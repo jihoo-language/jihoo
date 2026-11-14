@@ -595,7 +595,7 @@ realizations and universal parametric applications at every supported level,
 using actual delta conversion and checked-history invariants. The source grammar
 has no recognized inhabitant of `Pi A:Type(k), A` at any allowed input level.
 These are fragment results: arbitrary type-code interpretation/coherence,
-multiple/general dependent universe contexts, all family/resource constructs,
+general dependent universe/value contexts, all family/resource constructs,
 and full kernel consistency remain open.
 
 `NativeLoanScope` models the native reader's saved context depth and owner
@@ -614,3 +614,41 @@ Ordinary typing permits the duplicate-free example, while the actual current
 `ContextQuantity.checkClosed` rejects its duplicate owner consumption and accepts
 the corresponding single-use continuation. These results add no Lend typing rule,
 ambient code-borrow permission, full code-substitution or heap/lifetime theorem.
+
+The `NativeFamilyIota` collection defines executable family contractions and
+their genuine root equations independently of the installed delta/ACU converter.
+Actual checked histories derive signature scope, parameter alignment and
+recursive-field metadata. `case_preserves` and `contract_case_preserves` retain
+the original type for generic Case with leading parameters, dependent fields,
+nonparameter indices, and context/branch/result conversions. The analogous
+`view_preserves_one_level` and `contract_view_one_level_preserves` cover borrowed
+boxed constructors with leading parameters, dependent owned fields and dependent
+motives. Recursive field/IH telescope and executable position-alignment lemmas
+are checked, but generic recursive View/Elim preservation, contextual closure,
+enlarged confluence and installation of these iota equations remain open.
+
+`NativeMultiUniverseSyntax`, `Model`, `Fundamental`, `Closure` and `Examples`
+support any finite list of independent mixed-level universe parameters. Actual
+source typing and syntax recognition reconstruct the intrinsic expression and
+its conversion-saturated contextual interpretation; nested universe lambdas
+construct concrete dependent Pi meanings. The example spanning input levels
+0 and 31 checks at administrative Type32. The `CodeComputations` and `Computed`
+modules additionally construct normal forms and authentic conversion/model
+coherence for arbitrarily nested first-order type-level lambda applications,
+including computed source binder annotations. No normal-form premise or
+realization of the original source is assumed. Higher-kinded families, general
+interleaved dependent universe/value contexts and arbitrary native type codes
+are not yet covered.
+
+The `NativeAuthenticKindArguments`, `NativeTraceInterpretation` and
+`NativeClosing` collection constructs dependent closing interpretations from
+actual checked-call argument traces. Converted inferred signatures are aligned
+using typed ghost substitution and uniqueness. Erased arguments retain their
+actual checked mode rather than being fabricated as runtime rechecks. The
+general telescope theorem still requires explicit domain classification, while
+`NativeSmallTelescopeClosure` removes that premise uniformly for every binder
+genuinely formed at Prop or Type0, including neutral, computed and aliased
+domains. Constructed closing interpretations establish unowned unrestricted
+representations and Pi-separated owner-consuming results. General positive-kind
+closing, full CODE/resource substitution and the operational fundamental theorem
+remain open.

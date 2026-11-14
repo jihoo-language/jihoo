@@ -713,3 +713,93 @@ import Jihoo.NativeLoanScope
 import Jihoo.NativeLendSyntax
 
 import Jihoo.NativeLendPolicyExamples
+
+import Jihoo.NativeFamilyIota
+
+import Jihoo.NativeFamilyIotaBinding
+
+import Jihoo.NativeFamilyIotaCase
+
+import Jihoo.NativeFamilyIotaCaseExamples
+
+import Jihoo.NativeFamilyIotaCasePreservation
+
+import Jihoo.NativeFamilyIotaConstructor
+
+import Jihoo.NativeFamilyIotaExamples
+
+import Jihoo.NativeFamilyIotaInstantiation
+
+import Jihoo.NativeFamilyIotaMetadata
+
+import Jihoo.NativeFamilyIotaParameterAlignment
+
+import Jihoo.NativeFamilyIotaParameterCongruence
+
+import Jihoo.NativeFamilyIotaParameterExamples
+
+import Jihoo.NativeFamilyIotaParameterInstantiation
+
+import Jihoo.NativeFamilyIotaRecursiveArguments
+
+import Jihoo.NativeFamilyIotaRecursiveMetadata
+
+import Jihoo.NativeFamilyIotaSoundness
+
+import Jihoo.NativeFamilyIotaTelescopes
+
+import Jihoo.NativeFamilyIotaTyping
+
+import Jihoo.NativeFamilyIotaViewAlgebra
+
+import Jihoo.NativeFamilyIotaViewArguments
+
+import Jihoo.NativeFamilyIotaViewCongruence
+
+import Jihoo.NativeFamilyIotaViewExamples
+
+import Jihoo.NativeFamilyIotaViewHypotheses
+
+import Jihoo.NativeFamilyIotaViewInstantiation
+
+import Jihoo.NativeFamilyIotaViewPositions
+
+import Jihoo.NativeFamilyIotaViewPreservation
+
+import Jihoo.NativeFamilyIotaViewRecursiveTyping
+
+import Jihoo.NativeMultiUniverseSyntax
+
+import Jihoo.NativeMultiUniverseModel
+
+import Jihoo.NativeMultiUniverseFundamental
+
+import Jihoo.NativeMultiUniverseClosure
+
+import Jihoo.NativeMultiUniverseExamples
+
+import Jihoo.NativeMultiUniverseCodeComputations
+
+import Jihoo.NativeMultiUniverseComputedFundamental
+
+import Jihoo.NativeMultiUniverseComputedExamples
+
+import Jihoo.NativeAuthenticKindArguments
+
+import Jihoo.NativeTraceInterpretation
+
+import Jihoo.NativeAuthenticKindExamples
+
+import Jihoo.NativeClosingContexts
+
+import Jihoo.NativeClosingTelescope
+
+import Jihoo.NativeClosingResourceSemantics
+
+import Jihoo.NativeClosingTelescopeExamples
+
+import Jihoo.NativeClosingDomainClassification
+
+import Jihoo.NativeSmallTelescopeClosure
+
+import Jihoo.NativeSmallTelescopeExamples
