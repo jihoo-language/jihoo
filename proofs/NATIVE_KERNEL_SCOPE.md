@@ -577,3 +577,23 @@ loan lifetime semantics, and actual source execution refinement remain open.
 The updated delta and owned-loop source suites now admit generic identity and
 unknown owned-step callees through that same boundary while retaining their
 source negatives and synthetic mutation checks.
+
+
+`NativeUniverseContext` and `NativeUniverseFundamental` reconstruct actual
+source bodies under an abstract Type0 parameter, with U64, higher-order function
+values and mixed value contexts. A conversion-saturated partial source code
+interpretation supplies coherent meanings for the supported type-code grammar.
+The closed theorem constructs a genuine dependent Pi over the concrete finite
+universe, rather than accepting realization of the original source as an input.
+
+`NativeFiniteUniverseValues`, `NativeUniverseLevelModel`, and
+`NativeUniverseLevelSource` generalize this source reconstruction to each native
+universe input 0 through 31, with actual noncumulative Pi sorts and administrative
+Type32. The added text generator is reproduced by the aggregate check.
+`NativeUniverseLevelRealization` derives contextual simultaneous-substitution
+realizations and universal parametric applications at every supported level,
+using actual delta conversion and checked-history invariants. The source grammar
+has no recognized inhabitant of `Pi A:Type(k), A` at any allowed input level.
+These are fragment results: arbitrary type-code interpretation/coherence,
+multiple/general dependent universe contexts, all family/resource constructs,
+and full kernel consistency remain open.

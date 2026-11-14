@@ -210,7 +210,9 @@ refinement and runtime heap/loan correspondence remain open.
 A concrete finite universe/context model and a source-derived U64/function
 fundamental theorem are also checked. Recognized closed U64 terms have a genuine
 finite forward path to a unique numeral; the full dependent fundamental theorem
-and consistency remain open.
+and consistency remain open. Abstract-type/function source interpretation and
+realizability also cover every native universe input 0 through 31, with the
+administrative Type32 boundary retained.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

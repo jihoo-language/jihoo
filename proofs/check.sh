@@ -32,7 +32,7 @@ with open(sys.argv[1], encoding="utf-8") as audit:
 allowed = {"propext", "Quot.sound", "Classical.choice"}
 entries = re.findall(r"depends on axioms: \[([^\]]*)\]", report)
 closed = re.findall(r"does not depend on any axioms", report)
-assert len(entries) + len(closed) == 6388, report
+assert len(entries) + len(closed) == 6472, report
 for entry in entries:
     unexpected = set(filter(None, re.split(r"[,\s]+", entry))) - allowed
     assert not unexpected, f"Unexpected proof dependencies: {unexpected}"
@@ -50,6 +50,7 @@ generators = (
     ("generate-native-finite-universes.py", "NativeFiniteUniverses.lean"),
     ("generate-native-finite-pi.py", "NativeFinitePi.lean"),
     ("generate-native-contextual-universe-codes.py", "NativeContextualUniverseCodes.lean"),
+    ("generate-native-universe-values.py", "NativeFiniteUniverseValues.lean"),
 )
 with tempfile.TemporaryDirectory(prefix="jihoo-finite-model-") as directory:
     output = Path(directory)
