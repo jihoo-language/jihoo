@@ -707,3 +707,9 @@ import Jihoo.NativeUniverseLevelSource
 import Jihoo.NativeUniverseLevelExamples
 
 import Jihoo.NativeUniverseLevelRealization
+
+import Jihoo.NativeLoanScope
+
+import Jihoo.NativeLendSyntax
+
+import Jihoo.NativeLendPolicyExamples

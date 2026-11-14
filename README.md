@@ -213,6 +213,10 @@ finite forward path to a unique numeral; the full dependent fundamental theorem
 and consistency remain open. Abstract-type/function source interpretation and
 realizability also cover every native universe input 0 through 31, with the
 administrative Type32 boundary retained.
+Loan snapshot scope/renaming and the dependent-lend reader/continuation
+specializations are checked separately. Regression proofs show that returning
+an owner retains its alias identity and that the existing resource gate rejects
+duplicate consumption. Integrated Lend typing and heap lifetime safety remain open.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

@@ -597,3 +597,20 @@ has no recognized inhabitant of `Pi A:Type(k), A` at any allowed input level.
 These are fragment results: arbitrary type-code interpretation/coherence,
 multiple/general dependent universe contexts, all family/resource constructs,
 and full kernel consistency remain open.
+
+`NativeLoanScope` models the native reader's saved context depth and owner
+index. Active loans have scoped indices; entering and exiting readers, ordinary
+binder weakening and arbitrary variable rebasing preserve the stated permissions.
+The weakening theorem requires that all saved frames have already been entered:
+a future-depth snapshot supplies a checked counterexample without that premise.
+
+`NativeLendSyntax` models the exact dependent reader specialization to
+`Borrow(owner)` and continuation specialization to the returned original owner.
+Renaming and simultaneous substitution commute with these constructions. The
+source dependent-path selector requires a named variable, so its substitution
+theorem explicitly requires the substituted owner to remain a variable.
+`NativeLendPolicyExamples` verifies nested loan exit and returned-owner aliasing.
+Ordinary typing permits the duplicate-free example, while the actual current
+`ContextQuantity.checkClosed` rejects its duplicate owner consumption and accepts
+the corresponding single-use continuation. These results add no Lend typing rule,
+ambient code-borrow permission, full code-substitution or heap/lifetime theorem.
