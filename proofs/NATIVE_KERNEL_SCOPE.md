@@ -624,6 +624,13 @@ callback is universally typable and supplies no output typing oracle.
 `NativeLendGhostExamples` checks scalar and owner-dependent refinement results
 and rejects escaping result binders. This is a sound ghost-body result checker;
 complete source Lend admission, active runtime loans and heap lifetimes remain open.
+`NativeLendGhostRule` supplies source-facing generic and dependent ghost rule
+premises, including owner typing/ownership, native result-head lifetime policy
+and the dependent returned-owner annotation. Both rule shapes construct a typed
+pure-model result; the generic branch uses genuinely checked callbacks and the
+dependent branch uses the actually specialized bodies. The closed value-owner
+example follows the generic path. This does not install Lend into the shared
+HasType judgment or claim runtime loan permission/accounting.
 
 The `NativeFamilyIota` collection defines executable family contractions and
 their genuine root equations independently of the installed delta/ACU converter.
@@ -638,8 +645,14 @@ recursive View original-type preservation and executable contractor preservation
 for either recursion flag. Recursive calls and their exact IH telescope come
 from actual source arguments and authenticated recursive metadata. The concrete
 two-self-field regression retains a converted leading parameter and dependent
-original result. Generic recursive Elim preservation, contextual closure,
-enlarged confluence and installation of these iota equations remain open.
+original result. `NativeFamilyIotaDataElimPreservation` and
+`NativeFamilyIotaPropElimPreservation` cover general indexed recursive data and
+proposition elimination. `NativeFamilyIotaPreservation.Root.preserves` and
+`contract_preserves` combine every selected Elim/Case/View/Drop root and its
+executable contraction under actual checked history. Contextual type-index
+preservation needs genuinely enlarged conversion: old conversion does not
+equate these iota steps. Enlarged confluence/injectivity, installation and the
+consistent typing/metatheory rebase remain open.
 
 `NativeMultiUniverseSyntax`, `Model`, `Fundamental`, `Closure` and `Examples`
 support any finite list of independent mixed-level universe parameters. Actual
@@ -650,9 +663,21 @@ construct concrete dependent Pi meanings. The example spanning input levels
 modules additionally construct normal forms and authentic conversion/model
 coherence for arbitrarily nested first-order type-level lambda applications,
 including computed source binder annotations. No normal-form premise or
-realization of the original source is assumed. Higher-kinded families, general
-interleaved dependent universe/value contexts and arbitrary native type codes
-are not yet covered.
+realization of the original source is assumed. General interleaved dependent
+universe/value contexts and arbitrary native type codes are not yet covered.
+
+`NativeNeutralSpines` derives free-head application injectivity and rigid-head
+separation from actual delta/ACU confluence at every finite arity. The
+`NativeFamilyCode` and `NativeFamilySource` collection uses these facts to
+construct coherence, actual source reconstruction and a saturated fundamental
+interpretation for finite blocks of type-to-type family variables
+`G : Type(i) -> Type(j)` and independent mixed-level universe parameters. Codes
+include arbitrary nested family applications such as `G(H(A))` and arrows.
+Closed family/universe lambdas construct concrete iterated dependent Pi meanings
+and formed native principal types; empty families exclude abstract inhabitants.
+The source example `lambda G, lambda A, lambda x:G A, x` works at all native
+input levels. Value-indexed families, fully interleaved dependent contexts and
+arbitrary native type-code computations/constructors remain open.
 
 The `NativeAuthenticKindArguments`, `NativeTraceInterpretation` and
 `NativeClosing` collection constructs dependent closing interpretations from
@@ -666,3 +691,16 @@ domains. Constructed closing interpretations establish unowned unrestricted
 representations and Pi-separated owner-consuming results. General positive-kind
 closing, full CODE/resource substitution and the operational fundamental theorem
 remain open.
+
+`NativeInferredKindArguments.InputTelescope.close_checkedCall` additionally
+handles finite mixtures of fresh kind parameters and small ordinary binders.
+It retains actual argument inference at the original replay fuel and the
+inferred kind-spine observation; the closed domain's canonical kind and value
+realization follow from those input checks, forward spine preservation and the
+actual application gate. No canonical output/classification certificate is
+supplied. All-positive-input kind-spine coverage and runtime value closing
+interpretation still remain open. `NativeCodeBetaBoundary` checks that raw
+syntactic code rechecking is stronger than the current validator's guarantee:
+an admitted closed application can have a rejected raw beta substitution.
+The actual native Core accepts both forms and retains the effectful argument
+as a runtime binding, so this is not a native soundness counterexample.

@@ -215,9 +215,12 @@ realizability also cover every native universe input 0 through 31, with the
 administrative Type32 boundary retained.
 Source reconstruction also handles any finite number of independent mixed-level
 universe parameters and nested first-order type-level beta computations in
-binder annotations. Separate family iota results preserve the exact original
-type for parameterized Case and arbitrary recursive borrowed View; recursive
-Elim and their integration into conversion remain open. Actual checked calls construct
+binder annotations. Type-to-type family variables at arbitrary native levels
+also have source-derived interpretations, including nested family applications.
+Separate family iota results preserve the exact original
+type for parameterized Case, general indexed recursive Prop/data Elim and
+arbitrary recursive borrowed View. Their integration into conversion remains
+open. Actual checked calls construct
 closing interpretations for every finite Prop/Type0 binder telescope; arbitrary
 higher-kind closing and full code/resource substitution remain open.
 Loan snapshot scope/renaming and the dependent-lend reader/continuation

@@ -1,5 +1,6 @@
 import Jihoo.NativeLendGhostChecking
 import Jihoo.NativeLendPolicyExamples
+import Jihoo.NativeLendGhostRule
 
 namespace Jihoo.NativeKernel.Environment.Lending.GhostExamples
 
@@ -50,5 +51,29 @@ theorem result_scope_escape_rejected :
 theorem unnamed_owner_rejected :
     inferDependentGhost? 24 empty [] (.alloc (.natural 2) (.integer 0))
       scalarReader scalarContinuation = none := by cbv
+
+private def allocatedOwner : Term := .alloc (.natural 2) (.integer 0)
+
+/-- A value owner takes the generic native path. Its callbacks have the
+actual independent result types checked by that path. -/
+theorem generic_ghost_derivation : GhostDerivation empty []
+    (.lend allocatedOwner scalarReader scalarContinuation) .i64 := by
+  apply GhostDerivation.generic (ownerType := buffer) (valueType := .i64)
+  · exact .alloc (.natural (by decide)) (.integer (by decide) (by decide))
+  · exact .buffer (.refl _)
+  · exact ⟨.i64,.refl _,rfl⟩
+  · exact Checker.check_sound (by cbv : Checker.check 24 empty [] true scalarReader
+      (.pi false (.ref buffer) (Term.i64.rename Nat.succ)) = true)
+  · exact Checker.check_sound (by cbv : Checker.check 24 empty [] true scalarContinuation
+      (.pi false .i64 ((Term.pi false buffer (Term.i64.rename Nat.succ)).rename Nat.succ)) = true)
+
+theorem generic_ghost_original_type :
+    ∃ output, EnvironmentDelta.Forward empty
+      (desugar allocatedOwner scalarReader scalarContinuation) output ∧
+      HasType empty [] true output .i64 :=
+  generic_ghost_derivation.sound UnifiedProgram.EnvWellFormed.empty
+
+theorem allocated_owner_uses_generic_path :
+    dependent? allocatedOwner scalarReader scalarContinuation = none := by decide
 
 end Jihoo.NativeKernel.Environment.Lending.GhostExamples
