@@ -368,6 +368,7 @@
               Jihoo.NativeUnifiedAdmission \
               Jihoo.NativeACUBoundedNormalizer \
               Jihoo.NativeEnvironmentDeltaBounded \
+              Jihoo.NativeEnvironmentContextualPreservation \
               Jihoo.NativePartialRenaming \
               Jihoo.NativeCompositionMirCorrespondence \
               Jihoo.NativeCompositionMirSnapshot \

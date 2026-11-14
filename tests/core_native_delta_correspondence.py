@@ -70,7 +70,8 @@ def run(compiler, checker, output):
         (output / f'{name}.checker.stdout').write_bytes(result.stdout)
         (output / f'{name}.checker.stderr').write_bytes(result.stderr)
         require(result.returncode == (0 if accepted else 1),
-                f'{name}: unexpected delta comparison: {result.stderr!r}')
+                f'{name}: unexpected delta comparison (exit {result.returncode}): '
+                f'{(result.stdout + result.stderr)!r}')
         if accepted:
             require(result.stdout == b'native checked delta/ACU observation accepted\n',
                     f'{name}: missing acknowledgement')
