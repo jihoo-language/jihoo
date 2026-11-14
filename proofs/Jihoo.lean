@@ -803,3 +803,13 @@ import Jihoo.NativeClosingDomainClassification
 import Jihoo.NativeSmallTelescopeClosure
 
 import Jihoo.NativeSmallTelescopeExamples
+
+import Jihoo.NativeFamilyIotaViewRecursiveExamples
+
+import Jihoo.NativeFamilyIotaViewRecursivePreservation
+
+import Jihoo.NativeLendReduction
+
+import Jihoo.NativeLendGhostChecking
+
+import Jihoo.NativeLendGhostExamples

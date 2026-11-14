@@ -216,14 +216,16 @@ administrative Type32 boundary retained.
 Source reconstruction also handles any finite number of independent mixed-level
 universe parameters and nested first-order type-level beta computations in
 binder annotations. Separate family iota results preserve the exact original
-type for parameterized Case and one-level borrowed View; recursive iota and
-their integration into conversion remain open. Actual checked calls construct
+type for parameterized Case and arbitrary recursive borrowed View; recursive
+Elim and their integration into conversion remain open. Actual checked calls construct
 closing interpretations for every finite Prop/Type0 binder telescope; arbitrary
 higher-kind closing and full code/resource substitution remain open.
 Loan snapshot scope/renaming and the dependent-lend reader/continuation
 specializations are checked separately. Regression proofs show that returning
 an owner retains its alias identity and that the existing resource gate rejects
 duplicate consumption. Integrated Lend typing and heap lifetime safety remain open.
+The specialized ghost-body checks also construct a typed genuine forward
+contractum of the pure Lend expansion, with exact result-binder scope removal.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

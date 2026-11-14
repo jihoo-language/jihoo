@@ -615,6 +615,16 @@ Ordinary typing permits the duplicate-free example, while the actual current
 the corresponding single-use continuation. These results add no Lend typing rule,
 ambient code-borrow permission, full code-substitution or heap/lifetime theorem.
 
+`NativeLendReduction` constructs genuine finite beta paths from the native pure
+Lend expansion and its dependent specialization to the same contractum.
+`NativeLendGhostChecking` derives the contractum's exact original result type
+from executable inference of the specialized reader and continuation, authentic
+conversion and successful partial result-binder removal. It assumes neither
+callback is universally typable and supplies no output typing oracle.
+`NativeLendGhostExamples` checks scalar and owner-dependent refinement results
+and rejects escaping result binders. This is a sound ghost-body result checker;
+complete source Lend admission, active runtime loans and heap lifetimes remain open.
+
 The `NativeFamilyIota` collection defines executable family contractions and
 their genuine root equations independently of the installed delta/ACU converter.
 Actual checked histories derive signature scope, parameter alignment and
@@ -623,8 +633,12 @@ the original type for generic Case with leading parameters, dependent fields,
 nonparameter indices, and context/branch/result conversions. The analogous
 `view_preserves_one_level` and `contract_view_one_level_preserves` cover borrowed
 boxed constructors with leading parameters, dependent owned fields and dependent
-motives. Recursive field/IH telescope and executable position-alignment lemmas
-are checked, but generic recursive View/Elim preservation, contextual closure,
+motives. `NativeFamilyIotaViewRecursivePreservation` additionally proves generic
+recursive View original-type preservation and executable contractor preservation
+for either recursion flag. Recursive calls and their exact IH telescope come
+from actual source arguments and authenticated recursive metadata. The concrete
+two-self-field regression retains a converted leading parameter and dependent
+original result. Generic recursive Elim preservation, contextual closure,
 enlarged confluence and installation of these iota equations remain open.
 
 `NativeMultiUniverseSyntax`, `Model`, `Fundamental`, `Closure` and `Examples`
