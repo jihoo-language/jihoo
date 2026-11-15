@@ -1370,3 +1370,16 @@ contexts at the original call, global mixed-admission authority, arbitrary
 else/tail execution and old-owner conflict exclusion remain open. This does not
 establish general progress, universe consistency or native implementation
 refinement.
+
+
+One authentic mixed declaration check and its earlier history now construct the
+three-scalar entry contexts and exact internal call resource receipt, with no
+separate entry/call checks. `NativeBindingMachineMixedDynamicRelease` derives
+the forty-eight-step allocation/read/close/Free/typed-fill return, dead owner,
+closed lease, heap validity, reader inventory and heap trace. False comparison
+reaches typed else code at thirty-four steps with its lease still live; byte
+overflow faults after twenty-three steps without heap events. The dependent
+example now uses this mixed admission directly. This is a parameterized local
+scalar/call path: arbitrary control stacks, old-owner conflicts, else/tail
+execution and native implementation refinement remain open; the complete
+grammar and whole-kernel obligations are unchanged.

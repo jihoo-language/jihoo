@@ -1078,3 +1078,51 @@ all old owners. Arbitrary else/tail execution, general evidence/effectful result
 semantics, universe consistency, all specified computation preservation,
 complete ownership/borrow soundness and native implementation refinement remain
 unfinished. The whole-kernel goal is NOT complete; keep the automation active.
+
+
+## 2026-11-15: original mixed admission constructs the complete scalar/call entry
+
+`NativeBindingMachineMixedScalarEntry` retains the exact expanded-declaration
+check and quantity fuel from the authentic `MixedProgram.checkDeclaration`.
+For the existing three-scalar signature, its computational mode is computed by
+the original checker. The original function judgment constructs all three
+scalar closings, value/size contexts, empty source-loan associations and the
+entered-loan invariant. Fifteen actual transitions install the bindings and
+preserve the empty heap; the original lambda projections supply the exact
+internal call resource receipt. The body remains arbitrary original syntax.
+No independent scalar-entry or call check/context is supplied.
+
+`NativeBindingMachineMixedDynamicRelease` composes this entry with the actual
+allocation/read/close/alias-Free proof. One earlier mixed history and its real
+next declaration check now derive the forty-eight-step signed-fill return at
+I64, a dead fresh owner, closed lease, valid heap, reader inventory and the
+alloc/beginLease/read/close/free trace. Literal argument ranges are explicit;
+byte-size fit and index comparison remain alternatives, not success premises.
+A false comparison reaches the original typed else code at thirty-four steps,
+with a live owner, live lease and its exact reader inventory. Byte overflow
+faults after twenty-three steps with the empty heap and no heap events.
+
+The closed dependent example now uses this same mixed declaration admission;
+its independent function typing, scalar context proofs and call recheck are
+removed. The previous call API is retained through a raw internal-receipt
+variant. The general theorem is parameterized by scalar values, source types,
+reader/else syntax, physical owner alias, environment and authentic earlier
+mixed history; it is not a directly computed output fixture.
+
+The aggregate passed 917 Lake jobs, 8,953 unique public audits and all generated
+fixture comparisons (`out/logs/mixed-admission-dynamic-release-full-1.log`). All
+five added public proofs are audited exactly once with only `propext`,
+`Classical.choice` and `Quot.sound`; sampled peak tree RSS was 3,707.2 MiB.
+The existing rootless Nix 2.20.6 / Lean 4.34.1 / Lake 5.0.0-src proof shell was
+verified and reused. No native implementation, fixture, dependency lock or
+store pin changed.
+
+This constructs admission-to-execution associations for this scalar/dependent
+call path, not arbitrary controls. The declared three-scalar I64 signature is
+a local theorem case, not a reduced grammar or completion criterion. General
+mixed-admission authority across arbitrary saved frames, closures, dependent
+functions/families/recursion, old-owner conflict exclusion, arbitrary else/tail
+execution, evidence/effectful result semantics, universe consistency, full
+preservation and native implementation refinement remain unfinished. Keep the
+whole-kernel automation active. A useful next semantic step is finishing the
+live-lease else path, followed by general all-control resource authority.

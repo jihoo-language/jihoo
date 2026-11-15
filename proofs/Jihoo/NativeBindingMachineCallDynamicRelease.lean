@@ -45,11 +45,11 @@ private theorem literal_call_three_steps (heap : SizedBufferHeap.State) (code : 
 /-- The original full call supplies all component source/resource judgments.
 Successful guarded reading returns the actual fill at the EXACT input closed
 call type, rather than only a separately chosen function-signature instance. -/
-theorem reachable_call_dynamic_release (term : Term) (fuel : Nat) (code : Code)
+theorem reachable_raw_call_dynamic_release (term : Term) (fuel : Nat) (code : Code)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (evaluating : (run fuel (initial term)).state.control = .evaluate code)
     (typed : LoanClosingTyped env loans false code meanings type)
-    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+5) env loans code.context code.term = some control)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+5) env loans code.context code.term = some control)
     (shape : code.term = .app
       (.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex))
       (.alloc (.var countIndex) (.var fillIndex)))
@@ -101,7 +101,7 @@ theorem reachable_call_dynamic_release (term : Term) (fuel : Nat) (code : Code)
           .argument (.closure false ownerDomain sourceBody code.context code.origins code.values) argumentOrigin :: stack⟩,[],8⟩ := by
   obtain ⟨argumentType,result,functionTyped,argumentTyped,resultConverted⟩ := typed.lambda_call_inputs history shape
   obtain ⟨bodyControl,bodyProjected⟩ := LoanTyping.ResourceQuantity.projectRaw_single_lambda_call_body
-    (shape ▸ LoanTyping.ResourceQuantity.project_origin checked)
+    (shape ▸ checked)
   have stateShape : (run fuel (initial term)).state =
       ⟨(run fuel (initial term)).state.heap,.evaluate code,(run fuel (initial term)).state.stack⟩ := by
     cases state : (run fuel (initial term)).state
@@ -170,5 +170,63 @@ theorem reachable_call_dynamic_release (term : Term) (fuel : Nat) (code : Code)
     rw [reachedState] at result
     rw [result] at composed
     exact composed
+
+/-- The original full query supplies its exact internal receipt. -/
+theorem reachable_call_dynamic_release (term : Term) (fuel : Nat) (code : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run fuel (initial term)).state.control = .evaluate code)
+    (typed : LoanClosingTyped env loans false code meanings type)
+    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+5) env loans code.context code.term = some control)
+    (shape : code.term = .app
+      (.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex))
+      (.alloc (.var countIndex) (.var fillIndex)))
+    (context : ValueContext env code meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap code meanings)
+    (slots : LoanSlots code loans (run fuel (initial term)).state.stack)
+    (entered : Loans.Entered code.context.length loans)
+    (selectedAlias : releaseIndex = 0 ∨ releaseIndex = 2) :
+    ∃ count fill, meanings countIndex = .natural count ∧ meanings fillIndex = .integer fill ∧
+      let heap := (run fuel (initial term)).state.heap
+      let stack := (run fuel (initial term)).state.stack
+      let object := heap.heap.nextObject
+      let token := heap.heap.nextLease
+      let argument := Term.alloc (.var countIndex) (.var fillIndex)
+      let argumentOrigin := (code.child argument).origin
+      let sourceBody := allocatedDynamicBody readerDomain first again no index length releaseIndex
+      let allocated := SizedBufferHeap.allocate heap count (encodeInteger fill)
+      let lent := SizedBufferHeap.lend allocated object
+      let released := SizedBufferHeap.release (SizedBufferHeap.close lent token) object
+      let bodyCode := enter false ownerDomain sourceBody code.context code.origins code.values argumentOrigin (some (.owner object))
+      let bodyMeanings := consValues (.alloc (.natural count) (.integer fill)) meanings
+      let ownerOrigin := (Term.var 0).subst bodyCode.origins
+      let readerBody := dynamicReferenceReader index length no
+      let readerCode := enter false readerDomain readerBody bodyCode.context bodyCode.origins bodyCode.values
+        (.borrow ownerOrigin) (some (.reference token))
+      let readerMeanings := consValues (.borrow ((Term.var 0).subst bodyMeanings)) bodyMeanings
+      let continuation := bodyCode.child (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1))))
+      let finishStack := .lendFinish token object (some bodyCode.context.length) ownerOrigin readerCode.origin continuation :: stack
+      if count*8+8 < 2^64 then
+        ∃ offset, bodyMeanings index = .natural offset ∧ bodyMeanings length = .natural count ∧
+          if offset < count then
+            LoanTyping.HasType env [] [] true (.integer fill) type ∧
+            released.heap.live object = false ∧ SizedBufferHeap.Valid released ∧ ReaderInventory released (readerFrames stack) ∧
+            (run 33 (run fuel (initial term)).state).state = ⟨released,.returned (.integer fill),stack⟩ ∧
+            eventsHeap (run 33 (run fuel (initial term)).state).events =
+              [.alloc object count (encodeInteger fill),.beginLease token object,
+                .read token offset (encodeInteger fill),.close token,.free object]
+          else
+            LoanTyping.HasType env [] [] true ((no.rename Nat.succ).subst readerMeanings) (first.subst bodyMeanings) ∧
+            ValueContext env (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+            OwnerSizes env lent (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+            ReaderInventory lent (readerFrames finishStack) ∧
+            (run 19 (run fuel (initial term)).state).state =
+              ⟨lent,.evaluate (readerCode.child (no.rename Nat.succ)),finishStack⟩ ∧
+            eventsHeap (run 19 (run fuel (initial term)).state).events =
+              [.alloc object count (encodeInteger fill),.beginLease token object]
+      else run 8 (run fuel (initial term)).state =
+        ⟨⟨heap,.fault .allocationOverflow,
+          .argument (.closure false ownerDomain sourceBody code.context code.origins code.values) argumentOrigin :: stack⟩,[],8⟩ := by
+  exact reachable_raw_call_dynamic_release term fuel code history evaluating typed
+    (LoanTyping.ResourceQuantity.project_origin checked) shape context sizes slots entered selectedAlias
 
 end Jihoo.NativeKernel.Environment.BindingMachine
