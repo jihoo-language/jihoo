@@ -1128,3 +1128,12 @@ object, its Free guard, and the actual five steps. Byte-size overflow is an
 explicit outcome, not an assumed allocation success. Source/control/reader
 association, general resource authority and the full fundamental theorem still
 remain open. This source-machine result does not refine native allocation.
+
+`NativeBindingMachineOwnedReaderExecution` constructs the allocating reader
+and two-owner continuation together: sixteen actual transitions and exact
+allocation/close/activation/two-Free events, with original ghost tail typing
+and zero residual demand for both source resources. The fresh first result is
+interpreted at its declared closed Buffer type. Fresh identity/guard evidence
+is derived, not an input. Byte overflow and a still-active outer reader of the
+old owner remain explicit outcomes; general admitted-program exclusion of the
+latter and arbitrary tail resource simulation are still unproved.

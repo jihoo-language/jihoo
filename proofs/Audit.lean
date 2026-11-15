@@ -8816,3 +8816,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.freeGuard_of_unborrowed
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_reader_fresh
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocating_reader
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_two_owner_tail_zero
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.unborrowed_close
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_owned_reader_release

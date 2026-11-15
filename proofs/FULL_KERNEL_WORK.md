@@ -370,3 +370,22 @@ audits and all generated-fixture comparisons, with only the three allowed
 logical axioms. Sampled peak tree RSS was 3,630.0 MiB. No compiler/runtime
 implementation or native fixture changed. The existing rootless project shell
 reports Nix 2.20.6 (evaluation smoke check 42), Lean 4.34.1 and Lake 5.0.0-src.
+
+The owned-reader execution unit connects that fresh Buffer interpretation and
+the actual separate resource obligations to sixteen real machine transitions:
+allocate, close, install both retained owner bindings, Free the fresh first
+result, and Free the original owner. The final tail keeps the original ghost
+result type and has zero residual source demand for both distinct capabilities.
+No fresh-result lookup, output typing, allocation success or heap guard is an
+input. A byte-size overflow stops explicitly after five steps. A remaining
+outer reader of the original object stops its release after the fresh result
+has been freed; its absence is characterized by the actual reader inventory.
+General source admission must still exclude such conflicts in legal consuming
+continuations and relate arbitrary tail execution to its zero-demand projection.
+The original owner's source length/slot/control association and general runtime
+exclusive authority remain part of the open common fundamental theorem.
+
+The complete check passed 889 Lake jobs, 8,819 unique public axiom audits and
+generated-fixture comparisons (sampled peak tree RSS 3,632.5 MiB). Dependencies
+use only the three allowed logical axioms. Native executable behavior and
+fixtures were not changed by this execution proof.
