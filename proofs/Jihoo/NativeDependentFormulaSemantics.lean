@@ -174,25 +174,25 @@ theorem Formula.conversion_truth (wf : UnifiedProgram.EnvWellFormed env)
       have parts := converted.eq_injective wf.admissible
       simp only [Formula.truth,Index.conversion_meaning wf parts.1 assignment,
         Index.conversion_meaning wf parts.2 assignment]
-    | less c d => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | less c d => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .eq) (op' := .lt) rfl rfl (by intro h; cases h) converted wf.admissible)
-    | all body => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | all body => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .eq) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
   | less a b =>
     cases right with
-    | equal c d => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | equal c d => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .lt) (op' := .eq) rfl rfl (by intro h; cases h) converted wf.admissible)
     | less c d =>
       have parts := converted.lt_injective wf.admissible
       simp only [Formula.truth,Index.conversion_meaning wf parts.1 assignment,
         Index.conversion_meaning wf parts.2 assignment]
-    | all body => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | all body => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .lt) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
   | all body ih =>
     cases right with
-    | equal c d => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | equal c d => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .eq) rfl rfl (by intro h; cases h) converted wf.admissible)
-    | less c d => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | less c d => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .lt) rfl rfl (by intro h; cases h) converted wf.admissible)
     | all other =>
       have parts := converted.pi_injective wf.admissible

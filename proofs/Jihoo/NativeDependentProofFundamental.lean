@@ -118,10 +118,10 @@ theorem recognized_principal (wf : UnifiedProgram.EnvWellFormed env) (recognized
     obtain ⟨formula,expression,erasedSource,functionConversion⟩ := ih functionTyped
     cases formula with
     | equal a b =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .eq) (op' := .pi erased) rfl rfl (by intro h; cases h) functionConversion wf.admissible)
     | less a b =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .lt) (op' := .pi erased) rfl rfl (by intro h; cases h) functionConversion wf.admissible)
     | all body =>
       have components := functionConversion.pi_injective wf.admissible

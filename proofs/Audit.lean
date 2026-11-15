@@ -83,7 +83,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.wrongAnnotation_rejected
 #print axioms Jihoo.CoreBridge.generatedExamples_typed
 #print axioms Jihoo.CoreBridge.generatedExamples_target
-
 #print axioms Jihoo.GraphCertificates.rawEqual_iff
 #print axioms Jihoo.GraphCertificates.Node.valid_payload
 #print axioms Jihoo.GraphCertificates.Node.valid_backward
@@ -100,7 +99,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.mixedExample_accepted
 #print axioms Jihoo.GraphCertificates.malformedRoot_rejected
 #print axioms Jihoo.GraphCertificates.changedPrefix_rejected
-
 #print axioms Jihoo.GraphCertificates.Canonical.parseNat_encode
 #print axioms Jihoo.GraphCertificates.Canonical.parseMany_encode
 #print axioms Jihoo.GraphCertificates.Canonical.parseList_encode
@@ -128,7 +126,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.negativeZero_rejected
 #print axioms Jihoo.GraphCertificates.signedInteger_roundtrip
 #print axioms Jihoo.GraphCertificates.twoShifts_compose
-
 #print axioms Jihoo.CoreBridge.Raw.rename_id
 #print axioms Jihoo.CoreBridge.Raw.rename_comp
 #print axioms Jihoo.CoreBridge.Raw.subst_id
@@ -158,7 +155,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.HasType.head_beta
 #print axioms Jihoo.GraphCertificates.validate_shift_typed
 #print axioms Jihoo.GraphCertificates.validate_substitute_typed
-
 #print axioms Jihoo.CoreBridge.Raw.Examples.malformed_lookup
 #print axioms Jihoo.CoreBridge.Raw.Examples.malformed_not_formed
 #print axioms Jihoo.CoreBridge.Raw.Examples.arbitrary_substitution_changes_proposition
@@ -180,8 +176,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Examples.dependent_after_not_original_type
 #print axioms Jihoo.CoreBridge.Raw.Examples.shift_certificate_accepted
 #print axioms Jihoo.CoreBridge.Raw.Examples.accepted_shift_output_typed
-
--- Beta-aware conversion, contextual preservation and conditional artifacts.
 #print axioms Jihoo.CoreBridge.Raw.Beta.Conv.renaming
 #print axioms Jihoo.CoreBridge.Raw.Beta.Conv.substitution
 #print axioms Jihoo.CoreBridge.Raw.Beta.Conv.subst_congr
@@ -238,8 +232,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.Examples.accepted_substitution_beta_type
 #print axioms Jihoo.CoreBridge.Raw.Beta.Examples.integer_types_separate
 #print axioms Jihoo.CoreBridge.Raw.Beta.Examples.pi_erasedness_separate
-
--- Full-graph inert sort transport and independently checked typing artifacts.
 #print axioms Jihoo.GraphCertificates.Node.assemble_prop
 #print axioms Jihoo.GraphCertificates.Node.assemble_universe
 #print axioms Jihoo.GraphCertificates.unfoldGraph_prop_none
@@ -263,8 +255,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.Typing.wrong_root_rejected
 #print axioms Jihoo.GraphCertificates.Typing.literal_roundtrip
 #print axioms Jihoo.GraphCertificates.Typing.snapshot_literal_accepted
-
--- Closed typed contextual beta replay and exact canonical association.
 #print axioms Jihoo.GraphCertificates.TypedBeta.validate_sound
 #print axioms Jihoo.GraphCertificates.TypedBeta.Wire.parse_encode
 #print axioms Jihoo.GraphCertificates.TypedBeta.Wire.decode_encode
@@ -276,8 +266,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.TypedBeta.Examples.no_redex
 #print axioms Jihoo.GraphCertificates.TypedBeta.Examples.wrong_path_rejected
 #print axioms Jihoo.GraphCertificates.TypedBeta.Examples.replay_roundtrip
-
--- Formed type skeletons and conditional closed literal evidence truth.
 #print axioms Jihoo.CoreBridge.Raw.Beta.Par.type_head
 #print axioms Jihoo.CoreBridge.Raw.Beta.Star.type_head
 #print axioms Jihoo.CoreBridge.Raw.Beta.Conv.rigid_head
@@ -305,8 +293,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.Typing.Evidence.Examples.false_bound_rejected
 #print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.nonnormal_index_evidence
 #print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.nonnormal_index_truth
-
--- Bounded finite head normalization and literal-truth witnesses.
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Transition.preserve
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Trace.preserve
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Trace.typeRoot
@@ -331,8 +317,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Examples.arguments_not_searched
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Examples.bodies_not_searched
 #print axioms Jihoo.GraphCertificates.HeadNormalization.Examples.false_bound_rejected
-
--- Composed term and type-index normalization.
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Transition.preserve
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Trace.preserve
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Trace.termRoot
@@ -348,8 +332,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Examples.left_first
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Examples.right_next
 #print axioms Jihoo.GraphCertificates.TypeIndexNormalization.Examples.no_arithmetic
-
--- Conversion-stable higher-order simple typing and head simulation.
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Shape.substitution
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Shape.renaming
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Shape.conversion_unique
@@ -386,8 +368,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.Typing.SimpleErasure.selected_head_step
 #print axioms Jihoo.GraphCertificates.Typing.SimpleErasure.trace_simulation
 #print axioms Jihoo.GraphCertificates.Typing.SimpleErasure.validate_head_simulation
-
--- Closed simply typed/raw head normalization and literal consistency.
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.subst_identity
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.subst_composition
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.shift_instantiate
@@ -425,8 +405,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.ClosedNormalizationExamples.head_normal_still_reduces
 #print axioms Jihoo.CoreBridge.Raw.Beta.ClosedNormalizationExamples.arithmetic_is_not_evaluated
 #print axioms Jihoo.GraphCertificates.Typing.ClosedConsistency.Examples.nonnormal_certificate_truth
-
--- Contextual beta/add preservation and checked actual-Core normalization.
 #print axioms Jihoo.CoreBridge.Raw.Computation.Step.conversion
 #print axioms Jihoo.CoreBridge.Raw.Computation.formation_proposition_step
 #print axioms Jihoo.CoreBridge.Raw.Computation.formation_preservation
@@ -446,8 +424,6 @@ import Jihoo
 #print axioms Jihoo.GraphCertificates.CoreNormal.Examples.literal_add_step
 #print axioms Jihoo.GraphCertificates.CoreNormal.Examples.evidence_original_type
 #print axioms Jihoo.GraphCertificates.CoreNormal.Examples.overflowing_add_rejected
-
--- Open head normalization: closing substitution and accessibility reflection.
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.subst_instantiate
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.inhabit_subst
 #print axioms Jihoo.CoreBridge.Raw.Beta.SimpleErasure.Term.inhabit_reducible
@@ -468,7 +444,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.OpenNormalizationExamples.closing_can_introduce_redex
 #print axioms Jihoo.CoreBridge.Raw.Beta.OpenNormalizationExamples.untyped_loop_not_accessible
 #print axioms Jihoo.CoreBridge.Raw.Beta.OpenNormalizationExamples.looping_term_not_typable
-
 #print axioms Jihoo.CoreBridge.LinearNaturals.Expr.typed
 #print axioms Jihoo.CoreBridge.LinearNaturals.coefficientsAdd_eval
 #print axioms Jihoo.CoreBridge.LinearNaturals.basis_eval
@@ -487,7 +462,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.LinearNaturals.Examples.wide_sum_not_zero
 #print axioms Jihoo.CoreBridge.LinearNaturals.Examples.application_rejected
 #print axioms Jihoo.GraphCertificates.LinearNormal.admit_sound
-
 #print axioms Jihoo.CoreBridge.LinearEvidence.context_succ
 #print axioms Jihoo.CoreBridge.LinearEvidence.Formula.formed
 #print axioms Jihoo.CoreBridge.LinearEvidence.Converts.sound
@@ -510,7 +484,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.LinearEvidence.Examples.false_under_quantifier_rejected
 #print axioms Jihoo.CoreBridge.LinearEvidence.Examples.true_claim_wrong_evidence_rejected
 #print axioms Jihoo.CoreBridge.LinearEvidence.Examples.arbitrary_beta_evidence_rejected
-
 #print axioms Jihoo.CoreBridge.CorePrincipal.coefficientsAdd_nil
 #print axioms Jihoo.CoreBridge.CorePrincipal.basis_nonempty
 #print axioms Jihoo.CoreBridge.CorePrincipal.steps_trans
@@ -536,7 +509,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.CorePrincipal.Examples.symbolic_decision_rejected
 #print axioms Jihoo.CoreBridge.CorePrincipal.Examples.computed_endpoint_steps
 #print axioms Jihoo.CoreBridge.CorePrincipal.Examples.original_refl_type_preserved
-
 #print axioms Jihoo.CoreBridge.LinearNaturals.Expr.encode_rename
 #print axioms Jihoo.CoreBridge.LinearNaturals.Expr.eval_rename
 #print axioms Jihoo.CoreBridge.LinearNaturals.Expr.encode_substitute
@@ -552,11 +524,9 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.LinearEvidence.ApplicationExamples.capture_would_change_truth
 #print axioms Jihoo.CoreBridge.LinearEvidence.ApplicationExamples.two_binders_avoid_capture
 #print axioms Jihoo.CoreBridge.LinearEvidence.ApplicationExamples.nested_application_sound
-
 #print axioms Jihoo.GraphCertificates.ApplicationSpine.Chain.remaining_le
 #print axioms Jihoo.GraphCertificates.ApplicationSpine.validate_sound
 #print axioms Jihoo.GraphCertificates.ApplicationSpine.validateBytes_sound
-
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Ty.subst_closed
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Converts.sound
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Derives.sound
@@ -569,7 +539,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Examples.composition
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Ty.proposition
 #print axioms Jihoo.CoreBridge.PropositionalEvidence.Ty.formed
-
 #print axioms Jihoo.CoreBridge.Raw.Beta.Conv.successor_positive
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.index_inversion
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.usub_inversion
@@ -580,7 +549,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.closed_usub_reconstructs
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.evaluated_index_safe
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.evaluated_usub_safe
-
 #print axioms Jihoo.Quantity.discharge_count
 #print axioms Jihoo.Quantity.Finishes.count_eq
 #print axioms Jihoo.Quantity.Prefix.count_le
@@ -590,7 +558,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.Linear.finished
 #print axioms Jihoo.Quantity.Linear.prefix
 #print axioms Jihoo.Quantity.erased_unreachable
-
 #print axioms Jihoo.Quantity.scopes_outer
 #print axioms Jihoo.Quantity.erased_bound_prefix
 #print axioms Jihoo.Quantity.Control.rename_id
@@ -603,7 +570,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.openOwner_count
 #print axioms Jihoo.Quantity.alias_finished
 #print axioms Jihoo.Quantity.alias_prefix
-
 #print axioms Jihoo.Quantity.Binders.classify_sound
 #print axioms Jihoo.Quantity.Binders.classify_complete
 #print axioms Jihoo.Quantity.Binders.lendable_iff
@@ -616,7 +582,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.Binders.projected_alias_finished
 #print axioms Jihoo.Quantity.Binders.projected_alias_prefix
 #print axioms Jihoo.Quantity.Binders.projectAlias_context
-
 #print axioms Jihoo.Quantity.ContextProjection.enter_origin
 #print axioms Jihoo.Quantity.ContextProjection.enter_authentic
 #print axioms Jihoo.Quantity.ContextProjection.walk_sound
@@ -630,7 +595,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.ContextProjection.rooted_alias_origin
 #print axioms Jihoo.Quantity.ContextProjection.rooted_alias_finished
 #print axioms Jihoo.Quantity.ContextProjection.rooted_alias_prefix
-
 #print axioms Jihoo.Quantity.LendProjection.checked_lend_origin
 #print axioms Jihoo.Quantity.LendProjection.checked_lend_demand
 #print axioms Jihoo.Quantity.LendProjection.checked_lend_finished
@@ -641,7 +605,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.LendProjection.project_sound
 #print axioms Jihoo.Quantity.LendProjection.project_budget_decreases
 #print axioms Jihoo.Quantity.LendProjection.rooted_project_sound
-
 #print axioms Jihoo.Quantity.Substitution.discharge_filterMap
 #print axioms Jihoo.Quantity.Finishes.relabel
 #print axioms Jihoo.Quantity.Prefix.relabel
@@ -662,7 +625,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.Substitution.lend_substituted_finished
 #print axioms Jihoo.Quantity.Substitution.lend_substituted_prefix
 #print axioms Jihoo.Quantity.Substitution.rooted_substitution_source
-
 #print axioms Jihoo.Indexed.Mixed.Proposition.subst
 #print axioms Jihoo.Indexed.Mixed.WellFormed.scoped
 #print axioms Jihoo.Indexed.Mixed.Valid.valuation
@@ -683,7 +645,6 @@ import Jihoo
 #print axioms Jihoo.Indexed.Mixed.Examples.scalar_capture_avoiding
 #print axioms Jihoo.Indexed.Mixed.Examples.discharge_between_indices
 #print axioms Jihoo.Indexed.Mixed.Examples.discharge_both
-
 #print axioms Jihoo.CoreBridge.MixedBridge.Telescope.context_match
 #print axioms Jihoo.CoreBridge.MixedBridge.Telescope.indices_slot
 #print axioms Jihoo.CoreBridge.MixedBridge.Telescope.values_slot
@@ -707,7 +668,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.MixedBridge.universal_typed
 #print axioms Jihoo.CoreBridge.MixedBridge.CheckedExample.typed_closed
 #print axioms Jihoo.CoreBridge.MixedBridge.CheckedExample.true_in_valid_environment
-
 #print axioms Jihoo.CoreBridge.Checked.infer_complete
 #print axioms Jihoo.CoreBridge.Checked.inferType_sound
 #print axioms Jihoo.CoreBridge.Checked.inferType_iff
@@ -724,7 +684,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Checked.out_of_scope_index
 #print axioms Jihoo.CoreBridge.Checked.malformed_context_entry
 #print axioms Jihoo.CoreBridge.Checked.nonfunction_application
-
 #print axioms Jihoo.CoreBridge.Checked.Admission.Accepted.raw_typed
 #print axioms Jihoo.CoreBridge.Checked.Admission.Accepted.realizes
 #print axioms Jihoo.CoreBridge.Checked.Admission.GraphAccepted.sound
@@ -735,9 +694,7 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Checked.Admission.non_atomic_application_rejected
 #print axioms Jihoo.CoreBridge.Checked.Admission.unreachable_invalid_rejected
 #print axioms Jihoo.CoreBridge.Checked.Admission.separate_tree_budget
-
 #print axioms Jihoo.CoreBridge.Checked.Admission.Accepted.type_formed
-
 #print axioms Jihoo.MixedProofFunctions.Formula.scoped_subst
 #print axioms Jihoo.MixedProofFunctions.Formula.subst_id
 #print axioms Jihoo.MixedProofFunctions.Formula.subst_comp
@@ -763,7 +720,6 @@ import Jihoo
 #print axioms Jihoo.MixedProofFunctions.Examples.retain_true
 #print axioms Jihoo.MixedProofFunctions.Examples.no_missing_hypothesis
 #print axioms Jihoo.MixedProofFunctions.Examples.no_forward_scalar
-
 #print axioms Jihoo.MixedProofFunctions.Bridge.index_rename
 #print axioms Jihoo.MixedProofFunctions.Bridge.formula_rename
 #print axioms Jihoo.MixedProofFunctions.Bridge.index_subst
@@ -785,7 +741,6 @@ import Jihoo
 #print axioms Jihoo.MixedProofFunctions.Bridge.CheckedExample.source_true
 #print axioms Jihoo.MixedProofFunctions.Bridge.subtraction_excluded
 #print axioms Jihoo.MixedProofFunctions.Bridge.oversized_literal_excluded
-
 #print axioms Jihoo.MixedProofFunctions.Checked.infer_complete
 #print axioms Jihoo.MixedProofFunctions.Checked.inferType_iff
 #print axioms Jihoo.MixedProofFunctions.Checked.accepted_sound
@@ -805,8 +760,6 @@ import Jihoo
 #print axioms Jihoo.MixedProofFunctions.Checked.Snapshot.forward_index_rejected
 #print axioms Jihoo.MixedProofFunctions.Checked.Snapshot.false_snapshot_rejected
 #print axioms Jihoo.MixedProofFunctions.Checked.Snapshot.literal_false_type_impossible
-
--- Ownership-preserving ghost erasure and binder compaction.
 #print axioms Jihoo.Quantity.Erasure.relabel_compose
 #print axioms Jihoo.Quantity.Erasure.erase_relabel
 #print axioms Jihoo.Quantity.Erasure.substitution_erasure
@@ -829,8 +782,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.Erasure.Examples.target_check_not_source_check
 #print axioms Jihoo.Quantity.Erasure.Examples.duplication_survives
 #print axioms Jihoo.Quantity.Erasure.Examples.capture_still_rejected
-
--- Erasure trace reflection and runtime slot identity.
 #print axioms Jihoo.Quantity.Erasure.finishes_relabel_reflect
 #print axioms Jihoo.Quantity.Erasure.prefix_relabel_reflect
 #print axioms Jihoo.Quantity.Erasure.finishes_reflect
@@ -849,8 +800,6 @@ import Jihoo
 #print axioms Jihoo.Quantity.Erasure.ReflectionExamples.compact_lookup_example
 #print axioms Jihoo.Quantity.Erasure.ReflectionExamples.missing_slot_example
 #print axioms Jihoo.Quantity.Erasure.ReflectionExamples.erased_histories_not_injective
-
--- Generated-recursion capture layout and environment reconstruction.
 #print axioms Jihoo.LoweringEnvironment.readBlock_append
 #print axioms Jihoo.LoweringEnvironment.readBlock_sound
 #print axioms Jihoo.LoweringEnvironment.rebuild_pack
@@ -879,8 +828,6 @@ import Jihoo
 #print axioms Jihoo.LoweringEnvironment.Examples.pack_alone_not_injective
 #print axioms Jihoo.LoweringEnvironment.Examples.swapped_operands_change_environment
 #print axioms Jihoo.LoweringEnvironment.Examples.parameter_interpretation
-
--- Integrated checked ownership through erasure and capture lowering.
 #print axioms Jihoo.OwnershipLowering.scalar_injective
 #print axioms Jihoo.OwnershipLowering.resource_injective
 #print axioms Jihoo.OwnershipLowering.scalar_payload
@@ -898,8 +845,6 @@ import Jihoo
 #print axioms Jihoo.OwnershipLowering.Examples.ghost_owner_counterexample
 #print axioms Jihoo.OwnershipLowering.Examples.trap_prefix_survives
 #print axioms Jihoo.OwnershipLowering.Examples.trap_does_not_finish
-
--- Constructed sequential parameter allocation and call entry.
 #print axioms Jihoo.CallEntry.number_layout
 #print axioms Jihoo.CallEntry.number_pack
 #print axioms Jihoo.CallEntry.number_append
@@ -917,7 +862,6 @@ import Jihoo
 #print axioms Jihoo.CallEntry.Examples.reserved_and_node_not_parameters
 #print axioms Jihoo.CallEntry.Examples.constructed_owner
 #print axioms Jihoo.CallEntry.Examples.wrong_base_counterexample
-
 #print axioms Jihoo.Initialization.subset_sound
 #print axioms Jihoo.Initialization.sub_trans
 #print axioms Jihoo.Initialization.sub_append
@@ -933,7 +877,6 @@ import Jihoo
 #print axioms Jihoo.Initialization.Examples.invented_entry_rejected
 #print axioms Jihoo.Initialization.Examples.hidden_successor_rejected
 #print axioms Jihoo.Initialization.Examples.unreachable_accepted
-
 #print axioms Jihoo.Initialization.Store.covers_sub
 #print axioms Jihoo.Initialization.Store.covers_write
 #print axioms Jihoo.Initialization.Store.readMany_exists
@@ -955,7 +898,6 @@ import Jihoo
 #print axioms Jihoo.Initialization.Store.Examples.operations_distinguish_positions
 #print axioms Jihoo.Initialization.Store.Examples.captured_argument_values
 #print axioms Jihoo.Initialization.Store.Examples.concrete_cycle_no_fault
-
 #print axioms Jihoo.Initialization.Calls.arguments_exist
 #print axioms Jihoo.Initialization.Calls.validate_sound
 #print axioms Jihoo.Initialization.Calls.validated_call
@@ -975,12 +917,10 @@ import Jihoo
 #print axioms Jihoo.Initialization.Calls.Examples.unsaved_caller_local_rejected
 #print axioms Jihoo.Initialization.Calls.Examples.missing_return_value_rejected
 #print axioms Jihoo.Initialization.Calls.Examples.unit_return_accepted
-
 #print axioms Jihoo.Initialization.Calls.arguments_length
 #print axioms Jihoo.Initialization.Calls.validated_call_ready
 #print axioms Jihoo.Initialization.Calls.Examples.call_pushes_caller
 #print axioms Jihoo.Initialization.Calls.Examples.return_restores_caller
-
 #print axioms Jihoo.CoreBridge.Raw.Computation.Steps.trans
 #print axioms Jihoo.CoreBridge.Raw.Computation.Steps.conversion
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.natural_bound
@@ -999,7 +939,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.max_subtract_computes
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.underflow_not_saturated
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.oversized_sub_not_folded
-
 #print axioms Jihoo.CoreBridge.Raw.Beta.Step.computation
 #print axioms Jihoo.CoreBridge.Raw.Beta.Steps.computation
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.closed_index_computes
@@ -1015,7 +954,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.empty_read_not_integer
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.end_read_not_integer
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.literal_read_unique
-
 #print axioms Jihoo.CoreBridge.Raw.Beta.HasType.elements_inversion
 #print axioms Jihoo.CoreBridge.Raw.Beta.Evaluation.Step.computation
 #print axioms Jihoo.CoreBridge.Raw.Beta.Evaluation.preservation
@@ -1036,7 +974,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.unselected_element_traps
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.abstract_read_skips_trap
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.strict_closed_execution_safe
-
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.erase_idempotent
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.erase_renaming
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.erase_substitution
@@ -1060,11 +997,9 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.erased_argument_still_traps
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.erased_array_still_traps
 #print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.mixed_binder_erased_substitution
-
 #print axioms Jihoo.VerifiedCore.execution_safety
 #print axioms Jihoo.VerifiedCore.erased_execution
 #print axioms Jihoo.VerifiedCore.requested_truth
-
 #print axioms Jihoo.HeapLeases.empty_valid
 #print axioms Jihoo.HeapLeases.step_valid
 #print axioms Jihoo.HeapLeases.allocation_fresh
@@ -1099,7 +1034,6 @@ import Jihoo
 #print axioms Jihoo.HeapLeases.Examples.old_token_after_allocation
 #print axioms Jihoo.HeapLeases.Examples.close_authority_necessary
 #print axioms Jihoo.HeapLeases.Examples.quantity_heap_endpoint
-
 #print axioms Jihoo.ScopedLend.read_observation
 #print axioms Jihoo.ScopedLend.reader_total
 #print axioms Jihoo.ScopedLend.steps_append
@@ -1138,7 +1072,6 @@ import Jihoo
 #print axioms Jihoo.ScopedLend.Examples.returned_and_original_agree
 #print axioms Jihoo.ScopedLend.Examples.double_alias_rejected
 #print axioms Jihoo.ScopedLend.Examples.omitted_owner_rejected
-
 #print axioms Jihoo.ScopedLend.Graph.project_sound
 #print axioms Jihoo.ScopedLend.Graph.Represents.scoped
 #print axioms Jihoo.ScopedLend.Graph.Represents.execution
@@ -1162,7 +1095,6 @@ import Jihoo
 #print axioms Jihoo.ScopedLend.Graph.Examples.role_shift_owner
 #print axioms Jihoo.ScopedLend.Graph.Examples.ghost_is_not_reader
 #print axioms Jihoo.ScopedLend.Graph.Examples.scalar_is_not_owner
-
 #print axioms Jihoo.LinearHeapPrograms.Select.member
 #print axioms Jihoo.LinearHeapPrograms.Select.subset
 #print axioms Jihoo.LinearHeapPrograms.Select.unique
@@ -1210,7 +1142,6 @@ import Jihoo
 #print axioms Jihoo.LinearHeapPrograms.Examples.closed_no_live_objects
 #print axioms Jihoo.LinearHeapPrograms.Examples.ambient_owns
 #print axioms Jihoo.LinearHeapPrograms.Examples.ambient_borrow_survives
-
 #print axioms Jihoo.LinearCoreCallers.fresh_bindings
 #print axioms Jihoo.LinearCoreCallers.Select.lookup_selected
 #print axioms Jihoo.LinearCoreCallers.Select.lookup_other
@@ -1241,7 +1172,6 @@ import Jihoo
 #print axioms Jihoo.LinearCoreCallers.Examples.invalid_type_rejected
 #print axioms Jihoo.LinearCoreCallers.Examples.zero_budget_rejected
 #print axioms Jihoo.LinearCoreCallers.Examples.small_depth_rejected
-
 #print axioms Jihoo.LeaseErasure.erase_allocate
 #print axioms Jihoo.LeaseErasure.erase_finish
 #print axioms Jihoo.LeaseErasure.erase_open
@@ -1293,7 +1223,6 @@ import Jihoo
 #print axioms Jihoo.LeaseErasure.Examples.target_can_write_borrowed_object
 #print axioms Jihoo.LeaseErasure.Examples.source_cannot_write_borrowed_object
 #print axioms Jihoo.LeaseErasure.Examples.unsupported_callee_rejected
-
 #print axioms Jihoo.ScalarCoreCallers.Result.total
 #print axioms Jihoo.ScalarCoreCallers.fresh_scalarBindings
 #print axioms Jihoo.ScalarCoreCallers.consumed_scalarBindings
@@ -1343,7 +1272,6 @@ import Jihoo
 #print axioms Jihoo.ScalarCoreCallers.accepted_source_total
 #print axioms Jihoo.ScalarCoreCallers.accepted_forward
 #print axioms Jihoo.ScalarCoreCallers.accepted_source_result_unique
-
 #print axioms Jihoo.BoundedMir.tick_sound
 #print axioms Jihoo.BoundedMir.Step.deterministic
 #print axioms Jihoo.BoundedMir.returned_no_step
@@ -1425,7 +1353,6 @@ import Jihoo
 #print axioms Jihoo.MirCallerValidation.Examples.mismatched_extent_rejected
 #print axioms Jihoo.MirCallerValidation.Examples.insufficient_fuel_rejected
 #print axioms Jihoo.MirCallerValidation.Examples.unchecked_source_rejected
-
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.step_reflection
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.trap_reflection
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.StepsN.steps
@@ -1461,7 +1388,6 @@ import Jihoo
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.Examples.ready_prefix_array_reflection
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.Examples.erased_overflow_one_step
 #print axioms Jihoo.CoreBridge.Raw.Beta.PayloadErasure.Examples.original_overflow_one_step
-
 #print axioms Jihoo.OwnedCoreContinuation.Allocation.unique
 #print axioms Jihoo.OwnedCoreContinuation.free_owns
 #print axioms Jihoo.OwnedCoreContinuation.total
@@ -1514,7 +1440,6 @@ import Jihoo
 #print axioms Jihoo.OwnedLendTyping.Examples.every_run_heap_empty
 #print axioms Jihoo.OwnedLendTyping.Examples.allocating_continuation
 #print axioms Jihoo.OwnedLendTyping.Examples.allocating_run_heap_empty
-
 #print axioms Jihoo.OwnedLendContext.Shape.unique
 #print axioms Jihoo.OwnedLendContext.Shape.head
 #print axioms Jihoo.OwnedLendContext.returned_bindings
@@ -1543,7 +1468,6 @@ import Jihoo
 #print axioms Jihoo.OwnedLendTyping.CompositionalExamples.fresh_result_execution_exists
 #print axioms Jihoo.OwnedLendTyping.CompositionalExamples.unrelated_borrow_operand_rejected
 #print axioms Jihoo.OwnedLendTyping.CompositionalExamples.unrelated_reader_rejected
-
 #print axioms Jihoo.OwnedScalarContext.fresh_ownerView
 #print axioms Jihoo.OwnedScalarContext.consumed_ownerView
 #print axioms Jihoo.OwnedScalarContext.ownedReturned_ownerView
@@ -1604,7 +1528,6 @@ import Jihoo
 #print axioms Jihoo.OwnedCoreContinuation.MixedExamples.scalar_cannot_be_freed
 #print axioms Jihoo.OwnedCoreContinuation.MixedExamples.owner_is_not_scalar
 #print axioms Jihoo.OwnedCoreContinuation.MixedExamples.consumed_owner_is_not_scalar
-
 #print axioms Jihoo.PureOwnedScalar.bindScalar_ownerView
 #print axioms Jihoo.PureOwnedScalar.bindScalar_scalarBindings
 #print axioms Jihoo.PureOwnedScalar.Shape.head
@@ -1662,7 +1585,6 @@ import Jihoo
 #print axioms Jihoo.PureOwnedScalar.Examples.owner_cannot_be_pure
 #print axioms Jihoo.PureOwnedScalar.Examples.owner_argument_rejected
 #print axioms Jihoo.PureOwnedScalar.Examples.scalar_cannot_be_freed
-
 #print axioms Jihoo.OwnedArgumentBinding.Shape.head
 #print axioms Jihoo.OwnedArgumentBinding.Shape.unique
 #print axioms Jihoo.OwnedArgumentBinding.Shape.not_pure
@@ -1712,7 +1634,6 @@ import Jihoo
 #print axioms Jihoo.OwnedCoreContinuation.Typed.ownedLet_inversion
 #print axioms Jihoo.OwnedCoreContinuation.Runs.ownedLet_inversion
 #print axioms Jihoo.OwnedCoreContinuation.Typed.ownedVar_inversion
-
 #print axioms Jihoo.OwnedCoreContinuation.Typed.induct
 #print axioms Jihoo.OwnedCoreContinuation.Runs.induct
 #print axioms Jihoo.OwnedCoreContinuation.core_reads_deterministic
@@ -1773,7 +1694,6 @@ import Jihoo
 #print axioms Jihoo.OwnedResultExamples.return_borrowed_original
 #print axioms Jihoo.OwnedResultExamples.borrowed_return_has_no_active_lease
 #print axioms Jihoo.OwnedResultExamples.consumer_old_name_unavailable
-
 #print axioms Jihoo.OwnedCoreResults.consume_heap_empty
 #print axioms Jihoo.OwnedResultExamples.every_fresh_run_same_identity
 #print axioms Jihoo.OwnedResultExamples.every_original_run_same_identity
@@ -2283,7 +2203,6 @@ import Jihoo
 #print axioms Jihoo.SizedErasureExamples.every_target_no_live
 #print axioms Jihoo.SizedErasureExamples.every_target_safe
 #print axioms Jihoo.SizedErasureExamples.every_target_accounted
-
 #print axioms Jihoo.BoundedMir.argumentValueValid_i64
 #print axioms Jihoo.BoundedMir.argumentValueValid_u64
 #print axioms Jihoo.BoundedMir.argumentValueValid_bool
@@ -2332,7 +2251,6 @@ import Jihoo
 #print axioms Jihoo.DynamicMirCorrespondence.every_execution_agrees
 #print axioms Jihoo.DynamicMirCorrespondence.compact_to_mir
 #print axioms Jihoo.DynamicMirCorrespondence.mir_to_compact
-
 #print axioms Jihoo.MirLocal.overlay_size
 #print axioms Jihoo.MirLocal.overlay_lookup
 #print axioms Jihoo.MirLocal.overlay_lookup_opt
@@ -2416,7 +2334,6 @@ import Jihoo
 #print axioms Jihoo.MirBufferExamples.executable_zero_cells
 #print axioms Jihoo.MirBufferExamples.too_many_cells
 #print axioms Jihoo.MirBufferExamples.missing_store_not_embedded
-
 #print axioms Jihoo.SizedMir.EnvRel.lookup
 #print axioms Jihoo.SizedMir.EnvRel.cons
 #print axioms Jihoo.SizedMir.lowerNat_correct
@@ -2505,7 +2422,6 @@ import Jihoo
 #print axioms Jihoo.SizedMirExamples.unsupported_free_rejected
 #print axioms Jihoo.SizedMirExamples.unused_bad_argument_lowered
 #print axioms Jihoo.SizedMirExamples.unused_bad_argument_not_evaluated
-
 #print axioms Jihoo.SizedMir.Allocation.overlay_other_opt
 #print axioms Jihoo.SizedMir.Allocation.saved_overlay
 #print axioms Jihoo.SizedMir.Allocation.embedded_role_bounds
@@ -2604,7 +2520,6 @@ import Jihoo
 #print axioms Jihoo.SizedMirLinearExamples.source_bounds
 #print axioms Jihoo.SizedMirLinearExamples.original_core_to_generated
 #print axioms Jihoo.SizedMirLinearExamples.typed_source_totality
-
 #print axioms Jihoo.SizedMir.Linear.entry_lend
 #print axioms Jihoo.SizedMir.Linear.entry_ownedLend
 #print axioms Jihoo.SizedMir.Linear.Embedded.read_type
@@ -2692,7 +2607,6 @@ import Jihoo
 #print axioms Jihoo.SizedMirOwnedCoreExamples.executable_distinct_lengths
 #print axioms Jihoo.SizedMirOwnedCoreExamples.every_run_value
 #print axioms Jihoo.SizedMirOwnedCoreExamples.final_no_live
-
 #print axioms Jihoo.SizedMir.EnvKinds.cons
 #print axioms Jihoo.SizedMir.EnvKinds.lookup
 #print axioms Jihoo.SizedMir.inferKind_app
@@ -2763,10 +2677,8 @@ import Jihoo
 #print axioms Jihoo.SizedMir.Linear.Embedded.branch_decision
 #print axioms Jihoo.SizedMir.Linear.Embedded.branch_yes_join
 #print axioms Jihoo.SizedMir.Linear.Embedded.branch_no_join
-
 #print axioms Jihoo.SizedMir.Linear.Embedded.branch_yes
 #print axioms Jihoo.SizedMir.Linear.Embedded.branch_no
-
 #print axioms Jihoo.NativeCompositionMir.code_valid
 #print axioms Jihoo.NativeCompositionMir.final_heap
 #print axioms Jihoo.NativeCompositionMir.final_no_live
@@ -2787,7 +2699,6 @@ import Jihoo
 #print axioms Jihoo.NativeCompositionMirCorrespondence.lifecycle_eq
 #print axioms Jihoo.NativeCompositionMirCorrespondence.three_way_termination
 #print axioms Jihoo.NativeCompositionMirCorrespondence.every_execution_agrees
-
 #print axioms Jihoo.BoundedMir.Steps.prefix_completion
 #print axioms Jihoo.BoundedMir.Steps.running_progress
 #print axioms Jihoo.BoundedMir.rawTick_complete
@@ -2942,7 +2853,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicCoreRejections.bad_unselected_branch_rejected
 #print axioms Jihoo.SymbolicCoreRejections.nested_substitution_capture_avoiding
 #print axioms Jihoo.SymbolicCoreRejections.nested_result_substitution_capture_avoiding
-
 #print axioms Jihoo.SymbolicMirEntry.typed_source_run
 #print axioms Jihoo.SymbolicMirEntry.typed_source_total
 #print axioms Jihoo.SymbolicMirEntry.typed_source_adequacy
@@ -2974,7 +2884,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicMirEntryChecks.capacity_edge
 #print axioms Jihoo.SymbolicMirEntryChecks.over_capacity_still_admitted
 #print axioms Jihoo.SymbolicMirEntryChecks.over_capacity_not_bounded
-
 #print axioms Jihoo.SymbolicCoreCompaction.MaskSupports.retained
 #print axioms Jihoo.SymbolicCoreCompaction.MaskSupports.push
 #print axioms Jihoo.SymbolicCoreCompaction.MaskSupports.mapOwners
@@ -3010,7 +2919,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicCoreCompactionChecks.nested_index_compiles
 #print axioms Jihoo.SymbolicCoreCompactionChecks.branch_lend_compile_total
 #print axioms Jihoo.SymbolicCoreCompactionChecks.natural_binder_compile_total
-
 #print axioms Jihoo.SizedMir.Structural.Typed.infer
 #print axioms Jihoo.SizedMir.Structural.NatTyped.total
 #print axioms Jihoo.SizedMir.Structural.ScalarTyped.total
@@ -3075,7 +2983,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicMirStructuralChecks.generic_checked_lowering
 #print axioms Jihoo.SymbolicMirStructuralChecks.generic_checked_admission
 #print axioms Jihoo.SymbolicMirStructuralChecks.all_forms_generic
-
 #print axioms Jihoo.SymbolicCommonDataContext.project_entry
 #print axioms Jihoo.SymbolicCommonDataContext.projection
 #print axioms Jihoo.SymbolicCommonDataContext.naturalEnv_skip
@@ -3121,7 +3028,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicCommonDataChecks.wrong_motive_rejected
 #print axioms Jihoo.SymbolicCommonDataChecks.wrong_branch_rejected
 #print axioms Jihoo.SymbolicCommonDataChecks.missing_index_rejected
-
 #print axioms Jihoo.SymbolicCompositionChecks.body_typed
 #print axioms Jihoo.SymbolicCompositionChecks.inputs_close
 #print axioms Jihoo.SymbolicCompositionChecks.all_lengths_typed
@@ -3150,8 +3056,6 @@ import Jihoo
 #print axioms Jihoo.SymbolicCoreContext.naturalEnv_callBody
 #print axioms Jihoo.SymbolicCoreContext.naturalEnv_ownedReturned
 #print axioms Jihoo.SymbolicCompositionChecks.common_case_total
-
--- Structural CommonData ghost-slot erasure; excludes Core producer islands.
 #print axioms Jihoo.CommonDataErasure.Env.lookup
 #print axioms Jihoo.CommonDataErasure.position_injective
 #print axioms Jihoo.CommonDataErasure.Env.bind
@@ -3164,7 +3068,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataErasureChecks.target_exists
 #print axioms Jihoo.CommonDataErasureChecks.source_run
 #print axioms Jihoo.CommonDataErasureChecks.target_run
-
 #print axioms Jihoo.CommonData.bufferCall_consumed
 #print axioms Jihoo.CommonData.rel_bufferCall
 #print axioms Jihoo.CommonData.agrees_bufferCall
@@ -3182,10 +3085,7 @@ import Jihoo
 #print axioms Jihoo.CommonDataBufferProducerChecks.inventory
 #print axioms Jihoo.CommonDataBufferProducerChecks.all_lengths_total
 #print axioms Jihoo.CommonDataBufferProducerChecks.every_run_accounted
-
 #print axioms Jihoo.CommonDataBufferProducerChecks.delayed_free
-
--- Scalar bindings and direct constant-length Buffer erasure.
 #print axioms Jihoo.CommonDataBufferErasure.core_shape
 #print axioms Jihoo.CommonDataBufferErasure.core_lookup
 #print axioms Jihoo.CommonDataBufferErasure.ScalarLower.preserves
@@ -3200,7 +3100,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataBufferErasureChecks.target_run
 #print axioms Jihoo.CommonDataBufferErasureChecks.source_run
 #print axioms Jihoo.CommonDataBufferErasureChecks.target_preserved
-
 #print axioms Jihoo.CommonDataCoreErasure.compileTarget_sound
 #print axioms Jihoo.CommonDataCoreErasure.Lower.compile_complete
 #print axioms Jihoo.CommonDataCoreErasure.Lower.compileTarget_complete
@@ -3227,7 +3126,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataCoreCompilerChecks.deep_nesting
 #print axioms Jihoo.CommonDataCoreCompilerChecks.deep_insufficient
 #print axioms Jihoo.CommonDataCoreCompilerChecks.typed_dynamic
-
 #print axioms Jihoo.CommonDataCoreErasure.Eval.deterministic
 #print axioms Jihoo.CommonDataCoreErasure.Bridge.enter_backward
 #print axioms Jihoo.CommonDataCoreErasure.Lower.backward
@@ -3244,7 +3142,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataCoreBackwardChecks.scalar_island_source
 #print axioms Jihoo.CommonDataCoreBackwardChecks.owner_compiles
 #print axioms Jihoo.CommonDataCoreBackwardChecks.owner_island_source
-
 #print axioms Jihoo.ReferenceHeap.execute_iff
 #print axioms Jihoo.ReferenceHeap.step_deterministic
 #print axioms Jihoo.ReferenceHeap.load_null
@@ -3274,7 +3171,6 @@ import Jihoo
 #print axioms Jihoo.ReferenceHeap.node_tag
 #print axioms Jihoo.ReferenceHeap.store_dead
 #print axioms Jihoo.ReferenceHeap.store_oob
-
 #print axioms Jihoo.CommonDataReference.source_pairs
 #print axioms Jihoo.CommonDataReference.target_resources
 #print axioms Jihoo.CommonDataReference.nil_count
@@ -3303,7 +3199,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataReferenceChecks.retained_buffer
 #print axioms Jihoo.CommonDataReferenceChecks.finished_buffer
 #print axioms Jihoo.CommonDataReferenceChecks.finished_children
-
 #print axioms Jihoo.ReferenceHeap.Frame.agree_refl
 #print axioms Jihoo.ReferenceHeap.Frame.agree_symm
 #print axioms Jihoo.ReferenceHeap.Frame.agree_trans
@@ -3362,10 +3257,8 @@ import Jihoo
 #print axioms Jihoo.ReferenceHeap.Frame.Checks.mixed_example
 #print axioms Jihoo.ReferenceHeap.Frame.Checks.mixed_store_client
 #print axioms Jihoo.ReferenceHeap.Frame.Checks.mixed_release_client
-
 #print axioms Jihoo.CommonDataReference.Related.push
 #print axioms Jihoo.CommonDataReference.BufferRelated.push
-
 #print axioms Jihoo.ReferenceCfg.tick_sound
 #print axioms Jihoo.ReferenceCfg.Step.deterministic
 #print axioms Jihoo.ReferenceCfg.returned_no_step
@@ -3425,7 +3318,6 @@ import Jihoo
 #print axioms Jihoo.ReferenceCfg.Checks.words_are_not_scalar_returns
 #print axioms Jihoo.ReferenceCfg.Checks.scalar_fixture_preserved
 #print axioms Jihoo.ReferenceCfg.Checks.scalar_insufficient_fuel
-
 #print axioms Jihoo.ReferenceCalls.tick_sound
 #print axioms Jihoo.ReferenceCalls.tick_complete
 #print axioms Jihoo.ReferenceCalls.Step.deterministic
@@ -3464,7 +3356,6 @@ import Jihoo
 #print axioms Jihoo.ReferenceCalls.Checks.override_does_not_rescue_bad_pc
 #print axioms Jihoo.ReferenceCalls.Checks.old_cycle_preserved
 #print axioms Jihoo.ReferenceCalls.Checks.old_failure_preserved
-
 #print axioms Jihoo.TreeDropCfg.walk_add
 #print axioms Jihoo.TreeDropCfg.walk_sound
 #print axioms Jihoo.TreeDropCfg.BoundedPrefix.steps
@@ -3502,8 +3393,6 @@ import Jihoo
 #print axioms Jihoo.TreeDropCfg.Checks.scalar_child
 #print axioms Jihoo.TreeDropCfg.Checks.interior_root
 #print axioms Jihoo.TreeDropCfg.Checks.null_root
-
--- Tree constructor prefixes and independent relocation (51 audits).
 #print axioms Jihoo.TreeCreateCfg.walk_sound
 #print axioms Jihoo.TreeCreateCfg.Prefix.execute
 #print axioms Jihoo.TreeCreateCfg.Prefix.short_fuel
@@ -3661,7 +3550,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataCaseRelocation.Checks.copied_node_short
 #print axioms Jihoo.CommonDataCaseRelocation.Checks.copied_nil_short
 #print axioms Jihoo.CommonDataCaseRelocation.Checks.copied_stack_short
-
 #print axioms Jihoo.CommonDataCaseEntryContext.Binding.reframe
 #print axioms Jihoo.CommonDataCaseEntryContext.Bindings.reframe
 #print axioms Jihoo.CommonDataCaseEntryContext.Context.reframe
@@ -3680,7 +3568,6 @@ import Jihoo
 #print axioms Jihoo.CommonDataCaseEntryContext.Checks.Fixture.nil_context
 #print axioms Jihoo.CommonDataCaseEntryContext.Checks.Fixture.nil_aliases_retired
 #print axioms Jihoo.CommonDataCaseEntryContext.Checks.Fixture.pending_after_child
-
 #print axioms Jihoo.TreeCreateContext.Binding.transport
 #print axioms Jihoo.TreeCreateContext.Bindings.transport
 #print axioms Jihoo.TreeCreateContext.node_frame_local
@@ -3702,94 +3589,66 @@ import Jihoo
 #print axioms Jihoo.TreeCreateContext.Checks.nil_boundary
 #print axioms Jihoo.TreeCreateContext.Checks.typed_constructor
 #print axioms Jihoo.TreeCreateContext.Checks.source_execution
-
-namespace Jihoo.CommonCompositionContract
-#print axioms Transfer.then
-#print axioms Transfer.steps
-#print axioms node_pipeline
-#print axioms supported_induction
-#print axioms literal_supported
-#print axioms opaque_rejected
-#print axioms idle
-#print axioms two_idles
-end Jihoo.CommonCompositionContract
-
-namespace Jihoo.CommonDataCaseRelocatedContext.Checks
-open CommonCompositionContract CommonDataTargetContext CommonDataCaseCfg
-open CommonDataReference RecursiveLexicalFields CommonDataCaseEntryContext
-open CommonDataReferenceChecks (image source)
-open CommonDataTargetContext.Checks (heap ctx env)
-open CommonDataCaseEntryContext.Checks
+#print axioms Jihoo.CommonCompositionContract.Transfer.then
+#print axioms Jihoo.CommonCompositionContract.Transfer.steps
+#print axioms Jihoo.CommonCompositionContract.node_pipeline
+#print axioms Jihoo.CommonCompositionContract.supported_induction
+#print axioms Jihoo.CommonCompositionContract.literal_supported
+#print axioms Jihoo.CommonCompositionContract.opaque_rejected
+#print axioms Jihoo.CommonCompositionContract.idle
+#print axioms Jihoo.CommonCompositionContract.two_idles
 #print axioms Jihoo.CommonDataCaseRelocatedContext.node
 #print axioms Jihoo.CommonDataCaseRelocatedContext.nil
 #print axioms Jihoo.CommonDataCaseRelocatedContext.entryProvider
-#print axioms node_transfer
-#print axioms node_valid
-#print axioms nil_transfer
-#print axioms nil_output_valid
-#print axioms node_zero_rejected
-end Jihoo.CommonDataCaseRelocatedContext.Checks
-
-namespace Jihoo.CommonDataBranchFinishChecks
-open CommonDataBranchFinish CommonCompositionContract CommonDataTargetContext
-open CommonDataReference
-#print axioms finish_context
-#print axioms finish_authority
-#print axioms finish_result
-#print axioms body_finish
-#print axioms result_preserved
-#print axioms pending_not_result
-#print axioms concrete_walk
-#print axioms concrete_execution
-#print axioms nested_buffers
-#print axioms reject_alias
-end Jihoo.CommonDataBranchFinishChecks
-
-namespace Jihoo.CommonDataRestrictedCompositionChecks
-open ReferenceCfg ReferenceCalls CommonDataCaseCfg CommonDataCaseRelocation
-open CommonDataRestrictedComposition
-#print axioms Fragment.size
-#print axioms linked_eq
-#print axioms Placement.program
-#print axioms assemble_size
-#print axioms assemble_placement
-#print axioms Placement.walk
-#print axioms Placement.node_entry
-#print axioms Placement.nil_entry
-#print axioms nested_jump
-#print axioms placed_induction
-#print axioms nested_run
-#print axioms nested_run_framed
-#print axioms three_placements
-#print axioms nested_steps
-end Jihoo.CommonDataRestrictedCompositionChecks
-
-namespace Jihoo.CommonDataCaseRegisterSafetyChecks
-open ReferenceCfg ReferenceCalls CommonDataCaseCfg CommonDataCaseRelocation
-open CommonDataRestrictedComposition CommonDataCaseRegisterSafety
-#print axioms safe_preserves
-#print axioms safe_iff_uniform
-#print axioms safe_reserved
-#print axioms RestrictedPlacement.reserved
-#print axioms no_node_layout
-#print axioms live_context_rejected
-#print axioms unsafe_rejected
-#print axioms checked_node
-#print axioms checked_nil
-#print axioms Agrees.trans
-#print axioms node_rejects_sibling
-#print axioms nil_preserves_sibling
-#print axioms collision_run
-#print axioms sibling_overwritten
-#print axioms collision_prevented
-#print axioms safe_node_runs
-#print axioms safe_nil_runs
-#print axioms collision_steps
-end Jihoo.CommonDataCaseRegisterSafetyChecks
-
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.node_transfer
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.node_valid
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.nil_transfer
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.nil_output_valid
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.node_zero_rejected
+#print axioms Jihoo.CommonDataBranchFinish.finish_context
+#print axioms Jihoo.CommonDataBranchFinish.finish_authority
+#print axioms Jihoo.CommonDataBranchFinish.finish_result
+#print axioms Jihoo.CommonDataBranchFinish.body_finish
+#print axioms Jihoo.CommonDataBranchFinish.result_preserved
+#print axioms Jihoo.CommonDataBranchFinish.pending_not_result
+#print axioms Jihoo.CommonDataBranchFinishChecks.concrete_walk
+#print axioms Jihoo.CommonDataBranchFinishChecks.concrete_execution
+#print axioms Jihoo.CommonDataBranchFinishChecks.nested_buffers
+#print axioms Jihoo.CommonDataBranchFinishChecks.reject_alias
+#print axioms Jihoo.CommonDataRestrictedComposition.Fragment.size
+#print axioms Jihoo.CommonDataRestrictedComposition.linked_eq
+#print axioms Jihoo.CommonDataRestrictedComposition.Placement.program
+#print axioms Jihoo.CommonDataRestrictedComposition.assemble_size
+#print axioms Jihoo.CommonDataRestrictedComposition.assemble_placement
+#print axioms Jihoo.CommonDataRestrictedComposition.Placement.walk
+#print axioms Jihoo.CommonDataRestrictedComposition.Placement.node_entry
+#print axioms Jihoo.CommonDataRestrictedComposition.Placement.nil_entry
+#print axioms Jihoo.CommonDataRestrictedComposition.nested_jump
+#print axioms Jihoo.CommonDataRestrictedComposition.placed_induction
+#print axioms Jihoo.CommonDataRestrictedCompositionChecks.nested_run
+#print axioms Jihoo.CommonDataRestrictedCompositionChecks.nested_run_framed
+#print axioms Jihoo.CommonDataRestrictedCompositionChecks.three_placements
+#print axioms Jihoo.CommonDataRestrictedCompositionChecks.nested_steps
+#print axioms Jihoo.CommonDataCaseRegisterSafety.safe_preserves
+#print axioms Jihoo.CommonDataCaseRegisterSafety.safe_iff_uniform
+#print axioms Jihoo.CommonDataCaseRegisterSafety.safe_reserved
+#print axioms Jihoo.CommonDataCaseRegisterSafety.RestrictedPlacement.reserved
+#print axioms Jihoo.CommonDataCaseRegisterSafety.no_node_layout
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.live_context_rejected
+#print axioms Jihoo.CommonDataCaseRegisterSafety.unsafe_rejected
+#print axioms Jihoo.CommonDataCaseRegisterSafety.checked_node
+#print axioms Jihoo.CommonDataCaseRegisterSafety.checked_nil
+#print axioms Jihoo.CommonDataCaseRegisterSafety.Agrees.trans
+#print axioms Jihoo.CommonDataCaseRegisterSafety.node_rejects_sibling
+#print axioms Jihoo.CommonDataCaseRegisterSafety.nil_preserves_sibling
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.collision_run
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.sibling_overwritten
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.collision_prevented
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.safe_node_runs
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.safe_nil_runs
+#print axioms Jihoo.CommonDataCaseRegisterSafetyChecks.collision_steps
 #print axioms Jihoo.CommonCaseIntegration.node_finish
 #print axioms Jihoo.CommonCaseIntegration.nil_entry
-
 #print axioms Jihoo.CommonLiteralBody.other_local
 #print axioms Jihoo.CommonLiteralBody.run
 #print axioms Jihoo.CommonLiteralBody.literal
@@ -3826,7 +3685,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.CommonLiteralFinishChecks.reduction
 #print axioms Jihoo.CommonLiteralFinishChecks.scratch_changed
 #print axioms Jihoo.CommonLiteralFinishChecks.node_inventory_nonempty
-
 #print axioms Jihoo.CommonCaseChildConsumption.typed
 #print axioms Jihoo.CommonCaseChildConsumption.literal_inventory_zero
 #print axioms Jihoo.CommonCaseChildConsumption.no_node_literal_body
@@ -3874,7 +3732,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.CommonCaseSourceConsumption.Checks.closed_connection
 #print axioms Jihoo.CommonCaseSourceConsumption.Checks.unconsumed_literal_rejected
 #print axioms Jihoo.CommonCaseSourceConsumption.Checks.node_run_unique
-
 #print axioms Jihoo.KernelChecker.infer_zero
 #print axioms Jihoo.KernelChecker.isType_zero
 #print axioms Jihoo.KernelChecker.lookup_sound
@@ -3883,8 +3740,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.KernelChecker.infer_instantiate
 #print axioms Jihoo.KernelChecker.Examples.dependent_application
 #print axioms Jihoo.KernelChecker.Examples.nested_capture
-
--- Executable dependent kernel, computation, uniqueness and byte admission.
 #print axioms Jihoo.KernelConversion.normalize_zero
 #print axioms Jihoo.KernelConversion.children_sound
 #print axioms Jihoo.KernelConversion.contract_sound
@@ -3972,8 +3827,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.KernelAdmission.Examples.unused_cycle
 #print axioms Jihoo.KernelAdmission.Examples.trailing_byte
 #print axioms Jihoo.KernelAdmission.Examples.zero_fuel
-
--- Full native syntax, universe/mode checker and canonical native snapshots.
 #print axioms Jihoo.NativeKernel.Term.equal_iff
 #print axioms Jihoo.NativeKernel.liftRenaming_id
 #print axioms Jihoo.NativeKernel.liftRenaming_comp
@@ -4190,8 +4043,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.NativeAdmission.Examples.universe_payload_limit
 #print axioms Jihoo.NativeKernel.NativeAdmission.Examples.trailing_byte
 #print axioms Jihoo.NativeKernel.NativeAdmission.Examples.zero_fuel
-
--- Native partial scope removal, rewrite and typed ghost substitution.
 #print axioms Jihoo.NativeKernel.PartialRenaming.Inverse.underBinders
 #print axioms Jihoo.NativeKernel.PartialRenaming.rename?_restores
 #print axioms Jihoo.NativeKernel.PartialRenaming.Within.underBinders
@@ -4275,8 +4126,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.GhostExamples.code_derivation_to_ghost_result
 #print axioms Jihoo.NativeKernel.GhostExamples.capture_avoiding_typed_result
 #print axioms Jihoo.NativeKernel.NativeAdmission.checkBytes_closed
-
--- Native confluence, preservation, direct arena operations and declaration modes.
 #print axioms Jihoo.NativeKernel.Conversion.Root.parallel
 #print axioms Jihoo.NativeKernel.Conversion.Par.diamond
 #print axioms Jihoo.NativeKernel.Conversion.Closure.single
@@ -4468,8 +4317,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Conversion.Star.variable_shape
 #print axioms Jihoo.NativeKernel.Conversion.Conv.variable_injective
 #print axioms Jihoo.NativeKernel.Conversion.Conv.variable_node_separate
-
--- Evidence-binding branch and absurdity rules with full metatheory.
 #print axioms Jihoo.NativeKernel.Checker.nonFunctionHead_sound
 #print axioms Jihoo.NativeKernel.Checker.nonFunction_of_conversion
 #print axioms Jihoo.NativeKernel.Checker.branch_type_reweakens
@@ -4511,8 +4358,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.BranchMetatheoryExamples.changed_control_retains_original_evidence_type
 #print axioms Jihoo.NativeKernel.BranchMetatheoryExamples.absurd_annotation_keeps_original_type
 #print axioms Jihoo.NativeKernel.BranchMetatheoryExamples.ghost_absurd_substitutes_function_type
-
--- Computation of evidence branches and reflexive transport.
 #print axioms Jihoo.NativeKernel.Conversion.Examples.ifLt_true_context_fork
 #print axioms Jihoo.NativeKernel.Conversion.Examples.ifLt_false_context_fork
 #print axioms Jihoo.NativeKernel.Conversion.Examples.ifEq_true_context_fork
@@ -4542,7 +4387,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.BranchReductionExamples.invalid_literal_condition_untypable
 #print axioms Jihoo.NativeKernel.BranchReductionExamples.transport_refl_retains_converted_indices
 #print axioms Jihoo.NativeKernel.BranchReductionExamples.transport_normalization_retains_predicate_application
-
 #print axioms Jihoo.NativeKernel.Checker.loopSort_sound
 #print axioms Jihoo.NativeKernel.Checker.loopMotiveOK_sound
 #print axioms Jihoo.NativeKernel.HasType.loop_proof_flag_unique
@@ -4595,7 +4439,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.LoopMetatheoryExamples.changed_motive_keeps_original_result
 #print axioms Jihoo.NativeKernel.LoopMetatheoryExamples.closed_loop_scope
 #print axioms Jihoo.NativeKernel.LoopMetatheoryExamples.refinement_accumulator_substitution
-
 #print axioms Jihoo.NativeKernel.Conversion.Par.refl
 #print axioms Jihoo.NativeKernel.Conversion.Par.renaming
 #print axioms Jihoo.NativeKernel.Conversion.Par.substitution
@@ -4774,7 +4617,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.IrrelevanceBoundary.arbitrary_pack_irrelevance_collapses
 #print axioms Jihoo.NativeKernel.IrrelevanceBoundary.current_conversion_has_proof_congruence
 #print axioms Jihoo.NativeKernel.IrrelevanceBoundary.arbitrary_pack_irrelevance_rejected
-
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.constants_accepted
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.constants_exact
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.type_alias_accepted
@@ -4804,7 +4646,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.constants_ordered
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.final_global_typed
 #print axioms Jihoo.NativeKernel.GlobalEnvironment.Examples.final_correspondence
-
 #print axioms Jihoo.NativeKernel.FamilyEnvironment.fieldContext_length
 #print axioms Jihoo.NativeKernel.FamilyEnvironment.fieldContext_append
 #print axioms Jihoo.NativeKernel.FamilyEnvironment.hasType_indFree
@@ -5054,7 +4895,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.ACU.Examples.quotient_children_remain_native
 #print axioms Jihoo.NativeKernel.ACU.Examples.real_forward_fork_joins
 #print axioms Jihoo.NativeKernel.ACU.Examples.malformed_uadd_is_an_atom
-
 #print axioms Jihoo.NativeKernel.ACU.Arithmetic.toConv
 #print axioms Jihoo.NativeKernel.ACU.Arithmetic.renaming
 #print axioms Jihoo.NativeKernel.ACU.Arithmetic.substitution
@@ -5102,7 +4942,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.ACU.ArithmeticExamples.fold_and_split_have_actual_common_forward_reduct
 #print axioms Jihoo.NativeKernel.ACU.ArithmeticExamples.quotient_characterization_does_not_assume_interpretation
 #print axioms Jihoo.NativeKernel.ACU.ArithmeticExamples.variables_remain_distinct
-
 #print axioms Jihoo.NativeKernel.Checker.nonFunctionGate_sound
 #print axioms Jihoo.NativeKernel.NativeQuantity.reclose_rename
 #print axioms Jihoo.NativeKernel.NativeQuantity.openScopes_rename
@@ -5420,829 +5259,417 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.ACU.NormalizerExamples.concrete_kit_soundness
 #print axioms Jihoo.NativeKernel.ACU.NormalizerExamples.concrete_kit_forward_output
 #print axioms Jihoo.NativeKernel.ACU.Bounded.kit
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.full_variable_node_separate
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.pi_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.sort_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.array_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.eq_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.lt_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.refine_injective
-
 #print axioms Jihoo.NativeKernel.ACU.Conv.natural_injective
-
 #print axioms Jihoo.NativeKernel.Environment.Conversion.ofLegacy
-
 #print axioms Jihoo.NativeKernel.Environment.Conversion.normalize?_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Conversion.normalize?_forward
-
 #print axioms Jihoo.NativeKernel.Environment.Conversion.normalize_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Conversion.equal_sound
-
 #print axioms Jihoo.NativeKernel.Environment.pureBinderAllowed_ofLegacy
-
 #print axioms Jihoo.NativeKernel.Environment.pureBinderAllowed_renaming
-
 #print axioms Jihoo.NativeKernel.Environment.pureBinderAllowed_substitution
-
 #print axioms Jihoo.NativeKernel.Environment.loopMotiveAllowed_ofLegacy
-
 #print axioms Jihoo.NativeKernel.Environment.nonFunctionHead_full
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.pureBinderOK_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.ownedHead_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.ownedHead_normalize_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.backMotiveOK_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.resourceNonFunctionHead_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.takeNonFunctionGate_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Owned.extend
-
 #print axioms Jihoo.NativeKernel.Environment.fixedRepresentation.extend
-
 #print axioms Jihoo.NativeKernel.Environment.BackRepresentation.extend
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.nonaffine_type_indices_compare
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.nonaffine_type_indices_typed
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.legacy_comparator_missed_nonaffine_acu
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.actual_acu_comparator_accepts_nonaffine_atoms
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.head_exposure_uses_full_acu
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.exposed_function_typed_in_same_judgment
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.unresolved_global_is_not_plain
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.global_buffer_alias_runtime_type_argument_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.global_buffer_alias_ghost_type_argument_accepted
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.ghost_global_application_typed
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.additive_hidden_function_is_not_nonFunction
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.untyped_proof_slots_remain_distinct
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.head_exposure_propagates_bounded_refusal
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.failed_inference_stays_unexposed
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.old_conversion_embeds_in_actual_base
-
 #print axioms Jihoo.NativeKernel.Environment.ACUIntegrationExamples.old_pure_typing_has_ghost_embedding
-
 #print axioms Jihoo.NativeKernel.take_result_reweakens
-
 #print axioms Jihoo.NativeKernel.take_result_rename
-
 #print axioms Jihoo.NativeKernel.take_result_subst
-
 #print axioms Jihoo.NativeKernel.Environment.Owned.renaming
-
 #print axioms Jihoo.NativeKernel.Environment.Owned.substitution
-
 #print axioms Jihoo.NativeKernel.Environment.fixedRepresentation_rename
-
 #print axioms Jihoo.NativeKernel.Environment.fixedRepresentation_substitution
-
 #print axioms Jihoo.NativeKernel.Environment.BackRepresentation.renaming
-
 #print axioms Jihoo.NativeKernel.Environment.BackRepresentation.substitution
-
 #print axioms Jihoo.NativeKernel.Environment.ghost_backRepresentation
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Root.preserves
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Root.renaming
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Root.substitution
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.contract_sound
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.contract_preserves
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Steps.trans
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Steps.preserves
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Root.size_decreases
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.run_steps
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.run_preserves
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.run_size
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.run_eventually_stops
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.overflow_remains
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.signed_upper_boundary
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.signed_lower_boundary
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.positive_overflow_kept
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.negative_overflow_kept
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.multiplication_overflow_kept
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.empty_fold_does_not_visit_body
-
 #print axioms Jihoo.NativeKernel.Environment.ValueReduction.Examples.free_then_arithmetic
-
 #print axioms Jihoo.NativeKernel.Environment.scoped_rename_congr
-
 #print axioms Jihoo.NativeKernel.Environment.scoped_subst_congr
-
 #print axioms Jihoo.NativeKernel.Environment.closed_rename
-
 #print axioms Jihoo.NativeKernel.Environment.closed_subst
-
 #print axioms Jihoo.NativeKernel.Environment.scoped_rename_lift
-
 #print axioms Jihoo.NativeKernel.Environment.scoped_subst_lift
-
 #print axioms Jihoo.NativeKernel.Environment.applications_rename
-
 #print axioms Jihoo.NativeKernel.Environment.applications_subst
-
 #print axioms Jihoo.NativeKernel.Environment.propCaseType_eq
-
 #print axioms Jihoo.NativeKernel.Environment.variable_subst_eq_rename
-
 #print axioms Jihoo.NativeKernel.Environment.shifted_scoped
-
 #print axioms Jihoo.NativeKernel.Environment.recursiveFields_scoped
-
 #print axioms Jihoo.NativeKernel.Environment.hypothesisType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.fieldTelescope_subst
-
 #print axioms Jihoo.NativeKernel.Environment.hypothesisTelescope_subst
-
 #print axioms Jihoo.NativeKernel.Environment.propCaseType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.propCaseType_rename
-
 #print axioms Jihoo.NativeKernel.Environment.lower_raised
-
 #print axioms Jihoo.NativeKernel.Environment.load_result_shifted
-
 #print axioms Jihoo.NativeKernel.Environment.propMotiveType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.propMotiveType_rename
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghost
-
 #print axioms Jihoo.NativeKernel.Environment.renameArgs_ind
-
 #print axioms Jihoo.NativeKernel.Environment.substArgs_ind
-
 #print axioms Jihoo.NativeKernel.Environment.binderAllowed_renaming
-
 #print axioms Jihoo.NativeKernel.Environment.binderAllowed_substitution
-
 #print axioms Jihoo.NativeKernel.Environment.renameArgs_con
-
 #print axioms Jihoo.NativeKernel.Environment.renameArgs_elim
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostRenaming
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostWeaken
-
 #print axioms Jihoo.NativeKernel.Environment.Binder.ghostRenaming
-
 #print axioms Jihoo.NativeKernel.Environment.substArgs_con
-
 #print axioms Jihoo.NativeKernel.Environment.substArgs_elim
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.Substitution.lift
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostSubstitution
-
 #print axioms Jihoo.NativeKernel.Environment.Binder.ghostSubstitution
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.Substitution.single
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostInstantiate
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.checkedGhostSubstitution
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.ContextConversion.refl
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.ContextConversion.trans
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.ContextConversion.extend
-
 #print axioms Jihoo.NativeKernel.Environment.Ghost.ContextConversion.substitution
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostContext
-
 #print axioms Jihoo.NativeKernel.Environment.Binder.ghostContext
-
 #print axioms Jihoo.NativeKernel.Environment.GhostExamples.closed_global_weakened
-
 #print axioms Jihoo.NativeKernel.Environment.GhostExamples.dependent_constructor_instantiated
-
 #print axioms Jihoo.NativeKernel.Environment.GhostExamples.captured_proposition_motive_instantiated
-
 #print axioms Jihoo.NativeKernel.Environment.PrincipalView.convert
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.principalView
-
 #print axioms Jihoo.NativeKernel.Environment.TypingView.convert
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.typingView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.lamView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.appView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.elementsView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.indexView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.packView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.witnessView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.proofView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.uaddView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.usubView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.reflView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.naturalView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.integerView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.piView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.transportView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ifLtView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ifEqView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.absurdView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.foldView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.loopView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.borrowView
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.derefView
-
 #print axioms Jihoo.NativeKernel.Environment.buffer_injective
-
 #print axioms Jihoo.NativeKernel.Environment.ref_injective
-
 #print axioms Jihoo.NativeKernel.Environment.ind_injective
-
 #print axioms Jihoo.NativeKernel.Environment.applications_congr
-
 #print axioms Jihoo.NativeKernel.Environment.shifted_two_cancel
-
 #print axioms Jihoo.NativeKernel.Environment.lowered_conversion
-
 #print axioms Jihoo.NativeKernel.Environment.Arguments.result_unique
-
 #print axioms Jihoo.NativeKernel.Environment.Binder.unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.sort_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.no_scalar_confusion
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.array_index_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.array_length_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.function_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.equality_indices_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.bound_indices_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.refinement_predicate_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.excludes
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.universe_level_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.universe_successor
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.no_type_in_type
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.universe_not_proposition
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.sorts_do_not_collapse
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.infer_unique
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.check_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.constructor_indices_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.buffer_index_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.reference_type_unique
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostBetaContract
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostBeta
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAdd
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostSub
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostRead
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostWitnessPack
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostProofPack
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostIfLtTrue
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostIfLtFalse
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostIfEqTrue
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostIfEqFalse
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostTransportRefl
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostDerefBorrow
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostBorrowDeref
-
 #print axioms Jihoo.NativeKernel.Environment.compute_ghost_preservation
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAddAssocRight
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAddAssocLeft
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAddComm
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAddZeroRight
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostAddZeroLeft
-
 #print axioms Jihoo.NativeKernel.Environment.compact_typed
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostLiteralSplit
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.load_result_unique
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.borrowed_index_no_u64
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.ghost_function_load_no_scalar
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.borrow_round_trip_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.literal_reassociation_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.UniquenessExamples.buffer_length_acu_unique
-
 #print axioms Jihoo.NativeKernel.Environment.LambdaShape.refl
-
 #print axioms Jihoo.NativeKernel.Environment.LambdaShape.trans
-
 #print axioms Jihoo.NativeKernel.Environment.mixed_rigid_shape
-
 #print axioms Jihoo.NativeKernel.Environment.GhostTransform.refl
-
 #print axioms Jihoo.NativeKernel.Environment.GhostTransform.trans
-
 #print axioms Jihoo.NativeKernel.Environment.GhostTransform.converted
-
 #print axioms Jihoo.NativeKernel.Environment.GhostTransform.typed
-
 #print axioms Jihoo.NativeKernel.Environment.binderAllowed_congr
-
 #print axioms Jihoo.NativeKernel.Environment.Arguments.convertTelescope
-
 #print axioms Jihoo.NativeKernel.Environment.applications_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.propCaseType_congr
-
 #print axioms Jihoo.NativeKernel.Environment.foldBodyType_congr
-
 #print axioms Jihoo.NativeKernel.Environment.loopBodyType_count_congr
-
 #print axioms Jihoo.NativeKernel.Environment.loopBodyType_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.Owned.congr
-
 #print axioms Jihoo.NativeKernel.Environment.mixed_lambda_shape
-
 #print axioms Jihoo.NativeKernel.Environment.arithmetic_ghost_transform
-
 #print axioms Jihoo.NativeKernel.Environment.mixed_ghost_transform
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostMixedRed
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostArithmeticRed
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.ghostNormalize
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.checkedGhostNormalize
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.dependent_binder_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.dependent_constructor_original_index
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.ref_buffer_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.load_nested_computation
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.concrete_normalizer_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.ContextualExamples.take_annotation_computation
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.bufferView
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.checked_globals_transparent
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Admissible.ofChecked
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expandArgs_map
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_ordinary
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_node_cons
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_global
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_globalFree
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_idempotent
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_renaming
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_liftSub
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_substitution
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_legacy
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_acu
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.refl
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.symm
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.trans
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.ofACU
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.node
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.renaming
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.substitution
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.delta
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.pi_injective
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.sort_injective
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expand_forward
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Conv.church_rosser
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Forward.toConv
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.conv_iff_forward_join
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Forward.confluence
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.expansion_eq_expand
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Bounded.normalize_forward
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Bounded.normalize_sound
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Bounded.normalize_within
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Bounded.equal_common_reduct
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Bounded.equal_sound
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.checked_global_preserves
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.authentic_delta_environment
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.buffer_alias_exposed
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.function_type_alias_exposed
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.delta_then_dependent_beta
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.globals_under_evidence_binder
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.repeated_bodies_precharged
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.exact_shared_expansion_budget
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.unresolved_global_rejected
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.malformed_global_rejected
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Examples.delta_root_retains_original_type
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseOp_arity
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseOp_binders
-
 #print axioms Jihoo.NativeKernel.Environment.instantiateParameters_sound
-
 #print axioms Jihoo.NativeKernel.Environment.peelDataFields_length
-
 #print axioms Jihoo.NativeKernel.Environment.reading_zero
-
 #print axioms Jihoo.NativeKernel.Environment.reading_succ
-
 #print axioms Jihoo.NativeKernel.Environment.parameterAt_subst
-
 #print axioms Jihoo.NativeKernel.Environment.parameterAt_rename
-
 #print axioms Jihoo.NativeKernel.Environment.closeDataFields_subst
-
 #print axioms Jihoo.NativeKernel.Environment.instantiatedFields_length
-
 #print axioms Jihoo.NativeKernel.Environment.instantiatedFields_subst
-
 #print axioms Jihoo.NativeKernel.Environment.u64Telescope_subst
-
 #print axioms Jihoo.NativeKernel.Environment.substArgs_dataInd
-
 #print axioms Jihoo.NativeKernel.Environment.dataMotiveType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.instantiatedRecursive_subst
-
 #print axioms Jihoo.NativeKernel.Environment.instantiatedRecursive_position
-
 #print axioms Jihoo.NativeKernel.Environment.dataHypothesisType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.dataHypothesisTelescope_subst
-
 #print axioms Jihoo.NativeKernel.Environment.substArgs_dataCon
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseResult_subst
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseTypes_subst
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseTypes_subst_success
-
 #print axioms Jihoo.NativeKernel.Environment.dataMotiveType_rename
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseType_rename
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseTypes_rename
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseTypes_rename_success
-
 #print axioms Jihoo.NativeKernel.EnvironmentCaseQuantity.compileTable_valid
-
 #print axioms Jihoo.NativeKernel.EnvironmentCaseQuantity.TableValid.extend
-
 #print axioms Jihoo.NativeKernel.EnvironmentCaseQuantity.findFamily_sound
-
 #print axioms Jihoo.NativeKernel.EnvironmentCaseQuantity.checkClosed_sound
-
 #print axioms Jihoo.NativeKernel.EnvironmentCaseQuantity.ClosedSafe.localScopes
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.raw_recursive_family_admitted
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.recursive_elimination_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.recursive_elimination_typed
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.recursive_elimination_resource_safe
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.case_consumes_recursive_field_once
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.case_quantity_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.case_scoped
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.drop_recursive_family
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.ref_recursive_family
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.ghost_borrow_family
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.ghost_deref_family
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.code_borrow_without_loan_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.code_deref_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.flat_data_elimination
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.flat_case_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.flat_drop_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.wrong_drop_family_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.missing_branch_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.wrong_recursive_erasure_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.typed_case_leak_rejected_by_quantities
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.typed_case_duplicate_rejected_by_quantities
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.branch_imbalance_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.recursive_outer_owner_capture_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.dependent_field_signature_admitted
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.dependent_fields_case_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.dependent_fields_quantity_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.parameter_signature_admitted
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.outer_parameter_substitution_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.parameter_case_telescope_exact
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.indexed_signature_admitted
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.indexed_runtime_motive_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.indexed_runtime_quantity_checked
-
 #print axioms Jihoo.NativeKernel.Environment.DataExamples.genuinely_index_dependent_proposition
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.dataEliminate_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.branchesAgainst_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.dataMotiveProof_sound
-
 #print axioms Jihoo.NativeKernel.foldAccumulatorBodyType_i64
-
 #print axioms Jihoo.NativeKernel.foldAccumulatorBodyType_rename
-
 #print axioms Jihoo.NativeKernel.foldAccumulatorBodyType_subst
-
 #print axioms Jihoo.NativeKernel.Environment.Owned.of_conversion
-
 #print axioms Jihoo.NativeKernel.Environment.foldAccumulatorBodyType_congr
-
 #print axioms Jihoo.NativeKernel.Environment.foldAccumulatorBodyType_count_congr
-
 #print axioms Jihoo.NativeKernel.Environment.foldAccumulatorBodyType_accumulator_congr
-
 #print axioms Jihoo.NativeKernel.Environment.ghost_iteration_body_allowed
-
 #print axioms Jihoo.NativeKernel.Environment.ghost_iteration_motive_allowed
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.repeated_body_zero
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.checked_repeat_local_and_outer
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.iteration_local_accumulator_once
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.linear_partial_lambda_rejected
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.peelCallAux_rename
-
 #print axioms Jihoo.NativeKernel.NativeQuantity.peelCallAux_atom_subst
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.iterationBodyOK_sound
-
 #print axioms Jihoo.NativeKernel.Environment.Checker.iterationMotiveOK_sound
-
 #print axioms Jihoo.NativeKernel.Environment.iterationMemoryFree.extend
-
 #print axioms Jihoo.NativeKernel.Environment.iterationMemoryFreeArgs.extend
-
 #print axioms Jihoo.NativeKernel.Environment.IterationBodyAllowed.extend
-
 #print axioms Jihoo.NativeKernel.Environment.IterationMotiveAllowed.extend
-
 #print axioms Jihoo.NativeKernel.Environment.closeDataFields_congr
-
 #print axioms Jihoo.NativeKernel.Environment.dataHypothesisType_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.dataHypothesisTelescope_congr
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseResult_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseType_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.dataCaseTypes_motive_congr
-
 #print axioms Jihoo.NativeKernel.Environment.eliminationResult_congr
-
 #print axioms Jihoo.NativeKernel.Environment.HasType.unique
-
 #print axioms Jihoo.NativeKernel.Environment.BranchTypes.ghost
-
 #print axioms Jihoo.NativeKernel.Environment.BranchTypes.ghostRenaming
-
 #print axioms Jihoo.NativeKernel.Environment.BranchTypes.ghostSubstitution
-
 #print axioms Jihoo.NativeKernel.Environment.BranchTypes.ghostContext
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.data_parameter_instantiated
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.data_parameter_weakened
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.data_elimination_unique
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.data_motive_contextual_computation
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.owned_fold_result_unique
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.owned_fold_weakened
-
 #print axioms Jihoo.NativeKernel.Environment.DataMetatheoryExamples.family_borrow_round_trip
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlainArgs_mono
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_node_mono
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_node_eq
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_rename
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_subst
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_of_pure
-
 #print axioms Jihoo.NativeKernel.Environment.plain_familyPlain
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlainArgs_all
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_arithmetic
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_arithmetic_forward
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_sumTerms
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_arithmeticFlatten
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_single
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_qpar
-
 #print axioms Jihoo.NativeKernel.Environment.familyPlain_qstar
-
 #print axioms Jihoo.NativeKernel.Environment.plain_rigid_separate
-
 #print axioms Jihoo.NativeKernel.Environment.plain_not_buffer
-
 #print axioms Jihoo.NativeKernel.Environment.plain_not_ref
-
 #print axioms Jihoo.NativeKernel.Environment.plain_nonFunction
-
 #print axioms Jihoo.NativeKernel.Environment.plain_not_back
-
 #print axioms Jihoo.NativeKernel.Environment.plain_not_boxed_family
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.arbitrary_neutral_atom_plain
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.neutral_cannot_become_owned
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.neutral_cannot_become_function
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.reverse_beta_does_not_preserve_plain
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.flat_family_plain
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.flat_cannot_become_boxed
-
 #print axioms Jihoo.NativeKernel.Environment.PlainExamples.unresolved_alias_not_plain
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Basis.Conv.extend
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Basis.Conv.renaming
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.Basis.Conv.substitution
@@ -6306,11 +5733,8 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.plain_not_pi_delta
 #print axioms Jihoo.NativeKernel.Environment.plain_not_back_delta
 #print axioms Jihoo.NativeKernel.Environment.plain_not_boxed_family_delta
-
 #print axioms Jihoo.NativeKernel.Environment.GhostExamples.delta_body_conversion_instantiated
-
 #print axioms Jihoo.NativeKernel.Environment.GhostExamples.delta_context_annotation_converted
-
 #print axioms Jihoo.NativeKernel.Environment.ViewFieldPlan
 #print axioms Jihoo.NativeKernel.Environment.viewFieldPlan
 #print axioms Jihoo.NativeKernel.Environment.viewPlan
@@ -6427,7 +5851,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.ViewMetatheoryExamples.motive_dependency_unique
 #print axioms Jihoo.NativeKernel.Environment.ViewMetatheoryExamples.delta_view_original_alias_type
 #print axioms Jihoo.NativeKernel.Environment.ViewMetatheoryExamples.delta_view_contextual_path
-
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Examples.dependent_beta_realized
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Examples.dependent_candidate_lambda
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Examples.observed_addition
@@ -6712,7 +6135,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.Examples.converted_unformed_result_realized
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.Examples.checked_delta_result_realized
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.Examples.checked_delta_result_canonicity
-
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.NumeralForward.replicate_ones
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.NumeralForward.arithmetic_preserves
 #print axioms Jihoo.NativeKernel.EnvironmentDelta.NumeralForward.mixed_preserves
@@ -6727,7 +6149,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.NormalizationExamples.wide_symbolic_split_rejoins
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.NormalizationExamples.arbitrary_depth_identity_chain
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Functions.NormalizationExamples.original_unformed_type_retained
-
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Index.syntax_rename
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Index.syntax_subst
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Index.meaning_rename
@@ -6765,7 +6186,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Examples.checked_delta_dependent_family_realized
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Examples.false_closed_equality_excluded
 #print axioms Jihoo.NativeKernel.Environment.Semantics.Dependent.Examples.false_closed_less_excluded
-
 #print axioms Jihoo.NativeKernel.Environment.CodeKinds.read_sound
 #print axioms Jihoo.NativeKernel.Environment.CodeKinds.Kind.kindOf
 #print axioms Jihoo.NativeKernel.Environment.CodeKinds.Kind.firstOrder
@@ -6968,7 +6388,6 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.ContextDeltaExamples.delta_generic_closed_gate
 #print axioms Jihoo.NativeKernel.Environment.ContextDeltaExamples.same_unified_delta_kind_and_global_call
 #print axioms Jihoo.NativeKernel.Environment.ContextDeltaExamples.forged_delta_kind_argument_rejected
-
 #print axioms Jihoo.NativeKernel.Environment.Semantics.UniverseContext.Mono.code_arrow
 #print axioms Jihoo.NativeKernel.Environment.Semantics.UniverseContext.shift_rename
 #print axioms Jihoo.NativeKernel.Environment.Semantics.UniverseContext.shift_subst
@@ -7104,10 +6523,9 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.authentic_indexed_case_is_checked
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.indexed_case_has_actual_iota_root
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.all_dependent_fields_keep_exact_original_type
-#print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.actual_beta_result_contains_pure_drop
-#print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.beta_path_keeps_original_buffer_index
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.actual_converter_completes_case
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.full_search_keeps_original_buffer_index
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.pure_drop_completes_typed_case
-#print axioms Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples.case_stays_neutral_in_installed_converter
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.case_preserves_no_parameters
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.case_preserves
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.contract_case_preserves
@@ -7134,7 +6552,7 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.Examples.pure_drop_is_typed
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.Examples.pure_drop_preserves_original_type
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.Examples.pure_drop_is_new_root
-#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Examples.pure_drop_is_not_silently_in_installed_conversion
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Examples.pure_drop_is_installed_in_conversion
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.fieldSubstitution_shift
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.fieldSubstitution_selected
 #print axioms Jihoo.NativeKernel.Environment.FamilyIota.consume_close_fields
@@ -7583,7 +7001,7 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.KindValueEvaluationExamples.computed_effectful_family_all_typed_indices
 #print axioms Jihoo.NativeKernel.Environment.KindValueEvaluationExamples.same_unified_computed_effectful_family
 #print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.authentic_history
-#print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.actual_raw_inference_retains_residual
+#print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.actual_raw_small_budget_rejected
 #print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.residual_inferred_kind_is_not_displayed
 #print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.actual_raw_checked_call_accepted
 #print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.actual_argument_canonical_gate_trace
@@ -7642,3 +7060,909 @@ end Jihoo.CommonDataCaseRegisterSafetyChecks
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.borrow_permission
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.code_borrow_named
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.no_code_borrow_without_reader
+#print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.expanded_type_convertible
+#print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.higher_order_skeleton
+#print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.no_head_false_lt
+#print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.no_head_false_eq
+#print axioms Jihoo.CoreBridge.Raw.Beta.EvidenceExamples.normal_neutral_is_not_closed_typed
+#print axioms Jihoo.CommonData.Typing.every_run_accounted
+#print axioms Jihoo.CommonData.Typing.other_released
+#print axioms Jihoo.CommonData.Typing.survivors
+#print axioms Jihoo.CommonData.Typing.live_domain
+#print axioms Jihoo.CommonData.Typing.scalar_no_leaks
+#print axioms Jihoo.CommonDataAccountingChecks.computed_drop_accounted
+#print axioms Jihoo.CommonDataAccountingChecks.fresh_replacement_released
+#print axioms Jihoo.CommonDataAccountingChecks.rebuilt_descendants_accounted
+#print axioms Jihoo.CommonDataAccountingChecks.nested_shells_accounted
+#print axioms Jihoo.CommonDataAccountingChecks.split_return_accounted
+#print axioms Jihoo.CommonDataAccountingChecks.split_live_domain
+#print axioms Jihoo.CommonDataAccountingChecks.untracked_survives
+#print axioms Jihoo.CommonDataAccountingChecks.empty_footprint_limit
+#print axioms Jihoo.CommonDataAccountingChecks.buffer_projection
+#print axioms Jihoo.CommonDataAccountingChecks.buffer_reader_typed
+#print axioms Jihoo.CommonDataAccountingChecks.buffer_reader_accounted
+#print axioms Jihoo.CommonDataApplicationExamples.graph_valid
+#print axioms Jihoo.CommonDataApplicationExamples.rebuild_typed
+#print axioms Jihoo.CommonDataApplicationExamples.drop_typed
+#print axioms Jihoo.CommonDataApplicationExamples.rebuild_then_drop_typed
+#print axioms Jihoo.CommonDataApplicationExamples.rebuild_twice_typed
+#print axioms Jihoo.CommonDataApplicationExamples.producer_run
+#print axioms Jihoo.CommonDataApplicationExamples.twice_run
+#print axioms Jihoo.CommonDataApplicationExamples.computed_destroy
+#print axioms Jihoo.CommonDataApplicationExamples.drop_run
+#print axioms Jihoo.CommonDataApplicationExamples.twice_safe
+#print axioms Jihoo.CommonDataApplicationExamples.drop_safe
+#print axioms Jihoo.CommonDataApplicationExamples.empty_argument_typed
+#print axioms Jihoo.CommonDataApplicationExamples.empty_argument_run
+#print axioms Jihoo.CommonDataApplicationExamples.aliases_retired
+#print axioms Jihoo.CommonDataApplicationExamples.erased_lambda_rejected
+#print axioms Jihoo.CommonDataApplicationExamples.wrong_family_rejected
+#print axioms Jihoo.CommonDataApplicationExamples.indexed_domain_rejected
+#print axioms Jihoo.CommonDataApplicationExamples.stale_alias_rejected
+#print axioms Jihoo.CommonDataApplicationExamples.ind_projects_opaque
+#print axioms Jihoo.CommonDataApplicationExamples.empty_then_drop_typed
+#print axioms Jihoo.CommonDataApplicationExamples.empty_then_drop_run
+#print axioms Jihoo.CommonDataApplicationExamples.buffer_argument_typed
+#print axioms Jihoo.CommonDataApplicationExamples.buffer_application_typed
+#print axioms Jihoo.CommonDataApplicationExamples.buffer_argument_run
+#print axioms Jihoo.CommonDataApplicationExamples.buffer_application_run
+#print axioms Jihoo.CommonDataApplicationExamples.nested_application_typed
+#print axioms Jihoo.CommonDataApplicationExamples.nested_application_run
+#print axioms Jihoo.CommonDataApplicationExamples.scalar_argument_rejected
+#print axioms Jihoo.CommonDataBufferChecks.symbolic_lifecycle
+#print axioms Jihoo.CommonDataBufferChecks.all_lengths
+#print axioms Jihoo.CommonDataBufferChecks.aliases_and_survivors
+#print axioms Jihoo.CommonDataBufferChecks.delayed_free
+#print axioms Jihoo.CommonDataBufferChecks.all_lengths_total
+#print axioms Jihoo.CommonDataBufferChecks.every_run_accounted
+#print axioms Jihoo.CommonDataBufferChecks.selected_buffer
+#print axioms Jihoo.CommonDataBufferChecks.consumed_alias_rejected
+#print axioms Jihoo.CommonDataBufferChecks.second_alias_rejected
+#print axioms Jihoo.CommonDataBufferChecks.wrong_size_rejected
+#print axioms Jihoo.CommonData.consumeBuffer_alias
+#print axioms Jihoo.CommonData.consumeBuffer_data
+#print axioms Jihoo.CommonData.caps_data
+#print axioms Jihoo.CommonData.caps_buffer
+#print axioms Jihoo.CommonData.data_in_caps
+#print axioms Jihoo.CommonData.buffer_in_caps
+#print axioms Jihoo.CommonData.rel_freshBuffer
+#print axioms Jihoo.CommonData.agrees_freshBuffer
+#print axioms Jihoo.CommonData.rel_consumeBuffer
+#print axioms Jihoo.CommonData.agrees_consumeBuffer
+#print axioms Jihoo.CommonData.select_frame
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.valid
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.reserved
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.nil_valid
+#print axioms Jihoo.CommonDataCaseRelocatedContext.Checks.nil_reserved
+#print axioms Jihoo.CommonDataChecks.duplicate_child_rejected
+#print axioms Jihoo.CommonDataChecks.empty_cannot_discard_data
+#print axioms Jihoo.CommonDataChecks.empty_cannot_discard_buffer
+#print axioms Jihoo.CommonDataChecks.variable_cannot_discard_child
+#print axioms Jihoo.CommonDataChecks.constructor_cannot_return_scalar
+#print axioms Jihoo.CommonDataChecks.parent_aliases_retired
+#print axioms Jihoo.CommonDataChecks.suffix_slots_shift
+#print axioms Jihoo.CommonDataChecks.missing_cell_rejected
+#print axioms Jihoo.CommonDataChecks.embedded_typed
+#print axioms Jihoo.CommonDataChecks.embedded_run
+#print axioms Jihoo.CommonDataChecks.extension_projects_opaque
+#print axioms Jihoo.CommonData.AccountedPost.map_account
+#print axioms Jihoo.CommonData.AccountedPost.toPost
+#print axioms Jihoo.CommonData.Account.refl
+#print axioms Jihoo.CommonData.Account.free
+#print axioms Jihoo.CommonData.Account.compose
+#print axioms Jihoo.CommonData.AccountedPost.compose
+#print axioms Jihoo.CommonData.AccountedPost.permute
+#print axioms Jihoo.CommonData.AccountedPost.finish
+#print axioms Jihoo.CommonData.ResultFootprint.unique
+#print axioms Jihoo.CommonData.AccountedPost.output
+#print axioms Jihoo.CommonData.AccountedPost.account_for
+#print axioms Jihoo.CommonDataCoreErasure.supports_of_closing
+#print axioms Jihoo.CommonDataCoreErasure.closed_total_accounted
+#print axioms Jihoo.CommonDataCoreErasure.Bridge.of_common
+#print axioms Jihoo.CommonDataCoreErasure.Bridge.scalar
+#print axioms Jihoo.CommonDataCoreErasure.Bridge.owner
+#print axioms Jihoo.CommonDataCoreErasure.Bridge.data
+#print axioms Jihoo.CommonDataCoreErasure.Bridge.enter
+#print axioms Jihoo.CommonDataCoreErasure.Lower.preserves
+#print axioms Jihoo.CommonDataCoreErasureChecks.producer_case_split_lowers
+#print axioms Jihoo.CommonDataCoreErasureChecks.dynamic_allocate_case_lowers
+#print axioms Jihoo.CommonDataCoreErasureChecks.dynamic_allocate_split_free_lowers
+#print axioms Jihoo.CommonDataCoreErasureChecks.case_effectful_application_lowers
+#print axioms Jihoo.CommonDataCoreErasureChecks.branch_owned_lend_case_preserves
+#print axioms Jihoo.CommonDataCoreErasureChecks.branch_owned_lend_case_total
+#print axioms Jihoo.CommonDataCoreErasureChecks.interleaved_bridge
+#print axioms Jihoo.CommonDataCoreErasureChecks.distinct_index_spaces
+#print axioms Jihoo.CommonDataCoreErasure.typing_lowers
+#print axioms Jihoo.CommonDataCoreErasure.typing_preserves
+#print axioms Jihoo.CommonDataCoreErasure.typing_total_accounted
+#print axioms Jihoo.CommonDataCoreSupports.Supports.cons
+#print axioms Jihoo.CommonDataCoreSupports.Supports.map
+#print axioms Jihoo.CommonDataCoreSupports.Supports.project
+#print axioms Jihoo.CommonDataCoreSupports.Supports.data_kept
+#print axioms Jihoo.CommonDataCoreSupports.Supports.buffer_kept
+#print axioms Jihoo.CommonDataCoreSupports.position_of_kept
+#print axioms Jihoo.CommonDataCoreSupports.Supports.freshBuffer
+#print axioms Jihoo.CommonDataCoreSupports.Supports.consumeBuffer
+#print axioms Jihoo.CommonDataCoreSupports.Supports.bufferCall
+#print axioms Jihoo.CommonDataCoreSupports.Supports.removeHead
+#print axioms Jihoo.CommonDataCoreSupports.Supports.dataContinuation
+#print axioms Jihoo.CommonDataCoreSupports.Supports.argumentContext
+#print axioms Jihoo.CommonDataCoreSupports.Supports.capturedContext
+#print axioms Jihoo.CommonDataCoreSupports.Supports.continuation
+#print axioms Jihoo.CommonDataCoreSupports.Supports.bindContext
+#print axioms Jihoo.CommonData.Destroy.deterministic
+#print axioms Jihoo.CommonData.Destroy.lengths
+#print axioms Jihoo.CommonData.Destroy.cells_frame
+#print axioms Jihoo.CommonData.destroy_total
+#print axioms Jihoo.CommonData.destroy_every_run
+#print axioms Jihoo.CommonData.destroy_accounting
+#print axioms Jihoo.CommonData.Eval.deterministic
+#print axioms Jihoo.CommonData.Typing.every_run
+#print axioms Jihoo.CommonDataDropExamples.graph_valid
+#print axioms Jihoo.CommonDataDropExamples.drop_typed
+#print axioms Jihoo.CommonDataDropExamples.destroy_run
+#print axioms Jihoo.CommonDataDropExamples.drop_run
+#print axioms Jihoo.CommonDataDropExamples.input_owned
+#print axioms Jihoo.CommonDataDropExamples.drop_safe
+#print axioms Jihoo.CommonDataDropExamples.empty_drop_run
+#print axioms Jihoo.CommonDataDropExamples.nested_case_typed
+#print axioms Jihoo.CommonDataDropExamples.nested_case_run
+#print axioms Jihoo.CommonDataDropExamples.drop_child_typed
+#print axioms Jihoo.CommonDataDropExamples.drop_child_run
+#print axioms Jihoo.CommonDataDropExamples.input_fields
+#print axioms Jihoo.CommonDataDropExamples.nested_case_safe
+#print axioms Jihoo.CommonDataDropExamples.sibling_fields
+#print axioms Jihoo.CommonDataDropExamples.wrong_family_rejected
+#print axioms Jihoo.CommonDataDropExamples.all_aliases_retired
+#print axioms Jihoo.CommonDataDropExamples.missing_cell_rejected
+#print axioms Jihoo.CommonDataDropExamples.shared_child_ownership_rejected
+#print axioms Jihoo.CommonDataDropExamples.drop_projects_opaque
+#print axioms Jihoo.CommonDataDropExamples.leased_child_rejected
+#print axioms Jihoo.CommonDataDropExamples.stale_alias_rejected
+#print axioms Jihoo.CommonDataDropExamples.buffer_continuation_typed
+#print axioms Jihoo.CommonDataDropExamples.buffer_continuation_run
+#print axioms Jihoo.CommonDataDropExamples.buffer_continuation_safe
+#print axioms Jihoo.CommonDataEnvironmentCompaction.core_related
+#print axioms Jihoo.CommonDataEnvironmentCompaction.project_compact
+#print axioms Jihoo.CommonDataEnvironmentCompaction.envRel_canonical
+#print axioms Jihoo.CommonDataEnvironmentCompaction.relational_square
+#print axioms Jihoo.CommonDataEnvironmentCompaction.position_exists
+#print axioms Jihoo.CommonDataEnvironmentCompaction.position_rank
+#print axioms Jihoo.CommonDataEnvironmentCompaction.position_mask
+#print axioms Jihoo.CommonDataEnvironmentCompaction.relational_position_rank
+#print axioms Jihoo.CommonDataEnvironmentCompaction.select_lookup
+#print axioms Jihoo.CommonDataEnvironmentCompaction.select_mask
+#print axioms Jihoo.CommonDataEnvironmentCompaction.support_select
+#print axioms Jihoo.CommonDataEnvironmentCompaction.lookup
+#print axioms Jihoo.CommonDataEnvironmentCompaction.nat_lookup
+#print axioms Jihoo.CommonDataEnvironmentCompaction.scalar_lookup
+#print axioms Jihoo.CommonDataEnvironmentCompaction.buffer_lookup
+#print axioms Jihoo.CommonDataEnvironmentCompaction.data_erased
+#print axioms Jihoo.CommonDataEnvironmentCompaction.ghost_erased
+#print axioms Jihoo.CommonDataEnvironmentCompaction.buffer_retained
+#print axioms Jihoo.CommonDataEnvironmentCompaction.nat_binder
+#print axioms Jihoo.CommonDataEnvironmentCompaction.scalar_binder
+#print axioms Jihoo.CommonDataEnvironmentCompaction.owner_binder
+#print axioms Jihoo.CommonDataEnvironmentCompaction.data_binder
+#print axioms Jihoo.CommonDataEnvironmentCompaction.case_binders
+#print axioms Jihoo.CommonDataEnvironmentCompaction.case_position_rank
+#print axioms Jihoo.CommonDataEnvironmentCompaction.projected_support
+#print axioms Jihoo.CommonDataEnvironmentCompaction.projected_support_compacted
+#print axioms Jihoo.CommonDataEnvironmentCompaction.common_mask_not_core
+#print axioms Jihoo.CommonDataEnvironmentCompaction.data_buffer_counterexample
+#print axioms Jihoo.CommonDataEnvironmentCompactionChecks.mixed_square
+#print axioms Jihoo.CommonDataEnvironmentCompactionChecks.mixed_indices
+#print axioms Jihoo.CommonDataEnvironmentCompactionChecks.stale_owner_alias
+#print axioms Jihoo.CommonDataEnvironmentCompactionChecks.case_two_fields
+#print axioms Jihoo.CommonDataEnvironmentCompactionChecks.kept_ghost
+#print axioms Jihoo.CommonDataExamples.graph_valid
+#print axioms Jihoo.CommonDataExamples.read_shape
+#print axioms Jihoo.CommonDataExamples.node_buffer_typed
+#print axioms Jihoo.CommonDataExamples.nil_buffer_typed
+#print axioms Jihoo.CommonDataExamples.case_typed
+#print axioms Jihoo.CommonDataExamples.valid_start
+#print axioms Jihoo.CommonDataExamples.owns_start
+#print axioms Jihoo.CommonDataExamples.fields_start
+#print axioms Jihoo.CommonDataExamples.layout_start
+#print axioms Jihoo.CommonDataExamples.node_buffer_run
+#print axioms Jihoo.CommonDataExamples.case_run
+#print axioms Jihoo.CommonDataExamples.case_safe
+#print axioms Jihoo.CommonDataExamples.result_fields
+#print axioms Jihoo.CommonDataExamples.complete_result_ownership
+#print axioms Jihoo.CommonDataExamples.old_parent_freed_last
+#print axioms Jihoo.CommonDataExamples.empty_agreement
+#print axioms Jihoo.CommonDataExamples.empty_valid
+#print axioms Jihoo.CommonDataExamples.empty_owned
+#print axioms Jihoo.CommonDataExamples.empty_fields
+#print axioms Jihoo.CommonDataExamples.empty_run
+#print axioms Jihoo.CommonDataExamples.empty_safe
+#print axioms Jihoo.CommonData.sized_lengths_frame
+#print axioms Jihoo.CommonData.Eval.lengths_frame
+#print axioms Jihoo.CommonData.Eval.cells_frame
+#print axioms Jihoo.CommonData.surviving_untouched
+#print axioms Jihoo.CommonData.Eval.frame_cells
+#print axioms Jihoo.CommonData.Eval.frame_fields
+#print axioms Jihoo.CommonData.Eval.frame_layout
+#print axioms Jihoo.CommonData.Post.frame_owned
+#print axioms Jihoo.CommonData.Typing.total_preserving
+#print axioms Jihoo.CommonData.Typing.every_run_preserving
+#print axioms Jihoo.CommonData.data_partition_disjoint
+#print axioms Jihoo.CommonData.buffer_partition_disjoint
+#print axioms Jihoo.CommonData.rel_argument
+#print axioms Jihoo.CommonData.rel_captured
+#print axioms Jihoo.CommonData.agrees_argument
+#print axioms Jihoo.CommonData.agrees_captured
+#print axioms Jihoo.CommonDataPartitionChecks.graph_valid
+#print axioms Jihoo.CommonDataPartitionChecks.reassemble_typed
+#print axioms Jihoo.CommonDataPartitionChecks.consume_captures_typed
+#print axioms Jihoo.CommonDataPartitionChecks.mixed_captures_typed
+#print axioms Jihoo.CommonDataPartitionChecks.pending_parent_typed
+#print axioms Jihoo.CommonDataPartitionChecks.alias_partition
+#print axioms Jihoo.CommonDataPartitionChecks.empty_slots_partition
+#print axioms Jihoo.CommonDataPartitionChecks.reserved_alias_rejected
+#print axioms Jihoo.CommonDataPartitionChecks.consumed_alias_rejected
+#print axioms Jihoo.CommonDataPartitionChecks.mixed_captures_total
+#print axioms Jihoo.CommonDataPartitionChecks.empty_producer_retains
+#print axioms Jihoo.CommonDataPartitionChecks.nonempty_captures_run
+#print axioms Jihoo.CommonDataPartitionChecks.nonempty_captures_safe
+#print axioms Jihoo.CommonDataPartitionChecks.retained_store_observations
+#print axioms Jihoo.CommonDataReference.Frees.append
+#print axioms Jihoo.CommonDataReference.Frees.frame
+#print axioms Jihoo.CommonDataReference.Frees.effect
+#print axioms Jihoo.CommonDataReference.drop_total
+#print axioms Jihoo.CommonDataReference.destroy_correspondence
+#print axioms Jihoo.CommonDataReference.source_unchanged
+#print axioms Jihoo.CommonDataReference.source_live_frame
+#print axioms Jihoo.CommonDataReference.retained_tree
+#print axioms Jihoo.CommonDataReference.retained_buffer
+#print axioms Jihoo.CommonDataReference.every_source_run
+#print axioms Jihoo.CommonData.scalar_total
+#print axioms Jihoo.CommonData.empty_layout
+#print axioms Jihoo.CommonData.Typing.total_accounted
+#print axioms Jihoo.CommonData.Typing.total
+#print axioms Jihoo.CommonDataSource.adapted_at
+#print axioms Jihoo.CommonDataSource.opaque_not_typed
+#print axioms Jihoo.CommonDataSource.case_empty_result
+#print axioms Jihoo.CommonDataSourceChecks.family_rejections
+#print axioms Jihoo.CommonDataSourceChecks.telescope_rejections
+#print axioms Jihoo.CommonDataSourceChecks.entry_rejections
+#print axioms Jihoo.CommonDataSourceChecks.foreign_nodes_opaque
+#print axioms Jihoo.CommonDataSourceChecks.case_rejections
+#print axioms Jihoo.CommonDataSourceChecks.case_result
+#print axioms Jihoo.CommonDataSourceChecks.fixture_run
+#print axioms Jihoo.CommonDataSourceChecks.fixture_safe
+#print axioms Jihoo.CommonDataSourceChecks.empty_input_run
+#print axioms Jihoo.CommonDataSourceExamples.source_valid
+#print axioms Jihoo.CommonDataSourceExamples.entry_decoded
+#print axioms Jihoo.CommonDataSourceExamples.target_valid
+#print axioms Jihoo.CommonDataSourceExamples.entry_typed
+#print axioms Jihoo.CommonDataSourceExamples.entry_total
+#print axioms Jihoo.CommonDataSourceExecution.sourceCore_eq
+#print axioms Jihoo.CommonDataSourceExecution.Eval.to_common
+#print axioms Jihoo.CommonDataSourceExecution.reflect
+#print axioms Jihoo.CommonDataSourceExecution.total_accounted
+#print axioms Jihoo.CommonDataSourceExecution.Eval.deterministic
+#print axioms Jihoo.CommonDataSourceExecution.correspondence
+#print axioms Jihoo.CommonDataSourceExecution.every_run_accounted
+#print axioms Jihoo.CommonDataSourceExecutionChecks.scalar_source
+#print axioms Jihoo.CommonDataSourceExecutionChecks.nested_source
+#print axioms Jihoo.CommonDataSourceExecutionChecks.split_source
+#print axioms Jihoo.CommonDataSourceExecutionChecks.computed_nil_source
+#print axioms Jihoo.CommonDataSourceExecutionChecks.recursive_drop_source
+#print axioms Jihoo.CommonDataSourceExecutionChecks.nested_accounted
+#print axioms Jihoo.CommonDataSourceExecutionChecks.source_exists
+#print axioms Jihoo.CommonDataSourceExecutionChecks.split_accounted
+#print axioms Jihoo.CommonDataSourceRules.adapted_at
+#print axioms Jihoo.CommonDataSourceRules.Typing.elaborate
+#print axioms Jihoo.CommonDataSourceRules.Typing.case_motive
+#print axioms Jihoo.CommonDataSourceRules.CheckedEntry.elaborate
+#print axioms Jihoo.CommonDataSourceRules.Typing.total_accounted
+#print axioms Jihoo.CommonDataSourceRulesChecks.source_valid
+#print axioms Jihoo.CommonDataSourceRulesChecks.scalar_case
+#print axioms Jihoo.CommonDataSourceRulesChecks.checked_entry
+#print axioms Jihoo.CommonDataSourceRulesChecks.computed_nil
+#print axioms Jihoo.CommonDataSourceRulesChecks.nested_case
+#print axioms Jihoo.CommonDataSourceRulesChecks.motive_rejections
+#print axioms Jihoo.CommonDataSourceRulesChecks.wrong_result_rejected
+#print axioms Jihoo.CommonDataSourceRulesChecks.nil_kind_mismatch
+#print axioms Jihoo.CommonDataSourceRulesChecks.node_kind_mismatch
+#print axioms Jihoo.CommonDataSourceRulesChecks.parent_alias_rejected
+#print axioms Jihoo.CommonDataSourceRulesChecks.split_application
+#print axioms Jihoo.CommonDataSourceRulesChecks.wrong_entry_annotation
+#print axioms Jihoo.CommonDataSourceRulesChecks.scalar_run
+#print axioms Jihoo.CommonDataSourceRulesChecks.scalar_accounted
+#print axioms Jihoo.CommonData.core_at
+#print axioms Jihoo.CommonData.rel_retireAll
+#print axioms Jihoo.CommonData.agrees_dataContinuation
+#print axioms Jihoo.CommonData.rel_remove
+#print axioms Jihoo.CommonData.agrees_remove
+#print axioms Jihoo.CommonData.data_lookup
+#print axioms Jihoo.CommonData.owns_permute
+#print axioms Jihoo.CommonData.move_pending
+#print axioms Jihoo.CommonData.restore_pending
+#print axioms Jihoo.CommonData.steps_append
+#print axioms Jihoo.CommonData.Post.finish
+#print axioms Jihoo.Indexed.converted_function
+#print axioms Jihoo.Indexed.converted_let
+#print axioms Jihoo.CoreBridge.lift_comp
+#print axioms Jihoo.CoreBridge.lift_shift
+#print axioms Jihoo.CoreBridge.within_lift
+#print axioms Jihoo.CoreBridge.within_shift
+#print axioms Jihoo.CoreBridge.Raw.Beta.Closure.single
+#print axioms Jihoo.CoreBridge.Raw.Beta.Closure.trans
+#print axioms Jihoo.CoreBridge.Raw.Beta.Closure.map
+#print axioms Jihoo.CoreBridge.Index.encode_bounded
+#print axioms Jihoo.CoreBridge.Index.encode_certified
+#print axioms Jihoo.CoreBridge.Ty.encode_bounded
+#print axioms Jihoo.CoreBridge.Ty.encode_certified
+#print axioms Jihoo.CoreBridge.Index.rename_encode
+#print axioms Jihoo.CoreBridge.Index.subst_shift
+#print axioms Jihoo.CoreBridge.Index.scoped_subst
+#print axioms Jihoo.CoreBridge.Index.scoped_rename
+#print axioms Jihoo.CoreBridge.Index.subst_var_encode
+#print axioms Jihoo.CoreBridge.Index.liftSub_var
+#print axioms Jihoo.CoreBridge.Ty.encode_renamingSubst
+#print axioms Jihoo.CoreBridge.Index.subst_id
+#print axioms Jihoo.CoreBridge.Ty.subst_id
+#print axioms Jihoo.CoreBridge.Ty.scoped_subst
+#print axioms Jihoo.CoreBridge.Ty.encode_proposition
+#print axioms Jihoo.CoreBridge.Index.erase_rename
+#print axioms Jihoo.CoreBridge.identityProof_typed
+#print axioms Jihoo.CoreBridge.nestedValues_typed
+#print axioms Jihoo.CoreBridge.arrayRead_typed
+#print axioms Jihoo.CoreBridge.dependentApplication_typed
+#print axioms Jihoo.CoreBridge.nestedDependentApplication_typed
+#print axioms Jihoo.CoreBridge.mixedProof_target
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.higher_proof_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.prepared_array_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.read_first_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.read_last_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.read_computed_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.read_last_safe
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.read_computed_safe
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.max_proof_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.max_subtract_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.max_subtract_safe
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.subtract_typed
+#print axioms Jihoo.CoreBridge.Raw.Beta.PrimitiveExamples.subtract_safe
+#print axioms Jihoo.GraphCertificates.BoundedChildren.ofRelated
+#print axioms Jihoo.Indexed.expr_subst_id
+#print axioms Jihoo.Indexed.expr_subst_comp
+#print axioms Jihoo.Indexed.lift_id
+#print axioms Jihoo.Indexed.shift_lift
+#print axioms Jihoo.Indexed.lift_comp
+#print axioms Jihoo.Indexed.shift_single
+#print axioms Jihoo.Indexed.lift_single
+#print axioms Jihoo.Indexed.Ty.subst_id
+#print axioms Jihoo.Indexed.Ty.shift_lift
+#print axioms Jihoo.Indexed.Ty.shift_single
+#print axioms Jihoo.Indexed.Context.extend_subst
+#print axioms Jihoo.Indexed.Context.shift_lift
+#print axioms Jihoo.Indexed.Context.shift_single
+#print axioms Jihoo.Indexed.Term.subst_id
+#print axioms Jihoo.Indexed.Term.renameValues_indexSubst
+#print axioms Jihoo.Indexed.Term.shift_lift
+#print axioms Jihoo.Indexed.liftValues_indexSubst
+#print axioms Jihoo.Indexed.HasType.refl_inversion
+#print axioms Jihoo.Indexed.HasType.elements_inversion
+#print axioms Jihoo.NativeKernel.rename_back
+#print axioms Jihoo.NativeKernel.subst_back
+#print axioms Jihoo.NativeKernel.rename_give
+#print axioms Jihoo.NativeKernel.subst_give
+#print axioms Jihoo.NativeKernel.rename_take
+#print axioms Jihoo.NativeKernel.subst_take
+#print axioms Jihoo.NativeKernel.rename_takeResultType
+#print axioms Jihoo.NativeKernel.subst_takeResultType
+#print axioms Jihoo.NativeKernel.rename_takeBodyType
+#print axioms Jihoo.NativeKernel.subst_takeBodyType
+#print axioms Jihoo.NativeKernel.Environment.family_forward_lambda_shape
+#print axioms Jihoo.NativeKernel.Environment.family_forward_ghost_transform
+#print axioms Jihoo.NativeKernel.Environment.HasType.ghostFamilyForward
+#print axioms Jihoo.NativeKernel.Environment.absurdAllowed.extend
+#print axioms Jihoo.NativeKernel.Environment.renameArgs_caseOf
+#print axioms Jihoo.NativeKernel.Environment.substArgs_caseOf
+#print axioms Jihoo.NativeKernel.Environment.renameArgs_view
+#print axioms Jihoo.NativeKernel.Environment.substArgs_view
+#print axioms Jihoo.NativeKernel.Environment.familyPlain_enlarged_parallel
+#print axioms Jihoo.NativeKernel.Environment.familyPlain_enlarged_star
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.arithmetic_root_residual
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.node
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.ofOldCompute
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.ofOldMixed
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.projected_join
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.church_rosser
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.confluence
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.conv_iff_forward_join
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.ContextBoundary.original_lambda_is_typed
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.ContextBoundary.real_iota_changes_annotation
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.ContextBoundary.target_keeps_exact_original_type
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.ContextBoundary.genuine_enlarged_equation_is_available
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.legacy
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.acu
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.delta
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.toConv
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.ofForwardJoin
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.extend
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.renaming
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.substitution
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.subst_congr
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.toForward
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.renaming
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.substitution
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.subst_congr
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.beta_body_join
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.beta_annotation_join
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.beta_argument_join
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.root_expansion
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.expansion
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Root.complete
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Root.deterministic
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.contract_iff_root
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.acu
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.delta
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.extend
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.variable_shape
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.full_rigid_node_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.full_rigid_disjoint
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.full_variable_node_separate
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.full_variable_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.pi_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.sort_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.full_universe_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.array_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.eq_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.lt_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.refine_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.buffer_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.ref_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.ind_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.natural_shape
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.natural_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.normalize?_forward
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.normalize?_sound
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.equal_common_reduct
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.equal_sound
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.output
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.addCong
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.node
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.refl
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.arithmetic
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.ofAtom
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.ofRoot
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.sumTerms
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.renaming
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.substitution
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.instantiate
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Arithmetic.weight_eq
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.weight_flatten
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.flatten_nonadd
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.weight_atom_le
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.atom_view
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.natural_inv
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Arithmetic.head_fields
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.diamond
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.strip
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.confluence
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.toConv
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Mixed.toForward
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Mixed.compact_pointwise
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.realize
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Star.realize
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Parallel.input
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.ParallelRoot.atom
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.ParallelRoot.parallel
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.Atom.inspect
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Quotient.ParallelRoot.family_inputs
+#print axioms Jihoo.NativeKernel.Environment.Representation.family_root_plain_transform
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.nonFunctionOp_rigid
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.nonFunctionOp_not_pi
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.NonFunction.ofHead
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.NonFunction.of_conversion
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.NonFunction.extend
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.NonFunction.not_pi
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.NonFunction.pi_rejected
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.legacy_nonFunctionHead
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.elim_residual
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.case_residual
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.view_residual
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.drop_residual
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.congruence
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Iota.congruence
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.root_nonrigid
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.root_compute_disjoint
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.root_global_disjoint
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.rigid_shape
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Search.normalize?_forward
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Search.normalize?_sound
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Search.normalize_sound
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Search.equal_sound
+#print axioms Jihoo.NativeKernel.EnvironmentDelta.NumeralForward.family_forward_preserves
+#print axioms Jihoo.NativeKernel.Environment.Representation.old_forward_plain_transform
+#print axioms Jihoo.NativeKernel.Environment.viewMotiveType_subst
+#print axioms Jihoo.NativeKernel.Environment.viewResult_subst
+#print axioms Jihoo.NativeKernel.Environment.viewMotiveType_rename
+#print axioms Jihoo.NativeKernel.Environment.viewResult_rename
+#print axioms Jihoo.Quantity.AliasExamples.mixed_run
+#print axioms Jihoo.Quantity.AliasExamples.mixed_prefix_once
+#print axioms Jihoo.Quantity.AliasExamples.either_name_once
+#print axioms Jihoo.Quantity.AliasExamples.both_names_twice
+#print axioms Jihoo.Quantity.AliasExamples.below_scope_run
+#print axioms Jihoo.Quantity.AliasExamples.below_scope_alias_once
+#print axioms Jihoo.Quantity.lift_id
+#print axioms Jihoo.Quantity.lift_comp
+#print axioms Jihoo.Quantity.Binders.PermittedBindings.length_eq
+#print axioms Jihoo.Quantity.Examples.nested_run
+#print axioms Jihoo.Quantity.Examples.nested_once
+#print axioms Jihoo.Quantity.Examples.trap_before
+#print axioms Jihoo.Quantity.Examples.trap_after
+#print axioms Jihoo.Quantity.Examples.trap_can_abandon
+#print axioms Jihoo.Quantity.Examples.trap_no_completion
+#print axioms Jihoo.Quantity.Examples.local_iteration
+#print axioms Jihoo.Quantity.Examples.local_loop_no_outer_use
+#print axioms Jihoo.Quantity.Examples.unbalanced_runs
+#print axioms Jihoo.Quantity.Examples.repeated_capture_runs
+#print axioms Jihoo.RecursiveBodyProjection.project_rel
+#print axioms Jihoo.RecursiveBodyProjection.project_agrees
+#print axioms Jihoo.RecursiveBodyProjection.retain_rel
+#print axioms Jihoo.RecursiveBodyProjection.retain_agrees
+#print axioms Jihoo.RecursiveBodyProjection.continuation_agrees
+#print axioms Jihoo.RecursiveCaseBody.owns_rotate
+#print axioms Jihoo.RecursiveCaseBody.body_total
+#print axioms Jihoo.RecursiveCaseBody.BodyRun.deterministic
+#print axioms Jihoo.RecursiveCaseBody.body_every_run
+#print axioms Jihoo.RecursiveCaseBody.SegmentRun.deterministic
+#print axioms Jihoo.RecursiveCaseBody.footprint_append
+#print axioms Jihoo.RecursiveCaseBody.segment_total
+#print axioms Jihoo.RecursiveCaseBody.segment_every_run
+#print axioms Jihoo.RecursiveCaseBodyExamples.agreement
+#print axioms Jihoo.RecursiveCaseBodyExamples.initial_valid
+#print axioms Jihoo.RecursiveCaseBodyExamples.inventory
+#print axioms Jihoo.RecursiveCaseBodyExamples.layout
+#print axioms Jihoo.RecursiveCaseBodyExamples.read_shape
+#print axioms Jihoo.RecursiveCaseBodyExamples.typed
+#print axioms Jihoo.RecursiveCaseBodyExamples.body_run
+#print axioms Jihoo.RecursiveCaseBodyExamples.segment_run
+#print axioms Jihoo.RecursiveCaseBodyExamples.segment_safe
+#print axioms Jihoo.RecursiveCaseBodyExamples.all_buffer_aliases_retired
+#print axioms Jihoo.RecursiveCaseBodyExamples.parent_only_freed_last
+#print axioms Jihoo.RecursiveCaseBodyExamples.parent_live_through_body
+#print axioms Jihoo.RecursiveCaseBodyExamples.data_projected_dead
+#print axioms Jihoo.RecursiveCaseBodyExamples.ghosts_supply_no_bound
+#print axioms Jihoo.RecursiveCaseBodyExamples.graph_valid
+#print axioms Jihoo.RecursiveCaseBodyExamples.cannot_free_data
+#print axioms Jihoo.RecursiveCaseBodyExamples.shared_data_buffer_rejected
+#print axioms Jihoo.RecursiveCaseBodyExamples.empty_suffix_total
+#print axioms Jihoo.RecursiveFieldOwnership.unpack
+#print axioms Jihoo.RecursiveFieldOwnership.root_not_in_fields
+#print axioms Jihoo.RecursiveFieldOwnership.fields_separate
+#print axioms Jihoo.RecursiveFieldOwnership.allocate_node
+#print axioms Jihoo.RecursiveFieldOwnership.release_node
+#print axioms Jihoo.RecursiveFieldOwnership.release_accounting
+#print axioms Jihoo.RecursiveFieldOwnership.consume_left
+#print axioms Jihoo.RecursiveFieldOwnership.consume_left_total
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.reject_shared_child
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.reject_ancestor_alias
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.reject_dead_field
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.reject_borrowed_field
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.release_preserves_child_and_frame
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.fixture_valid
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.fixture_owned
+#print axioms Jihoo.RecursiveFieldOwnershipExamples.concrete_core_consumer
+#print axioms Jihoo.RecursiveFieldRuntime.Represents.unique
+#print axioms Jihoo.RecursiveFieldRuntime.Represents.congr
+#print axioms Jihoo.RecursiveFieldRuntime.Represents.clear_other
+#print axioms Jihoo.RecursiveFieldRuntime.take_total
+#print axioms Jihoo.RecursiveFieldRuntime.split_safe
+#print axioms Jihoo.RecursiveFieldRuntime.take_result
+#print axioms Jihoo.RecursiveFieldRuntime.allocate_safe
+#print axioms Jihoo.RecursiveFieldRuntime.consume_left_total
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.valid_fixture
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.owns_fixture
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.fields_fixture
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.split_actual_pointers
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.missing_cell_stuck
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.dead_parent_stuck
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.wrong_field_rejected
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.borrowed_parent_rejected
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.interpreted_core_consumer
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.allocate_then_take
+#print axioms Jihoo.RecursiveFieldRuntimeExamples.truncated_witness_rejected
+#print axioms Jihoo.RecursiveLexicalFields.embedValue_injective
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.embedded_lookup
+#print axioms Jihoo.RecursiveLexicalFields.buffer_lookup
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.toSized
+#print axioms Jihoo.RecursiveLexicalFields.footprint_buffers
+#print axioms Jihoo.RecursiveLexicalFields.buffer_total
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.lookup
+#print axioms Jihoo.RecursiveLexicalFields.Rel.retire
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.retire
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.ghosts
+#print axioms Jihoo.RecursiveLexicalFields.Agrees.bind
+#print axioms Jihoo.RecursiveLexicalFields.Fields.bind
+#print axioms Jihoo.RecursiveLexicalFields.enter_total
+#print axioms Jihoo.RecursiveLexicalFields.footprint_member
+#print axioms Jihoo.RecursiveLexicalFields.Fields.clear
+#print axioms Jihoo.RecursiveLexicalFields.finish_safe
+#print axioms Jihoo.RecursiveLexicalFields.data_not_buffer
+#print axioms Jihoo.RecursiveLexicalFields.buffer_not_data
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.agrees_fixture
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.inventory_fixture
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.actual_root_order
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.all_parent_aliases_retired
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.lexical_entry_safe
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.delayed_release_preserves_children
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.parent_release_timing
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.buffer_not_a_case_root
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.empty_not_a_node
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.missing_cell_rejected
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.freed_parent_rejected
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.tail_buffer_aliases_preserved
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.mixed_tail_preserved
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.stale_alias_cannot_select
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.recursive_root_not_buffer
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.buffer_environment_bridge
+#print axioms Jihoo.RecursiveLexicalFieldsExamples.existing_buffer_program
+#print axioms Jihoo.Indexed.scoped_shift
+#print axioms Jihoo.Indexed.scoped_lift
+#print axioms Jihoo.Indexed.scoped_single
+#print axioms Jihoo.Indexed.Term.scoped_valueRenaming
+#print axioms Jihoo.Indexed.complete_subst
+#print axioms Jihoo.Indexed.lift_eval
+#print axioms Jihoo.Indexed.Ty.denote_shift
+#print axioms Jihoo.Indexed.Ty.denote_single
+#print axioms Jihoo.Indexed.empty_valuation
+#print axioms Jihoo.SymbolicCommonDataContext.buffer_lookup
+#print axioms Jihoo.SymbolicCommonDataContext.freshBufferEntry_closes
+#print axioms Jihoo.SymbolicCommonDataContext.consumeBufferEntry_closes
+#print axioms Jihoo.SymbolicCommonDataContext.freshBufferEntry_env
+#print axioms Jihoo.SymbolicCommonDataContext.consumeBufferEntry_env
+#print axioms Jihoo.SymbolicCommonDataContext.Closes.freshBuffer
+#print axioms Jihoo.SymbolicCommonDataContext.Closes.consumeBuffer
+#print axioms Jihoo.TreeDropCall.walk_add
+#print axioms Jihoo.TreeDropCall.walk_sound
+#print axioms Jihoo.TreeDropCall.BoundedPrefix.steps
+#print axioms Jihoo.TreeDropCall.BoundedPrefix.execute
+#print axioms Jihoo.TreeDropCall.nil_prefix
+#print axioms Jihoo.TreeDropCall.node_prefix
+#print axioms Jihoo.TreeDropCall.call_left
+#print axioms Jihoo.TreeDropCall.call_right
+#print axioms Jihoo.TreeDropCall.return_child
+#print axioms Jihoo.TreeDropCall.tree_prefix
+#print axioms Jihoo.TreeDropCall.body_zero
+#print axioms Jihoo.TreeDropCall.body_unchanged
+#print axioms Jihoo.TreeDropCall.recursive_destinations
+#print axioms Jihoo.TreeDropCall.steps_append
+#print axioms Jihoo.TreeDropCall.compileDrop_entry
+#print axioms Jihoo.TreeDropCall.compileDrop_body_block
+#print axioms Jihoo.TreeDropCall.compileDrop_body_exit
+#print axioms Jihoo.TreeDropCall.enter_owner
+#print axioms Jihoo.TreeDropCall.return_owner
+#print axioms Jihoo.TreeDropCall.resume_local
+#print axioms Jihoo.TreeDropCall.invoke
+#print axioms Jihoo.TreeDropCall.invoke_effect
+#print axioms Jihoo.TreeDropCall.drop_simulation
+#print axioms Jihoo.TreeDropCall.Checks.installed
+#print axioms Jihoo.TreeDropCall.Checks.asymmetric_exact
+#print axioms Jihoo.TreeDropCall.Checks.short
+#print axioms Jihoo.TreeDropCall.Checks.body_entry
+#print axioms Jihoo.TreeDropCall.Checks.live_local
+#print axioms Jihoo.TreeDropCall.Checks.shared_buffer
+#print axioms Jihoo.TreeDropCall.Checks.unit_destination
+#print axioms Jihoo.TreeDropCall.Checks.unrelocated_rejected
+#print axioms Jihoo.TreeDropCall.Checks.insufficient_stack
+#print axioms Jihoo.NativeKernel.Environment.CallReplay.Steps.runtime_entry_typed
+#print axioms Jihoo.NativeKernel.Environment.CallReplay.Steps.runtime_argument_typed
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.ClosedControlContract.zero
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_contracts
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.runtime_arguments_resourceSafe
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_runtime_contracts
+#print axioms Jihoo.NativeKernel.NativeQuantity.splitSpine_reassembles
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_exact_source_contracts
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_runtime_contracts_in_extension
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.same_unified_owned_full_call
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.owned_full_call_resource_admitted
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.actual_owned_call_body_contract
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.owned_partial_factory_rejected
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.ghost_index_has_no_code_inference
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.same_unified_ghost_only_erased_index
+#print axioms Jihoo.NativeKernel.Environment.CallResourceContractExamples.erased_index_not_a_runtime_argument
+#print axioms Jihoo.NativeKernel.Environment.kindOf_rename
+#print axioms Jihoo.NativeKernel.Environment.firstOrderKind_rename
+#print axioms Jihoo.NativeKernel.Environment.scalarLoopMotive_rename
+#print axioms Jihoo.NativeKernel.Environment.hasLeadingLambdas_rename
+#print axioms Jihoo.NativeKernel.Environment.globalFree_rename
+#print axioms Jihoo.NativeKernel.Environment.purePlain_rename
+#print axioms Jihoo.NativeKernel.Environment.plain_rename
+#print axioms Jihoo.NativeKernel.Environment.iterationMemoryFree_rename
+#print axioms Jihoo.NativeKernel.Environment.lower_rename_scope
+#print axioms Jihoo.NativeKernel.Environment.drop_shift_rename_scope
+#print axioms Jihoo.NativeKernel.Environment.viewRepresentation_rename
+#print axioms Jihoo.NativeKernel.Environment.applicationAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.nonFunction_renaming
+#print axioms Jihoo.NativeKernel.Environment.absurdAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.continuationAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.IterationBodyAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.IterationMotiveAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.ViewMotiveAllowed.renaming
+#print axioms Jihoo.NativeKernel.Environment.HasType.modeRenaming
+#print axioms Jihoo.NativeKernel.Environment.HasType.modeWeaken
+#print axioms Jihoo.NativeKernel.Environment.HasType.variableSubstitution
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.openHead_typed
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_retained_body_contracts
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_retained_body_weaken
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.actual_owned_body_code_typed
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.actual_owned_body_under_erased_binding
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.owner_lookup_retains_flag
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.outer_array_view_policy
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.outer_array_view_policy_renamed
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.array_motive_binder_dependency_rejected
+#print axioms Jihoo.NativeKernel.Environment.CodeRetentionExamples.aliased_kind_source_under_binding
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.eraseArgs_map
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_rename
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_liftSub
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_subst
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_single
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_instantiate
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_strict
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.erase_free
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.legacy_conversion
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.acu_conversion
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_renaming
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_substitution
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.basis_conversion
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_variable
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_ordinary_node
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_strict
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_free
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_pi
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.project_application
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.applications
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.elimHypotheses
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.elimBody
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.viewArguments
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.viewHypotheses
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.viewBody
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.BuilderMap.root
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.root_erasure
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.root_projection
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.family_conversion
+#print axioms Jihoo.NativeKernel.Environment.Semantics.ValueErasure.family_forward
+#print axioms Jihoo.NativeKernel.Environment.Lending.outlivedHead_rename
+#print axioms Jihoo.NativeKernel.Environment.Lending.Outlived.renaming
+#print axioms Jihoo.NativeKernel.Environment.Lending.outlivedHead_subst
+#print axioms Jihoo.NativeKernel.Environment.Lending.Outlived.substitution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostRenaming
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostWeaken
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Binder.ghostRenaming
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Ghost.Substitution.lift
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostSubstitution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Binder.ghostSubstitution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Ghost.Substitution.single
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostInstantiate
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.checkedGhostSubstitution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Examples.arbitrary_owner_ghost_instantiation
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Examples.ghost_weakening_under_new_binder
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlendArgs_map
+#print axioms Jihoo.NativeKernel.Environment.RawLend.rebuild_other
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_other
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_lend
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_desugar
+#print axioms Jihoo.NativeKernel.Environment.RawLend.rebuild_rename
+#print axioms Jihoo.NativeKernel.Environment.RawLend.rebuild_subst
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_rename
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_subst
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_instantiate
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_builders
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_root
+#print axioms Jihoo.NativeKernel.Environment.RawLend.legacy_conversion
+#print axioms Jihoo.NativeKernel.Environment.RawLend.acu_conversion
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_renaming
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_substitution
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_node_nonempty
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_root
+#print axioms Jihoo.NativeKernel.Environment.RawLend.rebuild_family_congruence
+#print axioms Jihoo.NativeKernel.Environment.RawLend.family_conversion
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_ordinary
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_lend
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_desugar
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.toConv
+#print axioms Jihoo.NativeKernel.Environment.RawLend.unlend_forward
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_forward
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.projected
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.church_rosser
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.confluence
+#print axioms Jihoo.NativeKernel.Environment.RawLend.conv_iff_forward_join
+#print axioms Jihoo.NativeKernel.Environment.RawLend.lend_children_join
+#print axioms Jihoo.NativeKernel.Environment.RawLend.lendTerm_rename
+#print axioms Jihoo.NativeKernel.Environment.RawLend.desugar_rename
+#print axioms Jihoo.NativeKernel.Environment.RawLend.lendTerm_subst
+#print axioms Jihoo.NativeKernel.Environment.RawLend.desugar_subst
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.extend
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.renaming
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.substitution
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.subst_congr
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.extend
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.rigid_shape
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.variable_shape
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.full_rigid_node_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.full_rigid_disjoint
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.full_variable_node_separate
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.full_variable_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.pi_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.sort_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.full_universe_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.array_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.eq_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.lt_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.refine_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.buffer_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.ref_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.ind_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.natural_injective
+#print axioms Jihoo.NativeKernel.Environment.RawLend.nonFunctionOp_rigid
+#print axioms Jihoo.NativeKernel.Environment.RawLend.nonFunctionOp_not_pi
+#print axioms Jihoo.NativeKernel.Environment.RawLend.NonFunction.ofHead
+#print axioms Jihoo.NativeKernel.Environment.RawLend.NonFunction.of_conversion
+#print axioms Jihoo.NativeKernel.Environment.RawLend.NonFunction.extend
+#print axioms Jihoo.NativeKernel.Environment.RawLend.NonFunction.not_pi
+#print axioms Jihoo.NativeKernel.Environment.RawLend.NonFunction.pi_rejected
+#print axioms Jihoo.NativeKernel.Environment.RawLend.legacy_nonFunctionHead
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.legacy
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.acu
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.delta
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.iota
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.acu
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.delta
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.iota
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.ofForwardJoin
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.ofProjected
+#print axioms Jihoo.NativeKernel.Environment.RawLend.conv_iff_projection
+#print axioms Jihoo.NativeKernel.Environment.RawLend.lendTerm_source
+#print axioms Jihoo.NativeKernel.Environment.RawLend.desugar_source
+#print axioms Jihoo.NativeKernel.Environment.RawLend.explicit_callbacks_forward
+#print axioms Jihoo.NativeKernel.Environment.RawLend.ghost_derivation_typed_endpoint
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.FunctionView.convert
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.functionView
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.lamView
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.appView
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostBetaContract
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.ghostBeta
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.finish_from_specialized_checks
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.dependent_finish_original_type
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.reader_from_generic_checks
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.continuation_from_generic_checks
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.generic_finish_original_type
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.explicitLendFinish
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Forward.neutralSpine_shape
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.neutralSpine_injective
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
+#print axioms Jihoo.NativeKernel.Environment.FamilyIota.Extended.Conv.family_application_injective
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Atomic.Root.forward
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Atomic.Root.preserves
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Atomic.Steps.forward
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Atomic.Steps.preserves
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.Atomic.Steps.typed_forward
+#print axioms Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary.actual_raw_inference_emits_displayed_kind
+#print axioms Jihoo.NativeKernel.Environment.CallReplay.Steps.splitAt
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.close_typed_store
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.close_typed_checkedCall
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.typed_store_forward
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.close_typed_checkedCall_forward
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.close_typed_checkedCall_normalized
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.openHead_source_telescope
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_typed_binding_store
+#print axioms Jihoo.NativeKernel.Environment.CallReplay.Steps.entry_length
+#print axioms Jihoo.NativeKernel.Environment.CallReplay.Steps.entry_ghost_typed
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.replay_erased_flags
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.lookup_erased_eq
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.replay_source_slots
+#print axioms Jihoo.NativeKernel.Environment.CodeKinds.Telescope.checkedCall_source_slots
+#print axioms Jihoo.NativeKernel.Environment.ContextQuantity.checked_app_source_slot_permissions
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.actual_owned_exact_store
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.actual_owned_store_slots
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.actual_owned_closed_body_typed
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.non_displayed_inferred_kind_has_typed_store
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.retained_code_beta_boundary
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.actual_computed_call_admitted
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.actual_computed_call_remaining_trace
+#print axioms Jihoo.NativeKernel.Environment.CallBindingStoreExamples.erased_ghost_slot_alignment

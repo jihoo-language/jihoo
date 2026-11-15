@@ -139,9 +139,9 @@ theorem recognized_principal (wf : UnifiedProgram.EnvWellFormed env)
     obtain ⟨F,functionExpression,functionErasure,functionConverted⟩ := ihf Γ length validΓ functionTyped
     cases F with
     | parameter index =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl functionConverted wf.admissible)
+      exact False.elim (Environment.FamilyIota.Extended.Conv.full_variable_node_separate rfl functionConverted wf.admissible)
     | natural =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (Environment.FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi erased) rfl rfl (by intro h; cases h) functionConverted wf.admissible)
     | arrow A B =>
       rw [TypeCode.syntax_arrow] at functionConverted
@@ -155,7 +155,7 @@ theorem recognized_principal (wf : UnifiedProgram.EnvWellFormed env)
         rw [TypeCode.syntax_instantiate,argumentErasure] at result
         exact .trans result resultConverted
     | fiber family observation =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.neutralSpine_node_separate
+      exact False.elim (Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
         (arguments := [.var (Γ.length+observation.val)]) wf.admissible rfl (by intro h; cases h) rfl functionConverted)
 
 /-- Actual native HasType constructs a concrete contextual value for every

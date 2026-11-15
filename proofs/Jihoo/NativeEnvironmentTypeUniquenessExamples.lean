@@ -32,7 +32,7 @@ theorem ghost_function_load_no_scalar :
       GhostContinuationExamples.loadTerm .u64 := by
   intro other
   have converted := Checker.infer_unique emptyWellFormed GhostContinuationExamples.function_substitution_accepted other
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .pi false) (op' := .u64)
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .pi false) (op' := .u64)
     rfl rfl (by intro same; cases same) converted emptyWellFormed.admissible
 
 theorem borrow_round_trip_original_type (other : HasType empty [] mode

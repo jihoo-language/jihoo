@@ -67,9 +67,9 @@ theorem ResultShape.closed_nonFunction_in_extension
   | @rigid op children converted head =>
       have reduced := (converted.extend extension).substitution values history.wellFormed.closed
       have witnessed : nonFunction after (result.subst values) := by
-        apply EnvironmentDelta.Basis.NonFunction.of_conversion reduced
-        apply EnvironmentDelta.Basis.NonFunction.ofHead
-        simpa only [Term.subst,EnvironmentDelta.Basis.nonFunctionHead] using head
+        apply FamilyIota.Extended.NonFunction.of_conversion reduced
+        apply FamilyIota.Extended.NonFunction.ofHead
+        simpa only [Term.subst,FamilyIota.Extended.nonFunctionHead] using head
       intro erased domain body pi
       exact witnessed.not_pi pi history.wellFormed.admissible
   | abstract converted spine =>

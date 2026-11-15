@@ -100,7 +100,7 @@ theorem HasType.principalView (h : HasType env Γ mode t T) : PrincipalView env 
     (motive_2 := fun ctx ghost term type _ => PrincipalView env ctx ghost term type)
     (motive_3 := fun _ _ _ _ _ _ _ => True) (motive_4 := fun _ _ _ _ _ => True) (motive_5 := fun _ _ _ _ _ => True)
   all_goals intros
-  all_goals first | trivial | exact EnvironmentDelta.Basis.Conv.refl _ | skip
+  all_goals first | trivial | exact FamilyIota.Extended.Conv.refl _ | skip
   case var hx readable => exact ⟨_, hx, .refl _⟩
   case pi hA hB _ _ =>
     cases hA with
@@ -119,7 +119,7 @@ theorem HasType.principalView (h : HasType env Γ mode t T) : PrincipalView env 
   case ind found arity size typed ih => exact ⟨_,found,.refl _⟩
   case con found sigFound size typed ih => exact ⟨_,_,_,_,found,sigFound,typed,.refl _⟩
   case propElim found prop motive branches scrutinee _ _ _ =>
-    exact ⟨_,_,_,_,_,_,found,rfl,rfl,scrutinee,by simpa only [eliminationResult,prop,Bool.false_eq_true,↓reduceIte] using EnvironmentDelta.Basis.Conv.refl _⟩
+    exact ⟨_,_,_,_,_,_,found,rfl,rfl,scrutinee,by simpa only [eliminationResult,prop,Bool.false_eq_true,↓reduceIte] using FamilyIota.Extended.Conv.refl _⟩
   case foldOwned count init owned body allowed _ _ _ => exact ⟨_,init,.refl _⟩
   case ghostBorrowOwned owner owned _ => exact ⟨_,owner,.refl _⟩
   case ghostDerefOwned reference _ => exact ⟨_,reference,.refl _⟩
@@ -127,7 +127,7 @@ theorem HasType.principalView (h : HasType env Γ mode t T) : PrincipalView env 
   case dataElim found isData boxed size motive scrutinee generated branches allowed ihm ihs ihb =>
     rename_i family entry analysis ctx motiveTerm proof ghost scrutineeTerm indices types caseTerms
     cases analysis <;>
-      exact ⟨_,_,_,_,_,_,found,rfl,rfl,scrutinee,by simpa only [eliminationResult,isData,↓reduceIte] using EnvironmentDelta.Basis.Conv.refl _⟩
+      exact ⟨_,_,_,_,_,_,found,rfl,rfl,scrutinee,by simpa only [eliminationResult,isData,↓reduceIte] using FamilyIota.Extended.Conv.refl _⟩
   case view found isData boxed arity size scrutinee motive allowed generated branches _ _ _ =>
     exact ⟨_,_,_,_,_,_,_,found,rfl,rfl,scrutinee,motive,.refl _⟩
   case store buffer index value proof _ _ _ _ => exact ⟨_,buffer,.refl _⟩

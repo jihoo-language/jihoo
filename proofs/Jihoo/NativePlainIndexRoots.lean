@@ -1,4 +1,4 @@
-import Jihoo.NativePlainIndexForward
+import Jihoo.NativeFamilyIotaPlainIndices
 import Jihoo.NativeRepresentationViews
 
 namespace Jihoo.NativeKernel.Environment.Representation
@@ -30,19 +30,19 @@ private theorem decidePlain (m n : Nat) : PlainIndices env ctx (.decide (.natura
 
 private theorem elementsNotIndex (wf : UnifiedProgram.EnvWellFormed env) (typed : HasType env ctx true (.elements count values) .u64) : False := by
   have converted : Conv env (.array (.natural values.length)) .u64 := typed.principalView
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
 
 private theorem packNotIndex (wf : UnifiedProgram.EnvWellFormed env) (typed : HasType env ctx true (.pack predicate value proof) .u64) : False := by
   have converted : Conv env (.refine predicate) .u64 := typed.principalView
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
 
 private theorem borrowNotIndex (wf : UnifiedProgram.EnvWellFormed env) (typed : HasType env ctx true (.borrow value) .u64) : False := by
   obtain ⟨type, _, converted⟩ := typed.borrowView
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted wf.admissible
 
  theorem compute_plain_transform (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (step : ACU.Computes input output) : PlainTransform env input output := by
-  refine ⟨.acu (.compute step),?_⟩
+  refine ⟨.old (.acu (.compute step)),?_⟩
   intro ctx mode type typed plain
   cases step with
   | beta erased domain body argument =>
@@ -134,7 +134,7 @@ private theorem borrowNotIndex (wf : UnifiedProgram.EnvWellFormed env) (typed : 
 
 /-- Actual delta contraction is allowed only inside an independently typed
 U64 hole; a structural global is never a plain representation node. -/
-theorem forward_plain_transform (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
+theorem old_forward_plain_transform (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (step : EnvironmentDelta.Forward env input output) : PlainTransform env input output := by
   induction step using EnvironmentDelta.Forward.rec
     (motive_2 := fun xs ys _ => ListRel (PlainTransform env) xs ys) with
@@ -150,5 +150,19 @@ theorem forward_plain_transform (history : UnifiedProgram.UnifiedProgramChecked 
       | node head _ => simp [plainNode] at head
   | nil => exact .nil
   | cons first rest ihfirst ihrest => exact .cons ihfirst ihrest
+
+/-- Representation with typed holes is preserved by the actual installed
+family, legacy and delta forward relation. -/
+theorem forward_plain_transform (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
+    (step : FamilyIota.Extended.Forward env input output) : PlainTransform env input output := by
+  induction step using FamilyIota.Extended.Forward.rec
+    (motive_2 := fun xs ys _ => ListRel (PlainTransform env) xs ys) with
+  | old original => exact old_forward_plain_transform history original
+  | iota root => exact family_root_plain_transform history root
+  | refl => exact .refl _
+  | trans _ _ first second => exact first.trans history second
+  | node op children ih => exact .node history ih
+  | nil => exact .nil
+  | cons _ _ first rest => exact .cons first rest
 
 end Jihoo.NativeKernel.Environment.Representation

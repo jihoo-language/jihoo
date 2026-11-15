@@ -35,11 +35,11 @@ theorem viewCaseResult_parameters_congr (closed : Conversion.Closed env)
       (viewCaseResult family constructor fields hypotheses qs motive borrowed dependent) := by
   unfold viewCaseResult
   split
-  · apply EnvironmentDelta.Basis.Conv.node .app
+  · apply FamilyIota.Extended.Conv.node .app
     refine .cons (.refl _) (.cons (.node .borrow (.cons ?_ .nil)) .nil)
     simp only [List.length_append,List.length_map,List.length_range]
     rw [← related_length parameters]
-    apply EnvironmentDelta.Basis.Conv.node _
+    apply FamilyIota.Extended.Conv.node _
     exact related_append (related_rename closed parameters _) (related_refl _)
   · exact .refl _
 
@@ -53,7 +53,7 @@ theorem view_telescope_parameters_congr (closed : Conversion.Closed env)
   | cons plan plans ih =>
     have domain := (parameter_term_congr closed parameters depth previous.length plan.field.domain).substitution
       (viewReadAt previous) closed
-    apply EnvironmentDelta.Basis.Conv.node (.pi (if plan.borrowed then false else plan.field.erased))
+    apply FamilyIota.Extended.Conv.node (.pi (if plan.borrowed then false else plan.field.erased))
     refine .cons ?_ (.cons (ih (previous ++ [plan.borrowed])) .nil)
     cases plan.borrowed with
     | false => exact domain

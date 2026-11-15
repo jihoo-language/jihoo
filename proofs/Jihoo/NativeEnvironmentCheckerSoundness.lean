@@ -75,7 +75,7 @@ theorem nonFunctionHead_sound {T : Term} (h : nonFunctionHead T = true) : nonFun
 
 theorem nonFunction_of_conversion {A B : Term} (conv : Conversion.Conv env A B)
     (h : nonFunction env B) : nonFunction env A :=
-  EnvironmentDelta.Basis.NonFunction.of_conversion conv h
+  FamilyIota.Extended.NonFunction.of_conversion conv h
 
 /-- Runtime continuation results remain nonfunctions; ghost substitution may
 expose arbitrary type heads without introducing runtime captures. -/
@@ -117,10 +117,10 @@ theorem backMotiveOK_sound (h : backMotiveOK fuel env erased motive = true) :
     · contradiction
 
 theorem resourceNonFunctionHead_sound (h : resourceNonFunctionHead T = true) : nonFunction env T := by
-  apply EnvironmentDelta.Basis.NonFunction.ofHead
+  apply FamilyIota.Extended.NonFunction.ofHead
   fun_cases resourceNonFunctionHead T <;>
-    simp_all only [resourceNonFunctionHead, EnvironmentDelta.Basis.nonFunctionHead,
-      EnvironmentDelta.Basis.nonFunctionOp, Bool.false_eq_true]
+    simp_all only [resourceNonFunctionHead, FamilyIota.Extended.nonFunctionHead,
+      FamilyIota.Extended.nonFunctionOp, Bool.false_eq_true]
 
 theorem takeNonFunctionGate_sound
     (h : (ghost || takeNonFunctionHead (Conversion.normalize env fuel result)) = true) :
@@ -216,33 +216,6 @@ theorem branches_sound
           obtain ⟨actual, inferred, converted⟩ := accepts_elim accepted
           exact .cons (.convert (hi _ _ inferred) converted) (ih tail)
 
-theorem splitCases_sound {count : Nat} {children branches : List Term} {scrutinee : Term}
-    (h : splitCases count children = some (branches, scrutinee)) :
-    branches.length = count ∧ children = branches ++ [scrutinee] := by
-  induction count generalizing children branches with
-  | zero =>
-      cases children with
-      | nil => simp [splitCases] at h
-      | cons value rest =>
-          cases rest with
-          | nil =>
-              simp only [splitCases, Option.some.injEq, Prod.mk.injEq] at h
-              obtain ⟨rfl, rfl⟩ := h
-              exact ⟨rfl, rfl⟩
-          | cons _ _ => simp [splitCases] at h
-  | succ count ih =>
-      cases children with
-      | nil => simp [splitCases] at h
-      | cons branch rest =>
-          simp only [splitCases] at h
-          cases decoded : splitCases count rest with
-          | none => simp [decoded] at h
-          | some result =>
-              rcases result with ⟨cases, value⟩
-              simp only [decoded] at h
-              obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨length, layout⟩ := ih decoded
-              exact ⟨by simp only [List.length_cons, length], by simp only [List.cons_append, layout]⟩
 
 theorem branchesAgainst_sound
     (hi : ∀ t T, inferBranch t = some T → HasType env ctx ghost t T)

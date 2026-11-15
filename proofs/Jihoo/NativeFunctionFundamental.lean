@@ -21,12 +21,12 @@ theorem SimpleType.syntax_injective {A B : SimpleType} (wf : UnifiedProgram.EnvW
     cases B with
     | natural => rfl
     | arrow B C =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
   | arrow A C ha hc =>
     cases B with
     | natural =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .u64) rfl rfl (by intro h; cases h) converted wf.admissible)
     | arrow B D =>
       have parts := converted.pi_injective wf.admissible
@@ -82,7 +82,7 @@ theorem recognized_principal (wf : UnifiedProgram.EnvWellFormed env)
     obtain ⟨F,functionExpression,functionErasure,functionConverted⟩ := ihf functionTyped
     cases F with
     | natural =>
-      exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+      exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi erased) rfl rfl (by intro h; cases h) functionConverted wf.admissible)
     | arrow A B =>
       have components := functionConverted.pi_injective wf.admissible

@@ -1,4 +1,5 @@
 import Jihoo.NativeLoanPermissions
+import Jihoo.NativeLoanSubstitution
 
 namespace Jihoo.NativeKernel.Environment.LoanTyping.Examples
 
@@ -81,5 +82,22 @@ theorem closed_code_application : HasType empty [] [] false
     (Term.i64.subst (single allocatedOwner)) at applied
   have same : Term.i64.subst (single allocatedOwner) = .i64 := by cbv
   exact same ▸ applied
+
+/-- Ghost closing may replace the source's named owner by an allocating term.
+This theorem deliberately does not claim raw effectful CODE substitution. -/
+theorem arbitrary_owner_ghost_instantiation : HasType empty [] [] true
+    (source.subst (single allocatedOwner)) .i64 := by
+  have allocated : HasType empty [] [] true allocatedOwner buffer :=
+    ofEnvironment (Checker.check_sound
+      (by cbv : Checker.check 24 empty [] true allocatedOwner buffer = true))
+  have specialized := dependent_code_lend.ghostInstantiate UnifiedProgram.EnvWellFormed.empty allocated
+  have same : Term.i64.subst (single allocatedOwner) = .i64 := by cbv
+  exact same ▸ specialized
+
+theorem ghost_weakening_under_new_binder : HasType empty []
+    (⟨Term.u64,false⟩ :: ownerContext) true (source.rename Nat.succ) .i64 := by
+  have weakened := dependent_code_lend.ghostWeaken UnifiedProgram.EnvWellFormed.empty .u64 false
+  have same : Term.i64.rename Nat.succ = .i64 := by cbv
+  exact same ▸ weakened
 
 end Jihoo.NativeKernel.Environment.LoanTyping.Examples

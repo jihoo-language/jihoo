@@ -74,7 +74,7 @@ theorem checked_delta_result_canonicity :
     ∃ value, value < 2^64 ∧ Conv aliasEnvironment application (.natural value) := by
   have typed : HasType aliasEnvironment [] true application (.node (.global 0) []) := Checker.check_sound
     (by cbv : Checker.check 24 aliasEnvironment [] true application (.node (.global 0) []) = true)
-  have delta : Conv aliasEnvironment (.node (.global 0) []) .u64 := EnvironmentDelta.Basis.Conv.delta (env := aliasEnvironment) (index := 0) (declaration := aliasDeclaration) (by rfl)
+  have delta : Conv aliasEnvironment (.node (.global 0) []) .u64 := FamilyIota.Extended.Conv.delta (env := aliasEnvironment) (index := 0) (declaration := aliasDeclaration) (by rfl)
   exact closed_natural_canonicity aliasHistory.wellFormed (typed.convert delta) applicationRecognized
 
 end Jihoo.NativeKernel.Environment.Semantics.Functions.Examples

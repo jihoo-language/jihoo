@@ -119,9 +119,7 @@ theorem pure_drop_preserves_original_type : HasType env [] true .u64 (.univ 0) :
 
 theorem pure_drop_is_new_root : Root env droppedType .u64 := .drop _ _ _
 
-theorem pure_drop_is_not_silently_in_installed_conversion : ¬ Conversion.Conv env droppedType .u64 := by
-  intro converted
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro same; cases same)
-    converted history.wellFormed.admissible
+theorem pure_drop_is_installed_in_conversion : Conversion.Conv env droppedType .u64 :=
+  .iota pure_drop_is_new_root
 
 end Jihoo.NativeKernel.Environment.FamilyIota.Examples

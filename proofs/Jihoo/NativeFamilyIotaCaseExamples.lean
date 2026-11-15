@@ -42,19 +42,17 @@ theorem all_dependent_fields_keep_exact_original_type :
     (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)
     (Checker.check_sound authentic_indexed_case_is_checked)
 
-theorem actual_beta_result_contains_pure_drop :
-    Conversion.normalize? env 40 reduct = some dropped := by cbv
+theorem actual_converter_completes_case :
+    Conversion.normalize? env 40 source = some (.alloc (.natural 1) (.integer 0)) := by cbv
 
-theorem beta_path_keeps_original_buffer_index : HasType env [] true dropped (.buffer (.natural 1)) :=
-  all_dependent_fields_keep_exact_original_type.ghostNormalize history actual_beta_result_contains_pure_drop
+theorem full_search_keeps_original_buffer_index :
+    HasType env [] true (.alloc (.natural 1) (.integer 0)) (.buffer (.natural 1)) :=
+  (Checker.check_sound authentic_indexed_case_is_checked).ghostNormalize history actual_converter_completes_case
 
+/-- The explicit beta/drop derivation remains available independently of search. -/
 theorem pure_drop_completes_typed_case :
     HasType env [] true (.alloc (.natural 1) (.integer 0)) (.buffer (.natural 1)) :=
-  drop_preserves beta_path_keeps_original_buffer_index
-
-theorem case_stays_neutral_in_installed_converter : Conversion.normalize? env 40 source ≠ some (.alloc (.natural 1) (.integer 0)) := by
-  cbv
-  intro same
-  cases same
+  all_dependent_fields_keep_exact_original_type.ghostNormalize history
+    (by cbv : Conversion.normalize? env 40 reduct = some (.alloc (.natural 1) (.integer 0)))
 
 end Jihoo.NativeKernel.Environment.FamilyIota.CaseExamples

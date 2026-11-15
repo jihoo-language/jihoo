@@ -9,7 +9,7 @@ theorem nonFunction_neutral : nonFunction env (.var 0) :=
   Environment.nonFunctionHead_full rfl
 
 theorem function_not_nonFunction (admissible : EnvironmentDelta.Admissible env) : ¬ nonFunction env (.pi false .u64 .u64) :=
-  EnvironmentDelta.Basis.NonFunction.pi_rejected admissible
+  FamilyIota.Extended.NonFunction.pi_rejected admissible
 
 theorem nonFunction_not_substitution_stable (admissible : EnvironmentDelta.Admissible env) :
     ∃ term substitution, nonFunction env term ∧ ¬nonFunction env (term.subst substitution) := by

@@ -34,7 +34,7 @@ theorem genuine_generic_two_binder_closing :
     ∃ values, RealizedInterpretation .empty genericFinalContext values ∧
       Conversion.Conv .empty .u64 ((Term.var 1).subst values) := by
   apply generic_telescope.close empty_history (RealizedInterpretation.nil Term.var) generic_actual_trace
-  · simpa only [Term.subst_id] using EnvironmentDelta.Basis.Conv.refl genericSignature
+  · simpa only [Term.subst_id] using FamilyIota.Extended.Conv.refl genericSignature
   · rfl
 
 theorem genuine_replay_matches_checked_entries :
@@ -74,7 +74,7 @@ theorem genuine_erased_index_two_binder_closing :
       Conversion.Conv .empty (.app KindRealizationExamples.neutralFamily (.strict owner (.natural 0)))
         ((Term.app (.var 1) (.var 0)).subst values) := by
   apply indexed_telescope.close empty_history (RealizedInterpretation.nil Term.var) indexed_actual_trace
-  · simpa only [Term.subst_id] using EnvironmentDelta.Basis.Conv.refl indexedSignature
+  · simpa only [Term.subst_id] using FamilyIota.Extended.Conv.refl indexedSignature
   · rfl
 
 /-- Complete two-binder semantic closure for every genuinely ghost-typed
@@ -102,10 +102,10 @@ theorem all_typed_indices_closing (typed : HasType .empty [] true index .u64) :
   exact False.elim (by
     cases kind with
     | type level =>
-        exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+        exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
           (by intro same; cases same) converted empty_history.wellFormed.admissible
     | index erased rest =>
-        exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+        exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
           (by intro same; cases same) converted empty_history.wellFormed.admissible)
 
 open AuthenticKindExamples
@@ -141,7 +141,7 @@ theorem genuine_alias_two_binder_closing :
       Conversion.Conv familyAlias (.app KindRealizationExamples.neutralFamily (.strict owner (.natural 0)))
         ((Term.app (.var 1) (.var 0)).subst values) := by
   apply alias_telescope.close authentic_alias_history (RealizedInterpretation.nil Term.var) alias_actual_trace
-  · simpa only [Term.subst_id] using EnvironmentDelta.Basis.Conv.refl aliasSignature
+  · simpa only [Term.subst_id] using FamilyIota.Extended.Conv.refl aliasSignature
   · rfl
 
 def indexedIdentitySignature : Term := .pi false (.pi false .u64 (.univ 0))

@@ -20,7 +20,10 @@ lake build --wfail
 report=$(mktemp)
 generated=$(mktemp)
 trap 'rm -f "$report" "$generated"' EXIT
-lake env lean -M 4096 -j 1 -DwarningAsError=true Audit.lean > "$report"
+if ! lake env lean -M 4096 -j 1 -DwarningAsError=true Audit.lean > "$report" 2>&1; then
+  cat "$report"
+  exit 1
+fi
 cat "$report"
 # Audit actual elaborated dependencies, not merely source text. Only Lean's
 # standard logical axioms may occur; in particular sorryAx is never accepted.
@@ -32,7 +35,7 @@ with open(sys.argv[1], encoding="utf-8") as audit:
 allowed = {"propext", "Quot.sound", "Classical.choice"}
 entries = re.findall(r"depends on axioms: \[([^\]]*)\]", report)
 closed = re.findall(r"does not depend on any axioms", report)
-assert len(entries) + len(closed) == 7061, report
+assert len(entries) + len(closed) == 7966, report
 for entry in entries:
     unexpected = set(filter(None, re.split(r"[,\s]+", entry))) - allowed
     assert not unexpected, f"Unexpected proof dependencies: {unexpected}"

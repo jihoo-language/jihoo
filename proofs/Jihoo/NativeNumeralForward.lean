@@ -1,4 +1,5 @@
-import Jihoo.NativeEnvironmentConversionBasis
+import Jihoo.NativeFamilyIotaForwardAPI
+import Jihoo.NativeFamilyIotaChurchRosser
 
 /-! Literal equality yields a genuine finite forward computation to a valid
 literal. Additive splitting may expand a literal, so numerals are not assumed
@@ -113,12 +114,27 @@ theorem Represents.contract (represented : Represents term value) (bound : value
     exact .trans (.node .uadd (.cons first (.cons second .nil)))
       (.acu (.arithmetic (.literalAdd m n bound)))
 
+/-- Family roots cannot contract a numeric tree; numeric shape is retained by
+all genuine installed forward equations. -/
+theorem family_forward_preserves (step : Environment.FamilyIota.Extended.Forward env input output) :
+    ∀ {value}, Represents input value → Represents output value := by
+  induction step using Environment.FamilyIota.Extended.Forward.rec
+    (motive_2 := fun xs ys _ => ListRel
+      (fun a b => ∀ {value},Represents a value → Represents b value) xs ys) with
+  | old original => exact forward_preserves original
+  | iota root => intro value represented;cases root <;> cases represented
+  | refl => intro value represented;exact represented
+  | trans _ _ first second => intro value represented;exact second (first represented)
+  | node op children ih => intro value represented;exact node_transport ih represented
+  | nil => exact .nil
+  | cons _ _ first rest => exact .cons first rest
+
 /-- Actual Church--Rosser plus numeric shape gives the path to the numeral,
 not merely a shared reduct or an untyped symmetric expansion. -/
 theorem conversion_to_forward (admissible : EnvironmentDelta.Admissible env)
-    (converted : Basis.Conv env term (.natural value)) (bound : value < 2^64) :
-    EnvironmentDelta.Forward env term (.natural value) := by
+    (converted : Environment.FamilyIota.Extended.Conv env term (.natural value)) (bound : value < 2^64) :
+    Environment.FamilyIota.Extended.Forward env term (.natural value) := by
   obtain ⟨common,left,right⟩ := converted.church_rosser admissible
-  exact .trans left ((forward_preserves right (.natural value)).contract bound)
+  exact .trans left (.old ((family_forward_preserves right (.natural value)).contract bound))
 
 end Jihoo.NativeKernel.EnvironmentDelta.NumeralForward

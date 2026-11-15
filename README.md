@@ -196,7 +196,7 @@ environment checker adds dependent constructors, proposition elimination,
 Buffer/ref operations, Back/Give/Take, owned iteration and data elimination
 with Case/Drop and borrowed View, with code quantities derived from
 checked type and family metadata. It uses the proved bounded
-environment-indexed delta/ACU converter.
+environment-indexed family-iota/delta/ACU converter.
 Its resource gate derives abstract representation kinds from checked contexts
 and replays each call's actual dependent signature and erasure flags.
 The same typing checker unfolds checked global definitions during comparison
@@ -205,7 +205,7 @@ history derives the closed, transparent environment used for Church–Rosser,
 rigid injectivity, ghost substitution and cross-mode type uniqueness. Actual
 combined forward reduction and concrete normalization preserve the original
 independently derived type, including beneath dependent binders. Further
-operators and family iota equations, consistency, native source
+operators and loan equations, consistency, native source
 refinement and runtime heap/loan correspondence remain open.
 A concrete finite universe/context model and a source-derived U64/function
 fundamental theorem are also checked. Recognized closed U64 terms have a genuine
@@ -220,10 +220,11 @@ also have source-derived interpretations, including nested family applications.
 Value-dependent families `B : A -> Type(j)` also have source-derived meanings
 over arbitrary supported monotypes, with observations `x : A` used as indices
 and ordinary values. The closed dependent identity is checked at all native levels.
-Separate family iota results preserve the exact original
+Installed family iota rules preserve the exact original
 type for parameterized Case, general indexed recursive Prop/data Elim and
-arbitrary recursive borrowed View. Their integration into conversion remains
-open. Actual checked calls construct
+arbitrary recursive borrowed View. The same expanded conversion has genuine
+finite common reducts, rigid injectivity, contextual preservation and a sound
+bounded implementation. Actual checked calls construct
 closing interpretations for every finite Prop/Type0 binder telescope; arbitrary
 higher-kind closing and full code/resource substitution remain open.
 Loan snapshot scope/renaming and the dependent-lend reader/continuation
@@ -234,8 +235,18 @@ The specialized ghost-body checks also construct a typed genuine forward
 contractum of the pure Lend expansion, with exact result-binder scope removal.
 A separate loan-indexed extension covers all existing typing rules plus active
 code borrowing and Lend. Existing derivations embed into it, ghost promotion
-forgets the loan stack, and code borrows require active named owners. Its default
-checker integration, full metatheory and heap/resource execution proof remain open.
+forgets the loan stack, and code borrows require active named owners. Full ghost
+renaming and simultaneous substitution cover all 64 rules, including replacing
+named owners with arbitrary typed values. Original checked calls also retain
+their opened source bodies' code typing and actual argument resource contracts.
+They reconstruct exact typed argument stores for every binder sort, with
+source-slot type and erasure alignment derived from the actual replay.
+Explicit Lend callbacks also have atomic pure evaluation with original-type
+preservation. A separate raw Lend/family/delta/ACU theory has genuine finite
+common reducts and binding-aware injectivity; its macro intermediates are not
+assumed typed.
+The loan extension's default checker integration, type uniqueness and heap/resource
+execution proof remain open.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

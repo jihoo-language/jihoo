@@ -85,18 +85,18 @@ theorem Mono.syntax_injective (wf : UnifiedProgram.EnvWellFormed env) {A B : Mon
   | parameter =>
     cases B with
     | parameter => rfl
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | natural => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | arrow B C => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
   | natural =>
     cases B with
-    | parameter => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl (.symm converted) wf.admissible)
+    | parameter => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl (.symm converted) wf.admissible)
     | natural => rfl
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | arrow B C => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
   | arrow A C ha hc =>
     cases B with
-    | parameter => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl (.symm converted) wf.admissible)
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | parameter => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl (.symm converted) wf.admissible)
+    | natural => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .u64) rfl rfl (by intro h; cases h) converted wf.admissible)
     | arrow B D =>
       rw [Mono.syntax_arrow,Mono.syntax_arrow] at converted

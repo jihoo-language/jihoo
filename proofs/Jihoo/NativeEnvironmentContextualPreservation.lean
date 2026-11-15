@@ -2,6 +2,7 @@ import Jihoo.NativeEnvironmentRootPreservation
 import Jihoo.NativeDataMotiveCongruence
 import Jihoo.NativeViewMotiveCongruence
 import Jihoo.NativeEnvironmentDeltaTyping
+import Jihoo.NativeFamilyIotaPreservation
 
 /-! Contextual preservation for the actual forward ACU normalizer relation.
 A child induction supplies conversion, preservation in every context, and the
@@ -119,7 +120,7 @@ theorem forward_rigid_shape (step : EnvironmentDelta.Forward env input output) :
   | cons => trivial
 
 structure GhostTransform (env : Environment) (input output : Term) : Prop where
-  forward : EnvironmentDelta.Forward env input output
+  forward : FamilyIota.Extended.Forward env input output
   shape : LambdaShape env input output
   preserves : ∀ {ctx type}, HasType env ctx true input type → HasType env ctx true output type
 
@@ -132,7 +133,7 @@ theorem GhostTransform.trans (first : GhostTransform env a b) (second : GhostTra
     fun typed => second.preserves (first.preserves typed)⟩
 
 theorem GhostTransform.converted (change : GhostTransform env input output) : (Conv env) input output :=
-  EnvironmentDelta.Basis.forward_toConv change.forward
+  change.forward.toConv
 
 theorem GhostTransform.typed (change : GhostTransform env a b) (typed : HasType env ctx mode a T) :
     HasType env ctx true b T := change.preserves typed.ghost
@@ -175,7 +176,7 @@ private theorem arguments_transport (closed : Conversion.Closed env) (args : Arg
       rename_i newArgument newArguments
       have tailTyped := ihtail _ tailChanges
       have replacement : (Conv env) (rest.subst (single newArgument)) (rest.subst (single argument)) := by
-        apply EnvironmentDelta.Basis.Conv.subst_congr closed
+        apply FamilyIota.Extended.Conv.subst_congr closed
         intro index
         cases index with
         | zero => exact .symm headChange.converted
@@ -331,7 +332,7 @@ private theorem viewResult_congr (motive : Conv env a b) (scrutinee : Conv env c
 
 private theorem instantiate_congr (closed : Conversion.Closed env) (body : Term) (changed : (Conv env) a b) :
     (Conv env) (body.subst (single a)) (body.subst (single b)) := by
-  apply EnvironmentDelta.Basis.Conv.subst_congr closed
+  apply FamilyIota.Extended.Conv.subst_congr closed
   intro index
   cases index with
   | zero => exact changed
@@ -577,7 +578,7 @@ private theorem children_preservation (wf : UnifiedProgram.EnvWellFormed env)
     exact .free (first.typed buffer) (second.typed rest)
   case refBuffer size _ =>
     obtain ⟨_,rfl,change⟩ := list_one changes
-    obtain ⟨_,rfl,kids⟩ := forward_rigid_shape change.forward rfl rfl
+    obtain ⟨_,rfl,kids⟩ := FamilyIota.Extended.Forward.rigid_shape change.forward rfl rfl
     obtain ⟨_,rfl,_⟩ := list_one kids
     exact .refBuffer (change.typed (HasType.buffer (ghost := true) size)).bufferView.1
   case ghostBorrow buffer _ =>
@@ -627,7 +628,7 @@ termination_by sizeOf input
 
 private theorem transform (step : ACU.MixedRed input output)
     (preserved : ∀ {ctx type}, HasType env ctx true input type → HasType env ctx true output type) :
-    GhostTransform env input output := ⟨.acu step,mixed_lambda_shape step,preserved⟩
+    GhostTransform env input output := ⟨.old (.acu step),mixed_lambda_shape step,preserved⟩
 
 theorem arithmetic_ghost_transform (wf : UnifiedProgram.EnvWellFormed env)
     (step : ACU.ArithmeticRed input output) : GhostTransform env input output := by
@@ -685,7 +686,7 @@ theorem forward_lambda_shape (step : EnvironmentDelta.Forward env input output) 
       cases rest with
       | cons bodyStep rest =>
         cases rest
-        exact ⟨_,_,shape,EnvironmentDelta.Basis.forward_toConv domainStep,forward_lambda_shape bodyStep⟩
+        exact ⟨_,_,shape,.old (EnvironmentDelta.Basis.forward_toConv domainStep),forward_lambda_shape bodyStep⟩
   · trivial
 termination_by sizeOf input
 
@@ -698,10 +699,10 @@ theorem forward_ghost_transform (history : UnifiedProgram.UnifiedProgramChecked 
   | trans first second ihfirst ihsecond => exact ihfirst.trans ihsecond
   | acu reduced => exact mixed_ghost_transform history.wellFormed reduced
   | node op kids ih =>
-      exact ⟨.node op kids,forward_lambda_shape (.node op kids),
+      exact ⟨.old (.node op kids),forward_lambda_shape (.node op kids),
         fun typed => children_preservation history.wellFormed typed op _ rfl _ ih⟩
   | delta found =>
-      refine ⟨.delta found,by simp [LambdaShape],?_⟩
+      refine ⟨.old (.delta found),by simp [LambdaShape],?_⟩
       intro ctx type typed
       obtain ⟨declaration,selected,preserved⟩ := EnvironmentDelta.checked_global_preserves history typed
       have same := Option.some.inj (found.symm.trans selected)
@@ -714,10 +715,47 @@ theorem HasType.ghostForward (history : UnifiedProgram.UnifiedProgramChecked def
     (typed : HasType env ctx mode term type) (step : EnvironmentDelta.Forward env term output) :
     HasType env ctx true output type := (forward_ghost_transform history step).typed typed
 
+/-- Family roots do not replace a leading lambda; contextual steps retain every
+leading binder and convert each changed annotation in the installed relation. -/
+theorem family_forward_lambda_shape (step : FamilyIota.Extended.Forward env input output) :
+    LambdaShape env input output := by
+  fun_cases LambdaShape env input output
+  · rename_i erased domain body
+    obtain ⟨ys,shape,kids⟩ := step.rigid_shape rfl rfl
+    cases kids with
+    | cons domainStep rest => cases rest with
+      | cons bodyStep rest =>
+        cases rest
+        exact ⟨_,_,shape,domainStep.toConv,family_forward_lambda_shape bodyStep⟩
+  · trivial
+termination_by sizeOf input
+
+/-- Every genuine family, legacy and delta path preserves the exact original
+dependent type. The actual checked history supplies family root typing. -/
+theorem family_forward_ghost_transform (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
+    (step : FamilyIota.Extended.Forward env input output) : GhostTransform env input output := by
+  induction step using FamilyIota.Extended.Forward.rec
+    (motive_2 := fun xs ys _ => ListRel (GhostTransform env) xs ys) with
+  | old original => exact forward_ghost_transform history original
+  | iota root =>
+      refine ⟨.iota root,?_,fun typed => root.preserves history typed⟩
+      cases root <;> simp only [LambdaShape,FamilyIota.elimTerm,FamilyIota.caseTerm,FamilyIota.viewTerm]
+  | refl => exact .refl _
+  | trans _ _ first second => exact first.trans second
+  | node op kids ih =>
+      exact ⟨.node op kids,family_forward_lambda_shape (.node op kids),
+        fun typed => children_preservation history.wellFormed typed op _ rfl _ ih⟩
+  | nil => exact .nil
+  | cons _ _ first rest => exact .cons first rest
+
+theorem HasType.ghostFamilyForward (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
+    (typed : HasType env ctx mode term type) (step : FamilyIota.Extended.Forward env term output) :
+    HasType env ctx true output type := (family_forward_ghost_transform history step).typed typed
+
 /-- A successful concrete bounded delta/ACU normalization retains the independently derived original type. -/
 theorem HasType.ghostNormalize (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (typed : HasType env ctx mode term type) (normalized : Conversion.normalize? env fuel term = some output) :
-    HasType env ctx true output type := typed.ghostForward history (Conversion.normalize?_forward normalized)
+    HasType env ctx true output type := typed.ghostFamilyForward history (Conversion.normalize?_forward normalized)
 
 theorem HasType.checkedGhostNormalize (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (typed : HasType env ctx mode term type) (normalized : Conversion.normalize? env fuel term = some output) :

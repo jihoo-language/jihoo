@@ -8,19 +8,19 @@ variable {definitions : List GlobalDeclaration} {familyDeclarations : List Famil
 
 /-- Forward normalization preserves a displayed Pi/Universe kind spine even
 when its Pi domains need more computation or are not first-order domains. -/
-theorem kindOf_forward (step : EnvironmentDelta.Forward env input output)
+theorem kindOf_forward (step : FamilyIota.Extended.Forward env input output)
     (source : Jihoo.NativeKernel.kindOf input = true) : Jihoo.NativeKernel.kindOf output = true := by
   have wf : WellFounded (fun a b : Term => sizeOf a < sizeOf b) := (measure sizeOf).wf
   induction input using wf.induction generalizing output with
   | h input ih =>
       fun_cases Jihoo.NativeKernel.kindOf input
       · rename_i level
-        obtain ⟨children,shape,changes⟩ := forward_rigid_shape step rfl rfl
+        obtain ⟨children,shape,changes⟩ := FamilyIota.Extended.Forward.rigid_shape step rfl rfl
         cases changes
         subst output
         rfl
       · rename_i erased domain body
-        obtain ⟨children,shape,changes⟩ := forward_rigid_shape step rfl rfl
+        obtain ⟨children,shape,changes⟩ := FamilyIota.Extended.Forward.rigid_shape step rfl rfl
         cases changes with
         | cons domainChange remaining =>
             cases remaining with

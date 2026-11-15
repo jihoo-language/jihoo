@@ -1,5 +1,4 @@
 import Jihoo.NativeDataSyntax
-import Jihoo.NativeEnvironmentConversion
 
 /-! Borrowed data telescopes derived from the same checked canonical signature.
 The plan is compiled before parameter substitution: its ownership decisions do

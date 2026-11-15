@@ -9,7 +9,7 @@ open Jihoo.Quantity
 variable {definitions : List GlobalDeclaration} {familyDeclarations : List FamilyDeclaration}
 
 def UnownedHead (env : Environment) (op : Op) : Prop :=
-  EnvironmentDelta.Basis.rigid op = true ∧ op ≠ .buffer ∧
+  FamilyIota.Extended.rigid op = true ∧ op ≠ .buffer ∧
     ∀ family count, op = .ind family count →
       ∃ entry, env.families[family]? = some entry ∧ entry.boxed = false
 
@@ -20,7 +20,7 @@ theorem head_unrestricted (accepted : head env term = some .unrestricted) :
   | node op children =>
       refine ⟨op,children,rfl,?_⟩
       cases op <;> simp_all [head,NativeQuantity.binderMode,UnownedHead,
-        EnvironmentDelta.Basis.rigid,GlobalEnvironment.ordinary,ACU.fullRigid,
+        FamilyIota.Extended.rigid,FamilyIota.Extended.familyHead,EnvironmentDelta.Basis.rigid,GlobalEnvironment.ordinary,ACU.fullRigid,
         NativeKernel.Conversion.rigid,ACU.arithmeticRigid]
       case buffer =>
         cases children with
@@ -39,7 +39,7 @@ theorem UnownedHead.not_owned (head : UnownedHead env op)
   intro owned
   cases owned with
   | buffer converted =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint head.1 rfl head.2.1 converted admissible
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint head.1 rfl head.2.1 converted admissible
   | family found boxed converted =>
       have same := (converted.full_rigid_node_injective head.1 rfl admissible).1
       obtain ⟨flatEntry,selected,flat⟩ := head.2.2 _ _ same

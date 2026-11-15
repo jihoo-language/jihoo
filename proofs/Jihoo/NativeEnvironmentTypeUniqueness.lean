@@ -245,7 +245,7 @@ theorem HasType.sort_unique {s r : SortTag} (ht : HasType env Γ mode t s.term)
 
 theorem HasType.no_scalar_confusion (hu : HasType env Γ mode t .u64)
     (wf : UnifiedProgram.EnvWellFormed env) (hi : HasType env Γ mode' t .i64) : False :=
-  EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro same; cases same)
+  FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro same; cases same)
     (hu.unique wf hi) wf.admissible
 
 theorem HasType.array_index_unique (ht : HasType env Γ mode t (.array m))
@@ -293,12 +293,12 @@ theorem HasType.no_type_in_type (wf : UnifiedProgram.EnvWellFormed env) :
 
 theorem HasType.universe_not_proposition (wf : UnifiedProgram.EnvWellFormed env) :
     ¬ HasType env Γ mode (.univ n) .prop :=
-  fun h => EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+  fun h => FamilyIota.Extended.Conv.full_rigid_disjoint
     (op := .universe (n+1)) (op' := .prop) rfl rfl (by intro same; cases same) h.principalView wf.admissible
 
 theorem HasType.sorts_do_not_collapse (hp : HasType env Γ mode t .prop)
     (wf : UnifiedProgram.EnvWellFormed env) (hu : HasType env Γ mode' t (.univ n)) : False :=
-  EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .universe n) (op' := .prop)
+  FamilyIota.Extended.Conv.full_rigid_disjoint (op := .universe n) (op' := .prop)
     rfl rfl (by intro same; cases same) (.symm (hp.unique wf hu)) wf.admissible
 
 /-- Every accepted inferred type determines all declarative types, including

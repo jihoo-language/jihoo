@@ -33,7 +33,7 @@ theorem target_untypable (wf : UnifiedProgram.EnvWellFormed env) : ¬ HasType en
   obtain ⟨_,left⟩ := strictLeft typed
   have bad := left.uaddView.1
   have separated := (HasType.u64 (env := env) (ctx := ctx) (ghost := true)).unique wf bad
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .universe 0) (op' := .u64)
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .universe 0) (op' := .u64)
     rfl rfl (by intro same; cases same) separated wf.admissible
 
 theorem quotient_parallel_step : ACU.QPar source target :=

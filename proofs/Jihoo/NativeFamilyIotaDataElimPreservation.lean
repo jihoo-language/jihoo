@@ -155,7 +155,7 @@ theorem data_elim_preserves {family constructor : Nat} {entry : CheckedFamily} {
   simp only [List.nil_append] at recursivelyApplied
   rw [exactResult] at recursivelyApplied
   have final := HasType.convert (by simpa only [List.nil_append] using recursivelyApplied)
-    ((EnvironmentDelta.Basis.Conv.node .app (.cons
+    ((FamilyIota.Extended.Conv.node .app (.cons
       (applications_congr (.refl motive) (related_drop actualIndices.2.2 _)) (.cons (.refl _) .nil))).trans result)
   have parameterNonrecursive : ∀ j < entry.declaration.params,∀ field,signature.fields[j]? = some field → field.recursive = none := by
     intro j inside field fieldFound

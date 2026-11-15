@@ -33,10 +33,10 @@ theorem owned_not_u64 (wf : UnifiedProgram.EnvWellFormed env) (owned : Owned env
   intro converted
   cases owned with
   | buffer buffer =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .buffer) (op' := .u64) rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .buffer) (op' := .u64) rfl rfl
         (by intro equality; cases equality) (.trans (.symm buffer) converted) wf.admissible
   | family found boxed family =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .ind _ _) (op' := .u64) rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .ind _ _) (op' := .u64) rfl rfl
         (by intro equality; cases equality) (.trans (.symm family) converted) wf.admissible
 
 theorem PlainIndices.lambdaBody (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)

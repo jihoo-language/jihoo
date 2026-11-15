@@ -147,7 +147,7 @@ first-order type spine. In particular, a neutral variable is never accepted
 merely because its spelling is a variable. -/
 inductive ResultShape (env : Environment) (ctx : Context) (result : Term) : Prop where
   | rigid : Conversion.Conv env result (.node op children) →
-      EnvironmentDelta.Basis.nonFunctionOp op = true → ResultShape env ctx result
+      FamilyIota.Extended.nonFunctionOp op = true → ResultShape env ctx result
   | abstract : Conversion.Conv env result normal → Spine env ctx normal (.type level) →
       ResultShape env ctx result
 
@@ -156,14 +156,14 @@ def rigidResultHead : Term → Bool
   | term@(.node _ _) => Checker.takeNonFunctionHead term
 
 theorem rigidResultHead_sound (accepted : rigidResultHead term = true) :
-    ∃ op children, term = .node op children ∧ EnvironmentDelta.Basis.nonFunctionOp op = true := by
+    ∃ op children, term = .node op children ∧ FamilyIota.Extended.nonFunctionOp op = true := by
   cases term with
   | var index => contradiction
   | node op children =>
       refine ⟨op,children,rfl,?_⟩
       cases op <;> simp_all [rigidResultHead, Checker.takeNonFunctionHead,
         NativeKernel.nonFunctionHead, Checker.resourceNonFunctionHead,
-        EnvironmentDelta.Basis.nonFunctionOp]
+        FamilyIota.Extended.nonFunctionOp]
 
 /-- A consumed runtime owner cannot be retained by a returned function.
 Abstract results use the actual context kind spine, including its U64 checks. -/

@@ -14,22 +14,22 @@ theorem sort_not_u64 (admissible : EnvironmentDelta.Admissible env) (sort : Sort
   cases sort with
   | prop =>
       intro converted
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .prop) (op' := .u64)
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .prop) (op' := .u64)
         rfl rfl (by intro equality; cases equality) converted admissible
   | type level =>
       intro converted
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .universe level) (op' := .u64)
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .universe level) (op' := .u64)
         rfl rfl (by intro equality; cases equality) converted admissible
 
 /-- A rigid source head survives actual forward reduction with its arity. -/
 theorem u64_no_rigid_head (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
-    (typed : HasType env ctx mode term .u64) (rigid : EnvironmentDelta.Basis.rigid op = true)
+    (typed : HasType env ctx mode term .u64) (rigid : FamilyIota.Extended.rigid op = true)
     (reject : ∀ arguments, ¬ HasType env ctx true (.node op arguments) .u64) :
     ¬ Conv env term (.node op arguments) := by
   intro converted
   obtain ⟨common, first, second⟩ := converted.church_rosser history.wellFormed.admissible
-  obtain ⟨children, rfl, _⟩ := forward_rigid_shape second rigid rfl
-  exact reject children (typed.ghostForward history first)
+  obtain ⟨children, rfl, _⟩ := FamilyIota.Extended.Forward.rigid_shape second rigid rfl
+  exact reject children (typed.ghostFamilyForward history first)
 
 theorem u64_not_buffer (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (typed : HasType env ctx mode term .u64) : ¬ Conv env term (.buffer n) := by
@@ -105,7 +105,7 @@ theorem u64_not_lambda (history : UnifiedProgram.UnifiedProgramChecked definitio
     | cons second rest => cases rest with
       | nil =>
           obtain ⟨_, _, converted⟩ := view
-          exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted history.wellFormed.admissible
+          exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro equality; cases equality) converted history.wellFormed.admissible
       | cons => exact view
 
 end Jihoo.NativeKernel.Environment.Representation

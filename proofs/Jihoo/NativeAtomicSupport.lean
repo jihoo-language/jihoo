@@ -87,8 +87,8 @@ inductive AtomicSupported : {env : Environment} → {ctx : Context} → {mode : 
       (step : ACU.MixedRed term output) (supported : AtomicSupported (typed.ghostMixedRed wellFormed step)) :
       AtomicSupported typed
   | forward (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
-      (typed : HasType env ctx mode term T) (step : EnvironmentDelta.Forward env term output)
-      (supported : AtomicSupported (typed.ghostForward history step)) : AtomicSupported typed
+      (typed : HasType env ctx mode term T) (step : FamilyIota.Extended.Forward env term output)
+      (supported : AtomicSupported (typed.ghostFamilyForward history step)) : AtomicSupported typed
   | global (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
       (found : env.globals[index]? = some declaration) (origin : GlobalOrigin history found)
       (valueTyped : HasType origin.earlier [] bodyMode declaration.value declaration.type)

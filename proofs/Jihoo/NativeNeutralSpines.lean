@@ -1,4 +1,6 @@
 import Jihoo.NativeEnvironmentWellFormed
+import Jihoo.NativeNeutralSpineSyntax
+import Jihoo.NativeFamilyIotaNeutralCoherence
 
 /-! Authentic conversion of neutral higher-kinded family applications.
 The argument list is stored from the last argument towards the head. These
@@ -6,9 +8,6 @@ facts permit arbitrary argument terms and use quotient confluence, rather
 than assuming typing, normalization or preservation of parallel reduction. -/
 namespace Jihoo.NativeKernel
 
-def neutralSpine (head : Nat) : List Term → Term
-  | [] => .var head
-  | argument :: rest => .app (neutralSpine head rest) argument
 
 namespace ACU
 open Conversion (ListRel)

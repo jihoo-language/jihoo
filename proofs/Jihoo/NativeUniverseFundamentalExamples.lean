@@ -71,7 +71,7 @@ private def computedCode : Term := .app (.lam false (.univ 0) (.var 0)) .u64
 theorem computed_universe_code_interpreted : Nonempty (CodeValue empty computedCode) := by
   have converted : Conv empty computedCode .u64 := by
     simpa only [computedCode,Term.app,Term.lam,Term.subst,NativeKernel.single] using
-      (EnvironmentDelta.Basis.Conv.legacy (env := empty) (NativeKernel.Conversion.Conv.beta false (.univ 0) (.var 0) .u64))
+      (FamilyIota.Extended.Conv.legacy (env := empty) (NativeKernel.Conversion.Conv.beta false (.univ 0) (.var 0) .u64))
   exact ⟨⟨.natural,converted⟩⟩
 
 theorem computed_universe_code_has_actual_type : HasType empty [] true computedCode (.univ 0) :=
@@ -88,7 +88,7 @@ private theorem history : UnifiedProgram.UnifiedProgramChecked [declaration] [] 
   UnifiedProgram.checkProgram_sound
     (by cbv : UnifiedProgram.checkProgram 32 32 [declaration] [] = some checkedEnvironment)
 private def deltaCode : CodeValue checkedEnvironment (.node (.global 0) []) :=
-  ⟨.natural,EnvironmentDelta.Basis.Conv.delta (env := checkedEnvironment) (index := 0) (declaration := declaration) rfl⟩
+  ⟨.natural,FamilyIota.Extended.Conv.delta (env := checkedEnvironment) (index := 0) (declaration := declaration) rfl⟩
 
 theorem checked_delta_type_argument_realized :
     HasType checkedEnvironment [] true (.app identity (.node (.global 0) [])) (.pi false .u64 .u64) ∧

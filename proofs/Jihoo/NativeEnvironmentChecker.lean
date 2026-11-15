@@ -1,3 +1,4 @@
+import Jihoo.NativeFamilyIotaDecoder
 import Jihoo.NativeEnvironmentTyping
 import Jihoo.NativePartialRenaming
 import Jihoo.NativeChecker
@@ -99,14 +100,6 @@ def branches (inferBranch : Term → Option Term) (fuel : Nat) (env : Environmen
       accepts fuel env (inferBranch branch) (propCaseType signature motive) &&
         branches inferBranch fuel env motive signatures rest
   | _, _ => false
-
-/-- Decode the exact native motive/cases/scrutinee child layout. -/
-def splitCases : Nat → List Term → Option (List Term × Term)
-  | 0, [scrutinee] => some ([], scrutinee)
-  | n + 1, branch :: children => do
-      let (branches, scrutinee) ← splitCases n children
-      pure (branch :: branches, scrutinee)
-  | _, _ => none
 
 /-- Check a list of computed branch types; no signature callback is accepted. -/
 def branchesAgainst (inferBranch : Term → Option Term) (fuel : Nat) (env : Environment) :

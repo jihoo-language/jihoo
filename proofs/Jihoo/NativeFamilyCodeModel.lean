@@ -183,7 +183,7 @@ theorem TypeCode.syntax_arrow (A B : TypeCode parameters families) (offset : Nat
 
 private theorem variable_injective (wf : UnifiedProgram.EnvWellFormed env)
     (converted : Conv env (.var x) (.var y)) : x = y :=
-  (EnvironmentDelta.Basis.Conv.neutralSpine_injective (arguments := []) (replacements := []) wf.admissible converted).1
+  (Environment.FamilyIota.Extended.Conv.neutralSpine_injective (arguments := []) (replacements := []) wf.admissible converted).1
 
 /-- Coherence reconstructs the entire open code tree, including every nested
 higher-kinded family application. No equality of model assignments is assumed. -/
@@ -196,24 +196,24 @@ theorem TypeCode.syntax_injective (wf : UnifiedProgram.EnvWellFormed env) {A B :
       have same := variable_injective wf converted
       have indexes : index = other := Fin.ext (by omega)
       cases indexes; rfl
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | natural => exact False.elim (Environment.FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | arrow B C => exact False.elim (Environment.FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
     | application family argument =>
-      have impossible := (EnvironmentDelta.Basis.Conv.neutralSpine_injective
+      have impossible := (Environment.FamilyIota.Extended.Conv.neutralSpine_injective
         (arguments := []) (replacements := [argument.syntax offset]) wf.admissible converted).2
       cases impossible
   | natural =>
     cases B with
-    | parameter index => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
+    | parameter index => exact False.elim (Environment.FamilyIota.Extended.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
     | natural => rfl
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | arrow B C => exact False.elim (Environment.FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
-    | application family argument => exact False.elim (EnvironmentDelta.Basis.Conv.neutralSpine_node_separate
+    | application family argument => exact False.elim (Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
         (arguments := [argument.syntax offset]) wf.admissible rfl (by intro h; cases h) rfl converted.symm)
   | arrow A C ha hc =>
     cases B with
-    | parameter index => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | parameter index => exact False.elim (Environment.FamilyIota.Extended.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
+    | natural => exact False.elim (Environment.FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .u64) rfl rfl (by intro h; cases h) converted wf.admissible)
     | arrow B D =>
       rw [TypeCode.syntax_arrow,TypeCode.syntax_arrow] at converted
@@ -221,17 +221,17 @@ theorem TypeCode.syntax_injective (wf : UnifiedProgram.EnvWellFormed env) {A B :
       cases ha components.2.1
       cases hc components.2.2
       rfl
-    | application family argument => exact False.elim (EnvironmentDelta.Basis.Conv.neutralSpine_node_separate
+    | application family argument => exact False.elim (Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
         (arguments := [argument.syntax offset]) wf.admissible rfl (by intro h; cases h) rfl converted.symm)
   | application family argument ih =>
     cases B with
     | parameter index =>
-      have impossible := (EnvironmentDelta.Basis.Conv.neutralSpine_injective
+      have impossible := (Environment.FamilyIota.Extended.Conv.neutralSpine_injective
         (arguments := [argument.syntax offset]) (replacements := []) wf.admissible converted).2
       cases impossible
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.neutralSpine_node_separate
+    | natural => exact False.elim (Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
         (arguments := [argument.syntax offset]) wf.admissible rfl (by intro h; cases h) rfl converted)
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.neutralSpine_node_separate
+    | arrow B C => exact False.elim (Environment.FamilyIota.Extended.Conv.neutralSpine_node_separate
         (arguments := [argument.syntax offset]) wf.admissible rfl (by intro h; cases h) rfl converted)
     | application other replacement =>
       obtain ⟨heads,arguments⟩ := converted.family_application_injective wf.admissible

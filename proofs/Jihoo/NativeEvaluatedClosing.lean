@@ -10,7 +10,7 @@ variable {definitions : List GlobalDeclaration} {familyDeclarations : List Famil
 /-- Every actual substituted code value has its observed forward value path.
 Slots beyond the source context can be retained by the reflexive constructor. -/
 def ForwardValues (env : Environment) (source target : Nat → Term) : Prop :=
-  ∀ index, EnvironmentDelta.Forward env (source index) (target index)
+  ∀ index, FamilyIota.Extended.Forward env (source index) (target index)
 
 theorem ForwardValues.refl (values : Nat → Term) : ForwardValues env values values :=
   fun _ => .refl
@@ -32,7 +32,7 @@ def normalizedValues (env : Environment) (fuel : Nat) (values : Nat → Term) : 
 theorem ForwardValues.normalized (values : Nat → Term) :
     ForwardValues env values (normalizedValues env fuel values) := by
   intro index
-  change EnvironmentDelta.Forward env (values index)
+  change FamilyIota.Extended.Forward env (values index)
     ((Conversion.normalize? env fuel (values index)).getD (values index))
   cases normalized : Conversion.normalize? env fuel (values index) with
   | none => exact .refl
@@ -43,8 +43,8 @@ coherence, including every binder and arbitrary typed U64 index occurrence. -/
 theorem ForwardValues.subst_congr (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (values : ForwardValues env before after) (term : Term) :
     Conversion.Conv env (term.subst before) (term.subst after) :=
-  EnvironmentDelta.Basis.Conv.subst_congr history.wellFormed.closed
-    (fun index => EnvironmentDelta.Basis.forward_toConv (values index)) term
+  FamilyIota.Extended.Conv.subst_congr history.wellFormed.closed
+    (fun index => FamilyIota.Extended.Forward.toConv (values index)) term
 
 /-- Complete typed closing is stable for all actual forward value paths. Every
 lookup's dependent type is transported by proved substitution congruence. -/
@@ -54,7 +54,7 @@ theorem RealizedInterpretation.forwardValues
     (values : ForwardValues env before after) : RealizedInterpretation env ctx after := by
   refine ⟨closing.formed,?_,?_⟩
   · intro index binding selected
-    exact ((closing.typed index binding selected).ghostForward history (values index)).convert
+    exact ((closing.typed index binding selected).ghostFamilyForward history (values index)).convert
       (values.subst_congr history binding.ty)
   · intro index kind found
     exact (closing.arguments index kind found).forward history (values index)

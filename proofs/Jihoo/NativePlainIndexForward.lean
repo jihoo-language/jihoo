@@ -1,3 +1,4 @@
+import Jihoo.NativeFamilyIotaForwardAPI
 import Jihoo.NativePlainIndices
 import Jihoo.NativeTypedChildren
 
@@ -7,15 +8,15 @@ namespace Jihoo.NativeKernel.Environment.Representation
 open Environment.Conversion
 
 structure PlainTransform (env : Environment) (input output : Term) : Prop where
-  forward : EnvironmentDelta.Forward env input output
+  forward : FamilyIota.Extended.Forward env input output
   preserves : ∀ {ctx mode type}, HasType env ctx mode input type →
     PlainIndices env ctx input → PlainIndices env ctx output
 
 theorem PlainTransform.converted (change : PlainTransform env input output) : Conversion.Conv env input output :=
-  EnvironmentDelta.Basis.forward_toConv change.forward
+  FamilyIota.Extended.Forward.toConv change.forward
 
 private theorem list_forward (changes : ListRel (PlainTransform env) xs ys) :
-    ListRel (EnvironmentDelta.Forward env) xs ys := by
+    ListRel (FamilyIota.Extended.Forward env) xs ys := by
   induction changes with
   | nil => exact .nil
   | cons first rest ih => exact .cons first.forward ih
@@ -58,7 +59,7 @@ theorem PlainTransform.refl (term : Term) : PlainTransform env term term :=
 theorem PlainTransform.trans (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (first : PlainTransform env a b) (second : PlainTransform env b c) : PlainTransform env a c :=
   ⟨.trans first.forward second.forward,fun typed plain =>
-    second.preserves (typed.ghostForward history first.forward) (first.preserves typed plain)⟩
+    second.preserves (typed.ghostFamilyForward history first.forward) (first.preserves typed plain)⟩
 
 /-- Every node child is transformed at its actual source binder context. -/
 theorem PlainTransform.node (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
@@ -66,7 +67,7 @@ theorem PlainTransform.node (history : UnifiedProgram.UnifiedProgramChecked defi
   refine ⟨.node op (list_forward changes),?_⟩
   intro ctx mode type typed plain
   cases plain with
-  | index indexTyped => exact .index (indexTyped.ghostForward history (.node op (list_forward changes)))
+  | index indexTyped => exact .index (indexTyped.ghostFamilyForward history (.node op (list_forward changes)))
   | node head children =>
       apply PlainIndices.node head
       intro child member

@@ -128,7 +128,7 @@ theorem viewCaseResult_instantiation (closed : Conversion.Closed env)
     have motiveSame := fieldSubstitution_shift (viewArguments plans values) motive
     rw [length,size] at motiveSame
     rw [motiveSame]
-    apply EnvironmentDelta.Basis.Conv.node .app
+    apply FamilyIota.Extended.Conv.node .app
     refine .cons (.refl _) (.cons (.node .borrow (.cons ?_ .nil)) .nil)
     have flagsLength : (plans.map ViewFieldPlan.borrowed).length = plans.length := List.length_map ..
     have form := read_fields_form (plans.map ViewFieldPlan.borrowed)

@@ -97,8 +97,8 @@ theorem recognized_in_value_context (wf : UnifiedProgram.EnvWellFormed env)
     obtain ⟨erased,domain,codomain,functionTyped,argumentTyped,allowed,resultConverted⟩ := typed.appView
     obtain ⟨F,functionExpression,functionErasure,functionConverted⟩ := ihf Γ length agreement functionTyped
     cases F with
-    | parameter => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl functionConverted wf.admissible)
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | parameter => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl functionConverted wf.admissible)
+    | natural => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi erased) rfl rfl (by intro h; cases h) functionConverted wf.admissible)
     | arrow A B =>
       rw [Mono.syntax_arrow] at functionConverted

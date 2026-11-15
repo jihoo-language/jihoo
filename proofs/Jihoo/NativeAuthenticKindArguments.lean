@@ -1,3 +1,4 @@
+import Jihoo.NativeFamilyIotaForwardAPI
 import Jihoo.NativeKindPrefixInterpretation
 import Jihoo.NativeCallReplayExtension
 
@@ -50,12 +51,12 @@ theorem Kind.conv_injective {first second : Kind} (admissible : EnvironmentDelta
           cases heads
           rfl
       | index erased result =>
-          exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+          exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
             (by intro same; cases same) converted admissible)
   | index erased result ih =>
       cases second with
       | type level =>
-          exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+          exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
             (by intro same; cases same) converted admissible)
       | index other rest =>
           obtain ⟨same,_,bodies⟩ := converted.pi_injective admissible
@@ -93,8 +94,8 @@ open Representation
 variable {definitions : List GlobalDeclaration} {familyDeclarations : List FamilyDeclaration}
 
 private theorem normalizedValueForward (env : Environment) (fuel : Nat) (value : Term) :
-    EnvironmentDelta.Forward env value (Conversion.normalize env fuel value) := by
-  change EnvironmentDelta.Forward env value ((Conversion.normalize? env fuel value).getD value)
+    FamilyIota.Extended.Forward env value (Conversion.normalize env fuel value) := by
+  change FamilyIota.Extended.Forward env value ((Conversion.normalize? env fuel value).getD value)
   cases normalized : Conversion.normalize? env fuel value with
   | none => exact .refl
   | some normal => exact Conversion.normalize?_forward normalized
@@ -109,7 +110,7 @@ theorem ArgumentAtKind.realizes_in_extension
   have typed : HasType after [] true value kind.term :=
     (HasType.convert (Checker.check_sound checked) (Conversion.normalize?_sound normalized)).ghost.extend extension
   have forward := (normalizedValueForward before fuel value).extend extension
-  have transformed := typed.ghostForward history forward
+  have transformed := typed.ghostFamilyForward history forward
   have isPlain := plain.extend extension (normalizedKindArgument_plain normalized application)
   exact ⟨typed,_,forward,PlainIndices.of_familyPlain transformed.term_wellFormed
     (plain_familyPlain isPlain) (Bool.and_eq_true_iff.mp isPlain).1⟩

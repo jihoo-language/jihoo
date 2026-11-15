@@ -1,9 +1,9 @@
 import Jihoo.NativeKindValueEvaluation
 
-/-! A real raw-env checker input need not return a displayed inferred kind
-spine even in an authentic checked world. This is not a counterexample to
-whole-program source-expansion coverage or native runtime soundness. The same
-argument has a genuine canonical gate trace and a safe observed value. -/
+/-! Concrete raw-environment fuel behavior under the installed family search.
+Insufficient fuel rejects; sufficient fuel computes the displayed kind. The
+old delta-only residual example does not transfer to the enlarged search.
+This finite regression does not establish all-input kind-spine coverage. -/
 namespace Jihoo.NativeKernel.Environment.InferredKindCoverageBoundary
 open CodeKinds
 
@@ -20,33 +20,34 @@ theorem authentic_history :
   UnifiedProgram.checkProgram_sound (by cbv : UnifiedProgram.checkProgram 64 128
     [⟨.univ 1,delayedKind 3⟩] [] = some environment)
 
-theorem actual_raw_inference_retains_residual :
-    Checker.infer 4 environment [] false argument = some (delayedKind 1) := by cbv
+theorem actual_raw_small_budget_rejected :
+    Checker.infer 4 environment [] false argument = none := by cbv
+
+theorem actual_raw_inference_emits_displayed_kind :
+    Checker.infer 8 environment [] false argument = some (.univ 0) := by cbv
 
 theorem residual_inferred_kind_is_not_displayed : Jihoo.NativeKernel.kindOf (delayedKind 1) = false := rfl
 
 theorem actual_raw_checked_call_accepted :
-    CallReplay.checked 5 environment [] false consumer [argument] =
+    CallReplay.checked 9 environment [] false consumer [argument] =
       some ([⟨false,.univ 0,argument⟩],.u64) := by cbv
 
-/-- This actual raw argument has the authentic canonical gate trace, so the
-inferred kind-spine route is a sufficient route and not a necessary one. -/
+/-- The same actual raw argument has an authentic canonical gate trace. -/
 theorem actual_argument_canonical_gate_trace : ArgumentAtKind environment (.type 0) argument :=
-  ⟨4,.univ 0,by cbv,by cbv,by cbv⟩
+  ⟨8,.univ 0,by cbv,by cbv,by cbv⟩
 
 theorem no_displayed_inferred_kind_witness :
     ¬ ∃ actual, Checker.infer 4 environment [] false argument = some actual ∧
       Jihoo.NativeKernel.kindOf actual = true := by
   rintro ⟨actual,inferred,kinded⟩
-  have same := Option.some.inj (actual_raw_inference_retains_residual.symm.trans inferred)
-  subst actual
-  exact Bool.false_ne_true kinded
+  rw [actual_raw_small_budget_rejected] at inferred
+  cases inferred
 
 /-- The alternative actual gate trace transports to the evaluated value
 without a second code check or any input-spine completeness assumption. -/
 theorem actual_argument_value_safe : Realizes environment (.type 0) .u64 := by
   apply (actual_argument_canonical_gate_trace.realizes authentic_history).forward authentic_history
-  apply EnvironmentDelta.Forward.acu
+  apply FamilyIota.Extended.Forward.acu
   apply ACU.MixedRed.compute
   simpa [argument,Term.subst,single] using ACU.Computes.beta false aliasTerm (.var 0) .u64
 

@@ -67,16 +67,16 @@ theorem Arguments.result_unique (args : Arguments env ctx mode data telescope xs
     rename_i telescope erased domain rest ctx mode data argument arguments result converted typed tail _ ihtail ctx' mode' data' telescope' result' other same
     cases other with
     | cons converted' typed' tail' =>
-      have bodies := ((EnvironmentDelta.Basis.Conv.trans (.symm converted) (.trans same converted')).pi_injective wf.admissible).2.2
+      have bodies := ((FamilyIota.Extended.Conv.trans (.symm converted) (.trans same converted')).pi_injective wf.admissible).2.2
       exact ihtail _ _ _ _ _ tail' (bodies.substitution (single argument) wf.closed)
 
 theorem viewMotiveType_dependency_unique (wf : UnifiedProgram.EnvWellFormed env)
     (converted : Conv env (viewMotiveType first owner) (viewMotiveType second owner')) : first = second := by
   cases first <;> cases second
   · rfl
-  · exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .universe 0) (op' := .pi false)
+  · exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint (op := .universe 0) (op' := .pi false)
       rfl rfl (by intro same; cases same) converted wf.admissible)
-  · exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .pi false) (op' := .universe 0)
+  · exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint (op := .pi false) (op' := .universe 0)
       rfl rfl (by intro same; cases same) converted wf.admissible)
   · rfl
 

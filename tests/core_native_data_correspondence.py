@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Actual Core data cases and drop versus the unified exact byte gate.
-Regression evidence only: source IO fidelity, iota and native heap semantics
-remain distinct from the checked typing and finite Control certificates.
+Regression evidence only: source IO fidelity and native heap semantics remain
+distinct from checked typing, installed family computation and finite Control.
 """
 from __future__ import annotations
 import argparse,copy,hashlib,json,shlex,tempfile
@@ -23,7 +23,7 @@ CASES={
  'drop-recursive':(NAT+'(def value U64 (drop Nat (s (s z)) 7))',True),
  'drop-owner-function':(NAT+'(def value (pi tree Nat U64) (lam tree Nat (drop Nat tree 7)))',True),
  'family-reference-type':(NAT+'(def value (Type 0) (Ref Nat))',True),
- 'ghost-family-borrow-deref':(NAT+'(def value (Eq (drop Nat (deref (borrow (s z))) 0) 0) (refl 0))',True,False),
+ 'ghost-family-borrow-deref':(NAT+'(def value (Eq (drop Nat (deref (borrow (s z))) 0) 0) (refl 0))',True),
  'parameter-recursion':(PARAM+'(def value U64 (induct D (lam v (D 3) U64) 0 (lam0 child (D 3) (lam ih U64 (uadd ih 1))) (step 3 (base 3))))',True),
  'dependent-fields':('(data Box (box (pi n U64 (pi b (Buffer n) Box)))) (def value U64 (case Box (lam v Box U64) (lam n U64 (lam b (Buffer n) (free b n))) (box 2 (alloc 2 (int 0)))))',True),
  'proof-motive':(NAT+'(def value (Eq 0 0) (induct Nat (lam v Nat (Eq 0 0)) (refl 0) (lam0 child Nat (lam0 ih (Eq 0 0) (refl 0))) (s z)))',True),

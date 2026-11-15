@@ -1,26 +1,26 @@
-import Jihoo.NativeEnvironmentConversionNormalizer
-import Jihoo.NativeEnvironmentConversionPolicies
+import Jihoo.NativeFamilyIotaSearch
+import Jihoo.NativeFamilyIotaPolicies
 import Jihoo.NativeACUInjectivityAPI
 import Jihoo.NativeCheckerSoundness
 
-/-! The same native judgment uses genuine environment-indexed ACU and delta
+/-! The same native judgment uses genuine environment-indexed family, ACU and delta
 conversion. The bounded implementation proves every comparison through actual
 forward equations; environment invariants are required only by metatheory. -/
 namespace Jihoo.NativeKernel.Environment.Conversion
 
-abbrev Conv := EnvironmentDelta.Basis.Conv
+abbrev Conv := FamilyIota.Extended.Conv
 abbrev ListRel := NativeKernel.Conversion.ListRel
 abbrev Closed := EnvironmentDelta.Basis.Closed
 abbrev treeSize := NativeKernel.Conversion.treeSize
 abbrev treeDepth := NativeKernel.Conversion.treeDepth
 abbrev substitutionSafe := NativeKernel.Conversion.substitutionSafe
-abbrev normalize? := EnvironmentDelta.Basis.normalize?
-abbrev normalize := EnvironmentDelta.Basis.normalize
-abbrev equal := EnvironmentDelta.Basis.equal
-abbrev normalize?_sound := @EnvironmentDelta.Basis.normalize?_sound
-abbrev normalize?_forward := @EnvironmentDelta.Basis.normalize?_forward
-abbrev normalize_sound := @EnvironmentDelta.Basis.normalize_sound
-abbrev equal_sound := @EnvironmentDelta.Basis.equal_sound
+abbrev normalize? := FamilyIota.Search.normalize?
+abbrev normalize := FamilyIota.Search.normalize
+abbrev equal := FamilyIota.Search.equal
+abbrev normalize?_sound := @FamilyIota.Search.normalize?_sound
+abbrev normalize?_forward := @FamilyIota.Search.normalize?_forward
+abbrev normalize_sound := @FamilyIota.Search.normalize_sound
+abbrev equal_sound := @FamilyIota.Search.equal_sound
 
 theorem ofLegacy (h : NativeKernel.Conversion.Conv a b) : Conv env a b := .legacy h
 
@@ -82,7 +82,7 @@ theorem pureBinderAllowed_substitution (closed : Conversion.Closed env)
       · exact Or.inl hp
       · exact Or.inr (by simpa only [Term.subst, substArgs] using hu.substitution σ closed)
 
-abbrev nonFunction := EnvironmentDelta.Basis.NonFunction
+abbrev nonFunction := FamilyIota.Extended.NonFunction
 
 def absurdAllowed (env : Environment) (ghost : Bool) (term : Term) : Prop :=
   ghost = true ∨ nonFunction env term
@@ -98,6 +98,6 @@ theorem loopMotiveAllowed_ofLegacy (h : NativeKernel.loopMotiveAllowed ghost pro
   · exact Or.inr (Or.inr ⟨normal, .legacy hc, hs⟩)
 
 theorem nonFunctionHead_full (h : NativeKernel.nonFunctionHead term = true) : nonFunction env term :=
-  EnvironmentDelta.Basis.NonFunction.ofHead (EnvironmentDelta.Basis.legacy_nonFunctionHead h)
+  FamilyIota.Extended.NonFunction.ofHead (FamilyIota.Extended.legacy_nonFunctionHead h)
 
 end Jihoo.NativeKernel.Environment

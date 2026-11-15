@@ -1,3 +1,4 @@
+import Jihoo.NativeFamilyIotaForwardAPI
 import Jihoo.NativeKindInterpretation
 import Jihoo.NativePlainIndexSeparation
 
@@ -10,11 +11,11 @@ open Representation
 
 structure Realizes (env : Environment) (kind : Kind) (value : Term) : Prop where
   typed : HasType env [] true value kind.term
-  representation : ∃ normal, EnvironmentDelta.Forward env value normal ∧ PlainIndices env [] normal
+  representation : ∃ normal, FamilyIota.Extended.Forward env value normal ∧ PlainIndices env [] normal
 
 private theorem normalize_forward (env : Environment) (fuel : Nat) (term : Term) :
-    EnvironmentDelta.Forward env term (Conversion.normalize env fuel term) := by
-  change EnvironmentDelta.Forward env term ((Conversion.normalize? env fuel term).getD term)
+    FamilyIota.Extended.Forward env term (Conversion.normalize env fuel term) := by
+  change FamilyIota.Extended.Forward env term ((Conversion.normalize? env fuel term).getD term)
   cases found : Conversion.normalize? env fuel term with
   | none => exact .refl
   | some normal => exact Conversion.normalize?_forward found
@@ -24,7 +25,7 @@ theorem Admitted.realizes (history : UnifiedProgram.UnifiedProgramChecked defini
   obtain ⟨fuel, checked, application⟩ := admitted
   have typed := (Checker.check_sound checked).ghost
   have forward := normalize_forward env fuel value
-  have normalized := typed.ghostForward history forward
+  have normalized := typed.ghostFamilyForward history forward
   have isPlain := CallReplay.kindArgument_normal_plain application
   exact ⟨typed,_,forward,PlainIndices.of_familyPlain normalized.term_wellFormed
     (plain_familyPlain isPlain) (Bool.and_eq_true_iff.mp isPlain).1⟩
@@ -43,27 +44,27 @@ theorem Realizes.not_owned (history : UnifiedProgram.UnifiedProgramChecked defin
     (realized : Realizes env kind value) : ¬ Owned env value := by
   obtain ⟨normal, forward, plain⟩ := realized.representation
   intro owned
-  exact plain.not_owned history (realized.typed.ghostForward history forward) (owned.congr (EnvironmentDelta.Basis.forward_toConv forward))
+  exact plain.not_owned history (realized.typed.ghostFamilyForward history forward) (owned.congr (FamilyIota.Extended.Forward.toConv forward))
 
 theorem Realizes.nonFunction (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (realized : Realizes env kind value) : PiSeparated env value := by
   obtain ⟨normal, forward, plain⟩ := realized.representation
   intro erased domain body converted
-  exact plain.nonFunction history (realized.typed.ghostForward history forward) erased domain body
-    (.trans (.symm (EnvironmentDelta.Basis.forward_toConv forward)) converted)
+  exact plain.nonFunction history (realized.typed.ghostFamilyForward history forward) erased domain body
+    (.trans (.symm (FamilyIota.Extended.Forward.toConv forward)) converted)
 
 theorem Realizes.not_ref (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (realized : Realizes env kind value) : ¬ Conversion.Conv env value (.ref owner) := by
   obtain ⟨normal, forward, plain⟩ := realized.representation
   intro converted
-  exact plain.not_ref history (realized.typed.ghostForward history forward)
-    (.trans (.symm (EnvironmentDelta.Basis.forward_toConv forward)) converted)
+  exact plain.not_ref history (realized.typed.ghostFamilyForward history forward)
+    (.trans (.symm (FamilyIota.Extended.Forward.toConv forward)) converted)
 
 theorem Realizes.not_back (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (realized : Realizes env kind value) : ¬ Conversion.Conv env value (.back erased owner motive) := by
   obtain ⟨normal, forward, plain⟩ := realized.representation
   intro converted
-  exact plain.not_back history (realized.typed.ghostForward history forward)
-    (.trans (.symm (EnvironmentDelta.Basis.forward_toConv forward)) converted)
+  exact plain.not_back history (realized.typed.ghostFamilyForward history forward)
+    (.trans (.symm (FamilyIota.Extended.Forward.toConv forward)) converted)
 
 end Jihoo.NativeKernel.Environment.CodeKinds

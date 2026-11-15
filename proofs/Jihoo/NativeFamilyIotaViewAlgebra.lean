@@ -68,7 +68,7 @@ theorem ReadsAs.term (reading : ReadsAs env previous original borrowed)
     Conversion.Conv env ((viewRead previous term).subst borrowed) (term.subst original) := by
   unfold viewRead
   rw [Term.subst_comp]
-  exact EnvironmentDelta.Basis.Conv.subst_congr closed reading term
+  exact FamilyIota.Extended.Conv.subst_congr closed reading term
 
 /-- Every computed borrowed field really has an owned source type after
 arbitrary parameter and previous-field substitutions. -/

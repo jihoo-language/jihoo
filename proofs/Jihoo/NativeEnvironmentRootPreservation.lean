@@ -44,7 +44,7 @@ theorem HasType.ghostRead {Γ : Context} {mode : Bool} {count k : Nat}
   · have value := ha.elementsView.2.2.1 v (List.mem_of_getElem? selected)
     exact value.ghost.convert hconv
   · have impossible := ha.principalView
-    exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .array) (op' := .ref)
+    exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint (op := .array) (op' := .ref)
       rfl rfl (by intro same; cases same) impossible wf.admissible)
 
 theorem HasType.ghostWitnessPack {Γ : Context} {mode : Bool} {p a q T : Term}

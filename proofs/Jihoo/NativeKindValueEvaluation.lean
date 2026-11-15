@@ -26,15 +26,15 @@ holes cannot stand for the whole kind-valued frame; no index canonicity is used.
 theorem Realizes.rigid_child
     (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (realized : Realizes env kind (.node op children))
-    (rigid : EnvironmentDelta.Basis.rigid op = true)
+    (rigid : FamilyIota.Extended.rigid op = true)
     (noBinders : ∀ index, op.binders index = 0)
     (selected : children[index]? = some child)
     (typed : HasType env [] true child kind.term) : Realizes env kind child := by
   obtain ⟨normal,forward,plain⟩ := realized.representation
-  obtain ⟨normalizedChildren,shape,changes⟩ := forward_rigid_shape forward rigid rfl
+  obtain ⟨normalizedChildren,shape,changes⟩ := FamilyIota.Extended.Forward.rigid_shape forward rigid rfl
   subst normal
   obtain ⟨normalChild,selectedNormal,childForward⟩ := related_at changes selected
-  have normalizedTyped := realized.typed.ghostForward history forward
+  have normalizedTyped := realized.typed.ghostFamilyForward history forward
   have notIndex : ¬ HasType env [] true (.node op normalizedChildren) .u64 := by
     intro indexTyped
     exact kind.not_u64 history.wellFormed.admissible
@@ -42,21 +42,21 @@ theorem Realizes.rigid_child
   have childPlain := plain.children noBinders notIndex normalChild (List.mem_of_getElem? selectedNormal)
   exact ⟨typed,normalChild,childForward,childPlain⟩
 
-/-- The realization relation is stable along every genuine finite delta/ACU
+/-- The realization relation is stable along every genuine finite family-iota/delta/ACU
 forward path. Confluence is used only to join actual forward representation
 paths; it supplies no bounded normalizer completeness or normality claim. -/
 theorem Realizes.forward
     (history : UnifiedProgram.UnifiedProgramChecked definitions familyDeclarations env)
     (realized : Realizes env kind input)
-    (step : EnvironmentDelta.Forward env input output) : Realizes env kind output := by
+    (step : FamilyIota.Extended.Forward env input output) : Realizes env kind output := by
   obtain ⟨normal,represented,plain⟩ := realized.representation
   have converted : Conversion.Conv env output normal :=
-    (EnvironmentDelta.Basis.forward_toConv step).symm.trans
-      (EnvironmentDelta.Basis.forward_toConv represented)
+    (FamilyIota.Extended.Forward.toConv step).symm.trans
+      (FamilyIota.Extended.Forward.toConv represented)
   obtain ⟨common,outputForward,normalForward⟩ := converted.church_rosser history.wellFormed.admissible
-  have normalTyped := realized.typed.ghostForward history represented
+  have normalTyped := realized.typed.ghostFamilyForward history represented
   have commonPlain := (forward_plain_transform history normalForward).preserves normalTyped plain
-  exact ⟨realized.typed.ghostForward history step,common,outputForward,commonPlain⟩
+  exact ⟨realized.typed.ghostFamilyForward history step,common,outputForward,commonPlain⟩
 
 /-- Strict/Free and zero-iteration values preserve the semantic kind contract
 at their original type even when raw CODE rechecking is conservative. Free's
@@ -74,10 +74,10 @@ theorem Realizes.valueRoot
       have converted := typed.unique history.wellFormed integerTyped
       cases kind with
       | type level =>
-          exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+          exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
             (by intro same; cases same) converted history.wellFormed.admissible)
       | index erased rest =>
-          exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+          exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
             (by intro same; cases same) converted history.wellFormed.admissible)
   | strict first rest => exact realized.rigid_child history rfl (by intro index; rfl) (index := 1) rfl typed
   | free owner rest => exact realized.rigid_child history rfl (by intro index; rfl) (index := 1) rfl typed
@@ -88,7 +88,7 @@ theorem Realizes.valueRoot
 forward/root relations, rather than a supplied output representation flag. -/
 inductive KindValueSteps (env : Environment) : Term → Term → Prop where
   | refl : KindValueSteps env term term
-  | forward : EnvironmentDelta.Forward env input output → KindValueSteps env input output
+  | forward : FamilyIota.Extended.Forward env input output → KindValueSteps env input output
   | value : ValueReduction.Root input output → KindValueSteps env input output
   | trans : KindValueSteps env input middle → KindValueSteps env middle output → KindValueSteps env input output
 

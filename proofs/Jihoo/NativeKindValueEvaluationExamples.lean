@@ -14,13 +14,13 @@ theorem actual_effectful_type_argument_safe_after_value :
     Realizes .empty (.type 0) .u64 ∧ ¬ Owned .empty .u64 ∧ PiSeparated .empty .u64 := by
   apply inferred_argument_evaluation_safe (fuel := 64) empty_history
     (input := freeType) (actual := .univ 0) (domain := .univ 0)
-    (by cbv) rfl (by cbv) (by cbv) (EnvironmentDelta.Basis.Conv.refl _)
+    (by cbv) rfl (by cbv) (by cbv) (FamilyIota.Extended.Conv.refl _)
   exact .value (.free allocated .u64)
 
 theorem computed_family_observed_value_steps : KindValueSteps .empty computedFamily familyValue := by
   apply KindValueSteps.trans (middle := freeFamily)
   · apply KindValueSteps.forward
-    apply EnvironmentDelta.Forward.acu
+    apply FamilyIota.Extended.Forward.acu
     apply ACU.MixedRed.compute
     simpa [computedFamily,freeFamily,familyValue,allocated,owner,
       Term.subst,substArgs,Op.binders,liftSub,liftSubOne,single,Term.rename,renameArgs] using
@@ -33,7 +33,7 @@ theorem computed_effectful_family_value_safe :
     Realizes .empty familyKind familyValue ∧ ¬ Owned .empty familyValue ∧ PiSeparated .empty familyValue := by
   apply inferred_argument_evaluation_safe (fuel := 64) empty_history
     (input := computedFamily) (actual := familyKind.term) (domain := familyKind.term)
-    (by cbv) rfl (by cbv) (by cbv) (EnvironmentDelta.Basis.Conv.refl _)
+    (by cbv) rfl (by cbv) (by cbv) (FamilyIota.Extended.Conv.refl _)
     computed_family_observed_value_steps
 
 /-- Evaluated family values apply safely to every ghost-typed U64 code tree;

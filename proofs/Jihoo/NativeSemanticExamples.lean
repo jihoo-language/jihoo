@@ -90,7 +90,7 @@ theorem load_logical_realized : AtomicTruth empty answer := by
       (.pi false .i64 (.pi false (.buffer (.natural 2)) answer)) = true)
   have valueConv : Conversion.Conv empty .i64 .i64 := .refl _
   have ownerConv : Conversion.Conv empty (.buffer (.natural 2)) (.buffer ((Term.natural 2).rename Nat.succ)) := by
-    simpa only [Term.rename,renameArgs] using EnvironmentDelta.Basis.Conv.refl (.buffer (.natural 2))
+    simpa only [Term.rename,renameArgs] using FamilyIota.Extended.Conv.refl (.buffer (.natural 2))
   have resultConv : Conversion.Conv empty answer answer := .refl _
   have lowered : PartialRenaming.shift (-2) 0 answer = some answer := by cbv
   have witness := load_logical_witness emptyWellFormed.closed owner function valueConv ownerConv resultConv lowered

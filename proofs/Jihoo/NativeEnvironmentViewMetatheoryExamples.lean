@@ -64,12 +64,12 @@ private theorem aliasHistory : UnifiedProgram.UnifiedProgramChecked [⟨.univ 0,
   UnifiedProgram.checkProgram_sound
     (by cbv : UnifiedProgram.checkProgram 32 32 [⟨.univ 0,.u64⟩] [declaration] = some aliasEnv)
 
-/-- Global motive unfolding inside View retains its original, independently checked alias type. -/
-theorem delta_view_original_alias_type : HasType aliasEnv [] true (viewed .u64) globalMotive := by
+/-- Actual delta and family reduction retains the original independently checked alias type. -/
+theorem delta_view_original_alias_type : HasType aliasEnv [] true (.natural 0) globalMotive := by
   have source : HasType aliasEnv [] true (viewed globalMotive) globalMotive :=
     Checker.check_sound (by cbv : Checker.check 32 aliasEnv [] true (viewed globalMotive) globalMotive = true)
   exact source.ghostNormalize aliasHistory
-    (by cbv : Conversion.normalize? aliasEnv 32 (viewed globalMotive) = some (viewed .u64))
+    (by cbv : Conversion.normalize? aliasEnv 32 (viewed globalMotive) = some (.natural 0))
 
 /-- A typed finite delta path may be used independently of the concrete search fuel. -/
 theorem delta_view_contextual_path : HasType aliasEnv [] true (viewed .u64) globalMotive := by

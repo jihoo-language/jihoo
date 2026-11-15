@@ -332,19 +332,228 @@ theorem plain_not_boxed_family (plain : Environment.plain env term = true)
   plain_rigid_separate plain rfl (fun _ => by
     simp only [familyPlain,found,Option.any_some,boxed,Bool.not_true,Bool.false_and])
 
+private theorem plain_applications (head : familyPlain env function = true)
+    (args : ∀ value ∈ values,familyPlain env value = true) :
+    familyPlain env (applications function values) = true := by
+  induction values generalizing function with
+  | nil => exact head
+  | cons value values ih =>
+      apply ih (by simpa only [Term.app,familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff]
+        using And.intro head (args value (by simp)))
+      intro term member
+      exact args term (by simp [member])
+
+private theorem plain_elimTerm (motivePlain : familyPlain env motive = true)
+    (casesPlain : ∀ branch ∈ cases,familyPlain env branch = true)
+    (scrutineePlain : familyPlain env scrutinee = true) :
+    familyPlain env (FamilyIota.elimTerm family motive cases scrutinee) = true := by
+  simp only [FamilyIota.elimTerm,familyPlain]
+  apply (familyPlainArgs_all _).mpr
+  intro term member
+  rcases List.mem_cons.mp member with rfl | member
+  · exact motivePlain
+  · rcases List.mem_append.mp member with member | member
+    · exact casesPlain term member
+    · have same := List.mem_singleton.mp member
+      exact same ▸ scrutineePlain
+
+private theorem plain_elimHypotheses (motivePlain : familyPlain env motive = true)
+    (casesPlain : ∀ branch ∈ cases,familyPlain env branch = true)
+    (valuesPlain : ∀ value ∈ values,familyPlain env value = true) (fields : List Field) :
+    ∀ term ∈ FamilyIota.elimHypotheses family motive cases fields values,familyPlain env term = true := by
+  induction fields generalizing values with
+  | nil => simp [FamilyIota.elimHypotheses]
+  | cons field fields ih =>
+      cases values with
+      | nil => simp [FamilyIota.elimHypotheses]
+      | cons value values =>
+          have head := valuesPlain value (by simp)
+          have tail : ∀ t ∈ values,familyPlain env t = true := fun t member => valuesPlain t (by simp [member])
+          simp only [FamilyIota.elimHypotheses,List.zip_cons_cons,List.filterMap_cons]
+          by_cases recursive : field.recursive.isSome = true
+          · simp only [recursive,ite_true]
+            simp only [List.mem_cons,forall_eq_or_imp]
+            exact ⟨plain_elimTerm motivePlain casesPlain head,ih tail⟩
+          · simpa only [recursive,Bool.false_eq_true,ite_false,FamilyIota.elimHypotheses,FamilyIota.viewHypotheses,ite_true] using ih tail
+
+private theorem plain_viewTerm (motivePlain : familyPlain env motive = true)
+    (casesPlain : ∀ branch ∈ cases,familyPlain env branch = true)
+    (scrutineePlain : familyPlain env scrutinee = true) :
+    familyPlain env (FamilyIota.viewTerm recursion family motive cases scrutinee) = true := by
+  simpa only [FamilyIota.viewTerm,FamilyIota.elimTerm,familyPlain] using
+    (plain_elimTerm (family := family) motivePlain casesPlain scrutineePlain)
+
+private theorem plain_viewArguments (valuesPlain : ∀ value ∈ values,familyPlain env value = true)
+    (plans : List ViewFieldPlan) :
+    ∀ term ∈ FamilyIota.viewArguments plans values,familyPlain env term = true := by
+  induction plans generalizing values with
+  | nil => simp [FamilyIota.viewArguments]
+  | cons plan plans ih =>
+      cases values with
+      | nil => simp [FamilyIota.viewArguments]
+      | cons value values =>
+          simp only [FamilyIota.viewArguments,List.zip_cons_cons,List.map_cons,List.mem_cons,forall_eq_or_imp]
+          refine ⟨?_,ih (fun t member => valuesPlain t (by simp [member]))⟩
+          split
+          · simpa only [Term.borrow,familyPlain,familyPlainArgs,Bool.and_true] using valuesPlain value (by simp)
+          · exact valuesPlain value (by simp)
+
+private theorem plain_viewHypotheses (motivePlain : familyPlain env motive = true)
+    (casesPlain : ∀ branch ∈ cases,familyPlain env branch = true)
+    (valuesPlain : ∀ value ∈ values,familyPlain env value = true) (plans : List ViewFieldPlan) :
+    ∀ term ∈ FamilyIota.viewHypotheses recursion family motive cases plans values,familyPlain env term = true := by
+  cases recursion with
+  | false => simp [FamilyIota.viewHypotheses]
+  | true =>
+      induction plans generalizing values with
+      | nil => simp [FamilyIota.viewHypotheses]
+      | cons plan plans ih =>
+          cases values with
+          | nil => simp [FamilyIota.viewHypotheses]
+          | cons value values =>
+              have tail : ∀ t ∈ values,familyPlain env t = true := fun t member => valuesPlain t (by simp [member])
+              simp only [FamilyIota.viewHypotheses,List.zip_cons_cons,List.filterMap_cons,ite_true]
+              by_cases recursive : plan.self = true
+              · simp only [recursive,ite_true,List.mem_cons,forall_eq_or_imp]
+                have head : familyPlain env (.borrow value) = true := by
+                  simpa only [Term.borrow,familyPlain,familyPlainArgs,Bool.and_true] using valuesPlain value (by simp)
+                exact ⟨plain_viewTerm motivePlain casesPlain head,ih tail⟩
+              · simpa only [recursive,Bool.false_eq_true,ite_false,FamilyIota.elimHypotheses,FamilyIota.viewHypotheses,ite_true] using ih tail
+
+theorem familyPlain_enlarged_parallel (h : FamilyIota.Extended.Quotient.Parallel env a b) (plain : familyPlain env a = true) : familyPlain env b = true := by
+  induction h using FamilyIota.Extended.Quotient.Parallel.rec
+    (motive_2 := fun a b _ => familyPlain env a = true → familyPlain env b = true)
+    (motive_3 := fun xs ys _ => Conversion.ListRel
+      (fun a b => familyPlain env a = true → familyPlain env b = true) xs ys)
+    (motive_4 := fun xs ys _ => Conversion.ListRel
+      (fun a b => familyPlain env a = true → familyPlain env b = true) xs ys) with
+  | intro permutation children output ih =>
+    have atoms := (familyPlain_arithmeticFlatten _).mp plain
+    have source : familyPlainArgs env _ = true := (familyPlainArgs_all _).mpr
+      (fun atom member => atoms atom (permutation.mem_iff.mpr member))
+    have target := familyPlainArgs_mono ih source
+    have sum := (familyPlain_sumTerms _).mpr ((familyPlainArgs_all _).mp target)
+    exact familyPlain_arithmetic_forward output.symm sum
+  | var x => simp only [familyPlain]
+  | node op children ih => rename_i plain; exact familyPlain_node_mono ih plain
+  | beta erased domain body view bodyStep argumentStep bodyIH argumentIH =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    have lambda := familyPlain_arithmetic_forward view plain.1
+    simp only [familyPlain] at lambda
+    exact familyPlain_single (bodyIH lambda) (argumentIH plain.2)
+  | sub => simp only [familyPlain,familyPlainArgs]
+  | read count index proof arrayView indexView children selected ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    have array := familyPlain_arithmetic_forward arrayView plain.1
+    simp only [familyPlain] at array
+    have values := familyPlainArgs_mono ih array
+    exact (familyPlainArgs_all _).mp values _ (List.mem_of_getElem? selected)
+  | witnessPack predicate value proof view valueStep ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true] at plain
+    have packed := familyPlain_arithmetic_forward view plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at packed
+    exact ih packed.2.1
+  | proofPack predicate value proof view proofStep ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true] at plain
+    have packed := familyPlain_arithmetic_forward view plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at packed
+    exact ih packed.2.2
+  | derefBorrow value view valueStep ih | borrowDeref value view valueStep ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true] at plain
+    have exposed := familyPlain_arithmetic_forward view plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true] at exposed
+    exact ih exposed
+  | transportRefl value view proofStep ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact ih plain.2.2
+  | ifLtTrue m n no left right bound step ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact familyPlain_single (ih plain.2.2.1) (by simp only [familyPlain,familyPlainArgs,Bool.and_true])
+  | ifLtFalse m n yes left right bound step ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact ih plain.2.2.2
+  | ifEqTrue n no left right step ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact familyPlain_single (ih plain.2.2.1) (by simp only [familyPlain,familyPlainArgs,Bool.and_true])
+  | ifEqFalse m n yes left right bound step ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact ih plain.2.2.2
+  | elim family constructor entry signature motive cases scrutinee found sigFound count fields view motiveStep casesStep valuesStep selected motiveIH casesIH valuesIH =>
+    rename_i plain
+    have args := (familyPlainArgs_all _).mp (by simpa only [FamilyIota.elimTerm,FamilyIota.caseTerm,FamilyIota.viewTerm,familyPlain] using plain : familyPlainArgs env (motive::(cases++[scrutinee])) = true)
+    have casesPlain := familyPlainArgs_mono casesIH ((familyPlainArgs_all _).mpr (fun t member => args t (by simp [member])))
+    have scrutineePlain := familyPlain_arithmetic_forward view (args scrutinee (by simp))
+    have valuesPlain := familyPlainArgs_mono valuesIH (by simpa only [familyPlain] using scrutineePlain)
+    apply plain_applications
+    · apply plain_applications
+      · exact (familyPlainArgs_all _).mp casesPlain _ (List.mem_of_getElem? selected)
+      · intro t member
+        exact (familyPlainArgs_all _).mp valuesPlain t (List.mem_of_mem_drop member)
+    · exact plain_elimHypotheses (motiveIH (args motive (by simp))) ((familyPlainArgs_all _).mp casesPlain)
+        ((familyPlainArgs_all _).mp valuesPlain) _
+  | caseOf family constructor entry signature motive cases scrutinee found data sigFound count fields view casesStep valuesStep selected casesIH valuesIH =>
+    rename_i plain
+    have args := (familyPlainArgs_all _).mp (by simpa only [FamilyIota.elimTerm,FamilyIota.caseTerm,FamilyIota.viewTerm,familyPlain] using plain : familyPlainArgs env (motive::(cases++[scrutinee])) = true)
+    have casesPlain := familyPlainArgs_mono casesIH ((familyPlainArgs_all _).mpr (fun t member => args t (by simp [member])))
+    have valuesPlain := familyPlainArgs_mono valuesIH (by simpa only [familyPlain] using familyPlain_arithmetic_forward view (args scrutinee (by simp)))
+    apply plain_applications ((familyPlainArgs_all _).mp casesPlain _ (List.mem_of_getElem? selected))
+    intro t member
+    exact (familyPlainArgs_all _).mp valuesPlain t (List.mem_of_mem_drop member)
+  | view recursion family constructor entry signature motive cases scrutinee found boxed sigFound count fields bound planned view motiveStep casesStep valuesStep selected motiveIH casesIH valuesIH =>
+    rename_i plain
+    rename_i plans values motive' cases' values' branch'
+    have args := (familyPlainArgs_all _).mp (by simpa only [FamilyIota.elimTerm,FamilyIota.caseTerm,FamilyIota.viewTerm,familyPlain] using plain : familyPlainArgs env (motive::(cases++[scrutinee])) = true)
+    have casesPlain := familyPlainArgs_mono casesIH ((familyPlainArgs_all _).mpr (fun t member => args t (by simp [member])))
+    have scrutineePlain := familyPlain_arithmetic_forward view (args scrutinee (by simp))
+    have sourceValues : familyPlainArgs env values = true := by simpa only [Term.borrow,familyPlain,familyPlainArgs,Bool.and_true] using scrutineePlain
+    have valuesPlain := familyPlainArgs_mono valuesIH sourceValues
+    have dropped : ∀ t ∈ List.drop entry.declaration.params values',familyPlain env t = true :=
+      fun t member => (familyPlainArgs_all _).mp valuesPlain t (List.mem_of_mem_drop member)
+    apply plain_applications
+    · exact plain_applications ((familyPlainArgs_all _).mp casesPlain _ (List.mem_of_getElem? selected)) (plain_viewArguments dropped _)
+    · exact plain_viewHypotheses (motiveIH (args motive (by simp))) ((familyPlainArgs_all _).mp casesPlain) dropped _
+  | drop family owner rest step ih =>
+    rename_i plain
+    simp only [familyPlain,familyPlainArgs,Bool.and_true,Bool.and_eq_true_iff] at plain
+    exact ih plain.2
+  | nil => exact .nil
+  | cons _ _ ih it => exact .cons ih it
+  | _ => first | exact .nil | apply Jihoo.NativeKernel.Conversion.ListRel.cons <;> assumption
+
+theorem familyPlain_enlarged_star (h : (FamilyIota.Extended.Quotient.Star env) a b) (plain : familyPlain env a = true) : familyPlain env b = true := by
+  induction h with
+  | refl => exact plain
+  | cons step rest ih => exact ih (familyPlain_enlarged_parallel step plain)
+
+
 /-- The same separation holds for the installed delta/ACU relation in an authentic world.
 Plainness supplies global-freedom of the source; the rigid target has an ordinary head. -/
 theorem plain_rigid_separate_delta (admissible : EnvironmentDelta.Admissible env)
     (plain : Environment.plain env term = true)
-    (rigid : EnvironmentDelta.Basis.rigid op = true)
+    (rigid : FamilyIota.Extended.rigid op = true)
     (forbidden : ∀ arguments,familyPlain env (.node op arguments) = false) :
     ¬ Conversion.Conv env term (.node op arguments) := by
   intro converted
-  have pure := converted.toProjected admissible
-  change ACU.Conv (EnvironmentDelta.expand env term) (EnvironmentDelta.expand env (.node op arguments)) at pure
-  rw [EnvironmentDelta.expand_globalFree ((globalFree_correct term).mp (Bool.and_eq_true_iff.mp plain).1),
-    EnvironmentDelta.expand_ordinary (Bool.and_eq_true_iff.mp rigid).1] at pure
-  exact plain_rigid_separate plain (Bool.and_eq_true_iff.mp rigid).2 forbidden pure
+  obtain ⟨common,left,right⟩ := FamilyIota.Extended.Quotient.projected_join converted admissible
+  rw [EnvironmentDelta.expand_globalFree ((globalFree_correct term).mp (Bool.and_eq_true_iff.mp plain).1)] at left
+  have commonPlain := familyPlain_enlarged_star left (plain_familyPlain plain)
+  obtain ⟨result,path,eqv⟩ := right.realize (.refl _)
+  have resultPlain := familyPlain_arithmetic_forward eqv commonPlain
+  have path' := path.toForward
+  rw [EnvironmentDelta.expand_ordinary (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp rigid).1).1] at path'
+  obtain ⟨children,shape,_⟩ := path'.rigid_shape rigid rfl
+  rw [shape,forbidden children] at resultPlain
+  contradiction
 
 theorem plain_not_buffer_delta (admissible : EnvironmentDelta.Admissible env)
     (plain : Environment.plain env term = true) : ¬ Conversion.Conv env term (.buffer n) :=

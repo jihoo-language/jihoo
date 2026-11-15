@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Actual Core borrowed views versus checked unified exact bytes.
-This tests source checking and the verified typing/control gate. Authenticated
-view iota and native loan/heap semantics remain separate obligations.
+This tests source checking, installed view computation and the verified
+typing/control gate. Native loan/heap semantics remain separate obligations.
 """
 from __future__ import annotations
 import argparse,hashlib,json,shlex,tempfile
@@ -28,8 +28,8 @@ CASES={
  'earlier-boxed-field':('(data A (a A) (nextA (pi child A A))) (data B (b (pi field A B))) (def value (pi r (Ref B) U64) (lam r (Ref B) (view-rec B U64 (lam field (Ref A) 0) r)))',True),
  'checked-global-reference-alias':(NAT+'(def Alias (Type 0) Nat) (def value (pi r (Ref Alias) U64) (lam r (Ref Alias) '+COUNT+'))',True),
  'checked-global-motive-alias':(NAT+'(def M (pi r (Ref Nat) (Type 0)) (lam r (Ref Nat) U64)) (def value (pi r (Ref Nat) U64) (lam r (Ref Nat) (view Nat M 0 (lam child (Ref Nat) 1) r)))',True),
- 'ghost-constructor-iota-boundary':(NAT+'(def value (Eq (view Nat U64 0 (lam child (Ref Nat) 1) (borrow (s z))) 1) (refl 1))',True,False),
- 'dependent-value-iota-boundary':(NAT+'(def value (pi r (Ref Nat) (Buffer '+COUNT+')) (lam r (Ref Nat) (view Nat (lam r (Ref Nat) (Buffer '+COUNT+')) (alloc 0 (int 0)) (lam child (Ref Nat) (alloc 1 (int 0))) r)))',True,False),
+ 'ghost-constructor-iota':(NAT+'(def value (Eq (view Nat U64 0 (lam child (Ref Nat) 1) (borrow (s z))) 1) (refl 1))',True),
+ 'dependent-value-iota':(NAT+'(def value (pi r (Ref Nat) (Buffer '+COUNT+')) (lam r (Ref Nat) (view Nat (lam r (Ref Nat) (Buffer '+COUNT+')) (alloc 0 (int 0)) (lam child (Ref Nat) (alloc 1 (int 0))) r)))',True),
  'dependent-layout-rejected':(NAT+'(def value (pi r (Ref Nat) (Array '+COUNT+')) (lam r (Ref Nat) (view Nat (lam r (Ref Nat) (Array '+COUNT+')) (array) (lam child (Ref Nat) (array (int 0))) r)))',False),
  'dependent-borrow-result-rejected':(NAT+'(def value (pi r (Ref Nat) (Ref Nat)) (lam r (Ref Nat) (view Nat (lam x (Ref Nat) (Ref Nat)) r (lam child (Ref Nat) child) r)))',False),
  'extra-indices':('(data V 1 0 (nil (V 0)) (cons (pi0 n U64 (pi child (V n) (V (uadd n 1)))))) (def value (pi r (Ref (V 0)) U64) (lam r (Ref (V 0)) (view V U64 0 (lam0 n U64 (lam child (Ref (V n)) 1)) r)))',False),
@@ -69,7 +69,7 @@ def run(args):
   observations.append({'case':name,'native':'accept' if native else 'reject'})
   if native:
    Program.read(result.stdout);retained[name]=result.stdout
-   check(name,result.stdout,admitted,'actual Core exporter' if admitted else 'explicit missing authenticated View iota')
+   check(name,result.stdout,admitted,'actual Core exporter' if admitted else 'explicit model boundary')
  def mutate(name,base,edit):
   p=Program.read(retained[base]);edit(p);check(name,p.encode(),False,'synthetic')
  def payload_change(p,fn):

@@ -42,7 +42,7 @@ theorem small_sort_not_kind
   obtain ⟨common,domainForward,kindForward⟩ := converted.church_rosser history.wellFormed.admissible
   have fixed := kind.forward_fixed kindForward
   subst common
-  have kindTyped := typed.ghostForward history domainForward
+  have kindTyped := typed.ghostFamilyForward history domainForward
   obtain ⟨level,positive⟩ := kind.sort_positive history.wellFormed kindTyped
   rcases small with rfl | rfl <;> cases positive
 
@@ -72,10 +72,10 @@ theorem Kind.not_u64 (kind : Kind) (admissible : EnvironmentDelta.Admissible env
   intro converted
   cases kind with
   | type level =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
   | index erased result =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
 
 theorem Kind.not_family (kind : Kind) (admissible : EnvironmentDelta.Admissible env) :
@@ -83,10 +83,10 @@ theorem Kind.not_family (kind : Kind) (admissible : EnvironmentDelta.Admissible 
   intro converted
   cases kind with
   | type level =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
   | index erased result =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
 
 /-- Authentic first-order kind parameters are runtime binders. This follows
@@ -103,7 +103,7 @@ theorem binder_kind_runtime
           obtain ⟨common,domainForward,kindForward⟩ := converted.church_rosser history.wellFormed.admissible
           have fixed := kind.forward_fixed kindForward
           subst common
-          have kindTyped := typed.ghostForward history domainForward
+          have kindTyped := typed.ghostFamilyForward history domainForward
           obtain ⟨level,positive⟩ := kind.sort_positive history.wellFormed kindTyped
           rcases allowed with pure | data
           · simp only [pureBinderAllowed,↓reduceIte] at pure

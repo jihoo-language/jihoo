@@ -86,7 +86,7 @@ theorem parameterAt_congr (closed : Conversion.Closed env)
 theorem parameter_term_congr (closed : Conversion.Closed env)
     (related : Conversion.ListRel (Conversion.Conv env) ps qs) (depth locals : Nat) (term : Term) :
     Conversion.Conv env (term.subst (parameterAt depth locals ps)) (term.subst (parameterAt depth locals qs)) :=
-  EnvironmentDelta.Basis.Conv.subst_congr closed (parameterAt_congr closed related depth locals) term
+  FamilyIota.Extended.Conv.subst_congr closed (parameterAt_congr closed related depth locals) term
 
 private theorem indices_congr (closed : Conversion.Closed env)
     (related : Conversion.ListRel (Conversion.Conv env) ps qs) (depth locals : Nat) (indices : List Term) :
@@ -106,7 +106,7 @@ theorem dataCaseResult_parameters_congr (closed : Conversion.Closed env)
     (indices : Conversion.ListRel (Conversion.Conv env) xs ys) :
     Conversion.Conv env (dataCaseResult family constructor params fields hypotheses ps motive xs)
       (dataCaseResult family constructor params fields hypotheses qs motive ys) := by
-  apply EnvironmentDelta.Basis.Conv.node .app
+  apply FamilyIota.Extended.Conv.node .app
   refine .cons (applications_congr (.refl _) (related_rename closed (related_drop indices params) _)) (.cons ?_ .nil)
   exact constructor_congr (related_append (related_rename closed parameters _) (related_refl _))
 

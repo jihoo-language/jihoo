@@ -14,7 +14,7 @@ theorem bad_type_unformed (wf : UnifiedProgram.EnvWellFormed env) : ¬ HasType e
   intro typed
   have impossible := typed.uaddView.1
   have separated := (HasType.u64 (env := env) (ctx := ctx) (ghost := true)).unique wf impossible
-  exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint (op := .universe 0) (op' := .u64)
+  exact FamilyIota.Extended.Conv.full_rigid_disjoint (op := .universe 0) (op' := .u64)
     rfl rfl (by intro same; cases same) separated wf.admissible
 
 theorem arbitrary_result_formation_false : ¬ (∀ {term type}, HasType empty [] true term type →

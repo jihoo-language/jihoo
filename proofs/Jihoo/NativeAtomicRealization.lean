@@ -37,7 +37,7 @@ def NumeralObservation.literal {value : Nat} (bound : value < 2^64) :
     NumeralObservation env (.natural value) := ⟨value,bound,.refl _⟩
 
 theorem NumeralObservation.unique (wf : UnifiedProgram.EnvWellFormed env) (first second : NumeralObservation env term) : first.value = second.value :=
-  (EnvironmentDelta.Basis.Conv.trans (.symm first.converted) second.converted).natural_injective wf.admissible
+  (FamilyIota.Extended.Conv.trans (.symm first.converted) second.converted).natural_injective wf.admissible
 
 def NumeralObservation.add (first : NumeralObservation env a) (second : NumeralObservation env b)
     (bound : first.value + second.value < 2^64) : NumeralObservation env (.uadd a b) :=
@@ -61,7 +61,7 @@ theorem AtomicTruth.extend (realized : AtomicTruth before type) (extension : Env
   | convert _ converted ih => exact .convert ih (converted.extend extension)
 
 private theorem eq_lt_separate (wf : UnifiedProgram.EnvWellFormed env) : ¬ Conv env (.eq a b) (.lt c d) :=
-  fun h => EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl (by intro same; cases same) h wf.admissible
+  fun h => FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl (by intro same; cases same) h wf.admissible
 
 theorem AtomicTruth.equal_endpoints (wf : UnifiedProgram.EnvWellFormed env) (realized : AtomicTruth env T) :
     ∀ {left right}, Conv env T (.eq left right) → Conv env left right := by
@@ -82,8 +82,8 @@ theorem AtomicTruth.less_numerals (wf : UnifiedProgram.EnvWellFormed env) (reali
   | @less left m right n cleft cright ordered =>
     intro m' n' converted
     have endpoints := converted.lt_injective wf.admissible
-    have first := (EnvironmentDelta.Basis.Conv.trans (.symm cleft) endpoints.1).natural_injective wf.admissible
-    have second := (EnvironmentDelta.Basis.Conv.trans (.symm cright) endpoints.2).natural_injective wf.admissible
+    have first := (FamilyIota.Extended.Conv.trans (.symm cleft) endpoints.1).natural_injective wf.admissible
+    have second := (FamilyIota.Extended.Conv.trans (.symm cright) endpoints.2).natural_injective wf.admissible
     simpa only [←first,←second] using ordered
   | convert realized converted ih => intro m n target; exact ih (.trans converted target)
 
@@ -93,7 +93,7 @@ theorem AtomicTruth.less_zero_false (wf : UnifiedProgram.EnvWellFormed env) (rea
   | equality equal => intro index converted; exact eq_lt_separate wf converted
   | @less left m right n cleft cright ordered =>
     intro index converted
-    have zero := (EnvironmentDelta.Basis.Conv.trans (.symm cright) (converted.lt_injective wf.admissible).2).natural_injective wf.admissible
+    have zero := (FamilyIota.Extended.Conv.trans (.symm cright) (converted.lt_injective wf.admissible).2).natural_injective wf.admissible
     omega
   | convert realized converted ih => intro index target; exact ih (.trans converted target)
 

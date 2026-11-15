@@ -269,7 +269,8 @@ are discharged, rather than replaced with more passing fixtures:
    together with exact native opaque-global behavior. Owned/effectful iteration,
    checked families, dependent constructors, proposition/data elimination,
    Case/Drop, borrowed View, owned Ref and Back/Give/Take already share the unified judgment.
-   Their remaining native computation equations still require integration.
+   Family Elim/Case/View/Drop computation is integrated; loan computation and
+   the remaining native equations still require integration.
 4. Runtime ownership, quantities, borrow/continuation boundaries and first-order
    representation, connected to the same complete native judgment. Existing
    restricted resource proofs do not automatically supply this connection.
@@ -447,8 +448,8 @@ closed admission computes metadata and normalizes binder annotations itself.
 The joint tests pass 23 native data programs/22 byte checks, 28 owned iteration
 programs/26 byte checks, and all prior Back/ownership/mixed-program regressions.
 Thirty-five data, 24 iteration and seven expanded-metatheory Lean regressions
-also pass. An accepted ghost Drop equality remains an explicit rejected-model
-boundary because Drop computation has not been inserted into ACU. Existing
+also pass. The installed enlarged converter now admits the ghost Drop equality
+through its genuine family computation rule. Existing
 proved Borrow/Deref inverse equations are retained. These results do not prove
 native heap execution, active-loan semantics or machine counter fidelity.
 
@@ -466,8 +467,8 @@ context, uniqueness and actual forward-preservation proofs. Forty typing,
 resource, program and direct-global regressions and 17 telescope regressions
 pass. The native suite covers 33 source programs and 28 exact-byte checks,
 including typed recursive-result leaks/duplication and code dereference mutations.
-Two native-accepted equalities remain explicit gate rejections because View iota
-has not been added. Neither active loans nor runtime heap preservation is assumed.
+The installed enlarged converter now computes View iota, including recursive
+borrowed results. Neither active loans nor runtime heap preservation is assumed.
 
 `NativeClosedTerm` now supplies generic closed-term algebra independently of
 typing. Delta algebra/conversion/bounded search use only that lower layer;
@@ -481,7 +482,8 @@ conversion representatives; only actual executable application checking
 provides a computed normal form for runtime kind safety.
 
 `NativeEnvironmentPlainSeparation` proves that an actually plain type cannot
-convert under the current ACU theory to Buffer, Ref, Pi, Back or a boxed family.
+convert under the installed family-iota/delta/ACU theory to Buffer, Ref, Pi, Back
+or a boxed family.
 The proof uses raw Boolean forward invariants and genuine Church–Rosser; it
 does not assume symmetric preservation of plainness or typing. Seven regressions
 include the explicit failure of reverse-beta plainness invariance. The context
@@ -633,7 +635,7 @@ example follows the generic path. This does not install Lend into the shared
 HasType judgment or claim runtime loan permission/accounting.
 
 The `NativeFamilyIota` collection defines executable family contractions and
-their genuine root equations independently of the installed delta/ACU converter.
+their genuine root equations in the installed family-iota/delta/ACU converter.
 Actual checked histories derive signature scope, parameter alignment and
 recursive-field metadata. `case_preserves` and `contract_case_preserves` retain
 the original type for generic Case with leading parameters, dependent fields,
@@ -649,10 +651,16 @@ original result. `NativeFamilyIotaDataElimPreservation` and
 `NativeFamilyIotaPropElimPreservation` cover general indexed recursive data and
 proposition elimination. `NativeFamilyIotaPreservation.Root.preserves` and
 `contract_preserves` combine every selected Elim/Case/View/Drop root and its
-executable contraction under actual checked history. Contextual type-index
-preservation needs genuinely enlarged conversion: old conversion does not
-equate these iota steps. Enlarged confluence/injectivity, installation and the
-consistent typing/metatheory rebase remain open.
+executable contraction under actual checked history. The raw syntax layer sits
+below typing, avoiding circular dependencies. Binding-aware parallel residuals
+prove confluence and Church–Rosser through actual finite Forward paths for all
+legacy, delta and family roots, including arbitrary family metadata. Rigid
+injectivity and separation use that enlarged relation. The same relation now
+underlies all 60 shared typing rules, checker soundness, checked histories,
+ghost substitution, cross-mode uniqueness, original-type contextual preservation
+and bounded normalization. Plain-index and kind interpretations, closing,
+numeral reachability and finite universe models use it consistently. Bounded
+success is not asserted to produce a normal form or imply completeness.
 
 `NativeMultiUniverseSyntax`, `Model`, `Fundamental`, `Closure` and `Examples`
 support any finite list of independent mixed-level universe parameters. Actual
@@ -667,7 +675,7 @@ realization of the original source is assumed. General interleaved dependent
 universe/value contexts and arbitrary native type codes are not yet covered.
 
 `NativeNeutralSpines` derives free-head application injectivity and rigid-head
-separation from actual delta/ACU confluence at every finite arity. The
+separation from genuine conversion confluence at every finite arity. The
 `NativeFamilyCode` and `NativeFamilySource` collection uses these facts to
 construct coherence, actual source reconstruction and a saturated fundamental
 interpretation for finite blocks of type-to-type family variables
@@ -718,10 +726,12 @@ The actual native Core accepts both forms and retains the effectful argument
 as a runtime binding, so this is not a native soundness counterexample.
 
 `NativeKindValueEvaluation` transports authentic kind realization along actual
-delta/ACU forward paths and the separate Strict/Free/zero-iteration pure value
+family-iota/delta/ACU forward paths and the separate Strict/Free/zero-iteration pure value
 roots, retaining the original kind type and avoiding CODE rechecks.
-`NativeInferredKindCoverageBoundary` records the actual low-fuel raw-environment
-kind-spine limitation separately from fully source-expanded program coverage.
+`NativeInferredKindCoverageBoundary` records concrete raw-environment fuel
+behavior: the enlarged search rejects the old low-fuel residual example and
+returns a displayed kind at sufficient fuel. This finite regression does not
+establish all-input kind-spine coverage.
 `NativeExactClosing` fixes the final substitution to `pushValues` of the actual
 argument list and proves the exact argument/slot correspondence. Evaluated
 closing and resource-mode transport along actual Forward use typed ghost
@@ -741,6 +751,58 @@ Borrow derivation, including result-type conversions, and excludes code Borrow
 without a reader. `NativeLoanExamples` constructs an entire closed allocating
 application, borrowed index reader and owner-returning continuation, and proves
 permission revocation on reader exit. The default HasType/checker/admission
-alias is unchanged. Substitution/type uniqueness for the extended judgment,
+alias is unchanged. `NativeLoanPolicyNaturality`, `NativeLoanRenaming` and
+`NativeLoanSubstitution` prove policy naturality, ghost renaming/weakening and
+simultaneous substitution across every one of its 64 rules and five mutual
+judgments. Dependent ghost Lend permits arbitrary owners, so substituting an
+allocated value for a named owner retains typing without a fabricated variable
+premise. The examples check that instantiation and weakening. Type uniqueness,
 the executable loan-aware checker, internal quantity accounting and the native
 heap/loan fundamental theorem remain open.
+
+`NativeCallResourceContracts` extracts exact original application typing,
+actual runtime argument code typing/resource safety, and the opened source
+lambda's body contract from the same successful resource check.
+`NativeCodePolicyRenaming` and `NativeCodeRenaming` prove mode-preserving
+renaming/weakening for all shared rules. `NativeRetainedCallBodies` derives
+formation of the opened source context and code typing of its original body.
+These retain source bindings; they do not assume raw code beta rechecking,
+arbitrary resource renaming or dynamic closure/heap simulation.
+
+`NativeCallBindingStores` reconstructs the source telescope from actual
+opened-head typing, splits the same inferred call replay at its source prefix,
+and constructs the exact argument substitution with ghost typing for every
+source lookup. Original CODE body typing, body/resource contracts, actual
+remaining replay and dependent result coherence are retained together.
+`NativeCallStorePermissions` aligns every source erasure flag, actual slot value
+and closed lookup type with the replay entry; only nonerased entries gain CODE
+variable access and actual argument CODE/resource evidence. These type-only
+stores cover all binder sorts without kind classification or canonicality
+premises. They do not establish universal output realization or heap execution.
+
+`NativeLendRawSyntax`, `Projection`, `Conversion`, `Binding`, `Injectivity`,
+`Policies` and `API` add the genuine unconditional raw Lend macro equation to
+family-iota/delta/ACU. Total capture-avoiding macro projection proves enlarged
+Church–Rosser and actual finite common reducts, even when owner occurrences
+duplicate. Renaming, substitution, environment extension and rigid type
+injectivity are proved. `NativeLendRawTypedEndpoints` connects actual generic
+or specialized ghost checks to a genuinely reached typed result. This raw
+relation is separate from the installed family converter; raw macro intermediate
+typing is not asserted.
+
+`NativeLoanFunctionInversion`, `NativeLoanBetaPreservation` and
+`NativeLoanLendPreservation` derive lambda/application inversion, beta
+preservation and exact original-type Lend finish from the full 64-rule
+loan-indexed derivation. Both generic and specialized rules participate;
+the conclusion also survives result-type conversions. `NativeLoanAtomicEvaluation`
+uses those results for finite pure beta/explicit-Lend atomic steps, with genuine
+raw forward paths and original-type ghost preservation. This relation does not
+substitute arbitrary computations into CODE derivations or model heap events.
+
+`NativeGhostValueErasure` defines a total raw projection dropping Strict/Free's
+first operand, commuting with capture-avoiding renaming and substitution. Its
+legacy theorem is explicitly pinned to the old Basis relation.
+`NativeFamilyIotaValueMaps` and `NativeGhostValueIotaErasure` extend projection
+coherence to every genuine family root and the full installed conversion.
+This relates projected terms; it does not assert conversion of a source term to
+its erasure, formation of arbitrary erased types, or runtime heap correctness.

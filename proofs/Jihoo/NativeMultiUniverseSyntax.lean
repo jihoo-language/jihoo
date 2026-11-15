@@ -85,9 +85,8 @@ theorem Mono.syntax_arrow (A B : Mono count) (offset : Nat) :
 
 private theorem variable_injective (wf : UnifiedProgram.EnvWellFormed env)
     (converted : Conv env (.var x) (.var y)) : x = y := by
-  have projected := converted.toProjected wf.admissible
-  simp only [EnvironmentDelta.Conv,EnvironmentDelta.expand] at projected
-  exact projected.full_variable_injective
+  exact converted.full_variable_injective wf.admissible
+
 
 /-- Distinct abstract parameters cannot be identified by raw delta/ACU
 conversion in an authenticated world, even before assigning their model values. -/
@@ -101,18 +100,18 @@ theorem Mono.syntax_injective (wf : UnifiedProgram.EnvWellFormed env) {A B : Mon
       have indexes : index = other := Fin.ext (by omega)
       cases indexes
       rfl
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | natural => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
+    | arrow B C => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted wf.admissible)
   | natural =>
     cases B with
-    | parameter index => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
+    | parameter index => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
     | natural => rfl
-    | arrow B C => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | arrow B C => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .u64) (op' := .pi false) rfl rfl (by intro h; cases h) converted wf.admissible)
   | arrow A C ha hc =>
     cases B with
-    | parameter index => exact False.elim (EnvironmentDelta.Basis.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
-    | natural => exact False.elim (EnvironmentDelta.Basis.Conv.full_rigid_disjoint
+    | parameter index => exact False.elim (FamilyIota.Extended.Conv.full_variable_node_separate rfl converted.symm wf.admissible)
+    | natural => exact False.elim (FamilyIota.Extended.Conv.full_rigid_disjoint
         (op := .pi false) (op' := .u64) rfl rfl (by intro h; cases h) converted wf.admissible)
     | arrow B D =>
       rw [Mono.syntax_arrow,Mono.syntax_arrow] at converted

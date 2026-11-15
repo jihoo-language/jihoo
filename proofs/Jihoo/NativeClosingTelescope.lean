@@ -1,3 +1,4 @@
+import Jihoo.NativeFamilyIotaForwardAPI
 import Jihoo.NativeClosingContexts
 
 /-! Closing a dependent runtime telescope from actual closed application traces.
@@ -47,10 +48,10 @@ theorem DomainCanonical.u64
   intro kind converted
   cases kind with
   | type level =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
   | index erased result =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
 
 /-- The semantic endpoint also accommodates actually erased arguments: their
@@ -93,14 +94,14 @@ private theorem actual_argument_realizes
     Realizes env kind value := by
   have kindTyped : HasType env [] true value kind.term :=
     ((Checker.check_sound typed).convert (Conversion.normalize?_sound normalized)).ghost
-  have forward : EnvironmentDelta.Forward env value (Conversion.normalize env fuel value) := by
-    change EnvironmentDelta.Forward env value ((Conversion.normalize? env fuel value).getD value)
+  have forward : FamilyIota.Extended.Forward env value (Conversion.normalize env fuel value) := by
+    change FamilyIota.Extended.Forward env value ((Conversion.normalize? env fuel value).getD value)
     cases normalizedValue : Conversion.normalize? env fuel value with
     | none => exact .refl
     | some normal => exact Conversion.normalize?_forward normalizedValue
   have isPlain := normalizedKindArgument_plain normalized application
   exact ⟨kindTyped,_,forward,Representation.PlainIndices.of_familyPlain
-    (kindTyped.ghostForward history forward).term_wellFormed
+    (kindTyped.ghostFamilyForward history forward).term_wellFormed
     (plain_familyPlain isPlain) (Bool.and_eq_true_iff.mp isPlain).1⟩
 
 /-- Actual closed CallReplay traces plus their local displayed-kind obligation.
@@ -235,10 +236,10 @@ theorem DomainClassified.u64 (admissible : EnvironmentDelta.Admissible env) :
   intro kind converted
   cases kind with
   | type level =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
   | index erased result =>
-      exact EnvironmentDelta.Basis.Conv.full_rigid_disjoint rfl rfl
+      exact FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
         (by intro same; cases same) converted admissible
 
 theorem EntriesClassified.nil : EntriesClassified env [] := by
