@@ -117,7 +117,18 @@ The remaining core obligations include:
   It returns 7 in bounds and 0 otherwise and has the exact allocation/lease
   trace. Its full source/resource check and all-input source typing use Loan64.
   This parameterized function result does not replace the full-language goal.
-- The aggregate proof check currently audits 8,742 declarations. The mixed
+- `NativeBindingMachineNumeric` now preserves numeric values, recursively
+  captured slots, pending arithmetic/count frames, every heap payload and
+  representable allocation length across every actual prefix, including faults
+  and fuel exhaustion. It constructs I64 literal typing from actual heap data;
+  callers do not supply returned-value typing or numeric realization.
+- `NativeBindingMachineIndexValues` combines these bounds with full Loan64
+  source inversion and the actual mixed history to type Index integers at the
+  exact original closed requested type. It also covers IfLt with an Index yes
+  arm and a real pending reader read. General bounds faults remain an explicit
+  alternative; this is output preservation, not full typed progress or the
+  missing source/control/heap fundamental theorem.
+- The aggregate proof check currently audits 8,777 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -196,7 +207,7 @@ Index evidence interpretation still require the common fundamental theorem.
 The second increment corrects reader-result provenance and proves actual
 explicit-reader/final-continuation entry origin typing from the source Lend
 judgment. `proofs/check.sh` passed 876 Lake jobs and 8,693 audits; the native
-mixed suite passed 67 source fixtures and 53 exact-byte checks. The sampled
+mixed suite passed 66 source fixtures and 52 exact-byte checks. The sampled
 aggregate peak RSS was 3,582.1 MiB. This does not discharge general runtime
 value/context/stack typing, Index bound interpretation or owner accounting.
 
@@ -228,3 +239,11 @@ native mixed correspondence passes 67 sources and 53 exact-byte checks.
 General source/control/value/heap fundamental preservation, all `LoanSlots`
 transitions, arbitrary evidence/computed sizes, ownership, universe consistency
 and native implementation refinement remain open.
+
+The current increment proves unconditional all-prefix numeric/capture/heap
+width preservation and original-source-type interpretation of actual Index
+integers. The complete aggregate passed 883 Lake jobs, 8,777 unique public
+axiom audits and generated comparisons (sampled peak tree RSS 3,616.6 MiB).
+No runtime or production compiler behavior changed. General source-derived
+heap/layout/permission invariants and exclusion of bounds/value faults remain
+open, alongside all original whole-kernel completion obligations.

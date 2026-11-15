@@ -1062,3 +1062,5 @@ import Jihoo.NativeBindingMachineAlignment
 import Jihoo.NativeBindingMachineRunAlgebra
 import Jihoo.NativeBindingMachineDynamicIndex
 import Jihoo.NativeBindingMachineDynamicIndexExamples
+import Jihoo.NativeBindingMachineNumeric
+import Jihoo.NativeBindingMachineIndexValues

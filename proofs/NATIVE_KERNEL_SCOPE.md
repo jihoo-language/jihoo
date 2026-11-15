@@ -1044,3 +1044,21 @@ agrees on the source function. This function theorem eliminates local heap/slot
 premises for that composition, not arbitrary source functions or the full
 language. General runtime value/heap/source-stack interpretation, computed
 sizes and arbitrary proof terms, ownership and native refinement remain open.
+
+
+`NativeBindingMachineNumeric` supplies a numeric runtime-value/capture/control-
+stack and heap interpretation, preserved by every actual transition and prefix
+from the empty initial heap. U64/I64 values and saved arithmetic/count operands
+stay in range; uniform heap payloads and allocation byte lengths remain bounded,
+including released identities. I64 typing of actual decoded heap contents is
+constructed from that invariant, not an output-typing or realization premise.
+
+`NativeBindingMachineIndexValues` uses the full Loan64 input derivation and
+actual mixed history to place these integers at the exact original closed
+Index result type, including arbitrary result conversion and IfLt Index arms.
+Actual pending-reader authority follows from the all-prefix reader inventory;
+the read step either returns a constructed original-type integer or explicitly
+faults on bounds. General source/control association, heap layout/slot semantics
+and proof interpretation must still exclude that alternative for arbitrary
+admitted programs. Numeric preservation alone is not type preservation for
+arbitrary runtime values, ownership soundness or native refinement.
