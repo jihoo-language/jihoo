@@ -1260,3 +1260,19 @@ argument callback derivation, and connects actual activation to source loan
 slots and the reachable nested reader inventory. Canonical value meanings and
 runtime provenance remain distinct. General control/source association, heap
 size interpretation and exclusive resource authority remain open.
+
+
+`NativeBindingMachineOwnerSizes` now constructs captured source/heap length
+agreement at allocation argument entry and preserves old captured identities'
+lengths through arbitrary actual heap-event suffixes, including released aliases.
+It gives size/provenance information without assigning live/exclusive authority
+to every capture. `NativeBindingMachineSizedIndex` combines this with full bound
+evidence, source named-Borrow permission and the actual reader inventory to
+construct dynamic ten-step reads at the same closed input type. Allocation
+snapshots, selected numeric/owner slots, strict-bound and read-success premises
+are removed from this local theorem. A false comparison has original-type
+five-step else entry. `NativeBindingMachineSizedBorrow` similarly constructs a
+live reference with the actual dependent Buffer length at its exact source
+type. The common admission/control/value/size/loan/resource invariant, arbitrary
+evidence and source-result semantics, complete ownership safety and native
+implementation refinement remain unfinished.

@@ -703,3 +703,55 @@ lengths, preserving released aliases without assigning them live/exclusive
 capabilities, and derive dynamic named Index preconditions from those sizes.
 General admission/control/resource interpretation and all whole-kernel
 consistency, computation-preservation and native-refinement gates remain open.
+
+
+## 2026-11-15: immutable owner sizes and source-derived dynamic Index
+
+`NativeBindingMachineOwnerSizes` interprets each captured owner's source
+Buffer type at its actual allocated identity/length. It deliberately retains
+released aliases without granting liveness or exclusive ownership. Heap-event
+induction preserves this information through every actual execution suffix,
+including Free, nested reader actions, faults and exhausted fuel. Empty,
+scalar, reference and erased-comparison contexts preserve it. The original
+source allocation and pending function construct the new owner's size context
+at the six-step actual entry, preserving old captured owner lengths as well.
+No caller supplies the resulting owner's heap/type interpretation.
+
+`NativeBindingMachineSizedIndex` removes the previous dynamic-read theorem's
+allocation-snapshot and selected numeric/owner-slot premises. Full source
+Index inversion excludes the Array case for Borrow and exposes the actual
+owner's Buffer type. The erased comparison evidence identifies that type's
+closed length with the observed right operand. The constructed owner-size
+context then identifies the actual heap length; source Borrow permission,
+loan slots and the actual reader inventory construct the owner and live lease.
+Ten real transitions return an I64 at the SAME closed input result type. A
+false comparison instead enters the original-type else body in five steps.
+No strict-bound, physical-length, successful-read or output-typing certificate
+is requested. These remain local source/value/size/loan-context statements,
+not a closed-admission fundamental theorem.
+
+`NativeBindingMachineSizedBorrow` separately constructs a live reference at
+its exact closed source type, including the real Buffer allocation length.
+Its owner, token, lease, bound/type witnesses and actual next transition all
+follow from the source judgment, constructed size context, source loan slots
+and actual reachability. It requires no stored-owner or returned-reference
+realization certificate. This reference interpretation is not a deallocation
+capability.
+
+The aggregate passed 904 Lake jobs, 8,916 unique public audits and all generated
+fixture comparisons (`out/logs/owner-sizes-index-full.log`). All 21 new public
+proofs in this run are audited, with only `propext`, `Classical.choice` and
+`Quot.sound`; sampled peak tree RSS was 3,679.6 MiB. No native compiler/runtime
+or native fixture changed, and no dependency/store pin changed.
+
+Next derive the common source/control/value/owner-size/loan/resource invariant
+from actual mixed admission across every saved frame and closure creation.
+Compose the newly constructed allocation/size and authentic specialized-reader
+entry contexts across whole actual reader histories; reader reference entry
+must retain the checked specialized read rather than invent arbitrary callback
+typing. Interpret arbitrary evidence/computed source annotations and general
+Index forms, connect quantity authority to live aliases, and exclude old-owner
+conflicts before Free. All-universe consistency, all specified computation
+preservation, full ownership/borrow soundness and native implementation
+refinement remain unfinished. The whole-kernel goal is NOT complete; keep the
+existing automation active.

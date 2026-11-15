@@ -1082,3 +1082,6 @@ import Jihoo.NativeBindingMachineCapturedAllocation
 import Jihoo.NativeBindingMachineCapturedBranch
 import Jihoo.NativeBindingMachineAllocatedArgument
 import Jihoo.NativeBindingMachineReaderClosing
+import Jihoo.NativeBindingMachineOwnerSizes
+import Jihoo.NativeBindingMachineSizedIndex
+import Jihoo.NativeBindingMachineSizedBorrow
