@@ -10,12 +10,17 @@ import shlex
 import tempfile
 
 from core_native_unified_correspondence import CASES as MIXED_CASES, run
-from core_native_loan_typing_correspondence import CASES as LOAN_CASES, BUFFER, FUNCTION
+from core_native_loan_typing_correspondence import CASES as LOAN_CASES, BUFFER, FUNCTION, CONTINUATION
 
 CASES = dict(MIXED_CASES)
 CASES.update({f'loan-{name}': (source, accepted, accepted)
               for name, (source, accepted) in LOAN_CASES.items()})
 CASES.update({
+    'loan-explicit-owner-borrow': (
+        '(data Bit (zero Bit)) '
+        f'(def read (pi b {BUFFER} I64) (lam b {BUFFER} '
+        f'(lend b (lam r (Ref {BUFFER}) (index (borrow b) 0 (decide-lt 0 2))) {CONTINUATION}))) '
+        '(def value I64 (app read (alloc 2 (int 0))))', True, True),
     'family-between-loan-definitions': (
         f'(def read (pi b {BUFFER} I64) {FUNCTION}) '
         '(data Bit (zero Bit)) (def value I64 (app read (alloc 2 (int 0))))', True, True),

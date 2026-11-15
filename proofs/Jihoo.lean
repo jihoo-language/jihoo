@@ -1049,3 +1049,6 @@ import Jihoo.NativeLoanGlobalInputExamples
 import Jihoo.NativeLoanMixedProgram
 import Jihoo.NativeLoanMixedAdmission
 import Jihoo.NativeLoanMixedProgramExamples
+import Jihoo.NativeScopedProgramHistory
+import Jihoo.NativeLoanMixedPreservation
+import Jihoo.NativeLoanMixedPreservationExamples

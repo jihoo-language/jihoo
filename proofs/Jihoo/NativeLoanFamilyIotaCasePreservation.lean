@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaConstructor
 import Jihoo.NativeLoanFamilyIotaParameterAlignment
 
@@ -54,7 +55,7 @@ private theorem case_inputs (typed : HasType env [] ctx true term type) : CaseIn
 indices, branch expressions and surrounding result conversions. Parameters
 are zero here; their general transport is a separate subsequent theorem. -/
 theorem case_preserves_no_parameters {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (parameters : entry.declaration.params = 0) (selected : cases[constructor]? = some branch)
     (size : values.length = signature.fields.length)
@@ -99,7 +100,7 @@ private theorem case_related_drop (related : Conversion.ListRel (Conversion.Conv
 alignment and branch-domain transport are derived from the authentic history
 and the actual constructor derivation. No caller supplies a telescope oracle. -/
 theorem case_preserves {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
     (typed : HasType env [] ctx true
@@ -153,7 +154,7 @@ theorem case_preserves {family constructor : Nat} {entry : CheckedFamily} {signa
 input result. All signature and parameter premises are extracted internally
 from the computation and the checked history. -/
 theorem contract_case_preserves {family count : Nat}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env (.node (.caseOf family count) args) = some result)
     (typed : HasType env [] ctx true (.node (.caseOf family count) args) type) :
     HasType env [] ctx true result type := by

@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaPreservation
 import Jihoo.NativeLoanContextualEvaluation
 
@@ -32,7 +33,7 @@ theorem Steps.forward (steps : Steps env input output) : RawLend.Forward env inp
   | cons _ _ first rest => exact .cons first rest
 
 theorem Steps.ghost_transform
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (steps : Steps env input output) : GhostTransform env input output := by
   induction steps using Steps.rec
     (motive_2 := fun xs ys _ => NativeKernel.Conversion.ListRel (GhostTransform env) xs ys) with
@@ -49,12 +50,12 @@ theorem Steps.ghost_transform
   | cons _ _ first rest => exact .cons first rest
 
 theorem Steps.preserves
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (steps : Steps env input output) (typed : HasType env loans ctx mode input type) :
     HasType env [] ctx true output type := (steps.ghost_transform history).typed typed
 
 theorem Steps.typed_forward
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (steps : Steps env input output) (typed : HasType env loans ctx mode input type) :
     RawLend.Forward env input output ∧ HasType env [] ctx true output type :=
   ⟨steps.forward,steps.preserves history typed⟩

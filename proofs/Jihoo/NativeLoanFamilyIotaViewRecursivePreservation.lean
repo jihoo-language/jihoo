@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaViewPositions
 
 /-! Generic recursive View original-type preservation. Every recursive call
@@ -31,7 +32,7 @@ private theorem plan_generated
 dependent field domains, owned external fields, dependent motives and
 surrounding result conversions are all retained. -/
 theorem view_preserves_recursive {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
     (planned : viewPlan env family (signature.fields.drop entry.declaration.params) = some plans)
@@ -138,7 +139,7 @@ theorem view_preserves_recursive {family constructor : Nat} {entry : CheckedFami
 /-- All accepted recursive executable View contractions preserve the exact
 independently typed original result. No output-typing oracle is a premise. -/
 theorem contract_view_recursive_preserves {family count : Nat}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env (.node (.view true family count) args) = some result)
     (typed : HasType env [] ctx true (.node (.view true family count) args) type) :
     HasType env [] ctx true result type := by
@@ -149,7 +150,7 @@ theorem contract_view_recursive_preserves {family count : Nat}
 /-- Every accepted View contraction, recursive or one-level, preserves the
 original dependent result type under the authentic checked history. -/
 theorem contract_view_preserves {recursion : Bool} {family count : Nat}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env (.node (.view recursion family count) args) = some result)
     (typed : HasType env [] ctx true (.node (.view recursion family count) args) type) :
     HasType env [] ctx true result type := by

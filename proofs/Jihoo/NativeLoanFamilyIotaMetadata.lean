@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeUnifiedProgram
 import Jihoo.NativeLoanTypeUniqueness
 import Jihoo.NativeLoanDataMotiveCongruence
@@ -56,7 +57,7 @@ theorem Parameters.extend (parameters : Parameters before params signature) (ext
 /-- Authentic lookup API: there is no signature or normalization callback
 premise. The earlier family proof is extracted from checked history itself. -/
 theorem signature_metadata {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature) :
     SignatureScoped signature ∧ signature.result.length = entry.declaration.arity ∧
       Parameters env entry.declaration.params signature := by
@@ -93,7 +94,7 @@ theorem Parameters.instantiate (parameters : Parameters env params signature)
 /-- The public instance derives all metadata and closedness from actual
 checked history; callers supply only concrete lookups and field values. -/
 theorem signature_parameter_instance {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (size : values.length = signature.fields.length) (inside : j < entry.declaration.params)
     (selected : values[j]? = some value) :

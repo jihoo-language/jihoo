@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaRecursiveArguments
 
 /-! Actual recursive constructor fields for general indexed Elim. Their
@@ -19,7 +20,7 @@ private theorem related_of_lookup (size : xs.length = ys.length)
         (ih (Nat.succ.inj size) (fun j a b left right => lookup (j+1) a b left right))
 
 theorem recursive_field_argument {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (arguments : Arguments env [] ctx true entry.declaration.data (signatureTerm family signature) values result)
     (size : values.length = signature.fields.length)
@@ -33,7 +34,7 @@ theorem recursive_field_argument {family constructor j : Nat} {entry : CheckedFa
   simpa only [Term.subst,substArgs_dataInd] using typed
 
 theorem recursive_parameter_alignment {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature} {values : List Term}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true) (size : values.length = signature.fields.length)
     (fieldFound : signature.fields[j]? = some field) (recursive : field.recursive = some indices) :
@@ -73,7 +74,7 @@ theorem recursive_parameter_alignment {family constructor j : Nat} {entry : Chec
 /-- An authentic recursive data field forces the real family heap-layout bit.
 A flat family therefore cannot silently discard a recursive hypothesis. -/
 theorem recursive_data_is_boxed {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true)
     (fieldFound : signature.fields[j]? = some field) (recursive : field.recursive = some indices) :

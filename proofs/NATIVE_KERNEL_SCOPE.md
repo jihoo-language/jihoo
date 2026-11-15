@@ -828,11 +828,21 @@ typing and runtime quantity evidence in the real earlier prefix. Exact-byte
 acceptance constructs that history and a transparent well-formed environment.
 Kernel examples distinguish a well-typed double consumption from resource-safe
 admission and reject incorrect family placement, unscoped source annotations
-and exhausted resource fuel. The new native suite checks 61 source fixtures
-and 48 exact-byte cases, including families interleaved with dependent Lend
-functions. This closes the earlier separate mixed-family quantity interface;
-transporting family-iota preservation to this Loan64 history and a general
-typing-to-runtime ownership theorem are still required.
+and exhausted resource fuel. The new native suite checks 62 source fixtures
+and 49 exact-byte cases, including families interleaved with dependent Lend
+functions and an explicit code Borrow of the active named owner. This closes
+the earlier separate mixed-family quantity interface.
+
+`NativeScopedProgramHistory` extracts the closed transparent global storage
+and actual checked family telescopes needed by family-iota metatheory. Both
+the earlier history and the full Loan64/resource mixed history construct this
+common history. Loan family metadata, Case/Elim/recursive View preservation
+and contextual family evaluation now use it. `NativeLoanMixedPreservation`
+derives exact-original-type ghost preservation directly from the new mixed
+history, with no legacy global-typing premise. A checked example has an active
+owner Borrow declaration rejected by the older program checker, yet its actual
+family contraction retains its original type under the new history. General
+typing-to-runtime ownership and universe consistency remain open.
 
 `NativeCallResourceContracts` extracts exact original application typing,
 actual runtime argument code typing/resource safety, and the opened source

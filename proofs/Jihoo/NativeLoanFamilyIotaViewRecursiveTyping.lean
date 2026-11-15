@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaRecursiveArguments
 
 /-! The real View rule types each recursive call from recovered self-field
@@ -26,7 +27,7 @@ private theorem related_symm (related : Conversion.ListRel (Conversion.Conv env)
 /-- A recursive View hypothesis is typed by an actual View rule at the
 independently observed outer parameter instance. -/
 theorem recursive_view_hypothesis {family constructor position : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true) (boxed : entry.boxed = true)
     (arity : entry.declaration.arity = entry.declaration.params) (indexSize : indices.length = entry.declaration.params)
