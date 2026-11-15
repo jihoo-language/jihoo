@@ -1011,3 +1011,16 @@ proof field. It assumes the entry heap's concrete allocation shape, its owner
 slot identity and source/control alignment. Their general typing-derived
 preservation, dynamic indices and arbitrary proof forms remain open; this is
 not the full Index progress or no-leak theorem.
+
+
+`NativeBindingMachineAlignment` defines recursive runtime value/capture alignment,
+original-context erasure-slot alignment and concrete control/frame alignment.
+Every evaluation, return and heap action preserves them, so they hold at every
+prefix from any source term in the empty initial context, even at faults or fuel
+exhaustion. This includes computed closures, skipped erased arguments, branch
+proof slots and nested Lend reader/continuation frames. Reachable Loan64 variable
+input typing then constructs its next actual returned value without a supplied
+`Ready` premise. This discharges structural slot/erasure preservation. It does
+not yet establish that runtime values inhabit source types, source typing is
+preserved at every control point, or ownership/loan/length interpretations are
+preserved through arbitrary closures and effects.

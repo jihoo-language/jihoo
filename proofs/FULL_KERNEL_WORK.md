@@ -98,7 +98,14 @@ The remaining core obligations include:
   supply a numerical read guard, successful execution or output typing.
   The initial allocation-state/owner-slot association and source/control
   alignment remain explicit local premises, not a full-program theorem.
-- The aggregate proof check currently audits 8,701 declarations. The mixed
+- `NativeBindingMachineAlignment` now proves the mutually defined structural
+  value/captured-slot invariant across every evaluate, return, heap, fault and
+  fuel transition. All reachable original code and closures retain aligned
+  erasure flags and recursively aligned captured values. Full Loan64 variable
+  typing constructs the next actual value/step with no caller-supplied `Ready`
+  or slot-success premise. This is structural alignment, not heap typing,
+  source-typing preservation, loan authority or allocation accounting.
+- The aggregate proof check currently audits 8,725 declarations. The mixed
   native regression suite passes 66 source fixtures and 52 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -189,3 +196,11 @@ public axiom audits and the generated-fixture comparisons (peak sampled RSS
 3,583.4 MiB). No additional native implementation changed after the successful
 66-source/52-byte regression run. General evidence interpretation, source/slot
 fundamental preservation and the original whole-kernel obligations remain open.
+
+The next increment derives recursive closure/context/stack erasure alignment
+for all machine prefixes and removes `Ready` from reachable Loan64 variable
+execution. `proofs/check.sh` passed 878 Lake jobs, 8,725 unique public audits
+and the generated comparisons; peak sampled tree RSS was 3,593.8 MiB. No
+native executable behavior changed. The common fundamental theorem still
+needs semantic value/heap interpretation and source typing at all control
+points, including full `LoanSlots` preservation and dynamic proof bounds.

@@ -174,6 +174,12 @@ private theorem loan_readable (typed : LoanTyping.HasType env loans context mode
   all_goals first | trivial | skip
   case var => exact ⟨_,by assumption,by assumption⟩
 
+theorem loan_code_variable_permission
+    (typed : LoanTyping.HasType env loans context false (.var index) type) :
+    ∃ binding, lookup context index = some binding ∧ binding.erased = false := by
+  obtain ⟨binding,selected,permission⟩ := loan_readable typed
+  exact ⟨binding,selected,by simpa using permission⟩
+
 /-- The original Loan64 variable derivation excludes missing/erased slots
 under ordinary captured-slot alignment. -/
 theorem loan_code_variable_returns (typed : LoanSourceTyped env loans false code type)

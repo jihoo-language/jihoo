@@ -1058,3 +1058,4 @@ import Jihoo.NativeBindingMachineReaderState
 import Jihoo.NativeBindingMachineLoanTyping
 import Jihoo.NativeBindingMachineLendOrigins
 import Jihoo.NativeBindingMachineIndexBounds
+import Jihoo.NativeBindingMachineAlignment
