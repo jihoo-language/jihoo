@@ -1152,3 +1152,16 @@ The actual allocation length still needs interpretation at arbitrary dependent
 source types, through all calls and continuation control. Unsupported syntax
 continues to fault in this source machine; no native allocator, Store/write,
 general progress or full-kernel correctness claim follows from the invariant.
+
+`NativeBindingMachineReturnedBufferRead` composes an allocating reader with
+its retained continuation, a second Lend and named Borrow/Index on the fresh
+returned owner. Twenty real transitions and exact events are constructed from
+the source Loan64 judgment/resource check and the actual reader entry. Literal
+widths/bounds, fresh owner slot, allocation length, lease guards and the actual
+integer at the reconstructed reader's exact ghost type are derived. The first
+lease is closed before the distinct new lease is opened. Byte overflow remains
+an explicit outcome; ghost allocation origins are not re-executed as CODE.
+Current input source/control/frame association is still local, and the read
+endpoint retains its inner reader frame. General completion, arbitrary bound
+interpretation/resource simulation and native implementation refinement remain
+open.

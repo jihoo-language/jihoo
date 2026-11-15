@@ -8846,3 +8846,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.initial_run_fresh_not_captured
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.initial_run_captured_owner_provenance
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.initial_run_returned_owner_provenance
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.returned_read_limits
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.returned_allocated_index_origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_returned_buffer_read

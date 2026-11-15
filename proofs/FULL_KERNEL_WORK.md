@@ -423,3 +423,27 @@ public axiom audits and every generated-fixture comparison. Only `propext`,
 3,642.1 MiB. The provenance module shares the established runtime split
 auxiliaries so the full aggregate imports without duplicate generated matcher
 declarations. No native compiler/runtime source or fixture changed in this run.
+
+The returned-Buffer read unit composes actual allocating-reader return with a
+second Lend and a named Borrow/Index of that retained first result. The same
+Loan64 input supplies literal widths, the strict Index bound, the exact reader
+origin typing and actual integer typing at that reader type, including source-
+specialized callbacks and result conversions. Its own resource check supplies
+the declared closed Buffer interpretation. No allocation snapshot, returned
+owner-slot lookup, heap length, read success or output typing is an input.
+
+Twenty actual transitions construct allocation, old lease close, both outer
+continuation bindings, the fresh lease, its named Borrow and the read. The
+old token is closed and the distinct new token authorizes this actual object;
+the returned payload is the original signed fill. Allocation byte overflow
+remains explicit after five steps. Both runtime code and closure captures are
+retained; the closed allocation expression is ghost provenance, never CODE
+substitution/re-execution. This composes a fresh owned value with source-typed
+Index; arbitrary computations, dependent evidence and the full closed-admission
+source/control/value/resource fundamental theorem remain open.
+
+The complete aggregate passed 891 Lake jobs, 8,849 unique public axiom audits
+and generated-fixture comparisons (sampled peak tree RSS 3,641.8 MiB), using
+only the three allowed logical axioms. No native runtime/compiler or fixture
+changed. The existing real-project rootless shell remains Nix 2.20.6 (smoke
+evaluation 42), Lean 4.34.1 and Lake 5.0.0-src; dependency locks are unchanged.

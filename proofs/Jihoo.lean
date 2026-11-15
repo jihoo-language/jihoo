@@ -1071,3 +1071,4 @@ import Jihoo.NativeBindingMachineReaderResume
 import Jihoo.NativeBindingMachineOwnedReader
 import Jihoo.NativeBindingMachineOwnedReaderExecution
 import Jihoo.NativeBindingMachineOwnerProvenance
+import Jihoo.NativeBindingMachineReturnedBufferRead
