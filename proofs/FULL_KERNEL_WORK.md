@@ -985,3 +985,51 @@ and value/size/loan associations currently supplied at the reader boundary.
 Then extend all-control authority to arbitrary old owners and enclosing readers.
 The whole-kernel consistency, preservation, ownership/borrow and native-refinement
 obligations remain unfinished.
+
+
+## 2026-11-15: original function/allocation to dynamic reader release
+
+`NativeBindingMachineAllocatedDynamicRelease` removes the previously supplied
+body-recheck, birth/current-reader, owner-slot and reader-frame associations
+for this actual fresh-call path. The original full function resource query
+supplies its exact body receipt. The source allocation and pending function
+judgments construct the owner binder and canonical value/size contexts. Ten
+actual transitions allocate, bind, open named Lend and create the original
+reader closure. Run composition constructs the real global prefix; source
+loans, owner slot, fresh identity and precise continuation frame are all
+outputs of that entry proof, not supplied post-state certificates.
+
+Source bound evidence identifies the reader's captured length with the actual
+allocation count. Thirty transitions then perform guarded reference read,
+close, both continuation bindings, alias release and return the actual signed
+fill. The integer has the original function signature's dependent instance at
+the canonical allocation. Original argument provenance is retained and is NOT
+assumed raw-convertible to that canonical value instance. False comparisons
+have source-typed sixteen-step else entry; byte-size overflow has a five-step
+fault. No selected numbers, successful allocation/read/Free, live-owner,
+allocation snapshot or output-typing oracle is supplied.
+
+`NativeBindingMachineAllocatedDynamicExamples` checks a closed complete Loan64/
+resource admission with three scalar parameters and a genuinely dependent
+Buffer/reader type. Initial scalar value/size contexts are constructed by the
+proved entry rules. The actual eighteen-step caller prefix is computed; the
+generic thirty-step proof derives the forty-eight-step release/return of I64
+7. Final execution is not a supplied or directly computed output certificate.
+
+The final aggregate passed 914 Lake jobs, 8,944 unique public audits and all
+generated-fixture comparisons (`out/logs/allocated-dynamic-composition-full-final.log`).
+All eleven public proofs added in this run are audited exactly once, using only
+`propext`, `Classical.choice` and `Quot.sound`; sampled peak RSS was 3,701.7 MiB.
+No native implementation, native fixture, dependency lock or store pin changed.
+
+The source allocation/function typing and captured value/size/loan contexts at
+the pending-call boundary are still local inputs. Next recover that boundary
+and its exact function/body resource receipts from a single original call or
+mixed-admission derivation, and carry authority across all saved frames and
+closures. Arbitrary else/tail execution is not yet proved by this local path.
+For pre-existing owners, transport enclosing zero-demand reader budgets to
+exclude borrowed-owner consumption and derive the general Free guard. General
+evidence/effectful result semantics, all-universe consistency, all specified
+computation preservation, complete ownership/borrow soundness and native
+implementation refinement remain unfinished. The whole-kernel goal is NOT
+complete; leave the existing automation active.

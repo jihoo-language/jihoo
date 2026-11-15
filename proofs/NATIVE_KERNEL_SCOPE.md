@@ -1341,3 +1341,17 @@ contracts feed the actual reader/handoff/release proofs; previous full-query
 APIs remain specializations. These internal-query lemmas do not replace mixed
 admission, source/context guards or the full grammar. Allocation-to-reader
 association and the all-control authority theorem are still to be constructed.
+
+
+`NativeBindingMachineAllocatedDynamicRelease` now constructs actual allocation,
+owner binding, named Lend and original reader-closure entry from the pending
+call's source judgments and original function resource receipt. The body query,
+birth/current-frame and owner-slot associations are derived. Thirty transitions
+read the captured index, close, bind, release and return the actual signed fill
+at the source signature's canonical argument instance. Original provenance is
+retained without a raw-conversion premise. False comparisons have typed else
+entry at sixteen steps; byte overflow faults at five. A closed full-checker/
+resource admission instantiates the theorem to an actual forty-eight-step
+release/return. Pending-call value/size/loan/source contexts and general
+admission/control authority remain open, as do arbitrary else/tail execution,
+old-owner conflict exclusion and native implementation refinement.

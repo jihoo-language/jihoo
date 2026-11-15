@@ -8941,3 +8941,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_scalar_value_lend_handoff
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_dynamic_reader_completion
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_fresh_dynamic_reader_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_dynamic_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.AllocatedDynamicExamples.program_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.AllocatedDynamicExamples.program_releases_and_returns

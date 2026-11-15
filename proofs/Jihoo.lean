@@ -1093,3 +1093,5 @@ import Jihoo.NativeBindingMachineScalarReaderShape
 import Jihoo.NativeBindingMachineDynamicReaderCompletion
 import Jihoo.NativeBindingMachineFreshDynamicRelease
 import Jihoo.NativeLoanRawResourceOrigins
+import Jihoo.NativeBindingMachineAllocatedDynamicRelease
+import Jihoo.NativeBindingMachineAllocatedDynamicExamples
