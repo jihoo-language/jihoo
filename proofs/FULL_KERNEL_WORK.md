@@ -128,7 +128,14 @@ The remaining core obligations include:
   arm and a real pending reader read. General bounds faults remain an explicit
   alternative; this is output preservation, not full typed progress or the
   missing source/control/heap fundamental theorem.
-- The aggregate proof check currently audits 8,777 declarations. The mixed
+- `NativeBindingMachineLendValues` now reconstructs the checked reader type
+  from the full input Lend rule and places actual heap-read integers at that
+  type, including specialized callbacks without generic callback typing.
+  Actual scalar values close the original continuation body at the original
+  Lend result type; paired binding equations retain the real CODE body and
+  owner/result slots. This is a valid ghost scalar closing and local runtime
+  boundary, not the full value/heap/control-stack fundamental theorem.
+- The aggregate proof check currently audits 8,783 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -247,3 +254,11 @@ axiom audits and generated comparisons (sampled peak tree RSS 3,616.6 MiB).
 No runtime or production compiler behavior changed. General source-derived
 heap/layout/permission invariants and exclusion of bounds/value faults remain
 open, alongside all original whole-kernel completion obligations.
+
+The Lend value increment derives actual scalar reader typing and an actual-
+scalar closing of the original continuation body from source Lend typing.
+The entire check passed 884 Lake jobs, 8,783 unique audits and generated
+comparisons (peak sampled tree RSS 3,620.6 MiB). No generic callback or output-
+value typing certificate is an input. Full source/control association, general
+`LoanSlots`/resource interpretation, bounds-fault exclusion and all original
+whole-kernel obligations remain unfinished.

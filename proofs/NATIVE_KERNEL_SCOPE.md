@@ -1062,3 +1062,15 @@ faults on bounds. General source/control association, heap layout/slot semantics
 and proof interpretation must still exclude that alternative for arbitrary
 admitted programs. Numeric preservation alone is not type preservation for
 arbitrary runtime values, ownership soundness or native refinement.
+
+
+`NativeBindingMachineLendValues` reconstructs explicit Index-reader result
+formation/type from the full source Lend rule and its mixed history. Reachable
+heap integers inhabit that checked reader type without assuming generic callback
+typing or returned-value realization. The actual scalar can close the original
+continuation body at the original Lend result type, and concrete binding
+equations retain the actual CODE body and owner/result value slots. This is a
+ghost scalar closing derived from actual data, not a claim that the machine
+performs CODE beta substitution or that all captured runtime values satisfy
+their source-dependent heap types. The general source/control/slot/resource
+fundamental theorem, bounds-fault exclusion and native refinement remain open.

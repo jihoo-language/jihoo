@@ -8777,3 +8777,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_index_integer_typed
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_ifLt_index_integer_typed
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_pending_index
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.lend_index_reader_value
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_lend_index_reader
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.actual_lend_scalar_continuation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.continuation_actual_substitution
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.actual_lend_scalar_bindings
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.actual_lend_continuation_binding
