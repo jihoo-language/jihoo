@@ -16,7 +16,7 @@ theorem StackOwners.no_reader_at_limit (owners : StackOwners limit stack) : ¬ O
   all_goals omega
 
 set_option linter.unusedSimpArgs false in
-private theorem release_alias_return_four_steps (heap : SizedBufferHeap.State) (code : Code)
+theorem release_alias_return_four_steps (heap : SizedBufferHeap.State) (code : Code)
     (first again ownerOrigin resultOrigin : Term) (object owner releaseIndex : Nat) (value : Int) (stack : List Frame)
     (stored : code.values[owner]? = some (some (.owner object)))
     (selected : releaseIndex = 0 ∨ releaseIndex = owner+2)

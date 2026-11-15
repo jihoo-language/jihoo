@@ -1126,3 +1126,33 @@ execution, evidence/effectful result semantics, universe consistency, full
 preservation and native implementation refinement remain unfinished. Keep the
 whole-kernel automation active. A useful next semantic step is finishing the
 live-lease else path, followed by general all-control resource authority.
+
+
+## 2026-11-15: original literal else closes its lease and releases the fresh owner
+
+`NativeBindingMachineLiteralElseRelease` completes both outcomes of the
+original guarded fresh reference reader when its else body is an integer
+literal. The failed comparison's source judgment derives the literal's signed
+range. Six transitions enter that original else code, one evaluates the
+literal, five close the lease and bind the continuation, and four release
+either physical owner alias and return the literal at the original inferred
+Lend result type. The true branch retains its twenty-step actual payload read.
+Both outcomes preserve valid heap and exact enclosing reader inventory and
+prove the fresh owner dead. The original source/resource receipt and earlier
+actual frame provenance derive the Free guard; no literal bound, selected
+branch, no-reader premise or successful suffix is supplied by the caller.
+
+The aggregate passed 918 Lake jobs, 8,955 unique public audits and all generated
+fixture comparisons (`out/logs/fresh-literal-else-release-full.log`), with only
+the three allowed logical axioms and 3,707.6 MiB sampled peak RSS. The shared
+four-step alias-release lemma is now public for composition and audited; the
+new both-outcome theorem is audited too. No native code, fixture, dependency
+lock or store pin changed.
+
+The literal-else result is currently at the reachable fresh reader boundary,
+whose associations are constructed by the existing allocation/call proofs.
+Next compose this both-outcome suffix through those entries to remove the
+remaining live-lease else entry for mixed-admitted literal-fallback calls.
+Arbitrary else bodies, old-owner reader conflict exclusion, all-control mixed
+resource authority, universe consistency, full preservation and native
+implementation refinement remain open. The whole-kernel goal is NOT complete.

@@ -1383,3 +1383,12 @@ example now uses this mixed admission directly. This is a parameterized local
 scalar/call path: arbitrary control stacks, old-owner conflicts, else/tail
 execution and native implementation refinement remain open; the complete
 grammar and whole-kernel obligations are unchanged.
+
+
+For an original integer else body, `NativeBindingMachineLiteralElseRelease`
+now completes both outcomes at the fresh reader boundary: twenty transitions
+read/close/Free or sixteen evaluate the source-typed literal/close/Free. Literal
+width and the Free guard are derived, retaining outer reader inventory and
+original inferred result typing. Composition through allocation and mixed
+entry remains to be updated; arbitrary else bodies and general all-control
+ownership/native-refinement obligations remain open.
