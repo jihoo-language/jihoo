@@ -90,8 +90,8 @@ Borrow permission, exact allocation length and the real reader inventory
 construct the entire read. Neither a numerical bound nor successful execution
 is a premise. Allocation/slot and source-control association are still local
 entry invariants to derive in the whole-program fundamental theorem. -/
-theorem allocated_dynamic_index_executes
-    (valid : SizedBufferHeap.Valid before)
+theorem allocated_dynamic_index_executes_valid
+    (valid : SizedBufferHeap.Valid state.heap)
     (inventory : ReaderInventory state.heap (readerFrames state.stack))
     (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat)
     (code : Code) (evaluating : (run fuel state).state.control = .evaluate code)
@@ -122,18 +122,40 @@ theorem allocated_dynamic_index_executes
     cases stored
     obtain ⟨token,found⟩ := activeLease_complete present
     obtain ⟨frame,member,descriptor⟩ := activeLease_sound found
-    have allocationValid : SizedBufferHeap.Valid state.heap := by
-      rw [allocated]
-      exact SizedBufferHeap.step_valid valid .alloc
-    have readers := (run_reader_inventory allocationValid inventory fuel).readersLive
+    have readers := (run_reader_inventory valid inventory fuel).readersLive
     have leased := readers frame member token before.heap.nextObject
       (some (code.context.length-owner)) descriptor
     refine ⟨token,?_⟩
     rw [stateShape]
     exact guarded_read_ten_steps _ code _ shape storedIndex storedLength storedOwner found leased
-      (run_allocation_length valid allocated fuel) compared
+      (run_allocation_length_valid valid allocated fuel) compared
   · simp only [compared,↓reduceIte]
     rw [stateShape]
     exact guarded_read_else_five_steps _ code _ shape storedIndex storedLength compared
+
+theorem allocated_dynamic_index_executes
+    (valid : SizedBufferHeap.Valid before)
+    (inventory : ReaderInventory state.heap (readerFrames state.stack))
+    (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat)
+    (code : Code) (evaluating : (run fuel state).state.control = .evaluate code)
+    (typed : LoanTyping.HasType env loans code.context false code.term type)
+    (shape : code.term = .ifLt (.var index) (.var length) (dynamicRead owner index) no)
+    (entered : Loans.Entered code.context.length loans)
+    (slots : LoanSlots code loans (run fuel state).state.stack)
+    (storedIndex : code.values[index]? = some (some (.natural offset)))
+    (storedLength : code.values[length]? = some (some (.natural count)))
+    (storedOwner : code.values[owner]? = some (some (.owner before.heap.nextObject))) :
+    if offset < count then
+      ∃ token, run 10 (run fuel state).state =
+        ⟨⟨(run fuel state).state.heap,
+          .returned (.integer (decodeInteger ((run fuel state).state.heap.heap.payload before.heap.nextObject))),
+          (run fuel state).state.stack⟩,
+          [.heap (.read token offset ((run fuel state).state.heap.heap.payload before.heap.nextObject))],10⟩
+    else run 5 (run fuel state).state =
+      ⟨⟨(run fuel state).state.heap,.evaluate (code.child no),(run fuel state).state.stack⟩,[],5⟩ := by
+  apply allocated_dynamic_index_executes_valid ?_ inventory allocated fuel code evaluating typed shape entered slots
+    storedIndex storedLength storedOwner
+  rw [allocated]
+  exact SizedBufferHeap.step_valid valid .alloc
 
 end Jihoo.NativeKernel.Environment.BindingMachine

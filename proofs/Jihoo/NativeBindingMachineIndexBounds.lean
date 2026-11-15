@@ -92,18 +92,22 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine
 
 /-- Exact allocation lengths survive every actual machine prefix, including
 prefixes that return/fault or exhaust their fuel. -/
-theorem run_allocation_length (valid : SizedBufferHeap.Valid before)
+theorem run_allocation_length_valid (valid : SizedBufferHeap.Valid state.heap)
     (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat) :
     (run fuel state).state.heap.length before.heap.nextObject = count := by
-  have allocationValid : SizedBufferHeap.Valid state.heap := by
-    rw [allocated]
-    exact SizedBufferHeap.step_valid valid .alloc
   have objectBound : before.heap.nextObject < state.heap.heap.nextObject := by
     simp only [allocated,SizedBufferHeap.allocate]
     omega
-  have preserved := SizedBufferHeap.lengths_preserved objectBound (run_heap_steps allocationValid fuel)
+  have preserved := SizedBufferHeap.lengths_preserved objectBound (run_heap_steps valid fuel)
   rw [allocated,SizedBufferHeap.allocation_length] at preserved
   exact preserved.2
+
+theorem run_allocation_length (valid : SizedBufferHeap.Valid before)
+    (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat) :
+    (run fuel state).state.heap.length before.heap.nextObject = count := by
+  apply run_allocation_length_valid (state := state) ?_ allocated fuel
+  rw [allocated]
+  exact SizedBufferHeap.step_valid valid .alloc
 
 /-- A pending literal Index read derives its bound from full source typing,
 its exact length from an allocation state and subsequent execution, and its live lease from the
@@ -156,9 +160,9 @@ Loan64 derivation, owner-slot permissions, and a concrete allocation state.
 The erased literal Decide supplies both numerical bounds. The runtime owner
 slot's allocation identity and source/slot alignment remain explicit inputs,
 not a claimed whole-program fundamental theorem. -/
-theorem allocated_named_index_executes
+theorem allocated_named_index_executes_valid
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
-    (valid : SizedBufferHeap.Valid before)
+    (valid : SizedBufferHeap.Valid state.heap)
     (inventory : ReaderInventory state.heap (readerFrames state.stack))
     (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat)
     (evaluating : (run fuel state).state.control = .evaluate code)
@@ -185,15 +189,12 @@ theorem allocated_named_index_executes
   cases slot
   obtain ⟨token,found⟩ := activeLease_complete present
   obtain ⟨frame,member,descriptor⟩ := activeLease_sound found
-  have allocationValid : SizedBufferHeap.Valid state.heap := by
-    rw [allocated]
-    exact SizedBufferHeap.step_valid valid .alloc
-  have readers := (run_reader_inventory allocationValid inventory fuel).readersLive
+  have readers := (run_reader_inventory valid inventory fuel).readersLive
   have leased := readers frame member token before.heap.nextObject
     (some (code.context.length-owner)) descriptor
   have limits := evidence.literal_decide_limits history.wellFormed
   have readBound : offset < (run fuel state).state.heap.length before.heap.nextObject := by
-    rw [run_allocation_length valid allocated fuel]
+    rw [run_allocation_length_valid valid allocated fuel]
     exact limits.2.2
   refine ⟨token,?_⟩
   have stateShape : (run fuel state).state =
@@ -202,5 +203,26 @@ theorem allocated_named_index_executes
     | mk heap control stack => simpa only [current] using congrArg (State.mk heap · stack) evaluating
   rw [stateShape]
   exact named_index_five_steps _ code _ shape stored found leased limits.1 readBound
+
+theorem allocated_named_index_executes
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (valid : SizedBufferHeap.Valid before)
+    (inventory : ReaderInventory state.heap (readerFrames state.stack))
+    (allocated : state.heap = SizedBufferHeap.allocate before count fill) (fuel : Nat)
+    (evaluating : (run fuel state).state.control = .evaluate code)
+    (typed : LoanTyping.HasType env loans code.context false code.term type)
+    (shape : code.term = .index (.borrow (.var owner)) (.natural offset)
+      (.decide (.natural offset) (.natural count)))
+    (slots : LoanSlots code loans (run fuel state).state.stack)
+    (stored : code.values[owner]? = some (some (.owner before.heap.nextObject))) :
+    ∃ token,
+      run 5 (run fuel state).state =
+        ⟨⟨(run fuel state).state.heap,
+          .returned (.integer (decodeInteger ((run fuel state).state.heap.heap.payload before.heap.nextObject))),
+          (run fuel state).state.stack⟩,
+          [.heap (.read token offset ((run fuel state).state.heap.heap.payload before.heap.nextObject))],5⟩ := by
+  apply allocated_named_index_executes_valid history ?_ inventory allocated fuel evaluating typed shape slots stored
+  rw [allocated]
+  exact SizedBufferHeap.step_valid valid .alloc
 
 end Jihoo.NativeKernel.Environment.BindingMachine

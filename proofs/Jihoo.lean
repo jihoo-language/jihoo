@@ -1065,3 +1065,4 @@ import Jihoo.NativeBindingMachineDynamicIndexExamples
 import Jihoo.NativeBindingMachineNumeric
 import Jihoo.NativeBindingMachineIndexValues
 import Jihoo.NativeBindingMachineLendValues
+import Jihoo.NativeBindingMachineIndexExecution

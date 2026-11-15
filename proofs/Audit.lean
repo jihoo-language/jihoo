@@ -8783,3 +8783,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.continuation_actual_substitution
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.actual_lend_scalar_bindings
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.actual_lend_continuation_binding
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_allocation_length_valid
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_named_index_executes_valid
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_dynamic_index_executes_valid
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.ifLt_no
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_named_index_execution
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_dynamic_index_execution

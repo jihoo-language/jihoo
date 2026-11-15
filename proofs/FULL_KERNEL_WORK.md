@@ -135,7 +135,13 @@ The remaining core obligations include:
   Lend result type; paired binding equations retain the real CODE body and
   owner/result slots. This is a valid ghost scalar closing and local runtime
   boundary, not the full value/heap/control-stack fundamental theorem.
-- The aggregate proof check currently audits 8,783 declarations. The mixed
+- `NativeBindingMachineIndexExecution` now constructs literal/comparison-
+  guarded reads together with exact original-type integers from actual initial
+  execution prefixes. Heap validity, reader inventory and numeric bounds are
+  all derived, rather than supplied. The false comparison arm enters a body
+  with the same original source type. Local source/control typing, allocation
+  identity/layout and `LoanSlots` association remain explicit inputs.
+- The aggregate proof check currently audits 8,789 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -156,11 +162,13 @@ initial execution without typing assumptions. Next derive and preserve
 independently at each Borrow. Ordinary binder and reader-entry slot lemmas
 are available. Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
-local reader transition lemmas are available, but a common runtime-value,
-context and control-stack interpretation and its fundamental theorem are not.
+local reader, structural erasure and numeric value/heap components are
+available, but a common source-type/resource interpretation for every runtime
+value, context and control stack and its fundamental theorem are not.
 Dynamic IfLt hypothesis reads now supplement the literal-Decide bridge.
-Extend this to all Lt proof forms and arbitrary computed index/count terms. Derive exact heap lengths and the association between the owner
-slot and allocation from the common runtime interpretation, instead of the
+Extend this to all Lt proof forms and arbitrary computed index/count terms.
+Derive exact heap lengths and the association between the owner slot and
+allocation from the common runtime interpretation, instead of the
 current explicit local allocation-state/slot premises. The runtime bound
 check alone does not discharge those obligations.
 Retain computed callees, erased arguments and exact dependent result origins;
@@ -262,3 +270,24 @@ comparisons (peak sampled tree RSS 3,620.6 MiB). No generic callback or output-
 value typing certificate is an input. Full source/control association, general
 `LoanSlots`/resource interpretation, bounds-fault exclusion and all original
 whole-kernel obligations remain unfinished.
+
+The final increment connects actual prefix executions to original source
+result types for literal and dynamic reads and preserves the original type on
+else entry. New state-validity forms derive all heap/reader/numeric invariants
+from reachability; previous public entry points remain compatible wrappers.
+The aggregate passed 885 Lake jobs, 8,789 unique audits and generated-fixture
+comparisons (peak sampled tree RSS 3,621.7 MiB). No compiler/runtime code or
+native fixture changed in this unit; the existing 67-source/53-byte native
+regression evidence is unchanged, not a new implementation-refinement result.
+The reused `/workspace/.local/bin/nix-rootless` reports Nix 2.20.6, evaluates
+`builtins.add 20 22` to 42, and runs the actual `.#proofs` shell with Lean
+4.34.1/Lake 5.0.0-src. Toolchain lock/store contents were not changed.
+
+The next core dependency is the common source/control and resource/value
+interpretation: obtain input code typing, exact allocation/owner-slot association
+and all `LoanSlots` obligations from the actual Loan64/resource mixed history
+through every capture, call, Lend and continuation. Connect resource projection
+to real owner/lease identities; preserve source-dependent heap lengths; then
+extend bound interpretation to arbitrary proofs/computations. The numerical
+and scalar-closing results do not by themselves establish those obligations,
+full ownership/borrow soundness, universe consistency or native refinement.

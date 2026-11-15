@@ -1074,3 +1074,17 @@ ghost scalar closing derived from actual data, not a claim that the machine
 performs CODE beta substitution or that all captured runtime values satisfy
 their source-dependent heap types. The general source/control/slot/resource
 fundamental theorem, bounds-fault exclusion and native refinement remain open.
+
+
+`NativeBindingMachineIndexExecution` combines the existing constructed literal
+and comparison-guarded Index paths with actual prefix numeric interpretation
+and full Loan64 original-type conversion. Its caller supplies no heap-validity,
+reader-inventory, numeric-realization or post-result typing certificate: these
+are derived from the actual initial execution. Returned integers have the exact
+input closed type, and false comparison enters an else body with the same
+original source type. Earlier entry points remain compatibility wrappers.
+The source/control judgment and allocation/owner-slot/loan association are still
+local inputs. The full fundamental theorem must construct them from admitted
+mixed-program typing/resources, including all captures/effects and arbitrary
+bound proofs. This increment does not close general ownership, consistency,
+full source computation preservation or native implementation refinement.
