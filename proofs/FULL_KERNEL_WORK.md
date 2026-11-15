@@ -320,3 +320,29 @@ Validation of this increment: `proofs/check.sh` passed 886 Lake jobs, 8,800
 unique public axiom audits and all generated-fixture comparisons; sampled peak
 tree RSS was 3,623.7 MiB. Only `propext`, `Classical.choice` and `Quot.sound`
 occurred. No native executable behavior, compiler source or fixture changed.
+
+The nested-reader resumption unit recovers a continuation's outer Borrow
+permission from that actual dependent resource check's specialized body, then
+derives its concrete captured owner from the pre-existing `LoanSlots`. At the
+actual inner reader return, the old reader inventory supplies a distinct outer
+token that survives close and still denotes a live owner. Eight constructed
+machine transitions close the inner lease, install the two retained bindings,
+execute the authorized outer Borrow, discard its result through Strict and
+enter the continuation tail with all outer permissions and the original ghost
+result type. No post-close slot/lease/liveness or returned-value certificate is
+an input. Source checking also rejects reborrowing the just-restored owner
+through either alias when it has no remaining outer source loan.
+
+Input code typing, exact local resource projection and the original captured
+loan-slot/frame association remain local premises. The common fundamental
+theorem must derive them from actual closed mixed-history admission and carry
+them through every machine control transition. General ownership authority,
+heap layout/bound-proof interpretation, all specified computation preservation,
+universe consistency and native implementation refinement remain unfinished.
+
+The resumption increment passed the complete `proofs/check.sh`: 887 Lake jobs,
+8,806 unique public axiom audits and all generated-fixture comparisons. Only
+the three allowed logical axioms occurred; sampled peak tree RSS was
+3,624.2 MiB. Compiler/runtime/native fixtures remain unchanged. This run reused
+the existing rootless `.#proofs` shell with Lean 4.34.1/Lake 5.0.0-src and the
+serialized proof guard, without changing dependency locks or memory ceilings.

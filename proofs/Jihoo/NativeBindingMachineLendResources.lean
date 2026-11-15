@@ -3,33 +3,11 @@ import Jihoo.NativeLoanQuantityOrigins
 
 namespace Jihoo.NativeKernel.Environment.LoanTyping
 
-private def FreeTail (env : Environment) (loans : Loans.Stack) (ctx : Context)
-    (mode : Bool) : Term → Term → Prop
-  | .free _ rest,type => HasType env loans ctx mode rest type
-  | _,_ => True
-
-private theorem free_tail_convert (view : FreeTail env loans ctx mode term first)
-    (converted : Conversion.Conv env first second) : FreeTail env loans ctx mode term second := by
-  fun_cases FreeTail env loans ctx mode term first <;> simp only [FreeTail] at view ⊢
-  exact view.convert converted
-
 /-- Inversion of the complete judgment, retaining arbitrary result conversion. -/
 theorem HasType.free_tail (typed : HasType env loans ctx mode (.free owner rest) type) :
     HasType env loans ctx mode rest type := by
-  have general : ∀ {term type}, HasType env loans ctx mode term type →
-      FreeTail env loans ctx mode term type := by
-    intro term type source
-    apply HasType.rec (t := source)
-      (motive_1 := fun _ _ _ _ _ _ => True)
-      (motive_2 := fun stack context ghost expression result _ => FreeTail env stack context ghost expression result)
-      (motive_3 := fun _ _ _ _ _ _ _ _ => True)
-      (motive_4 := fun _ _ _ _ _ _ => True)
-      (motive_5 := fun _ _ _ _ _ _ => True)
-    all_goals intros
-    all_goals first | trivial | assumption | skip
-    case dataElim => split <;> trivial
-    case convert original converted ih => exact free_tail_convert ih converted
-  exact general typed
+  obtain ⟨result,restTyped,converted⟩ := typed.principalView
+  exact restTyped.convert converted
 
 end Jihoo.NativeKernel.Environment.LoanTyping
 

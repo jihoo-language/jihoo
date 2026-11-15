@@ -8800,3 +8800,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_free_variable
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_lend_free_tail_zero
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_lend_free
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.strict_first
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.strict_tail
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_continuation_outer_borrow
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_continuation_returned_owner_borrow
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.no_checked_continuation_reborrow
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_reader_resume

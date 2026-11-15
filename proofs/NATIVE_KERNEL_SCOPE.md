@@ -1105,3 +1105,14 @@ reader-frame/control association still need the common fundamental theorem.
 Abstract zero-demand tail prefixes are not yet associated with all concrete tail
 executions. The theorem executes retained source code, not a substituted CODE
 macro, and neither claims general value realization nor native refinement.
+
+`NativeBindingMachineReaderResume` derives an outer Borrow's source permission
+from the actual specialized checked continuation. Pre-existing captured loan
+slots identify its owner; reachability derives a distinct outer lease that
+survives closing the inner reader. It constructs all eight real transitions
+through both continuation bindings, the authorized Borrow and Strict tail
+entry, preserving outer slots and the original ghost result type. Both owner
+aliases are rejected for reborrow when no outer source permission remains.
+No caller supplies post-close heap/slot safety or execution success. Current
+input source/control/resource and captured-slot association are still local
+premises, not yet a closed-admission fundamental theorem or native refinement.
