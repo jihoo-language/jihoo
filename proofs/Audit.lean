@@ -8893,3 +8893,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSlots.less_branch
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_less_branch
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_less_borrow
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_argument_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_argument_lend

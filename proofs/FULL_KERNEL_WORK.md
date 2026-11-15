@@ -629,3 +629,48 @@ fresh allocation to an actual owner function binding and construct its value
 context from the source allocation, rather than requiring a caller's typed
 runtime owner. General consistency, specified computation preservation,
 ownership/borrow soundness and native implementation refinement remain open.
+
+
+## 2026-11-15: derived allocated-owner entry and named Lend start
+
+`NativeBindingMachineAllocatedArgument` connects a source-typed allocation
+at arbitrary captured size/fill slots to the actual pending function closure.
+The original input allocation judgment reconstructs a canonical ghost
+allocation from its observed numeric meanings. Function inversion then
+constructs the retained owner binder's ghost substitution, representation
+agreement and arbitrary dependent body typing. Six actual transitions allocate
+and enter the original body, with both the alloc and activation events. The
+Buffer interpretation uses the same input allocation type; the body signature
+is instantiated at the canonical ghost allocation while original argument
+provenance remains untouched. No runtime-argument/output typing or successful
+allocation/call certificate is an input. Byte overflow remains a five-step
+fault before function entry.
+
+For an original body beginning with named Lend of that argument, nine actual
+transitions allocate, bind the owner and open its lease. The heap derives
+owner liveness and the correct Buffer length, the reader code retains the
+constructed value context, and the post-state has the exact complete reader
+inventory, including every nested outer reader. The lease token and Lend
+guard are constructed from actual allocation/reachability, with no allocation
+snapshot, stored owner, live-owner witness or successful-Lend oracle.
+
+The final aggregate passed 900 Lake jobs, 8,895 unique public axiom audits and
+all generated-fixture comparisons (`out/logs/allocated-argument-full-final.log`).
+All 20 public theorems added in this run are audited exactly once. Dependencies
+use only `propext`, `Classical.choice` and `Quot.sound`; sampled peak tree RSS
+was 3,671.6 MiB. The existing rootless Nix proof shell and resource wrapper were
+reused. No production compiler/runtime behavior or native fixture changed.
+
+Next derive the full source/control/value/loan-context invariant from mixed
+admission across every frame and closure creation, extending the proved empty,
+scalar, allocated-owner and comparison entries. Reader activation must retain
+the authentic specialized checked-read derivation: specialized dependent Lend
+checks `Lending.read owner body`, not an arbitrary-argument callback, so do NOT
+assume that callback typing to recover a convenient generic body context.
+Connect actual reference entry and captured dependent lengths to heap/lease
+interpretation for arbitrary Index and nested reader lifetimes, and connect
+resource authority to live aliases rather than every captured owner. General
+effectful source-result semantics, universe consistency, all specified
+computation preservation, full ownership/borrow soundness and native
+implementation refinement remain unfinished. The whole-kernel goal is NOT
+complete; continue the existing automation.

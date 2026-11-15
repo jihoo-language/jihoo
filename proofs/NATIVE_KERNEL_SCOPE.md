@@ -1235,3 +1235,19 @@ can execute source-authorized Borrow in six steps using a live lease derived
 from the actual nested reader inventory. Original provenance evidence is not
 used as a canonical proof. The input source/control/value/loan association and
 general Index heap-size/resource interpretation remain unfinished.
+
+
+`NativeBindingMachineAllocatedArgument` now constructs a retained owner value
+context and dependent body typing from the original source allocation and
+pending function judgments, with six actual allocation/call transitions.
+Canonical ghost allocation and original runtime provenance remain distinct.
+A named Lend of that fresh argument then has nine constructed transitions,
+a live correctly sized Buffer, its new concrete lease and the exact complete
+reader inventory including outer readers. Byte overflow is explicit. No
+runtime argument/output typing, allocation snapshot, stored owner, live-owner
+or successful-execution certificate is supplied. Source/control/value contexts
+are still local preconditions, and representation-head interpretation alone
+is not heap/resource authority. Specialized dependent reader activation must
+retain its actual checked read, not assume arbitrary callback typing. General
+reference/Index interpretation, all-control fundamental soundness and native
+implementation refinement remain unfinished.
