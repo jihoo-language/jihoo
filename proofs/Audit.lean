@@ -8933,3 +8933,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_dynamic_reader_completion
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.StackOwners.no_reader_at_limit
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_fresh_dynamic_reader_release
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.dependent_raw_project_contract
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.raw_lend_free_tail_zero
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_lambda_body
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_raw_dynamic_reader_source
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_dynamic_reference_reader
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_scalar_value_lend_handoff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_dynamic_reader_completion
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_fresh_dynamic_reader_release

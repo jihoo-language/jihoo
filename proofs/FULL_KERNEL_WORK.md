@@ -952,3 +952,36 @@ evidence/result semantics, all-universe consistency, all specified computation
 preservation, full ownership/borrow soundness and native implementation
 refinement remain unfinished. The whole-kernel goal is NOT complete; leave the
 existing automation active.
+
+
+## 2026-11-15: internal body resource receipts from original function checking
+
+`NativeLoanRawResourceOrigins` recovers the exact internal body query from an
+original full lambda resource projection. Internal Lend receipts retain original
+read/restore scopes, full checker-derived source judgments and zero/one owner
+contracts. The residual owner-demand proof is reconstructed from that same
+internal receipt. These are internal query results, NOT a replacement admission
+gate; mixed checking, scope/context guards and the complete source grammar
+remain unchanged.
+
+The checked dynamic reference reader, scalar handoff, dynamic completion and
+fresh release proofs now have reusable internal-receipt variants. Their previous
+full-query APIs remain specializations through the actual projector's origin
+lemma. This lets the original function projection supply its body evidence;
+a caller no longer needs to rerun or assume a separately successful full body
+projection before composing allocation and reader entry. No output typing,
+execution-success or arbitrary callback certificate is added.
+
+The aggregate passed 912 Lake jobs, 8,941 unique public audits and all generated
+fixture comparisons (`out/logs/function-resource-receipts-full.log`), with only
+the three allowed logical axioms and 3,696.1 MiB sampled peak RSS. Rootless Nix
+2.20.6, smoke evaluation 42 and the actual proof shell (Lean 4.34.1/Lake
+5.0.0-src) were verified and reused under the shared guard. No native behavior,
+fixture, dependency lock or store pin changed.
+
+Next construct allocation, argument binding, Lend and reader-closure entry from
+the actual pre-allocation prefix, deriving the birth/current-frame, owner-slot
+and value/size/loan associations currently supplied at the reader boundary.
+Then extend all-control authority to arbitrary old owners and enclosing readers.
+The whole-kernel consistency, preservation, ownership/borrow and native-refinement
+obligations remain unfinished.

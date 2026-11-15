@@ -1,5 +1,6 @@
 import Jihoo.NativeBindingMachineReferenceIndex
 import Jihoo.NativeBindingMachineScalarReaderShape
+import Jihoo.NativeLoanRawResourceOrigins
 
 /-! Actual scalar/owner continuation bindings are interpreted from the same
 complete input Lend and resource projection. Specialized callbacks retain their
@@ -146,7 +147,7 @@ private theorem value_close_five_steps (heap : SizedBufferHeap.State) (code : Co
 /-- At the actual scalar return boundary the same source/resource check
 constructs both continuation bindings, their heap-size context and the exact
 closed original result type. The reader closes before either binding. -/
-theorem reachable_scalar_value_lend_handoff (term : Term) (fuel : Nat) (code : Code)
+theorem reachable_raw_scalar_value_lend_handoff (term : Term) (fuel : Nat) (code : Code)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (typed : LoanClosingTyped env loans false code meanings type)
     (context : ValueContext env code meanings)
@@ -154,7 +155,7 @@ theorem reachable_scalar_value_lend_handoff (term : Term) (fuel : Nat) (code : C
     (shape : code.term = .lend (.var owner) (.lam false domain readerBody)
       (.lam false first (.lam false again body)))
     (scalar : LoanTyping.ScalarReadShape readerBody)
-    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+1) env loans code.context code.term = some control)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some control)
     (stored : code.values[owner]? = some (some (.owner object)))
     (slots : LoanSlots code loans stack) (entered : Loans.Entered code.context.length loans)
     (returned : (run fuel (initial term)).state.control = .returned (.integer value))
@@ -205,9 +206,49 @@ theorem reachable_scalar_value_lend_handoff (term : Term) (fuel : Nat) (code : C
     exact value_close_five_steps _ _ leased _ _ _ _ _ _ _ _
   · rw [shape] at checked
     obtain ⟨outside,sort,resultType,reader,mode,rest,originalScope,readScope,restScope,
-      formed,controlScoped,sourceTyped,readTyped,binder,bodyTyped,resolved,readProjected,restProjected,
-      readZero,restOne,same⟩ := LoanTyping.ResourceQuantity.dependent_project_contract checked
+      sourceTyped,readTyped,binder,bodyTyped,resolved,readProjected,restProjected,
+      readZero,restOne,same⟩ := LoanTyping.ResourceQuantity.dependent_raw_project_contract checked
     exact ⟨reader,mode,rest,readProjected,restProjected,readZero,restOne,same⟩
+
+/-- The full outer resource query supplies its exact internal receipt. -/
+theorem reachable_scalar_value_lend_handoff (term : Term) (fuel : Nat) (code : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanClosingTyped env loans false code meanings type)
+    (context : ValueContext env code meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap code meanings)
+    (shape : code.term = .lend (.var owner) (.lam false domain readerBody)
+      (.lam false first (.lam false again body)))
+    (scalar : LoanTyping.ScalarReadShape readerBody)
+    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+1) env loans code.context code.term = some control)
+    (stored : code.values[owner]? = some (some (.owner object)))
+    (slots : LoanSlots code loans stack) (entered : Loans.Entered code.context.length loans)
+    (returned : (run fuel (initial term)).state.control = .returned (.integer value))
+    (stackShape : (run fuel (initial term)).state.stack =
+      .lendFinish token object name ((Term.var owner).subst code.origins) resultOrigin
+        (code.child (.lam false first (.lam false again body))) :: stack) :
+    let heap := (run fuel (initial term)).state.heap
+    let closed := SizedBufferHeap.close heap token
+    let next := restoredContinuation code first again body ((Term.var owner).subst code.origins) resultOrigin object (.integer value)
+    let nextMeanings := consValues ((Term.var owner).subst meanings) (consValues (.integer value) meanings)
+    run 5 (run fuel (initial term)).state =
+      ⟨⟨closed,.evaluate next,stack⟩,
+        [.heap (.close token),.activate false (.lam false again body) resultOrigin,
+          .activate false body ((Term.var owner).subst code.origins)],5⟩ ∧
+      ValueContext env next nextMeanings ∧ OwnerSizes env closed next nextMeanings ∧
+      LoanTyping.HasType env [] [] true (next.term.subst nextMeanings) type ∧
+      LoanSlots next loans stack ∧ ReaderInventory closed (readerFrames stack) ∧
+      (closed.heap.live object = true) ∧
+      (freeGuard closed object = true ↔ ¬ ObjectReader object stack) ∧
+      (∀ index, next.values[index]? = (some (.integer value) :: code.values)[Jihoo.Quantity.openOwner (owner+1) index]?) ∧
+      ∃ reader mode rest,
+        LoanTyping.ResourceQuantity.projectRaw resourceFuel env (Loans.enter code.context.length owner loans)
+          code.context (Lending.read (.var owner) readerBody) = some reader ∧
+        LoanTyping.ResourceQuantity.projectRaw resourceFuel env loans (⟨first,false⟩ :: code.context)
+          (body.subst (single ((Term.var owner).rename Nat.succ))) = some rest ∧
+        reader.demand owner = some 0 ∧ (Jihoo.Quantity.Control.scope mode rest).demand owner = some 1 ∧
+        control = .seq reader (.scope mode rest) := by
+  exact reachable_raw_scalar_value_lend_handoff term fuel code history typed context sizes shape scalar
+    (LoanTyping.ResourceQuantity.project_origin checked) stored slots entered returned stackShape
 
 /-- Compatibility specialization of scalar handoff to direct Index readers. -/
 theorem reachable_value_lend_handoff (term : Term) (fuel : Nat) (code : Code)

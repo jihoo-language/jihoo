@@ -21,6 +21,29 @@ theorem dynamic_reference_read_source (owner index length : Nat) (no : Term) :
 
 /-- The same original projection retains its authentic source judgment,
 specialized read and zero/one owner contract. No callback typing is invented. -/
+theorem checked_raw_dynamic_reader_source
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans ctx
+      (.lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
+        (.lam false first (.lam false again body))) = some control) :
+    ∃ outside reader mode rest,
+      LoanTyping.HasType env loans ctx false
+        (.lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
+          (.lam false first (.lam false again body))) outside ∧
+      LoanTyping.HasType env (Loans.enter ctx.length owner loans) ctx false
+        (.ifLt (.var index) (.var length) (dynamicRead owner index) no) first ∧
+      LoanTyping.ResourceQuantity.projectRaw resourceFuel env (Loans.enter ctx.length owner loans) ctx
+        (.ifLt (.var index) (.var length) (dynamicRead owner index) no) = some reader ∧
+      LoanTyping.ResourceQuantity.projectRaw resourceFuel env loans (⟨first,false⟩ :: ctx)
+        (body.subst (single ((Term.var owner).rename Nat.succ))) = some rest ∧
+      reader.demand owner = some 0 ∧ (Jihoo.Quantity.Control.scope mode rest).demand owner = some 1 ∧
+      control = .seq reader (.scope mode rest) := by
+  obtain ⟨outside,sort,result,reader,mode,rest,originalScope,readScope,restScope,
+    sourceTyped,readTyped,binder,bodyTyped,resolved,readProjected,restProjected,readZero,restOne,same⟩ :=
+    LoanTyping.ResourceQuantity.dependent_raw_project_contract checked
+  rw [dynamic_reference_read_source] at readTyped readProjected
+  exact ⟨outside,reader,mode,rest,sourceTyped,readTyped,readProjected,restProjected,readZero,restOne,same⟩
+
+/-- The full outer resource query supplies its exact internal receipt. -/
 theorem checked_dynamic_reader_source
     (checked : LoanTyping.ResourceQuantity.project (resourceFuel+1) env loans ctx
       (.lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
@@ -37,11 +60,7 @@ theorem checked_dynamic_reader_source
         (body.subst (single ((Term.var owner).rename Nat.succ))) = some rest ∧
       reader.demand owner = some 0 ∧ (Jihoo.Quantity.Control.scope mode rest).demand owner = some 1 ∧
       control = .seq reader (.scope mode rest) := by
-  obtain ⟨outside,sort,result,reader,mode,rest,originalScope,readScope,restScope,formed,controlScoped,
-    sourceTyped,readTyped,binder,bodyTyped,resolved,readProjected,restProjected,readZero,restOne,same⟩ :=
-    LoanTyping.ResourceQuantity.dependent_project_contract checked
-  rw [dynamic_reference_read_source] at readTyped readProjected
-  exact ⟨outside,reader,mode,rest,sourceTyped,readTyped,readProjected,restProjected,readZero,restOne,same⟩
+  exact checked_raw_dynamic_reader_source (LoanTyping.ResourceQuantity.project_origin checked)
 
 private theorem checked_natural_slot
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
@@ -131,9 +150,9 @@ private theorem dynamic_reference_else_six_steps (heap : SizedBufferHeap.State) 
 /-- The actual full resource check constructs source typing, captured numeric
 values and the physical read bound. The reader's original reference binder is
 executed; neither a generic callback nor numeric/output/success oracle occurs. -/
-theorem reachable_checked_dynamic_reference_reader (term : Term) (fuel : Nat) (code : Code)
+theorem reachable_raw_dynamic_reference_reader (term : Term) (fuel : Nat) (code : Code)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
-    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+1) env loans code.context code.term = some control)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some control)
     (shape : code.term = .lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
       (.lam false first (.lam false again body)))
     (context : ValueContext env code meanings)
@@ -177,7 +196,7 @@ theorem reachable_checked_dynamic_reference_reader (term : Term) (fuel : Nat) (c
           ⟨⟨heap,.evaluate (bodyCode.child (no.rename Nat.succ)),afterStack⟩,
             [.activate false readerBody (.borrow ((Term.var owner).subst code.origins))],6⟩ := by
   obtain ⟨outside,reader,mode,remaining,sourceTyped,readTyped,readProjected,restProjected,readZero,restOne,same⟩ :=
-    checked_dynamic_reader_source (shape ▸ checked)
+    checked_raw_dynamic_reader_source (shape ▸ checked)
   have originalSource : LoanTyping.HasType env loans code.context false code.term outside := by
     simpa only [shape] using sourceTyped
   have sourceClosing : LoanClosingTyped env loans false code meanings (Term.subst meanings outside) :=
@@ -234,5 +253,54 @@ theorem reachable_checked_dynamic_reference_reader (term : Term) (fuel : Nat) (c
       (initial_run_heap_valid term fuel) (initial_reader_inventory term fuel) 6
     rw [executed] at inventory
     exact ⟨noResult,inventory,executed⟩
+
+/-- The full outer resource query supplies its exact internal receipt. -/
+theorem reachable_checked_dynamic_reference_reader (term : Term) (fuel : Nat) (code : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+1) env loans code.context code.term = some control)
+    (shape : code.term = .lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
+      (.lam false first (.lam false again body)))
+    (context : ValueContext env code meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap code meanings)
+    (stored : code.values[owner]? = some (some (.owner object)))
+    (returned : (run fuel (initial term)).state.control = .returned
+      (.closure false domain (dynamicReferenceReader index length no) code.context code.origins code.values))
+    (stackShape : (run fuel (initial term)).state.stack =
+      .lendReader token object (some (code.context.length-owner)) ((Term.var owner).subst code.origins)
+        readerOrigin continuation :: rest) :
+    ∃ outside offset count reader mode remaining,
+      LoanClosingTyped env loans false code meanings (Term.subst meanings outside) ∧
+      code.values[index]? = some (some (.natural offset)) ∧ code.values[length]? = some (some (.natural count)) ∧
+      meanings index = .natural offset ∧ meanings length = .natural count ∧
+      LoanTyping.ResourceQuantity.projectRaw resourceFuel env (Loans.enter code.context.length owner loans) code.context
+        (.ifLt (.var index) (.var length) (dynamicRead owner index) no) = some reader ∧
+      LoanTyping.ResourceQuantity.projectRaw resourceFuel env loans (⟨first,false⟩ :: code.context)
+        (body.subst (single ((Term.var owner).rename Nat.succ))) = some remaining ∧
+      reader.demand owner = some 0 ∧ (Jihoo.Quantity.Control.scope mode remaining).demand owner = some 1 ∧
+      control = .seq reader (.scope mode remaining) ∧
+      let heap := (run fuel (initial term)).state.heap
+      let readerBody := dynamicReferenceReader index length no
+      let bodyCode := enter false domain readerBody code.context code.origins code.values
+        (.borrow ((Term.var owner).subst code.origins)) (some (.reference token))
+      let bodyMeanings := consValues (.borrow ((Term.var owner).subst meanings)) meanings
+      let afterStack := .lendFinish token object (some (code.context.length-owner))
+        ((Term.var owner).subst code.origins) bodyCode.origin continuation :: rest
+      heap.length object = count ∧ heap.heap.lease token = some object ∧ heap.heap.live object = true ∧
+      ValueContext env bodyCode bodyMeanings ∧ OwnerSizes env heap bodyCode bodyMeanings ∧
+      if offset < count then
+        LoanTyping.HasType env [] [] true (.integer (decodeInteger (heap.heap.payload object))) (first.subst meanings) ∧
+        ReaderInventory heap (readerFrames afterStack) ∧
+        run 11 (run fuel (initial term)).state =
+          ⟨⟨heap,.returned (.integer (decodeInteger (heap.heap.payload object))),afterStack⟩,
+            [.activate false readerBody (.borrow ((Term.var owner).subst code.origins)),
+              .heap (.read token offset (heap.heap.payload object))],11⟩
+      else
+        LoanTyping.HasType env [] [] true ((no.rename Nat.succ).subst bodyMeanings) (first.subst meanings) ∧
+        ReaderInventory heap (readerFrames afterStack) ∧
+        run 6 (run fuel (initial term)).state =
+          ⟨⟨heap,.evaluate (bodyCode.child (no.rename Nat.succ)),afterStack⟩,
+            [.activate false readerBody (.borrow ((Term.var owner).subst code.origins))],6⟩ := by
+  exact reachable_raw_dynamic_reference_reader term fuel code history (LoanTyping.ResourceQuantity.project_origin checked) shape
+    context sizes stored returned stackShape
 
 end Jihoo.NativeKernel.Environment.BindingMachine

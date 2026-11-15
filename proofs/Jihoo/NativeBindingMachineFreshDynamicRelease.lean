@@ -39,9 +39,9 @@ allocation snapshot or a safety certificate. Together with the authentic
 Lend/resource receipt it derives the Free guard, releases either physical
 owner alias once, and returns the actual scalar at the original inferred type.
 Arbitrary earlier reader stacks are allowed. -/
-theorem reachable_fresh_dynamic_reader_release (term : Term) (birthFuel fuel : Nat) (code : Code)
+theorem reachable_raw_fresh_dynamic_reader_release (term : Term) (birthFuel fuel : Nat) (code : Code)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
-    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+3) env loans code.context code.term = some control)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+3) env loans code.context code.term = some control)
     (shape : code.term = .lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
       (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1)))))
     (context : ValueContext env code meanings)
@@ -106,7 +106,7 @@ theorem reachable_fresh_dynamic_reader_release (term : Term) (birthFuel fuel : N
     exact oldOwners.tail.no_reader_at_limit
   obtain ⟨outside,offset,count,reader,mode,remaining,sourceClosing,indexMeaning,lengthMeaning,
     readProjected,restProjected,readZero,restOne,same,physical,completed⟩ :=
-    reachable_checked_dynamic_reader_completion (resourceFuel := resourceFuel+2) term fuel code history checked shape
+    reachable_raw_dynamic_reader_completion (resourceFuel := resourceFuel+2) term fuel code history checked shape
       context sizes slots entered stored returned stackShape
   refine ⟨outside,offset,count,sourceClosing,indexMeaning,lengthMeaning,physical,?_⟩
   by_cases compared : offset < count
@@ -139,7 +139,71 @@ theorem reachable_fresh_dynamic_reader_release (term : Term) (birthFuel fuel : N
     rw [freed] at composed
     refine ⟨guarded,?_,scalarTyped,releasedSizes,releasedInventory,releasedValid,composed,?_⟩
     · simp only [SizedBufferHeap.release,HeapLeases.put,ite_true]
-    · exact LoanTyping.ResourceQuantity.checked_lend_free_tail_zero selectedAlias (shape ▸ checked)
+    · exact LoanTyping.ResourceQuantity.raw_lend_free_tail_zero selectedAlias (shape ▸ checked)
   · simpa only [compared,↓reduceIte] using completed
+
+/-- The full outer resource query supplies its exact internal receipt. -/
+theorem reachable_fresh_dynamic_reader_release (term : Term) (birthFuel fuel : Nat) (code : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (checked : LoanTyping.ResourceQuantity.project (resourceFuel+3) env loans code.context code.term = some control)
+    (shape : code.term = .lend (.var owner) (.lam false domain (dynamicReferenceReader index length no))
+      (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1)))))
+    (context : ValueContext env code meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap code meanings)
+    (slots : LoanSlots code loans stack) (entered : Loans.Entered code.context.length loans)
+    (stored : code.values[owner]? = some (some (.owner object)))
+    (selectedAlias : releaseIndex = 0 ∨ releaseIndex = owner+2)
+    (born : object = (run birthFuel (initial term)).state.heap.heap.nextObject)
+    (birthStack : (run birthFuel (initial term)).state.stack = .argument function argumentOrigin :: stack)
+    (returned : (run fuel (initial term)).state.control = .returned
+      (.closure false domain (dynamicReferenceReader index length no) code.context code.origins code.values))
+    (stackShape : (run fuel (initial term)).state.stack =
+      .lendReader token object (some (code.context.length-owner)) ((Term.var owner).subst code.origins) readerOrigin
+        (code.child (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1))))) :: stack) :
+    ∃ outside offset count,
+      LoanClosingTyped env loans false code meanings (Term.subst meanings outside) ∧
+      meanings index = .natural offset ∧ meanings length = .natural count ∧
+      let heap := (run fuel (initial term)).state.heap
+      let closed := SizedBufferHeap.close heap token
+      let released := SizedBufferHeap.release closed object
+      let readerBody := dynamicReferenceReader index length no
+      let readerCode := enter false domain readerBody code.context code.origins code.values
+        (.borrow ((Term.var owner).subst code.origins)) (some (.reference token))
+      let readerMeanings := consValues (.borrow ((Term.var owner).subst meanings)) meanings
+      let finishStack := .lendFinish token object (some (code.context.length-owner))
+        ((Term.var owner).subst code.origins) readerCode.origin
+        (code.child (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1))))) :: stack
+      heap.length object = count ∧
+      if offset < count then
+        let value := decodeInteger (heap.heap.payload object)
+        let next := restoredContinuation code first again (.free (.var releaseIndex) (.var 1))
+          ((Term.var owner).subst code.origins) readerCode.origin object (.integer value)
+        let nextMeanings := consValues ((Term.var owner).subst meanings) (consValues (.integer value) meanings)
+        freeGuard closed object = true ∧ released.heap.live object = false ∧
+        LoanTyping.HasType env [] [] true (.integer value) (Term.subst meanings outside) ∧
+        OwnerSizes env released next nextMeanings ∧ ReaderInventory released (readerFrames stack) ∧
+        SizedBufferHeap.Valid released ∧
+        run 20 (run fuel (initial term)).state =
+          ⟨⟨released,.returned (.integer value),stack⟩,
+            [.activate false readerBody (.borrow ((Term.var owner).subst code.origins)),
+              .heap (.read token offset (heap.heap.payload object)),.heap (.close token),
+              .activate false (.lam false again (.free (.var releaseIndex) (.var 1))) readerCode.origin,
+              .activate false (.free (.var releaseIndex) (.var 1)) ((Term.var owner).subst code.origins),
+              .heap (.free object)],20⟩ ∧
+        ∃ rest,
+          LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans (⟨first,false⟩ :: code.context)
+            ((Term.var 1).subst (single ((Term.var owner).rename Nat.succ))) = some rest ∧
+          rest.demand (owner+1) = some 0 ∧
+          (∀ events, Jihoo.Quantity.Prefix rest events → events.count (owner+1) = 0)
+      else
+        LoanTyping.HasType env [] [] true ((no.rename Nat.succ).subst readerMeanings) (first.subst meanings) ∧
+        ValueContext env (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+        OwnerSizes env heap (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+        ReaderInventory heap (readerFrames finishStack) ∧
+        run 6 (run fuel (initial term)).state =
+          ⟨⟨heap,.evaluate (readerCode.child (no.rename Nat.succ)),finishStack⟩,
+            [.activate false readerBody (.borrow ((Term.var owner).subst code.origins))],6⟩ := by
+  exact reachable_raw_fresh_dynamic_reader_release term birthFuel fuel code history (LoanTyping.ResourceQuantity.project_origin checked)
+    shape context sizes slots entered stored selectedAlias born birthStack returned stackShape
 
 end Jihoo.NativeKernel.Environment.BindingMachine

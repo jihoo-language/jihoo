@@ -1333,3 +1333,11 @@ is zero. No no-reader/Unborrowed/Free-success oracle is an input. The local
 birth/current-frame and source/context associations remain explicit; arbitrary
 old-owner conflicts and the all-control mixed-admission authority theorem are
 still unfinished.
+
+
+Original full lambda resource projection now yields its exact internal body
+receipt. Internal Lend source judgments, read/restore scopes and zero/one owner
+contracts feed the actual reader/handoff/release proofs; previous full-query
+APIs remain specializations. These internal-query lemmas do not replace mixed
+admission, source/context guards or the full grammar. Allocation-to-reader
+association and the all-control authority theorem are still to be constructed.
