@@ -1165,3 +1165,20 @@ Current input source/control/frame association is still local, and the read
 endpoint retains its inner reader frame. General completion, arbitrary bound
 interpretation/resource simulation and native implementation refinement remain
 open.
+
+`NativeBindingMachineReturnedBufferCompletion` closes the fresh-result reader
+and executes both owner releases and scalar return in thirty-two real steps.
+The actual scalar has the original outer source result type; its proof uses
+input typing and actual fill bounds rather than an output certificate. The
+fresh Free guard follows from all-prefix owner provenance plus the concrete
+reader inventory. A still-active outer reader of the old owner gives a specified
+thirty-one-step fault; byte overflow stops after five. General admission/control
+association and old-owner conflict exclusion remain open, as do arbitrary source
+computations/resource simulation and native implementation refinement.
+
+`NativeBindingMachineReturnedBufferCompletionExamples` checks one actual
+closed Loan64/resource admission and contextual reader entry, then applies the
+general thirty-two-step proof after the fourteen-step caller prefix. The
+forty-six-step scalar result is derived through that theorem, not assumed as an
+output certificate. This concrete instantiation does not establish the general
+admission/control fundamental theorem or native checker/evaluator refinement.

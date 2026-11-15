@@ -6,7 +6,7 @@ rule, including source-specialized callbacks. No independently typed generic
 callback or returned-value certificate is supplied. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping
 
-private theorem actual_scalar_finish
+theorem actual_scalar_finish
     (wf : UnifiedProgram.EnvWellFormed env)
     (typed : HasType env [] [] true
       (.lend owner (.lam false domain (.index reference offset evidence))

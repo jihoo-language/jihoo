@@ -8849,3 +8849,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.returned_read_limits
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.returned_allocated_index_origin
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_returned_buffer_read
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_stopped
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_add
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.actual_scalar_finish
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.returned_read_result_type
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_returned_buffer_completion
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReturnedBufferCompletionExamples.program_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReturnedBufferCompletionExamples.program_completes

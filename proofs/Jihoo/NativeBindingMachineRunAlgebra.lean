@@ -4,6 +4,27 @@ import Jihoo.NativeBindingMachineHeap
 repeated expansion of the state/event/step fields of the same suffix run. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine
 
+theorem run_stopped (stopped : step state = none) (fuel : Nat) : run fuel state = ⟨state,[],0⟩ := by
+  cases fuel <;> simp only [run,stopped]
+
+/-- Compose actual finite prefixes, including an already stopped machine. -/
+theorem run_add (first second : Nat) (state : State) :
+    run (first+second) state =
+      let before := run first state
+      let after := run second before.state
+      ⟨after.state,before.events ++ after.events,before.steps+after.steps⟩ := by
+  induction first generalizing state with
+  | zero => simp only [Nat.zero_add,run,List.nil_append]
+  | succ first ih =>
+      simp only [Nat.succ_add,run]
+      cases observed : step state with
+      | none => simp only [run_stopped observed,List.nil_append,Nat.zero_add]
+      | some result =>
+          obtain ⟨next,event⟩ := result
+          simp only
+          rw [ih]
+          simp only [List.append_assoc,Nat.add_assoc,Nat.add_comm]
+
 theorem observe_run_zero (state : State) : observe (run 0 state) = observe ⟨state,[],0⟩ := rfl
 
 theorem observe_run_succ (fuel : Nat) (state : State) :

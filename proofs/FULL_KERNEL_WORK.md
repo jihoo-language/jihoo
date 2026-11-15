@@ -410,9 +410,10 @@ The next semantic dependency is the common source/control/value/resource
 fundamental theorem: interpret the closed Loan64 source type of each permitted
 owner slot at the allocation length now reconstructed from execution, preserve
 that interpretation through arbitrary calls and specialized continuations, and
-connect source resource prefixes to actual permitted owner uses. In particular,
-compose the fresh owned-reader value with subsequent source-typed Index reads,
-then generalize to arbitrary reader computations and dependent bound evidence.
+connect source resource prefixes to actual permitted owner uses. Fresh literal
+allocating readers now compose with source-typed Index and cleanup below;
+generalize that association to arbitrary reader computations, runtime-dependent
+allocation counts and dependent bound evidence.
 General consistency, full specified computation preservation, ownership/borrow
 soundness and native implementation refinement remain open; no completion gate
 or source constructor was removed.
@@ -447,3 +448,45 @@ and generated-fixture comparisons (sampled peak tree RSS 3,641.8 MiB), using
 only the three allowed logical axioms. No native runtime/compiler or fixture
 changed. The existing real-project rootless shell remains Nix 2.20.6 (smoke
 evaluation 42), Lean 4.34.1 and Lake 5.0.0-src; dependency locks are unchanged.
+
+The returned-Buffer completion unit derives the actual final integer at the
+original outer Lend result type, through the same specialized source rules and
+arbitrary result conversions. It then composes the constructed twenty-step
+read prefix with inner close, both inner continuation bindings, separate Free
+of the fresh result/original owner and scalar return: thirty-two actual steps.
+All-prefix owner provenance rules out a fresh object in the old reader stack;
+the actual reader inventory therefore supplies the fresh Free guard after its
+lease closes. There is no caller-provided liveness/guard/output/success oracle.
+
+An outer reader of the old object still gives an explicit thirty-one-step
+borrowed-owner fault; byte overflow gives the explicit five-step fault even
+when thirty-two steps are requested. Unconditional run composition also covers
+already stopped states. Source/control/frame association at the entry point
+remains local. The common admission-to-runtime fundamental theorem must still
+derive it and rule out old-owner conflicts for all legal consuming contexts,
+interpret arbitrary dependent evidence/computations and simulate resource use.
+The original whole-kernel consistency/preservation/ownership/native refinement
+obligations remain open; these are not narrowed completion gates.
+
+A closed application now checks actual Loan64/resource admission and its
+original captured context/projection, constructs the fourteen-step caller
+entry, and instantiates the general completion theorem to derive scalar 7
+after forty-six total steps. The scalar result is obtained from the general
+proof, not an input output/success certificate or an independent CBV evaluation
+of the final program. This demonstrates a real admitted instance of the local
+theorem; it is not a general proof of every closed-admission entry invariant.
+
+Final validation: `proofs/check.sh` passed 893 Lake jobs, 8,856 unique public
+axiom audits and all generated-fixture comparisons. Only the three allowed
+logical axioms occurred; sampled peak tree RSS was 3,651.7 MiB. No production
+compiler/runtime behavior or native fixture changed in this unit.
+
+Next reconstruct input source/closing/resource/slot association from actual
+mixed admission through arbitrary captured/computed calls, then interpret
+runtime-dependent allocation sizes and general evidence. Effectful source
+origins must be related to runtime scalar values semantically; do not assume
+conversion to their observed numeral or accept an output-typing/denotation
+oracle. Exclude old-owner reader conflicts from source resource authority and
+carry arbitrary continuation tails through that same interpretation. General
+universe consistency, all specified computation preservation, whole ownership/
+borrow soundness and native implementation refinement remain unfinished.
