@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Linux fallback for proof-limits.sh when user systemd is unavailable.
 
-Each child inherits a 6 GiB address-space limit. A subreaper watches aggregate
+Each child inherits a 64 GiB address-space limit. A subreaper watches aggregate
 process-tree RSS and kills the job at 6 GiB. Sampling is not a cgroup hard cap;
 the shared flock serializes jobs across checkouts. Lean also keeps its own
 4 GiB allocation limit. Exiting or interrupted jobs leave no child processes.
@@ -16,6 +16,7 @@ import sys
 import time
 
 LIMIT = 6 * 1024**3
+ADDRESS_LIMIT = 64 * 1024**3  # Lean's runtime reserves more virtual than resident memory.
 PAGE_SIZE = os.sysconf('SC_PAGE_SIZE')
 
 
@@ -58,7 +59,7 @@ def descendants(table):
 
 def child_limit():
     _, hard = resource.getrlimit(resource.RLIMIT_AS)
-    limit = LIMIT if hard == resource.RLIM_INFINITY else min(LIMIT, hard)
+    limit = ADDRESS_LIMIT if hard == resource.RLIM_INFINITY else min(ADDRESS_LIMIT, hard)
     resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
 
 
@@ -100,7 +101,7 @@ def main():
     for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(signum, stop)
     environment = dict(os.environ, JIHOO_PROOF_SUPERVISOR=str(os.getpid()))
-    print('Proof guard: serialized job, 6 GiB address space per process, '
+    print('Proof guard: serialized job, 64 GiB address space per process, '
           '6 GiB sampled tree RSS.', file=sys.stderr)
     try:
         job = subprocess.Popen(sys.argv[1:], env=environment,

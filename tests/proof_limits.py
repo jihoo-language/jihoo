@@ -17,7 +17,7 @@ WRAPPER = ROOT / 'scripts/proof-limits.sh'
 class ProofLimits(unittest.TestCase):
     def test_inherited_limit_nested_wrapper_and_exit_status(self):
         code = ('import resource, subprocess, sys; '
-                'assert resource.getrlimit(resource.RLIMIT_AS) == (6*1024**3,)*2; '
+                'assert resource.getrlimit(resource.RLIMIT_AS) == (64*1024**3,)*2; '
                 f'sys.exit(subprocess.call([{str(WRAPPER)!r}, '
                 f'{sys.executable!r}, "-c", "raise SystemExit(7)"]))')
         result = subprocess.run([sys.executable, str(GUARD), sys.executable, '-c', code],

@@ -546,6 +546,12 @@
         {
           default = pkgs.mkShell shell;
 
+          # The native development tools plus the Lean/Lake version pinned by
+          # nixpkgs. proofs/check.sh also checks proofs/lean-toolchain exactly.
+          proofs = pkgs.mkShell (shell // {
+            nativeBuildInputs = shell.nativeBuildInputs ++ [ pkgs.lean4 ];
+          });
+
           # The default shell with QEMU, OVMF and the UEFI shell, which the
           # uefi suite of tests/runner.jh runs UEFI programs with (x86_64).
           uefi = pkgs.mkShell (shell // uefiTestEnv pkgs);
