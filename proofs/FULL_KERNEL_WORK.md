@@ -1156,3 +1156,48 @@ remaining live-lease else entry for mixed-admitted literal-fallback calls.
 Arbitrary else bodies, old-owner reader conflict exclusion, all-control mixed
 resource authority, universe consistency, full preservation and native
 implementation refinement remain open. The whole-kernel goal is NOT complete.
+
+
+## 2026-11-15: mixed-admitted literal fallback completes both index outcomes
+
+`NativeBindingMachineAllocatedLiteralRelease` and
+`NativeBindingMachineCallLiteralRelease` compose the both-outcome reader suffix
+through the actual allocation and original full call. The allocation boundary
+now has thirty-step read/return or twenty-six-step literal/return; the original
+call has thirty-three or twenty-nine steps. Both release the fresh owner,
+retain enclosing reader inventory, prove heap validity and derive the actual
+value at the original signature instance/full call type. The shared call and
+Lend entry lemmas are public and audited; no successful intermediate suffix or
+output typing is supplied.
+
+`ScalarCalls.admitted_program_typed` reconstructs the complete original Loan64
+runtime judgment for the actual closed caller from the same admitted function
+and literal scalar arguments. `ScalarCalls.admitted_literal_release` includes
+this input judgment and composes every entry/suffix. One authentic earlier
+mixed history and its next declaration check derive an I64 runtime-typed
+return after forty-eight steps when the index is in range, or after forty-four
+steps for the original fallback literal when it is out of range. The fallback's
+range is derived from source typing, not a premise. Both prove the fresh owner
+dead, lease closed, valid heap, no remaining reader inventory and exact heap
+trace, with a read event only on the successful comparison. Byte overflow
+retains its twenty-three-step fault with the empty heap and no heap events.
+No comparison outcome, byte fit, context, local call check, bound/allocation
+snapshot, fallback bound, output typing or execution-success oracle is supplied.
+
+The existing closed dependent example now instantiates this both-outcome mixed
+admission theorem. Its returned value remains derived rather than directly
+computed. The final aggregate passed 921 Lake jobs, 8,961 unique public audits
+and all generated-fixture comparisons
+(`out/logs/mixed-literal-release-full-final-3.log`), with only `propext`,
+`Classical.choice` and `Quot.sound`; sampled peak tree RSS was 3,711.3 MiB.
+All six newly public proofs in this composition are audited exactly once.
+No native implementation, native fixture, dependency lock or store pin changed.
+
+This completes the literal-fallback branch for the local parameterized scalar/
+dependent-call path. It does not complete the kernel's grammar or whole-kernel
+obligations. Next transport the same admission/resource authority through
+arbitrary saved frames and closures, extend old-owner conflicts using enclosing
+zero-demand budgets, and handle arbitrary else/tail computation. Full ownership/
+borrow soundness from the same complete judgment, evidence/effectful result
+semantics, all-universe consistency, all specified computation preservation and
+native implementation refinement remain unfinished. Keep the automation active.

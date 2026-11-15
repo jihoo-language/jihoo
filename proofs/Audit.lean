@@ -8955,3 +8955,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarCalls.admitted_dynamic_release
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.release_alias_return_four_steps
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_fresh_literal_else_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.lend_reader_four_steps
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.literal_call_three_steps
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_literal_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_call_literal_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarCalls.admitted_literal_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarCalls.admitted_program_typed

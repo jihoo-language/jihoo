@@ -1,4 +1,4 @@
-import Jihoo.NativeBindingMachineMixedDynamicRelease
+import Jihoo.NativeBindingMachineMixedLiteralRelease
 
 /-! One authentic mixed declaration admission instantiates the general scalar
 entry and dependent reader/release composition. The intermediate source checks,
@@ -38,12 +38,12 @@ private theorem mixedAccepted : LoanTyping.MixedProgram.checkDeclaration 128 259
 /-- Scalar and owner contexts, body resource receipts, the call frame and the
 final actual value all come from the same mixed declaration admission. -/
 theorem program_releases_and_returns : observe (run 48 (initial program)) = .integer 7 := by
-  have result := ScalarCalls.admitted_dynamic_release (resourceFuel := 251)
+  have result := ScalarCalls.admitted_literal_release (resourceFuel := 251)
     LoanTyping.MixedProgram.History.empty mixedAccepted
     (by decide : 2 < 2^64) (by decide : 1 < 2^64) (by decide : ValueReduction.signed64 7) (Or.inl rfl)
   have fits : 2*8+8 < 2^64 := by decide
   have ordered : 1 < 2 := by decide
   simp only [fits,ordered,↓reduceIte] at result
-  exact result.2.1
+  exact result.2.2.1
 
 end Jihoo.NativeKernel.Environment.BindingMachine.AllocatedDynamicExamples

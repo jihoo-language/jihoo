@@ -1392,3 +1392,16 @@ width and the Free guard are derived, retaining outer reader inventory and
 original inferred result typing. Composition through allocation and mixed
 entry remains to be updated; arbitrary else bodies and general all-control
 ownership/native-refinement obligations remain open.
+
+
+The literal-fallback suffix is now composed through allocation, original call
+and authentic mixed declaration entry. `ScalarCalls.admitted_literal_release`
+includes the original complete runtime typing of its closed caller and proves
+runtime I64 typing of either returned value: forty-eight-step fill/read/close/
+Free or forty-four-step literal/close/Free. Both have dead fresh owner, closed
+lease, valid heap, empty reader inventory and exact heap trace; byte overflow
+still has a twenty-three-step fault without heap changes. No fallback bound or
+branch/output/success oracle is supplied. This local parameterized scalar/call
+family leaves arbitrary else/tails, old-owner resource conflicts, all-control
+mixed authority, universe consistency, full preservation and native refinement
+open; the full syntax and completion criterion are unchanged.

@@ -12,7 +12,7 @@ def allocatedDynamicBody (readerDomain first again no : Term) (index length rele
     (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1))))
 
 set_option linter.unusedSimpArgs false in
-private theorem lend_reader_four_steps (heap : SizedBufferHeap.State) (code : Code)
+theorem lend_reader_four_steps (heap : SizedBufferHeap.State) (code : Code)
     (object : Nat) (domain readerBody continuation : Term) (stack : List Frame)
     (shape : code.term = .lend (.var 0) (.lam false domain readerBody) continuation)
     (stored : code.values[0]? = some (some (.owner object))) (live : heap.heap.live object = true) :

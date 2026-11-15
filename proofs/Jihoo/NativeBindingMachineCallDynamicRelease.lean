@@ -33,7 +33,7 @@ theorem LoanClosingTyped.lambda_call_inputs
   · simpa only [Term.subst_instantiate] using
       (applicationConverted.substitution meanings history.wellFormed.closed).trans converted
 
-private theorem literal_call_three_steps (heap : SizedBufferHeap.State) (code : Code)
+theorem literal_call_three_steps (heap : SizedBufferHeap.State) (code : Code)
     (domain body argument : Term) (stack : List Frame)
     (shape : code.term = .app (.lam false domain body) argument) :
     run 3 ⟨heap,.evaluate code,stack⟩ =

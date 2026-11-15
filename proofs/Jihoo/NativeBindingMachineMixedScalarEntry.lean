@@ -73,6 +73,29 @@ theorem admitted_function
     | some control => exact ⟨control,LoanTyping.ResourceQuantity.project_origin projected⟩
   · contradiction
 
+/-- The same admitted declaration and scalar ranges also reconstruct the
+complete original Loan64 judgment for the actual closed caller program. -/
+theorem admitted_program_typed
+    (accepted : LoanTyping.MixedProgram.checkDeclaration 128 quantityFuel env source =
+      some ⟨signature,function body⟩)
+    (countBound : count < 2^64) (offsetBound : offset < 2^64)
+    (fillBound : ValueReduction.signed64 fill) :
+    LoanTyping.HasType env [] [] false (program body count offset fill) .i64 := by
+  obtain ⟨functionTyped,resource⟩ := admitted_function accepted
+  obtain ⟨closing,localType,sourceTyped,converted⟩ := functionTyped
+  simp only [Term.subst_id] at converted
+  have declared : LoanTyping.HasType env [] [] false (function body) signature := sourceTyped.convert converted
+  have firstApplied : LoanTyping.HasType env [] [] false (.app (function body) (.natural count))
+      (.pi false .u64 (.pi false .i64 .i64)) := by
+    simpa only [signature,Term.subst,substArgs,Op.binders,liftSub,single] using
+      (LoanTyping.HasType.app declared (.natural countBound) (Or.inr ⟨.u64,.refl _,by cbv,Or.inl (by cbv)⟩))
+  have secondApplied : LoanTyping.HasType env [] [] false (.app (.app (function body) (.natural count)) (.natural offset))
+      (.pi false .i64 .i64) := by
+    simpa only [Term.subst,substArgs,Op.binders,liftSub] using
+      (LoanTyping.HasType.app firstApplied (.natural offsetBound) (Or.inr ⟨.u64,.refl _,by cbv,Or.inl (by cbv)⟩))
+  simpa only [program,Term.subst,substArgs] using
+    (LoanTyping.HasType.app secondApplied (.integer fillBound.1 fillBound.2) (Or.inr ⟨.i64,.refl _,by cbv,Or.inl (by cbv)⟩))
+
 /-- All contexts and the original body receipt at the actual call boundary
 come from one checked mixed declaration and the literal scalar arguments.
 This lemma does not restrict the body syntax or change mixed admission. -/
