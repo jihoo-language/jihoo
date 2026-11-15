@@ -1137,3 +1137,18 @@ interpreted at its declared closed Buffer type. Fresh identity/guard evidence
 is derived, not an input. Byte overflow and a still-active outer reader of the
 old owner remain explicit outcomes; general admitted-program exclusion of the
 latter and arbitrary tail resource simulation are still unproved.
+
+`NativeBindingMachineOwnerProvenance` gives an unconditional all-prefix
+runtime owner-identity interpretation. Current values, every saved frame and
+all nested closure captures have owner IDs below the actual allocation counter.
+The next allocation cannot alias any of those old captures, even dead owners.
+Each captured/returned owner has an earlier actual allocation event, and its
+current length/payload equal that event's count/payload in this read-only
+uniform-fill heap. No allocation snapshot or provenance oracle is an input.
+
+This is provenance, not live/exclusive ownership: retained dead aliases remain
+possible, and source resource authority must determine which slots may be used.
+The actual allocation length still needs interpretation at arbitrary dependent
+source types, through all calls and continuation control. Unsupported syntax
+continues to fault in this source machine; no native allocator, Store/write,
+general progress or full-kernel correctness claim follows from the invariant.

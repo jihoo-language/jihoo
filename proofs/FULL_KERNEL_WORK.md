@@ -389,3 +389,37 @@ The complete check passed 889 Lake jobs, 8,819 unique public axiom audits and
 generated-fixture comparisons (sampled peak tree RSS 3,632.5 MiB). Dependencies
 use only the three allowed logical axioms. Native executable behavior and
 fixtures were not changed by this execution proof.
+
+The owner-provenance invariant now covers every actual machine transition and
+prefix from the empty heap, including faults/fuel exhaustion, computed calls,
+all saved frames and recursively captured closures. Every retained owner ID is
+strictly below the current allocation counter. Thus the next allocation cannot
+alias any old captured owner, including owners already released, rather than
+only being distinct from the currently leased object.
+
+Captured and returned owners are connected to an actual earlier allocation
+event with its exact count/payload; their present length and payload agree with
+that event throughout this read-only uniform-fill heap. These results derive
+runtime identity and layout provenance without a caller-provided allocation
+snapshot, heap invariant or provenance certificate. They do not imply that an
+owner is still live or exclusively usable: old aliases intentionally remain
+captured after consumption. Source-dependent count interpretation and resource
+authority must still select which retained aliases may be used.
+
+The next semantic dependency is the common source/control/value/resource
+fundamental theorem: interpret the closed Loan64 source type of each permitted
+owner slot at the allocation length now reconstructed from execution, preserve
+that interpretation through arbitrary calls and specialized continuations, and
+connect source resource prefixes to actual permitted owner uses. In particular,
+compose the fresh owned-reader value with subsequent source-typed Index reads,
+then generalize to arbitrary reader computations and dependent bound evidence.
+General consistency, full specified computation preservation, ownership/borrow
+soundness and native implementation refinement remain open; no completion gate
+or source constructor was removed.
+
+The final aggregate passed `proofs/check.sh`: 890 Lake jobs, 8,846 unique
+public axiom audits and every generated-fixture comparison. Only `propext`,
+`Classical.choice` and `Quot.sound` occurred. Sampled peak tree RSS was
+3,642.1 MiB. The provenance module shares the established runtime split
+auxiliaries so the full aggregate imports without duplicate generated matcher
+declarations. No native compiler/runtime source or fixture changed in this run.
