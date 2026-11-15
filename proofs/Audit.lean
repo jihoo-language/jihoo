@@ -8895,3 +8895,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_less_borrow
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_argument_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_argument_lend
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.explicitLendReaderInputs
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.value_reader_closing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_value_reader_activation

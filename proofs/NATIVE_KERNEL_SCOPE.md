@@ -1251,3 +1251,12 @@ is not heap/resource authority. Specialized dependent reader activation must
 retain its actual checked read, not assume arbitrary callback typing. General
 reference/Index interpretation, all-control fundamental soundness and native
 implementation refinement remain unfinished.
+
+
+`NativeBindingMachineReaderClosing` reconstructs the reference binder and
+canonical closed reader-body typing from the authentic full Lend input. It
+covers generic and specialized checked reads without assuming an arbitrary-
+argument callback derivation, and connects actual activation to source loan
+slots and the reachable nested reader inventory. Canonical value meanings and
+runtime provenance remain distinct. General control/source association, heap
+size interpretation and exclusive resource authority remain open.

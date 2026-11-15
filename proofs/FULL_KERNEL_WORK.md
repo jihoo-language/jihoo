@@ -674,3 +674,32 @@ effectful source-result semantics, universe consistency, all specified
 computation preservation, full ownership/borrow soundness and native
 implementation refinement remain unfinished. The whole-kernel goal is NOT
 complete; continue the existing automation.
+
+
+## 2026-11-15: authentic specialized reader reference closing
+
+`NativeBindingMachineReaderClosing` derives the actual reader-domain
+conversion and specialized checked-read typing from all full Loan64 Lend
+origins. Generic callbacks use their real lambda inversion and beta proof;
+specialized rules retain their checked read. No arbitrary-argument callback
+judgment is added. Actual reference entry constructs its ghost substitution,
+all captured value-head interpretations and canonical closed original-body
+typing, independently of the runtime provenance map. Named activation also
+preserves source loan slots and derives concrete lease/owner liveness from the
+actual reader inventory, including nested outer readers.
+
+The aggregate passed 901 Lake jobs, 8,898 unique public axiom audits and all
+generated-fixture comparisons (`out/logs/reader-closing-full.log`); only the
+three allowed logical axioms occur and sampled peak RSS was 3,674.6 MiB.
+Rootless Nix 2.20.6/evaluation 42 and actual proof-shell Lean 4.34.1/Lake
+5.0.0-src were verified through the resource guard. No native implementation
+or native fixture changed.
+
+The original reader body is proved at its canonical closed ghost instance;
+this does NOT invent a false-mode original callback derivation for specialized
+rules. General configuration/control preservation must retain that authentic
+source read. Next associate captured owner types with immutable actual heap
+lengths, preserving released aliases without assigning them live/exclusive
+capabilities, and derive dynamic named Index preconditions from those sizes.
+General admission/control/resource interpretation and all whole-kernel
+consistency, computation-preservation and native-refinement gates remain open.
