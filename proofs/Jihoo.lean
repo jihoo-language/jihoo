@@ -1091,3 +1091,4 @@ import Jihoo.NativeBindingMachineReferenceReaderCompletion
 import Jihoo.NativeBindingMachineCheckedDynamicReader
 import Jihoo.NativeBindingMachineScalarReaderShape
 import Jihoo.NativeBindingMachineDynamicReaderCompletion
+import Jihoo.NativeBindingMachineFreshDynamicRelease

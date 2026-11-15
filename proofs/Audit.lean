@@ -8931,3 +8931,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.actual_scalar_shape_finish
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_scalar_value_lend_handoff
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_dynamic_reader_completion
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.StackOwners.no_reader_at_limit
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_fresh_dynamic_reader_release

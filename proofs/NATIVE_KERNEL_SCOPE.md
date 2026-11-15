@@ -1321,3 +1321,15 @@ source grammar/Loan64 judgment unchanged. The old direct-Index API remains.
 No callback/output or intermediate-execution certificate is assumed. All-
 control mixed-admission/resource authority and general Free conflict exclusion
 remain unfinished.
+
+
+`NativeBindingMachineFreshDynamicRelease` derives absence of remaining owner
+readers from all-prefix frame provenance at an earlier actual call/birth prefix,
+then derives Free's guard from the constructed close inventory. Twenty actual
+transitions read, close, bind, release through either physical owner alias and
+return the observed I64 at the original inferred source type. The owner is dead,
+the heap/outer reader inventory remain valid and source residual owner demand
+is zero. No no-reader/Unborrowed/Free-success oracle is an input. The local
+birth/current-frame and source/context associations remain explicit; arbitrary
+old-owner conflicts and the all-control mixed-admission authority theorem are
+still unfinished.

@@ -911,3 +911,44 @@ boundary's source/control/frame and owner-slot/size contexts still require
 that global construction. Arbitrary evidence and result interpretation,
 all-universe consistency, all specified computation preservation, complete
 ownership/borrow soundness and native implementation refinement remain open.
+
+
+## 2026-11-15: fresh checked dynamic reader release without a Free oracle
+
+`NativeBindingMachineFreshDynamicRelease` derives the previously conditional
+Free guard for an actual fresh-argument history. The reader owner is identified
+with `nextObject` at an earlier actual call prefix with the same residual caller
+stack. All-prefix saved-frame owner provenance proves that no frame in that
+old stack can read the fresh identity, including dead captured aliases. The
+constructed close/handoff inventory therefore excludes every remaining lease
+of this owner. No no-reader, Unborrowed, Free guard or success certificate is
+supplied by the caller.
+
+For a true comparison, twenty actual transitions activate the captured-number
+reference reader, perform the physical read, close it, bind both continuation
+arguments, release through either the returned-owner slot or its old captured
+alias, and return the observed I64 at the original closed inferred source type.
+The owner is dead afterward; heap validity, outer reader inventory and all old
+captured size interpretations are retained. The same original resource check
+has zero residual owner demand on every remaining abstract resource prefix.
+A false comparison still preserves six-step original-type else entry. The
+explicit earlier birth/current-frame and source/value/size/loan associations
+remain local inputs; they are not yet reconstructed for all mixed admissions.
+
+The final aggregate passed 911 Lake jobs, 8,933 unique public axiom audits and
+all generated-fixture comparisons (`out/logs/fresh-dynamic-release-full.log`).
+All eleven new public proofs in this run are audited exactly once; dependencies
+use only `propext`, `Classical.choice` and `Quot.sound`, with sampled peak RSS
+3,689.8 MiB. No production compiler/runtime behavior, native fixture, dependency
+lock or Nix store pin changed.
+
+Next construct the all-control mixed-admission/resource authority invariant,
+including the actual birth/current-frame and owner-slot associations used here.
+For arbitrary pre-existing owners, transport each enclosing reader's zero-owner
+budget across calls, closures, branches and restored aliases to exclude
+consumption/re-lending and derive the general Free guard. The new fresh case
+alone does not settle that general borrowed-owner conflict. General arbitrary
+evidence/result semantics, all-universe consistency, all specified computation
+preservation, full ownership/borrow soundness and native implementation
+refinement remain unfinished. The whole-kernel goal is NOT complete; leave the
+existing automation active.
