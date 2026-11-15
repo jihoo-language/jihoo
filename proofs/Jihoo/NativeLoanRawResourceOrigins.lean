@@ -87,4 +87,27 @@ theorem projectRaw_lambda_body
     obtain ⟨bodyControl,projected,same⟩ := Option.bind_eq_some_iff.mp checked
     exact ⟨mode,bodyControl,projected,Option.some.inj same.symm⟩
 
+/-- One original call query contains the exact original lambda body query,
+under its own parameter binder. No separate function/body check is assumed. -/
+theorem projectRaw_single_lambda_call_body
+    (checked : projectRaw (fuel+3) env loans ctx (.app (.lam false domain body) argument) = some control) :
+    ∃ bodyControl, projectRaw (fuel+2) env loans (⟨domain,false⟩ :: ctx) body = some bodyControl := by
+  simp only [projectRaw,splitSpine,Op.arity,List.length_cons,List.length_nil,Nat.reduceAdd,
+    bne_self_eq_false,Bool.false_eq_true,↓reduceIte] at checked
+  obtain ⟨⟨head,supplied⟩,splitSpineChecked,checked⟩ := Option.bind_eq_some_iff.mp checked
+  cases splitSpineChecked
+  obtain ⟨⟨entries,result⟩,replayed,checked⟩ := Option.bind_eq_some_iff.mp checked
+  split at checked
+  · contradiction
+  · obtain ⟨opened,openedProof,checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨runtime,runtimeProjected,checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨bodyControl,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
+    simp only [openHead] at openedProof
+    split at openedProof
+    · contradiction
+    · obtain ⟨mode,resolved,openedProof⟩ := Option.bind_eq_some_iff.mp openedProof
+      have identity : opened = ⟨⟨domain,false⟩ :: ctx,[mode],body⟩ := (Option.some.inj openedProof).symm
+      subst opened
+      exact ⟨bodyControl,bodyProjected⟩
+
 end Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity

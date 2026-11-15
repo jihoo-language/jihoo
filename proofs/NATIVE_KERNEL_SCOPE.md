@@ -1355,3 +1355,18 @@ resource admission instantiates the theorem to an actual forty-eight-step
 release/return. Pending-call value/size/loan/source contexts and general
 admission/control authority remain open, as do arbitrary else/tail execution,
 old-owner conflict exclusion and native implementation refinement.
+
+
+`NativeBindingMachineCallDynamicRelease` starts at the original full call,
+recovering its lambda/argument typing and exact internal body resource receipt.
+The actual three-transition call prefix constructs the pending frame; composing
+allocation, reader activation, guarded read, close and alias Free gives a
+thirty-three-step return at the EXACT original closed call type. The heap trace
+and enclosing reader inventory are retained. False comparisons give typed
+nineteen-step else entry; allocation-size overflow faults after eight steps.
+The closed dependent example now uses this theorem after scalar entry, without
+separate function/argument checks or a supplied pending frame. Value/size/loan
+contexts at the original call, global mixed-admission authority, arbitrary
+else/tail execution and old-owner conflict exclusion remain open. This does not
+establish general progress, universe consistency or native implementation
+refinement.

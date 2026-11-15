@@ -5,7 +5,7 @@ receipt. Actual allocation constructs owner/value/size contexts and its reader
 frame; no birth/current-reader or output/success certificate is supplied. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine
 open CodeKinds
-variable {functionControl : Jihoo.Quantity.Control}
+variable {functionControl bodyControl : Jihoo.Quantity.Control}
 
 def allocatedDynamicBody (readerDomain first again no : Term) (index length releaseIndex : Nat) : Term :=
   .lend (.var 0) (.lam false readerDomain (dynamicReferenceReader index length no))
@@ -29,7 +29,7 @@ private theorem lend_reader_four_steps (heap : SizedBufferHeap.State) (code : Co
 Lend frame, guarded reference read, close, alias release and actual fill return.
 The original function resource query supplies the body receipt. All later
 source contexts and birth/frame associations are outputs of this proof. -/
-theorem reachable_allocated_dynamic_release (term : Term) (fuel : Nat)
+theorem reachable_allocated_dynamic_release_body (term : Term) (fuel : Nat)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (evaluating : (run fuel (initial term)).state.control = .evaluate allocationCode)
     (allocationTyped : LoanClosingTyped env allocationLoans false allocationCode allocationMeanings argumentType)
@@ -45,8 +45,8 @@ theorem reachable_allocated_dynamic_release (term : Term) (fuel : Nat)
     (functionSlots : LoanSlots
       ⟨.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex),ctx,origins,captured⟩ loans stack)
     (entered : Loans.Entered ctx.length loans)
-    (checkedFunction : LoanTyping.ResourceQuantity.project (resourceFuel+5) env loans ctx
-      (.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex)) = some functionControl)
+    (checkedBody : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+4) env loans (⟨ownerDomain,false⟩ :: ctx)
+      (allocatedDynamicBody readerDomain first again no index length releaseIndex) = some bodyControl)
     (selectedAlias : releaseIndex = 0 ∨ releaseIndex = 2)
     (stackShape : (run fuel (initial term)).state.stack = .argument
       (.closure false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex) ctx origins captured)
@@ -92,8 +92,7 @@ theorem reachable_allocated_dynamic_release (term : Term) (fuel : Nat)
                   .heap (.beginLease token object),.activate false readerBody (.borrow ownerOrigin)],16⟩
       else run 5 (run fuel (initial term)).state =
         ⟨⟨heap,.fault .allocationOverflow,.argument (.closure false ownerDomain sourceBody ctx origins captured) argumentOrigin :: stack⟩,[],5⟩ := by
-  obtain ⟨mode,bodyControl,bodyProjected,functionProjected⟩ :=
-    LoanTyping.ResourceQuantity.projectRaw_lambda_body (LoanTyping.ResourceQuantity.project_origin checkedFunction)
+  have bodyProjected := checkedBody
   obtain ⟨count,fill,countMeaning,fillMeaning,allocatedResult⟩ := reachable_allocated_argument_sizes term fuel history
     evaluating allocationTyped allocationContext allocationShape functionTyped functionContext functionSizes stackShape
   have canonicalTyped : LoanTyping.HasType env [] [] true (.alloc (.natural count) (.integer fill)) argumentType := by
@@ -190,5 +189,74 @@ theorem reachable_allocated_dynamic_release (term : Term) (fuel : Nat)
       rw [six] at composed
       exact ⟨noTyped,noContext,noSizes,inventory,composed⟩
   · simpa only [fits,↓reduceIte] using allocatedResult
+
+/-- The original full function query supplies the internal receipt. -/
+theorem reachable_allocated_dynamic_release (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run fuel (initial term)).state.control = .evaluate allocationCode)
+    (allocationTyped : LoanClosingTyped env allocationLoans false allocationCode allocationMeanings argumentType)
+    (allocationContext : ValueContext env allocationCode allocationMeanings)
+    (allocationShape : allocationCode.term = .alloc (.var countIndex) (.var fillIndex))
+    (functionTyped : LoanClosingTyped env loans false
+      ⟨.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex),ctx,origins,captured⟩
+      meanings (.pi false argumentType result))
+    (functionContext : ValueContext env
+      ⟨.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex),ctx,origins,captured⟩ meanings)
+    (functionSizes : OwnerSizes env (run fuel (initial term)).state.heap
+      ⟨.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex),ctx,origins,captured⟩ meanings)
+    (functionSlots : LoanSlots
+      ⟨.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex),ctx,origins,captured⟩ loans stack)
+    (entered : Loans.Entered ctx.length loans)
+    (checkedFunction : LoanTyping.ResourceQuantity.project (resourceFuel+5) env loans ctx
+      (.lam false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex)) = some functionControl)
+    (selectedAlias : releaseIndex = 0 ∨ releaseIndex = 2)
+    (stackShape : (run fuel (initial term)).state.stack = .argument
+      (.closure false ownerDomain (allocatedDynamicBody readerDomain first again no index length releaseIndex) ctx origins captured)
+      argumentOrigin :: stack) :
+    ∃ count fill, allocationMeanings countIndex = .natural count ∧ allocationMeanings fillIndex = .integer fill ∧
+      let heap := (run fuel (initial term)).state.heap
+      let object := heap.heap.nextObject
+      let token := heap.heap.nextLease
+      let allocated := SizedBufferHeap.allocate heap count (encodeInteger fill)
+      let lent := SizedBufferHeap.lend allocated object
+      let released := SizedBufferHeap.release (SizedBufferHeap.close lent token) object
+      let sourceBody := allocatedDynamicBody readerDomain first again no index length releaseIndex
+      let bodyCode := enter false ownerDomain sourceBody ctx origins captured argumentOrigin (some (.owner object))
+      let bodyMeanings := consValues (.alloc (.natural count) (.integer fill)) meanings
+      let ownerOrigin := (Term.var 0).subst bodyCode.origins
+      let readerBody := dynamicReferenceReader index length no
+      let readerCode := enter false readerDomain readerBody bodyCode.context bodyCode.origins bodyCode.values
+        (.borrow ownerOrigin) (some (.reference token))
+      let readerMeanings := consValues (.borrow ((Term.var 0).subst bodyMeanings)) bodyMeanings
+      let continuation := bodyCode.child (.lam false first (.lam false again (.free (.var releaseIndex) (.var 1))))
+      let finishStack := .lendFinish token object (some bodyCode.context.length) ownerOrigin readerCode.origin continuation :: stack
+      if count*8+8 < 2^64 then
+        ∃ offset, bodyMeanings index = .natural offset ∧ bodyMeanings length = .natural count ∧
+          if offset < count then
+            LoanTyping.HasType env [] [] true (.integer fill)
+              (result.subst (single (.alloc (.natural count) (.integer fill)))) ∧
+            released.heap.live object = false ∧ SizedBufferHeap.Valid released ∧ ReaderInventory released (readerFrames stack) ∧
+            run 30 (run fuel (initial term)).state =
+              ⟨⟨released,.returned (.integer fill),stack⟩,
+                [.heap (.alloc object count (encodeInteger fill)),.activate false sourceBody argumentOrigin,
+                  .heap (.beginLease token object),.activate false readerBody (.borrow ownerOrigin),
+                  .heap (.read token offset (encodeInteger fill)),.heap (.close token),
+                  .activate false (.lam false again (.free (.var releaseIndex) (.var 1))) readerCode.origin,
+                  .activate false (.free (.var releaseIndex) (.var 1)) ownerOrigin,.heap (.free object)],30⟩
+          else
+            LoanTyping.HasType env [] [] true ((no.rename Nat.succ).subst readerMeanings) (first.subst bodyMeanings) ∧
+            ValueContext env (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+            OwnerSizes env lent (readerCode.child (no.rename Nat.succ)) readerMeanings ∧
+            ReaderInventory lent (readerFrames finishStack) ∧
+            run 16 (run fuel (initial term)).state =
+              ⟨⟨lent,.evaluate (readerCode.child (no.rename Nat.succ)),finishStack⟩,
+                [.heap (.alloc object count (encodeInteger fill)),.activate false sourceBody argumentOrigin,
+                  .heap (.beginLease token object),.activate false readerBody (.borrow ownerOrigin)],16⟩
+      else run 5 (run fuel (initial term)).state =
+        ⟨⟨heap,.fault .allocationOverflow,.argument (.closure false ownerDomain sourceBody ctx origins captured) argumentOrigin :: stack⟩,[],5⟩ := by
+  obtain ⟨mode,bodyControl,bodyProjected,functionProjected⟩ :=
+    LoanTyping.ResourceQuantity.projectRaw_lambda_body (LoanTyping.ResourceQuantity.project_origin checkedFunction)
+  exact reachable_allocated_dynamic_release_body term fuel history evaluating allocationTyped allocationContext allocationShape
+    functionTyped functionContext functionSizes functionSlots entered bodyProjected selectedAlias stackShape
 
 end Jihoo.NativeKernel.Environment.BindingMachine

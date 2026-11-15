@@ -8944,3 +8944,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_dynamic_release
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.AllocatedDynamicExamples.program_admitted
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.AllocatedDynamicExamples.program_releases_and_returns
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_single_lambda_call_body
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocated_dynamic_release_body
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanClosingTyped.lambda_call_inputs
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_call_dynamic_release

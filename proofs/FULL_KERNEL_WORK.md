@@ -1033,3 +1033,48 @@ evidence/effectful result semantics, all-universe consistency, all specified
 computation preservation, complete ownership/borrow soundness and native
 implementation refinement remain unfinished. The whole-kernel goal is NOT
 complete; leave the existing automation active.
+
+
+## 2026-11-15: one original call judgment to actual fresh reader release
+
+`NativeBindingMachineCallDynamicRelease` moves the entry boundary before call
+preparation. Full Loan64 call inversion recovers the actual non-erased lambda,
+its argument typing and the original dependent result conversion. The original
+call's resource query supplies the exact function-body receipt through
+`projectRaw_single_lambda_call_body`; neither a separate function query nor
+independent function/argument typing is an input. The old full-function API
+remains a specialization of the new internal-body variant.
+
+Three constructed transitions evaluate the call head and install its actual
+argument frame. Composition with allocation/binding/Lend/reader/release proves
+thirty-three transitions to the actual fill, typed at the EXACT original closed
+call type. It retains the fresh owner's dead state, valid heap, enclosing
+reader inventory and alloc/beginLease/read/close/free heap trace. False
+comparisons have source-typed nineteen-step else entry and byte-size overflow
+has an eight-step fault. No pending-call frame, selected operands, successful
+execution, output typing or raw conversion of effectful provenance is assumed.
+
+The existing closed dependent example now uses a fifteen-step scalar-entry
+prefix and this thirty-three-step semantic theorem. Its separate allocation
+and owner-function checks and computed pending-call frame were removed. The
+final forty-eight-step result remains derived, rather than computed directly.
+Its whole closed admission and scalar entry checks are still separate local
+proofs; this is not yet a general admission-to-execution simulation.
+
+The final aggregate passed 915 Lake jobs, 8,948 unique public audits and all
+generated-fixture comparisons (`out/logs/original-call-dynamic-release-full-final.log`).
+All four added public proofs are audited exactly once, with only `propext`,
+`Classical.choice` and `Quot.sound`; sampled peak tree RSS was 3,706.1 MiB.
+The existing rootless Nix 2.20.6 proof shell (Lean 4.34.1/Lake 5.0.0-src) was
+verified and reused under the shared guard. No native implementation, fixture,
+dependency lock or store pin changed.
+
+The call-boundary value/size/loan contexts, entered-loan invariant and source
+call shape remain local inputs. Next derive these together with the original
+call typing/resource receipt from a single complete mixed admission and carry
+them through arbitrary saved frames and closures. The current result permits
+arbitrary enclosing reader stacks but does not prove resource authority for
+all old owners. Arbitrary else/tail execution, general evidence/effectful result
+semantics, universe consistency, all specified computation preservation,
+complete ownership/borrow soundness and native implementation refinement remain
+unfinished. The whole-kernel goal is NOT complete; keep the automation active.
