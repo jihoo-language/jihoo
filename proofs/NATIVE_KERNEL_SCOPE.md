@@ -1024,3 +1024,23 @@ input typing then constructs its next actual returned value without a supplied
 not yet establish that runtime values inhabit source types, source typing is
 preserved at every control point, or ownership/loan/length interpretations are
 preserved through arbitrary closures and effects.
+
+
+`NativeBindingMachineDynamicIndex` extends the literal bridge to dynamic scalar
+slots and the actual IfLt hypothesis binder. Full source typing supplies the
+named Borrow permission; actual comparison selects ten read transitions or
+five transitions into the else body. No caller-provided index bound or
+successful-run predicate is used. The general local theorem still assumes the
+entry allocation/slot association and source/control alignment.
+
+`NativeBindingMachineDynamicIndexExamples` connects a whole checked function
+with dynamic Buffer allocation and a Lend reader to the existing machine from
+its empty initial state, quantified over all bounded U64 count/index values
+whose allocation size fits the machine guard. It derives source typing,
+actual in-bounds result 7/out-of-bounds result 0, the exact single allocation,
+lease, optional read, close and Free trace, and final empty live-object/lease
+inventories. The source/resource checker is Loan64; the native mixed checker
+agrees on the source function. This function theorem eliminates local heap/slot
+premises for that composition, not arbitrary source functions or the full
+language. General runtime value/heap/source-stack interpretation, computed
+sizes and arbitrary proof terms, ownership and native refinement remain open.

@@ -26,6 +26,11 @@ CASES.update({
         f'(lam b {BUFFER} (lam r (Ref {BUFFER}) (app '
         '(lam0 p (Eq (free (deref r) 0) (free b 0)) (int 7)) '
         '(refl (free b 0))))))', False, False),
+    'dynamic-guarded-named-reader': (
+        '(def value (pi n U64 (pi i U64 I64)) (lam n U64 (lam i U64 '
+        '(app (lam b (Buffer n) (lend b '
+        '(lam r (Ref (Buffer n)) (if-lt i n p (index (borrow b) i p) (int 0))) '
+        '(lam a I64 (lam x (Buffer n) (free x a))))) (alloc n (int 7))))))', True, True),
     'nested-active-readers': (
         f'(def value I64 (app (lam b {BUFFER} (lend b '
         f'(lam r (Ref {BUFFER}) (lend (alloc 2 (int 7)) '

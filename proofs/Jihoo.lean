@@ -1059,3 +1059,6 @@ import Jihoo.NativeBindingMachineLoanTyping
 import Jihoo.NativeBindingMachineLendOrigins
 import Jihoo.NativeBindingMachineIndexBounds
 import Jihoo.NativeBindingMachineAlignment
+import Jihoo.NativeBindingMachineRunAlgebra
+import Jihoo.NativeBindingMachineDynamicIndex
+import Jihoo.NativeBindingMachineDynamicIndexExamples

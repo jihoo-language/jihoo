@@ -105,8 +105,20 @@ The remaining core obligations include:
   typing constructs the next actual value/step with no caller-supplied `Ready`
   or slot-success premise. This is structural alignment, not heap typing,
   source-typing preservation, loan authority or allocation accounting.
-- The aggregate proof check currently audits 8,725 declarations. The mixed
-  native regression suite passes 66 source fixtures and 52 exact-byte checks.
+- `NativeBindingMachineDynamicIndex` now connects the full IfLt/Index source
+  rules to actual dynamic scalar slots and an erased branch hypothesis. The
+  selected comparison constructs ten transitions and the exact read event;
+  the else branch takes five transitions without a read. No caller numerical
+  bound or successful-execution certificate is assumed. General allocation/
+  slot association remains an explicit local entry invariant.
+- The same checked dynamic-buffer function is proved for every bounded U64
+  count/index with representable allocation size, directly from an empty
+  machine: actual allocation, Lend, comparison, optional read, close and Free.
+  It returns 7 in bounds and 0 otherwise and has the exact allocation/lease
+  trace. Its full source/resource check and all-input source typing use Loan64.
+  This parameterized function result does not replace the full-language goal.
+- The aggregate proof check currently audits 8,742 declarations. The mixed
+  native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
 ## Next semantic work
@@ -128,8 +140,8 @@ are available. Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader transition lemmas are available, but a common runtime-value,
 context and control-stack interpretation and its fundamental theorem are not.
-Extend the new literal-Decide Index bridge to dynamic indices and all Lt
-proof forms. Derive exact heap lengths and the association between the owner
+Dynamic IfLt hypothesis reads now supplement the literal-Decide bridge.
+Extend this to all Lt proof forms and arbitrary computed index/count terms. Derive exact heap lengths and the association between the owner
 slot and allocation from the common runtime interpretation, instead of the
 current explicit local allocation-state/slot premises. The runtime bound
 check alone does not discharge those obligations.
@@ -184,7 +196,7 @@ Index evidence interpretation still require the common fundamental theorem.
 The second increment corrects reader-result provenance and proves actual
 explicit-reader/final-continuation entry origin typing from the source Lend
 judgment. `proofs/check.sh` passed 876 Lake jobs and 8,693 audits; the native
-mixed suite passed 66 source fixtures and 52 exact-byte checks. The sampled
+mixed suite passed 67 source fixtures and 53 exact-byte checks. The sampled
 aggregate peak RSS was 3,582.1 MiB. This does not discharge general runtime
 value/context/stack typing, Index bound interpretation or owner accounting.
 
@@ -204,3 +216,15 @@ and the generated comparisons; peak sampled tree RSS was 3,593.8 MiB. No
 native executable behavior changed. The common fundamental theorem still
 needs semantic value/heap interpretation and source typing at all control
 points, including full `LoanSlots` preservation and dynamic proof bounds.
+
+The latest unit adds the full source IfLt inversion, dynamic named-reader
+execution and a parameterized checked Buffer function. Runtime projection
+algebra keeps actual state/observation/event execution compositional. Full
+source/resource checking, all-bounded-input typing, actual return values,
+exact alloc/begin/read/close/free traces and final empty live-object/lease
+inventories are derived for that function, without output typing or run-success
+oracles. The aggregate check covers 881 Lake jobs and 8,742 unique audits;
+native mixed correspondence passes 67 sources and 53 exact-byte checks.
+General source/control/value/heap fundamental preservation, all `LoanSlots`
+transitions, arbitrary evidence/computed sizes, ownership, universe consistency
+and native implementation refinement remain open.
