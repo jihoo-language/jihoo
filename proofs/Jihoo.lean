@@ -1086,3 +1086,5 @@ import Jihoo.NativeBindingMachineOwnerSizes
 import Jihoo.NativeBindingMachineSizedIndex
 import Jihoo.NativeBindingMachineSizedBorrow
 import Jihoo.NativeBindingMachineReferenceIndex
+import Jihoo.NativeBindingMachineValueHandoff
+import Jihoo.NativeBindingMachineReferenceReaderCompletion

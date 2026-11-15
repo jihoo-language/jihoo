@@ -790,3 +790,51 @@ resource projection and remaining outer readers. Then derive the common
 admission/control/value/size/loan/resource invariant and general evidence/
 effectful result semantics. Whole-kernel consistency, all specified computation
 preservation, full ownership/borrow soundness and native refinement remain open.
+
+
+## 2026-11-15: actual scalar/owner handoff and eleven-step reader composition
+
+`NativeBindingMachineValueHandoff` extracts both actual continuation annotation
+conversions from all full Loan64 Lend origins. Generic cases use real lambda/
+Pi inversion; specialized cases retain their checked read/restore premises.
+The observed integer's width comes from actual reachability. It constructs
+both retained bindings at canonical integer/owner meanings, while preserving
+all original runtime provenance. The same source Lend reconstructs the
+continuation body's exact closed original result type and its complete value
+and immutable-owner-size contexts; no arbitrary callback or returned-value
+typing is supplied. Five actual transitions close the reader before either
+binding, preserve old source loan slots and the exact remaining outer-reader
+inventory, and relate the actual owner aliases to the same resource
+projection's zero reader demand and single continuation demand. The Free guard
+is characterized by remaining concrete readers, not assumed.
+
+`NativeBindingMachineReferenceReaderCompletion` composes the proved six-step
+reference read with that five-step handoff. The intermediate actual prefix,
+read integer, heap and continuation frame are constructed using run composition,
+not checked as a supplied output. Eleven actual transitions reach the original
+continuation body with canonical value/heap-size contexts, original closed
+result typing, restored source loans, exact owner-alias/resource correspondence
+and remaining reader inventory. It works with arbitrary original continuation
+bodies and nested outer reader stacks under the explicit local entry contexts.
+This is not execution/progress of every later continuation body.
+
+The aggregate passed 907 Lake jobs, 8,922 unique public audits and every
+fixture comparison (`out/logs/reference-reader-completion-full.log`). All six
+public theorems added in this run are audited exactly once, with only
+`propext`, `Classical.choice` and `Quot.sound`; sampled peak tree RSS was
+3,684.6 MiB. The source-only proofs preserve the existing native implementation,
+fixtures and dependency lock; the rootless Nix/resource-guard environment was
+reused.
+
+Next derive the all-control source/value/size/loan/resource invariant from
+actual mixed admission, using authentic specialized checked reads/restores
+rather than inventing false-mode original callback/body derivations. In
+particular carry the enclosing reader's zero-owner-demand authority through
+all actual frames to exclude consumption/re-lending of its leased owner and
+derive absence of remaining owner readers before Free. The local old-owner
+Free characterization is still conditional until that common invariant is
+proved. General higher-order/context association, arbitrary evidence and
+effectful result semantics, all-universe consistency, all specified computation
+preservation, complete ownership/borrow soundness and native implementation
+refinement remain unfinished. The whole-kernel goal is NOT complete; keep the
+existing automation active.

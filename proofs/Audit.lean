@@ -8919,3 +8919,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerSize.realization
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanClosingTyped.reference_index_heap
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_reference_index_reader
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.explicitLendValueDomains
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_value_lend_handoff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_reference_reader_completion

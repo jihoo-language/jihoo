@@ -1287,3 +1287,15 @@ retained. No allocation snapshot, arbitrary callback or success/output-typing
 certificate is supplied. Source/control/frame and owner-slot association remain
 local preconditions; arbitrary evidence and the whole fundamental theorem are
 still open.
+
+
+`NativeBindingMachineValueHandoff` now constructs the canonical scalar/owner
+continuation bindings, value/size contexts and exact closed original result
+type from the authentic full Lend input. Five actual transitions close before
+binding, retain outer reader inventory and source loans, and connect both
+physical owner aliases to the same zero/one resource projection. No callback/
+output typing is assumed. `NativeBindingMachineReferenceReaderCompletion`
+constructs the entire eleven-step actual reference-read/close/handoff path and
+its intermediate prefix from those proofs. Arbitrary continuation bodies are
+retained, but their later execution, the all-control mixed-admission invariant,
+enclosing-reader consumption exclusion and native refinement remain open.
