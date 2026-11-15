@@ -8806,3 +8806,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_continuation_returned_owner_borrow
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.no_checked_continuation_reborrow
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_reader_resume
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.natural_bound
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.integer_bound
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.alloc_inputs
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceModes.Resolved.buffer_linear
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.dependent_buffer_first_contract
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.allocating_first
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.BufferValue.allocate
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.freeGuard_of_unborrowed
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_reader_fresh
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_allocating_reader

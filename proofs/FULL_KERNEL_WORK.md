@@ -346,3 +346,27 @@ the three allowed logical axioms occurred; sampled peak tree RSS was
 3,624.2 MiB. Compiler/runtime/native fixtures remain unchanged. This run reused
 the existing rootless `.#proofs` shell with Lean 4.34.1/Lake 5.0.0-src and the
 serialized proof guard, without changing dependency locks or memory ceilings.
+
+The fresh owned-reader unit derives scalar literal widths and a reader's
+declared first-result conversion from the actual Loan64/resource check. Buffer
+normalization preserves its rigid head even for computed dependent sizes, so
+the first-result linear mode and its exact-once obligation are reconstructed,
+alongside the separate original-owner obligation; no `firstOwned` oracle is
+required. `BufferValue` interprets an actual owner as a live heap object with
+the length required by its closed source type modulo Loan64 conversion. It
+deliberately does not assert exclusive authority over all retained aliases.
+
+Actual reachable reader allocation constructs this interpretation and the
+five machine transitions. Its fresh result cannot alias the currently leased
+owner, no old lease refers to the new object, and its Free guard is derived.
+Caller-provided output typing, fresh owner slots, heap validity and allocation
+success are not premises. The byte-size overflow branch remains explicit:
+source U64 typing alone permits sizes that overflow the allocator's byte bound.
+The current source/control/reader association is still a local input, and
+general value/resource/heap fundamental preservation remains unfinished.
+
+Validation: `proofs/check.sh` passed 888 Lake jobs, 8,816 unique public axiom
+audits and all generated-fixture comparisons, with only the three allowed
+logical axioms. Sampled peak tree RSS was 3,630.0 MiB. No compiler/runtime
+implementation or native fixture changed. The existing rootless project shell
+reports Nix 2.20.6 (evaluation smoke check 42), Lean 4.34.1 and Lake 5.0.0-src.

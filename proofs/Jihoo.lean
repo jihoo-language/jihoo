@@ -1068,3 +1068,4 @@ import Jihoo.NativeBindingMachineLendValues
 import Jihoo.NativeBindingMachineIndexExecution
 import Jihoo.NativeBindingMachineLendResources
 import Jihoo.NativeBindingMachineReaderResume
+import Jihoo.NativeBindingMachineOwnedReader

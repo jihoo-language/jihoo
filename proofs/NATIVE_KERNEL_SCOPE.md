@@ -1116,3 +1116,15 @@ aliases are rejected for reborrow when no outer source permission remains.
 No caller supplies post-close heap/slot safety or execution success. Current
 input source/control/resource and captured-slot association are still local
 premises, not yet a closed-admission fundamental theorem or native refinement.
+
+`NativeBindingMachineOwnedReader` reconstructs Buffer first-result linear mode
+from successful actual normalization and derives its separate exact-once source
+contract. The same checked reader supplies literal widths and its declared
+first-result conversion. A live concrete owner and its actual heap length give
+the limited `BufferValue` interpretation; exclusivity is a separate obligation.
+Reachable reader allocation constructs that interpretation, a fresh identity
+distinct from the leased original owner, absence of old leases to the new
+object, its Free guard, and the actual five steps. Byte-size overflow is an
+explicit outcome, not an assumed allocation success. Source/control/reader
+association, general resource authority and the full fundamental theorem still
+remain open. This source-machine result does not refine native allocation.
