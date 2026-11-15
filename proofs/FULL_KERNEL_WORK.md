@@ -490,3 +490,24 @@ oracle. Exclude old-owner reader conflicts from source resource authority and
 carry arbitrary continuation tails through that same interpretation. General
 universe consistency, all specified computation preservation, whole ownership/
 borrow soundness and native implementation refinement remain unfinished.
+
+The scalar-closing bridge separates the actual value closing from retained
+runtime provenance. The same Loan64 source judgment/ghost input substitution
+now types arbitrary original function bodies after a natural argument is
+bound to its observed canonical value. The result type is instantiated at that
+actual numeral, while `Code.origins` still saves the original argument term.
+No conversion of effectful Strict/Free origins to their observed numeral is
+assumed. The checked mixed declaration supplies the initial empty closing and
+its original resource evidence; no semantic candidate is chosen by a caller.
+
+At a reachable natural closure-entry point, numeric bounds come from the
+unconditional runtime invariant. The actual step retains the closure body and
+captures, extends direct scalar-slot agreement and preserves old named loans.
+No argument/output typing certificate or successful-evaluation oracle is an
+input. The input closure typing/value-closing and captured-slot/loan invariants
+remain local premises. This is not the general control-stack preservation
+theorem or an interpretation of every captured heap/function value.
+
+The aggregate passed 894 Lake jobs, 8,866 unique public axiom audits and the
+generated-fixture comparisons. Only the three allowed logical axioms occurred.
+Native compiler/runtime behavior and fixtures were not changed.

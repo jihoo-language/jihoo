@@ -1182,3 +1182,13 @@ general thirty-two-step proof after the fourteen-step caller prefix. The
 forty-six-step scalar result is derived through that theorem, not assumed as an
 output certificate. This concrete instantiation does not establish the general
 admission/control fundamental theorem or native checker/evaluator refinement.
+
+`NativeBindingMachineScalarClosing` retains the complete Loan64 body typing
+with a value closing independent of the machine's source-origin map. Actual
+natural closure entry instantiates dependent result types at the observed
+numeral, preserving source code/captures/provenance, direct numeric-slot
+agreement and earlier named loans. Mixed declaration checking reconstructs the
+initial empty closing and resource evidence. Runtime bounds are derived, not
+an argument/output typing input; effectful origin-to-numeral conversion is never
+assumed. Input closure/capture invariants still need the common all-control
+fundamental theorem, including general value kinds and heap/resource authority.

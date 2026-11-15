@@ -8856,3 +8856,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_returned_buffer_completion
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReturnedBufferCompletionExamples.program_admitted
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReturnedBufferCompletionExamples.program_completes
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanClosingTyped.fromOrigins
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanClosingTyped.initial
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanClosingTyped.closed
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarSlots.initial
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarSlots.child
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarSlots.enter_natural
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ScalarSlots.enter_integer
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.enter_natural_closing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_mixed_closing_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_natural_closure_entry

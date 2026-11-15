@@ -1074,3 +1074,4 @@ import Jihoo.NativeBindingMachineOwnerProvenance
 import Jihoo.NativeBindingMachineReturnedBufferRead
 import Jihoo.NativeBindingMachineReturnedBufferCompletion
 import Jihoo.NativeBindingMachineReturnedBufferCompletionExamples
+import Jihoo.NativeBindingMachineScalarClosing
