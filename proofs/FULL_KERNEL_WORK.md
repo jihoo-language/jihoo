@@ -291,3 +291,32 @@ to real owner/lease identities; preserve source-dependent heap lengths; then
 extend bound interpretation to arbitrary proofs/computations. The numerical
 and scalar-closing results do not by themselves establish those obligations,
 full ownership/borrow soundness, universe consistency or native refinement.
+
+The Lend resource handoff now connects the dependent checker's actual reader
+and restored-continuation projections to the binding-retaining machine. Both
+the returned owner and the old captured owner slot refer to the same concrete
+object; their complete slot map and ghost closing agree with the checked alias
+substitution. Actual reader return constructs close followed by both real
+continuation activations, preserving every outer `LoanSlots` permission through
+the two retained binders. The current lease supplies owner liveness, and the
+remaining exact reader inventory characterizes Free's guard, including nested
+readers of the same object.
+
+For a continuation beginning with Free of either owner alias, the actual
+eight-step execution closes, activates and releases the same object, or reports
+an explicit outer-reader conflict. The source Lend derivation supplies the
+remaining code's original ghost result type, and its actual resource projection
+supplies zero residual owner demand on every abstract tail prefix. No output
+typing, successful execution, heap-validity, liveness or Free-guard oracle is
+an input. These are local theorems: input code typing/projection, source-owner
+slot association and current reader-frame/control association are still inputs.
+The next fundamental theorem must derive those associations from mixed-history
+admission, exclude outer-reader conflicts in legal consuming continuations,
+and associate arbitrary tail-machine executions with the zero-demand resource
+prefixes. Ghost origin typing is not semantic typing of arbitrary returned
+values. All original completion gates remain open.
+
+Validation of this increment: `proofs/check.sh` passed 886 Lake jobs, 8,800
+unique public axiom audits and all generated-fixture comparisons; sampled peak
+tree RSS was 3,623.7 MiB. Only `propext`, `Classical.choice` and `Quot.sound`
+occurred. No native executable behavior, compiler source or fixture changed.

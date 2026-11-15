@@ -1066,3 +1066,4 @@ import Jihoo.NativeBindingMachineNumeric
 import Jihoo.NativeBindingMachineIndexValues
 import Jihoo.NativeBindingMachineLendValues
 import Jihoo.NativeBindingMachineIndexExecution
+import Jihoo.NativeBindingMachineLendResources

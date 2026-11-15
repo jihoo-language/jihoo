@@ -8789,3 +8789,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.ifLt_no
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_named_index_execution
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_dynamic_index_execution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.free_tail
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReaderInventory.borrowed_iff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReaderInventory.free_guard_iff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_continuation_slots
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_continuation_origins
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_continuation_loans
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_lend_handoff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_lend_owner_free
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_free_variable
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.checked_lend_free_tail_zero
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_lend_free

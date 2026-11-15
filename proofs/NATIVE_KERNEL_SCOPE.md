@@ -1088,3 +1088,20 @@ local inputs. The full fundamental theorem must construct them from admitted
 mixed-program typing/resources, including all captures/effects and arbitrary
 bound proofs. This increment does not close general ownership, consistency,
 full source computation preservation or native implementation refinement.
+
+`NativeBindingMachineLendResources` connects the same dependent Lend resource
+projection to actual close and two retained continuation bindings. Its slot map
+identifies the restored-owner alias with the captured original owner, while
+preserving all outer named-loan slots. For Free at either alias, it constructs
+the eight actual transitions and derives the guard from the remaining concrete
+reader inventory. A still-active outer reader of that object gives a specified
+borrowed-owner fault; absence gives release, without caller-provided liveness
+or guard evidence. The remaining code retains the original ghost result type,
+and the recursive source projection has zero residual owner demand.
+
+This does not prove absence of that conflict from arbitrary admitted programs.
+The local input code typing/resource projection, original owner slot and actual
+reader-frame/control association still need the common fundamental theorem.
+Abstract zero-demand tail prefixes are not yet associated with all concrete tail
+executions. The theorem executes retained source code, not a substituted CODE
+macro, and neither claims general value realization nor native refinement.
