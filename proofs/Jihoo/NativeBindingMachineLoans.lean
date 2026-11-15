@@ -31,9 +31,8 @@ theorem ReadersLive.begin_reader (valid : SizedBufferHeap.Valid heap)
     simpa [SizedBufferHeap.lend,HeapLeases.put,different] using leased
 
 theorem ReadersLive.reader_body (readers : ReadersLive heap
-    (.lendReader token object name origin readerOrigin continuation :: stack)) :
-    ReadersLive heap (.lendFinish token object name origin
-      (.app readerOrigin (.borrow origin)) continuation :: stack) := by
+    (.lendReader token object name origin readerOrigin continuation :: stack)) (resultOrigin : Term) :
+    ReadersLive heap (.lendFinish token object name origin resultOrigin continuation :: stack) := by
   intro frame member queried owner key descriptor
   rcases List.mem_cons.mp member with rfl | member
   · exact readers _ List.mem_cons_self queried owner key descriptor

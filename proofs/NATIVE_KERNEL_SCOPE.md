@@ -979,3 +979,22 @@ and ordinary binder slot permissions, with separate erased argument handling.
 Named reader entry installs the corresponding new permission. A common typed
 control-stack/value invariant, specialized Lend callback entry, all source-derived
 heap/Index preconditions and native implementation refinement remain open.
+
+
+Reader-result provenance now records the exact body activated with the concrete
+reference and captured origin store, instead of a raw callback application.
+`NativeBindingMachineLendOrigins` proves that explicit-reader entry closes to
+`Lending.read` and that both continuation binders close to `Lending.finish`.
+The input Loan64 Lend derivation and its actual mixed history derive closed
+reader typing and the final continuation's original requested ghost type,
+without assuming callback typing at arbitrary arguments or output-value typing.
+Reachable named-reader activation combines that source provenance, real lease
+liveness and local owner-slot preservation. The erased equality example is
+accepted only after Lend specialization, computes 7, and retains the proved
+body origin; the native mixed checker agrees.
+
+These entry lemmas do not interpret arbitrary returned runtime values or prove
+source/slot preservation across all computation, capture and continuation
+steps. In particular `LoanSlots` is still an input at the pending source-frame
+boundary, reference lengths/evidence need an interpretation, and source-derived
+Index/no-fault and general ownership accounting remain open.

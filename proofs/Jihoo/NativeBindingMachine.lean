@@ -162,9 +162,12 @@ def returnAction (value : Value) : List Frame → Option Action
             .control (.evaluate (branchCode equal yes firstOrigin secondOrigin)) stack
           else .control (.evaluate no) stack
       | .lendOwner reader continuation origin name,.owner object => .lend object name origin reader continuation stack
-      | .lendReader token object name origin readerOrigin continuation,function@(.closure false _ _ _ _ _) =>
+      | .lendReader token object name origin _ continuation,
+          function@(.closure false domain body context origins captured) =>
+          let resultOrigin := (enter false domain body context origins captured
+            (.borrow origin) (some (.reference token))).origin
           applyValue function (.borrow origin) (some (.reference token))
-            (.lendFinish token object name origin (.app readerOrigin (.borrow origin)) continuation :: stack)
+            (.lendFinish token object name origin resultOrigin continuation :: stack)
       | frame@(.lendReader _ _ _ _ _ _),_ => fault .wrongValue (frame :: stack)
       | .lendFinish token object _ origin resultOrigin continuation,result =>
           .close token object result origin resultOrigin continuation stack

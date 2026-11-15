@@ -77,8 +77,20 @@ The remaining core obligations include:
   across binders; new named-reader entry supplies its new slot permission.
   These local source/slot lemmas do not yet give a full control-stack/value
   interpretation or derive the raw body typing of a specialized Lend callback.
-- The aggregate proof check currently audits 8,676 declarations. The mixed
-  native regression suite passes 64 source fixtures and 51 exact-byte checks.
+- Actual reader activation now saves the entered body's exact origin, rather
+  than a raw callback application. `NativeBindingMachineLendOrigins` derives
+  the closed reader origin and final continuation body at the original ghost
+  type from the input Loan64 Lend judgment, including specialized callbacks.
+  Reachable named reader entry combines that input derivation, actual lease
+  liveness and preservation of named owner slots. This is source provenance,
+  not a semantic runtime-value typing or whole-machine fundamental theorem.
+- The erased-owner-equality regression requires source specialization:
+  standalone callback checking rejects it, while Lend admission and actual
+  runtime execution succeed. Native and Loan64 mixed checking agree. The saved
+  continuation argument is the checked reader body origin. No arbitrary-input
+  callback typing or post-result typing is supplied to the general theorems.
+- The aggregate proof check currently audits 8,693 declarations. The mixed
+  native regression suite passes 66 source fixtures and 52 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
 ## Next semantic work
@@ -149,3 +161,10 @@ existing generated-fixture comparisons. The sampled peak tree RSS was
 compiler behavior was changed in this increment. Full verification remains
 unfinished; in particular source permission/owner-value preservation and
 Index evidence interpretation still require the common fundamental theorem.
+
+The second increment corrects reader-result provenance and proves actual
+explicit-reader/final-continuation entry origin typing from the source Lend
+judgment. `proofs/check.sh` passed 876 Lake jobs and 8,693 audits; the native
+mixed suite passed 66 source fixtures and 52 exact-byte checks. The sampled
+aggregate peak RSS was 3,582.1 MiB. This does not discharge general runtime
+value/context/stack typing, Index bound interpretation or owner accounting.

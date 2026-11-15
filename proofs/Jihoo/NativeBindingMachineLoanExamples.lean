@@ -1,4 +1,4 @@
-import Jihoo.NativeBindingMachineLoans
+import Jihoo.NativeBindingMachineLendOrigins
 import Jihoo.NativeLoanMixedPreservationExamples
 
 namespace Jihoo.NativeKernel.Environment.BindingMachine.LoanExamples
@@ -62,5 +62,56 @@ theorem untyped_escape_reports_closed_lease :
 
 theorem all_nested_prefixes_have_valid_heap (fuel : Nat) :
     SizedBufferHeap.Valid (run fuel (initial nestedCall)).state.heap := initial_run_heap_valid _ _
+
+/-- The erased equality is valid only after the reader parameter has been
+specialized to Borrow of the original owner. Runtime skips this evidence. -/
+def ghostCount (owner : Term) : Term := .free owner (.natural 0)
+def specializedBody : Term := .app
+  (.lam true (.eq (ghostCount (.deref (.var 0))) (ghostCount (.var 1))) (.integer 7))
+  (.refl (ghostCount (.var 1)))
+def specializedReader : Term := .lam false (.ref buffer) specializedBody
+def specializedSource : Term := .lend (.var 0) specializedReader continuation
+def specializedCall : Term := .app (.lam false buffer specializedSource) allocatedOwner
+
+theorem specialized_callback_admitted :
+    ResourceQuantity.checkClosed 128 192 .empty specializedCall .i64 = true := by cbv
+
+theorem unspecialized_callback_rejected :
+    (LoanTyping.Checker.infer 96 .empty [] ownerContext false specializedReader).isSome = false := by cbv
+
+theorem specialized_callback_computes : observe (run 192 (initial specializedCall)) = .integer 7 := by cbv
+
+/-- The continuation receives the actual specialized body origin, whose
+source typing can be derived; no arbitrary-argument callback typing is used. -/
+theorem specialized_callback_result_origin : activationOrigins (run 192 (initial specializedCall)).events =
+    [allocatedOwner,.borrow allocatedOwner,.refl (ghostCount allocatedOwner),
+      (Lending.read (.var 0) specializedBody).subst (CodeKinds.consValues allocatedOwner Term.var),allocatedOwner] := by cbv
+
+def specializedCode : Code := enter false buffer specializedSource [] Term.var []
+  allocatedOwner (some (.owner 0))
+
+theorem specialized_original_body_source_typed :
+    LoanSourceTyped .empty [] false specializedCode .i64 := by
+  have function : LoanTyping.HasType .empty [] [] false
+      (.lam false buffer specializedSource) (.pi false buffer .i64) :=
+    LoanTyping.Checker.check_sound (by cbv : LoanTyping.Checker.check 128 .empty [] [] false
+      (.lam false buffer specializedSource) (.pi false buffer .i64) = true)
+  have argument : LoanTyping.HasType .empty [] [] false allocatedOwner buffer :=
+    .alloc (.natural (by decide)) (.integer (by decide) (by decide))
+  have entered := enter_loan_source_typed (LoanTyping.MixedProgram.History.empty)
+    (LoanSourceTyped.initial function) (LoanSourceTyped.initial argument) (some (.owner 0))
+  simpa only [specializedCode,Code.initial,Code.origin,Term.subst_id,Term.subst,substArgs] using entered.2
+
+/-- The general source-to-actual-binding theorem derives this endpoint type
+for a callback which the standalone checker rejects before specialization. -/
+theorem specialized_continuation_original_type (result : Value) :
+    LoanTyping.HasType .empty [] [] true
+      (enter false buffer (.free (.var 0) (.var 1)) (⟨.i64,false⟩ :: specializedCode.context)
+        (CodeKinds.consValues ((Lending.read (.var 0) specializedBody).subst specializedCode.origins)
+          specializedCode.origins)
+        (some result :: specializedCode.values) ((Term.var 0).subst specializedCode.origins)
+        (some (.owner 0))).origin .i64 :=
+  typed_explicit_continuation_origin LoanTyping.MixedProgram.History.empty
+    specialized_original_body_source_typed rfl 0 result
 
 end Jihoo.NativeKernel.Environment.BindingMachine.LoanExamples
