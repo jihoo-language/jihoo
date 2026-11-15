@@ -1079,3 +1079,4 @@ import Jihoo.NativeBindingMachineComputedAllocation
 import Jihoo.NativeBindingMachineComputedAllocationExamples
 import Jihoo.NativeBindingMachineValueKinds
 import Jihoo.NativeBindingMachineCapturedAllocation
+import Jihoo.NativeBindingMachineCapturedBranch

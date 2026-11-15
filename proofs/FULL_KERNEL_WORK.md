@@ -600,3 +600,32 @@ without typing arbitrary effectful origin metadata as canonical evidence.
 General effectful annotation semantics, universe consistency, all specified
 computation preservation, whole ownership/borrow soundness and native
 implementation refinement remain unfinished.
+
+
+## 2026-11-15: canonical comparison evidence and surviving reader Borrow
+
+`NativeBindingMachineCapturedBranch` derives both runtime U64 operands from
+full source input typing and the constructed value context. Five actual
+transitions select an arbitrary original yes/no body at the same closed result
+type. The true branch constructs canonical erased Decide evidence from the
+observed comparison, extends its ghost substitution and preserves the complete
+value context. Original branch provenance remains untouched; its possibly
+effectful origin evidence is never assumed to be well typed or convertible to
+canonical numerals.
+
+Erased entry preserves named-owner slots and lexical reader keys. A true
+comparison with a source-authorized Borrow constructs six actual transitions
+to a reference whose lease and owner are live. Validity and reader liveness
+come from unconditional actual-prefix invariants, including nested reader
+stacks. No selected number, comparison proof, token, live-owner certificate,
+output typing or successful Borrow is supplied. General input control/value/
+loan-context construction is still required; this does not establish arbitrary
+Index heap-size association or complete resource authority.
+
+The aggregate passed 899 Lake jobs, 8,893 unique public audits and all generated
+fixture comparisons (`out/logs/captured-branch-full.log`), with only the three
+allowed logical axioms and 3,671.4 MiB sampled peak RSS. Next connect a derived
+fresh allocation to an actual owner function binding and construct its value
+context from the source allocation, rather than requiring a caller's typed
+runtime owner. General consistency, specified computation preservation,
+ownership/borrow soundness and native implementation refinement remain open.

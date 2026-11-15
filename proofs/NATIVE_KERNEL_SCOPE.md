@@ -1226,3 +1226,12 @@ byte overflow. No stored-number, successful-run or output-typing certificate
 is supplied. Representation heads alone do not establish closure bodies,
 heap liveness, exclusive authority or reference leases; general control-stack
 context construction and original effectful annotation semantics remain open.
+
+
+`NativeBindingMachineCapturedBranch` constructs canonical erased evidence from
+actual captured-number comparisons, preserves arbitrary original branch-body
+types and value contexts, and retains named-reader loan slots. A true branch
+can execute source-authorized Borrow in six steps using a live lease derived
+from the actual nested reader inventory. Original provenance evidence is not
+used as a canonical proof. The input source/control/value/loan association and
+general Index heap-size/resource interpretation remain unfinished.

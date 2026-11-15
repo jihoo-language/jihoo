@@ -8890,3 +8890,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_integer_value_context_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_mixed_value_context_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_allocation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSlots.less_branch
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_less_branch
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_captured_less_borrow
