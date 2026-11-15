@@ -756,9 +756,56 @@ alias is unchanged. `NativeLoanPolicyNaturality`, `NativeLoanRenaming` and
 simultaneous substitution across every one of its 64 rules and five mutual
 judgments. Dependent ghost Lend permits arbitrary owners, so substituting an
 allocated value for a named owner retains typing without a fabricated variable
-premise. The examples check that instantiation and weakening. Type uniqueness,
-the executable loan-aware checker, internal quantity accounting and the native
-heap/loan fundamental theorem remain open.
+premise. The examples check that instantiation and weakening. The full
+`NativeLoanPrincipalInversion` and `NativeLoanTypeUniqueness` collection proves
+type uniqueness modulo its genuine raw Lend/family/delta/ACU relation across every rule,
+different loan stacks and code/ghost modes. Strong source-substitution induction
+handles overlapping generic/dependent Lend paths and their larger specialized
+bodies; the final theorem requires only actual typing and environment well
+formedness. Binder/sort uniqueness are consequences. `NativeLoanConversion`
+and its algebra facade place the loan judgment, old-rule embedding, ghost
+binding, inversion, uniqueness, atomic evaluation and checker soundness in that
+same genuine relation. Loan-local representation policies carry raw witnesses,
+with positive conversion congruence and binding transport; the original default
+60-rule policies remain unchanged. The bounded raw search includes Lend,
+family, delta and ACU computation with genuine finite forward soundness and
+explicit depth/occurrence/duplication limits. Successful bounded output is not
+assumed normal or independently typed. Default mixed-program admission and the
+native heap/loan fundamental theorem remain open.
+
+`NativeLoanCheckerPolicy`, `NativeLoanLendChecking`, `NativeLoanChecker` and
+their soundness modules implement full recursive inference/binder/check/sort
+checking with the actual loan stack threaded through every shared constructor.
+Code Borrow requires an active named owner. Dependent readers use the entered
+stack and continuations the original stack; generic callbacks are checked at
+their independent signatures. Acceptance derives the full loan-indexed judgment
+without typing certificates or recursive soundness supplied by callers.
+`NativeLoanTypingInput` binds type formation and body typing of one closed native
+declaration to canonical version-6 graph bytes. `NativeScopeCheck` also validates
+all actual binder edges, independently of typing and conversion, and returns
+complete type/body scope proofs. Even unbound variables hidden in beta-erased
+annotation arguments reject. `CheckNativeLoanTyping.lean` bounds
+the IO adapter. The native suite checks nine source fixtures and nine exact-byte
+cases, including scope/erasure mutations and exhausted fuel. This entry point
+does not perform whole-program quantity admission or prove heap/loan execution.
+
+The separate `NativeLoanQuantity` collection threads the same full checker and
+loan stacks through recursive resource projection. From the same successful
+named-dependent check it derives actual specialized reader/body typing and
+scope, zero reader demand for the owner, one restored-owner demand, and linear
+use of an owned first result. Both owner names are identified before counting,
+so duplicate consumption rejects. Computed and generic callback forms retain
+their source contracts; their general dynamic closure/resource fundamental
+theorem remains open. The exact-byte quantity adapter has twelve native source
+fixtures and thirteen byte checks. It does not prove heap lifetime safety.
+
+`NativeTermShapeCheck` validates all native payloads/arity independently of
+typing. `NativeLoanGlobalChecking` expands declarations against the actual
+earlier prefix, checks stored typing/scope/shape, and derives a transparent
+well-formed global environment with strictly earlier references. Its examples
+include a Lend function called by a later declaration and rejection of forward
+references and discarded malformed annotations. This globals-only layer checks
+types; mixed-family quantity admission is separate.
 
 `NativeCallResourceContracts` extracts exact original application typing,
 actual runtime argument code typing/resource safety, and the opened source
@@ -798,6 +845,19 @@ the conclusion also survives result-type conversions. `NativeLoanAtomicEvaluatio
 uses those results for finite pure beta/explicit-Lend atomic steps, with genuine
 raw forward paths and original-type ghost preservation. This relation does not
 substitute arbitrary computations into CODE derivations or model heap events.
+The safe contextual evaluator additionally closes these steps beneath every
+non-Lend node, handling binders and dependent annotation changes. A Lend root
+contracts before descent into its source-specialized callbacks. The Loan64
+family collection covers parameterized Case, recursive Prop/data elimination
+and recursive borrowed View at the exact original type, using authentic checked
+family history. Its family evaluation relation composes those roots with the
+safe atomic/contextual evaluator, without an output-typing oracle. General raw
+macro-intermediate preservation is not asserted.
+
+Raw forward reduction also preserves explicitly supplied scope across legacy,
+ACU, delta, all family roots and Lend, with closed stored globals. Actual family
+and loan normalization preserve the executable scope flag. Symmetric conversion
+is excluded from this claim because reverse beta can insert unbound arguments.
 
 `NativeGhostValueErasure` defines a total raw projection dropping Strict/Free's
 first operand, commuting with capture-avoiding renaming and substitution. Its
@@ -806,3 +866,41 @@ legacy theorem is explicitly pinned to the old Basis relation.
 coherence to every genuine family root and the full installed conversion.
 This relates projected terms; it does not assert conversion of a source term to
 its erasure, formation of arbitrary erased types, or runtime heap correctness.
+
+`NativeProjectedContextCoherence` transports arbitrary raw dependent
+annotations through projected closing substitutions, consuming the actual
+source-slot alignment above. `NativeDependentCodeFrames` preserves genuine
+universe/family/observation lookup slots beneath arbitrary raw binder prefixes.
+`NativeEffectfulCodeInterpretation` recovers finite-code validity and its exact
+native universe from actual typing of nested Pi/Strict/Free annotations, then
+constructs the existing concrete finite universe interpretation. Checked
+conversion and projected coherence preserve that meaning. The all-level
+value-dependent family example has Strict in its Pi domain and Free(Alloc0)
+in its codomain. General native code interpretation and heap semantics remain
+open.
+
+`NativeLoanValueProjection` and `NativeLoanCodeCoherence` compose genuine raw
+Lend expansion with ghost value projection, preserving dependent closing
+alignment and concrete finite-code meaning even through raw macro paths.
+`NativeDependentLogicalRelation`, `NativeDependentRelationalContexts`,
+`NativeDependentNumericCoherence` and `NativeDependentRelationExamples` extend
+the existing concrete finite CwF with arbitrary dependent Pi fibers, semantic
+context extension/interleaving, RawLend conversion saturation and genuine beta
+lambda/application clauses. Concrete natural realizers use valid additive trees
+for arbitrary mathematical naturals, avoiding a false result word bound.
+Generic dependent identity has actual source typing and a constructed relational
+meaning. Interpretation candidates remain parameters; reconstructing every
+native annotation and universe candidate is still open.
+
+`NativeBindingMachine` retains original terms/contexts, captured origin
+substitutions and runtime slots in real closures. It evaluates callees and
+runtime arguments once, skips erased arguments, and executes scalar values,
+conditions, Strict, Alloc and Free. Its heap module connects every observed
+prefix, including fault/fuel results, to the existing sized heap steps and
+validity invariant without a successful-run premise. Entry typing preserves
+the original CODE body and ghost origin; ready variable lookup excludes missing
+and erased faults. Execution examples include exact single allocation/release,
+computed closures, erased ghost-borrow arguments and an explicit double-free
+fault with a valid prefix. General runtime-value typing, exclusion of invalid
+variable/value/ownership faults for admitted programs, no-leak, Lend/read/write execution and native evaluator
+refinement remain open.

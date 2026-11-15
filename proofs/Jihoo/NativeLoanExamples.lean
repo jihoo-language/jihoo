@@ -50,7 +50,7 @@ theorem dependent_code_lend : HasType empty [] ownerContext false source .i64 :=
         (Lending.restore (.var 0) .i64 continuationBody) (.pi false .i64 .i64) = true))
   · exact .refl _
   · cbv
-  · exact Or.inr (nonFunctionHead_full (by decide))
+  · exact Or.inr (nonFunction_ofEnvironment (nonFunctionHead_full (by decide)))
 
 theorem lend_ghost_promotion : HasType empty [] ownerContext true source .i64 :=
   dependent_code_lend.ghost []

@@ -1,3 +1,4 @@
+import Jihoo.NativeLoanConversionAlgebra
 import Jihoo.NativeLoanBetaPreservation
 
 /-! Atomic pure results of the actual loan-indexed body checks. Specialized
@@ -26,7 +27,7 @@ theorem dependent_finish_original_type
     HasType env [] ctx true (finish owner body (read owner readerBody)) outside := by
   exact (finish_from_specialized_checks wf continuation
     ((reader.ghost []).convert firstConverted.symm)).convert
-      (Lending.result_outside wf converted removed)
+      (result_outside wf converted removed)
 
 theorem reader_from_generic_checks
     (wf : UnifiedProgram.EnvWellFormed env)

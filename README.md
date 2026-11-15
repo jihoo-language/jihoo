@@ -220,6 +220,9 @@ also have source-derived interpretations, including nested family applications.
 Value-dependent families `B : A -> Type(j)` also have source-derived meanings
 over arbitrary supported monotypes, with observations `x : A` used as indices
 and ordinary values. The closed dependent identity is checked at all native levels.
+Finite-code interpretation also recovers checked dependent annotations with
+nested Pi, Strict and Free, including effectful binder annotations. Projected
+closing coherence follows from the actual source-slot type alignment.
 Installed family iota rules preserve the exact original
 type for parameterized Case, general indexed recursive Prop/data Elim and
 arbitrary recursive borrowed View. The same expanded conversion has genuine
@@ -245,8 +248,19 @@ Explicit Lend callbacks also have atomic pure evaluation with original-type
 preservation. A separate raw Lend/family/delta/ACU theory has genuine finite
 common reducts and binding-aware injectivity; its macro intermediates are not
 assumed typed.
-The loan extension's default checker integration, type uniqueness and heap/resource
+The loan extension's default checker integration and heap/resource
 execution proof remain open.
+Its separate executable checker now covers the complete shared syntax and all
+loan rules, with proved inference/check/binder soundness and saved reader stacks.
+An exact-byte entry point checks one closed native declaration; it provides
+typing rather than whole-program quantity or heap admission.
+Type uniqueness covers all 64 rules, across loan stacks and code/ghost modes.
+Loan-specific raw conversion, bounded search and safe contextual evaluation are
+also verified. Its resource gate checks reader demand zero and restored-owner
+demand one, including alias and owned-result accounting. Transparent global
+type checking, concrete higher-kind code interpretation and a source-binding
+CBV heap machine add further scoped results; full native heap/loan soundness
+and mixed-program admission remain open.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

@@ -1,4 +1,5 @@
 import Jihoo.NativeLendGhostRule
+import Jihoo.NativeLoanPolicies
 
 /-! Loan-indexed extension of the same complete native typing rules. Saved
 loan depths follow the actual native reader stack. Code borrowing requires an
@@ -187,7 +188,7 @@ mutual
     | codeBorrowOwned : HasType env loans ctx true (.var owner) T → Owned env T →
         Loans.active ctx.length loans owner = true →
         HasType env loans ctx false (.borrow (.var owner)) (.ref T)
-    | lendGeneric : HasType env loans ctx ghost owner T → Owned env T → Lending.Outlived env A →
+    | lendGeneric : HasType env loans ctx ghost owner T → Owned env T → Outlived env A →
         HasType env loans ctx ghost reader (.pi false (.ref T) (A.rename Nat.succ)) →
         HasType env loans ctx ghost continuation
           (.pi false A ((Term.pi false T (result.rename Nat.succ)).rename Nat.succ)) →
@@ -196,7 +197,7 @@ mutual
     | lendDependentCode : HasType env loans ctx false (.var owner) T → Owned env T →
         Binder env loans ctx false domain sort → Conversion.Conv env domain (.ref T) →
         HasType env (Loans.enter ctx.length owner loans) ctx false (Lending.read (.var owner) readerBody) A →
-        Lending.Outlived env A → Conversion.Conv env first A →
+        Outlived env A → Conversion.Conv env first A →
         Conversion.Conv env again (T.rename Nat.succ) →
         HasType env loans ctx false (Lending.restore (.var owner) first body) (.pi false first result) →
         Conversion.Conv env result normal → PartialRenaming.shift (-1) 0 normal = some outside →
@@ -206,7 +207,7 @@ mutual
     | lendDependentGhost : HasType env loans ctx true owner T → Owned env T →
         Binder env loans ctx false domain sort → Conversion.Conv env domain (.ref T) →
         HasType env loans ctx true (Lending.read owner readerBody) A →
-        Lending.Outlived env A → Conversion.Conv env first A →
+        Outlived env A → Conversion.Conv env first A →
         Conversion.Conv env again (T.rename Nat.succ) →
         HasType env loans ctx true (Lending.restore owner first body) (.pi false first result) →
         Conversion.Conv env result normal → PartialRenaming.shift (-1) 0 normal = some outside →

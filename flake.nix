@@ -309,6 +309,8 @@
                 ./proofs/CheckNativeFamilies.lean
                 ./proofs/CheckNativeOwnership.lean
                 ./proofs/CheckNativeUnifiedProgram.lean
+                ./proofs/CheckNativeLoanTyping.lean
+                ./proofs/CheckNativeLoanQuantity.lean
                 ./proofs/CheckNativeACUNormalizer.lean
                 ./proofs/CheckNativeDelta.lean
                 ./proofs/CheckNativeTransforms.lean
@@ -366,6 +368,8 @@
               Jihoo.NativeFamilyAdmission \
               Jihoo.NativeOwnershipAdmission \
               Jihoo.NativeUnifiedAdmission \
+              Jihoo.NativeLoanTypingInput \
+              Jihoo.NativeLoanQuantityInput \
               Jihoo.NativeACUBoundedNormalizer \
               Jihoo.NativeEnvironmentDeltaBounded \
               Jihoo.NativeEnvironmentContextualPreservation \
@@ -398,6 +402,8 @@
             python3 tests/core_native_owned_loop_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_view_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_context_correspondence.py --compiler ${jihoo}/bin/jihoo
+            python3 tests/core_native_loan_typing_correspondence.py --compiler ${jihoo}/bin/jihoo
+            python3 tests/core_native_loan_quantity_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_producer_gates.py
             python3 tests/core_transform_certificates.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_artifact_replay.py --compiler ${jihoo}/bin/jihoo

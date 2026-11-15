@@ -1,4 +1,5 @@
 import Jihoo.NativeLoanPolicyNaturality
+import Jihoo.NativeLoanPolicyTransport
 
 /-! Ghost renaming for all shared loan-indexed rules. Runtime permission
 stacks are erased by the ghost conclusion; actual context lookups are retained. -/
@@ -18,7 +19,7 @@ private theorem shifted_one (term : Term) :
 private theorem dependent_rename_target
     (wf : UnifiedProgram.EnvWellFormed env) (ρ : Nat → Nat)
     (owned : Owned env T) (domainConverted : Conversion.Conv env domain (.ref T))
-    (outlived : Lending.Outlived env A) (firstConverted : Conversion.Conv env first A)
+    (outlived : Outlived env A) (firstConverted : Conversion.Conv env first A)
     (againConverted : Conversion.Conv env again (T.rename Nat.succ))
     (resultConverted : Conversion.Conv env result normal)
     (removed : PartialRenaming.shift (-1) 0 normal = some outside)

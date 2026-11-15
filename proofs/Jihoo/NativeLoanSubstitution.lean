@@ -43,7 +43,7 @@ private theorem shifted_one (term : Term) :
 private theorem dependent_subst_target
     (wf : UnifiedProgram.EnvWellFormed env) (σ : Nat → Term)
     (owned : Owned env T) (domainConverted : Conversion.Conv env domain (.ref T))
-    (outlived : Lending.Outlived env A) (firstConverted : Conversion.Conv env first A)
+    (outlived : Outlived env A) (firstConverted : Conversion.Conv env first A)
     (againConverted : Conversion.Conv env again (T.rename Nat.succ))
     (resultConverted : Conversion.Conv env result normal)
     (removed : PartialRenaming.shift (-1) 0 normal = some outside)
