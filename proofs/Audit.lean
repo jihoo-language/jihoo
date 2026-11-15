@@ -8996,3 +8996,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_scalar_handoff
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_scalar_free_alias
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_scalar_release
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.canonical_continuation_aligned
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_variable_kind
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_integer_variable
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_natural_variable
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.AliasReborrowBoundary.source_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.AliasReborrowBoundary.runtime_alias_fault

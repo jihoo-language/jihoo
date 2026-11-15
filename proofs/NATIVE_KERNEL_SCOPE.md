@@ -1429,3 +1429,15 @@ nine-step release then derives runtime return typing and canonical tail budget
 without separate source loans for every duplicated runtime slot or a supplied
 alias/output/success premise. General view/authority preservation through
 arbitrary closures/calls/readers and full native refinement remain open.
+
+
+Canonical variable steps now derive actual stored representations and numeric
+ranges from source CODE typing, and canonical readiness is constructed from
+the actual saved continuation frame. A confirmed remaining model blocker is
+`AliasReborrowBoundary`: authentic complete mixed admission accepts its closed
+I64 program, but returned-owner alias reborrowing reaches `inactiveBorrow` in
+the binding-retaining runtime. Source alias identification and runtime lexical
+reader keys disagree. This refutes the corresponding unrestricted progress/
+Borrow-precondition claim for the CURRENT model; it is not a native compiler
+counterexample or a logical inconsistency. Repair the correspondence while
+retaining source acceptance before claiming the whole-kernel obligations.

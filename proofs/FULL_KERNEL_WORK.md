@@ -1300,10 +1300,10 @@ typing is supplied. Physical liveness comes from the actual closing reader.
 
 The new target build passed 309 Lake jobs with warnings as errors
 (`out/logs/canonical-release-local-5.log`, 1,103.1 MiB sampled peak RSS).
-Eleven public proof audits and the exact 8,996 aggregate count are registered.
-The full aggregate is rebuilding the lost cache and remains pending at this
-checkpoint; record its actual result before the final report. No native
-implementation, native fixture, dependency lock or store pin changed.
+The subsequent cold aggregate passed 930 Lake jobs, 8,996 unique public audits
+and all generated-fixture comparisons (`out/logs/canonical-authority-full-final.log`),
+with only the three allowed logical axioms and 3,828.2 MiB sampled peak RSS.
+No native implementation, native fixture, dependency lock or store pin changed.
 
 This removes the duplicated-slot coverage requirement at the canonical
 continuation boundary; it is not an all-control fundamental theorem. General
@@ -1312,3 +1312,50 @@ closures, computed calls, reader entry and dependent computation remains open,
 as do general else/tail execution, complete ownership/borrow soundness,
 all-universe consistency, full specified preservation and native implementation
 refinement. Keep the automation active; the whole-kernel goal is NOT complete.
+
+
+## 2026-11-15: canonical variable steps and a confirmed alias-reborrow blocker
+
+`NativeBindingMachineCanonicalVariables` constructs canonical single-binder
+slot readiness from the actual saved reader-continuation frame. Original
+canonical CODE variable typing and value context then select an actual stored
+runtime value through any composed alias map. Actual integer/natural lookups,
+canonical meanings, source-derived numeric ranges and runtime-mode literal
+typing are outputs; no stored value, successful lookup or output-typing oracle
+is supplied. This is a source-to-actual-machine variable step, not a claim of
+reference lifetime or general heap/value realization.
+
+A concrete NEW BLOCKER is now proved in
+`NativeBindingMachineAliasReborrowBoundary`. `source_admitted` proves that the
+closed I64 program is accepted by the authentic complete
+`MixedProgram.checkDeclaration 256 512` in the empty earlier environment.
+`runtime_alias_fault` proves that the actual binding-retaining run observes
+`inactiveBorrow`. The program allocates one Buffer, reads/closes a first Lend,
+then lends the returned owner alias and reads via Borrow of the older captured
+alias. Source restore correctly identifies the owner slots. The runtime instead
+records the second reader under lexical key 3 and looks up Borrow of the older
+alias under key 1; the earlier reader is already closed. This is a current
+Lean runtime-model progress/precondition blocker, NOT evidence of a native
+compiler failure or logical inconsistency.
+
+The final aggregate passed 932 Lake jobs, 9,002 unique public audits and all
+generated-fixture comparisons
+(`out/logs/canonical-lookups-boundary-full-final.log`), using only `propext`,
+`Classical.choice` and `Quot.sound`; sampled peak tree RSS was 3,858.3 MiB.
+The six additional public proofs, including both counterexample facts, are
+audited exactly once. The complete lost build cache was reconstructed under
+the shared guard. No native implementation, fixture, dependency lock or store
+pin changed. Passing this aggregate does NOT discharge the blocker.
+
+NEXT PRIORITY: repair the binding-retaining Borrow/reader-name correspondence
+for returned owner aliases. Inspect `NativeBindingMachine.evaluateAction`'s
+Borrow key, `execute`/`activeLease`, and the source alias map/loan-slot invariant.
+Preserve this accepted program and its admission proof; after a justified
+semantic repair, replace the fault fact with a proved successful scalar return.
+Do not reject the source program, add a guard/output oracle, or weaken the
+completion criterion to avoid it. Recheck reader inventory, numeric/provenance
+invariants and all existing source/runtime compositions when the model changes.
+Then continue general canonical control/frame/closure preservation, arbitrary
+else/tail computation, complete ownership/borrow soundness, universe consistency,
+full specified preservation and native implementation refinement. The whole-
+kernel goal is NOT complete; keep the automation active.

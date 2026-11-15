@@ -1111,3 +1111,5 @@ import Jihoo.NativeBindingMachineCanonicalView
 import Jihoo.NativeBindingMachineCanonicalHandoff
 import Jihoo.NativeLoanScalarFreeAliases
 import Jihoo.NativeBindingMachineCanonicalRelease
+import Jihoo.NativeBindingMachineCanonicalVariables
+import Jihoo.NativeBindingMachineAliasReborrowBoundary
