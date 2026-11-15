@@ -1310,3 +1310,14 @@ nested reader inventory and canonical value/size contexts. No original generic
 callback, selected numeric operands, bound/allocation snapshot or output/success
 certificate is assumed. Source/control/frame and owner-slot association and
 all-control resource authority remain open.
+
+
+Guarded reference readers now have a sixteen-step authentic-checker composition
+through read, close and canonical continuation bindings, with original closed
+inferred result typing, owner-alias/resource agreement and outer reader
+inventory. False comparisons keep original-type six-step else entry. The
+scalar-shape helper only classifies local proof cases and leaves the full
+source grammar/Loan64 judgment unchanged. The old direct-Index API remains.
+No callback/output or intermediate-execution certificate is assumed. All-
+control mixed-admission/resource authority and general Free conflict exclusion
+remain unfinished.

@@ -8925,3 +8925,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.dynamic_reference_read_source
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_dynamic_reader_source
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_dynamic_reference_reader
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ScalarReadShape.substitution
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ScalarReadShape.read
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ScalarReadShape.result_conversion
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.actual_scalar_shape_finish
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_scalar_value_lend_handoff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_dynamic_reader_completion

@@ -874,3 +874,40 @@ and resource handoff, and carry the zero-owner-demand authority through all
 runtime frames. General all-control mixed-admission/resource interpretation,
 arbitrary evidence and result semantics, universe consistency, all specified
 computation preservation and native refinement remain unfinished.
+
+
+## 2026-11-15: guarded scalar handoff and sixteen-step checked composition
+
+`NativeBindingMachineScalarReaderShape` proves source-derived scalar conversion
+for Index and comparison-guarded Index under substitution and specialized read.
+It is an auxiliary local classification; the complete Loan64 judgment, source
+grammar and completion criteria are unchanged. Generic and specialized Lend
+cases reconstruct the actual scalar finish without callback/output typing
+premises. `NativeBindingMachineValueHandoff` now constructs canonical integer/
+owner bindings, original closed result typing, heap-size and loan contexts and
+the same zero/one resource correspondence for both cases. The previous direct-
+Index public entry remains as a specialization.
+
+`NativeBindingMachineDynamicReaderCompletion` starts from the actual resource
+receipt and constructs sixteen transitions from the returned original reader
+closure through captured-number comparison, physical reference read, close and
+both continuation bindings. The intermediate global prefix and observed read
+value are derived by run composition. The final body retains its exact closed
+inferred source result type, canonical contexts, owner aliases, source loans
+and outer reader inventory. The Free guard is characterized by those outer
+readers, rather than assumed. A false comparison retains six-step original-
+type else entry with the reference and reader inventory intact. No arbitrary
+callback, numeric/output typing or intermediate-success certificate is supplied.
+
+The aggregate passed 910 Lake jobs, 8,931 unique public audits and all fixture
+comparisons (`out/logs/dynamic-reader-completion-full.log`), with the three
+allowed logical axioms only and 3,690.2 MiB sampled peak RSS. No native
+implementation, native fixture or dependency pin changed.
+
+Next derive Free's guard for actual fresh-argument histories using allocation
+provenance, then extend the common mixed-admission/control/resource invariant
+to arbitrary captured owners and enclosing zero-demand readers. The reader
+boundary's source/control/frame and owner-slot/size contexts still require
+that global construction. Arbitrary evidence and result interpretation,
+all-universe consistency, all specified computation preservation, complete
+ownership/borrow soundness and native implementation refinement remain open.
