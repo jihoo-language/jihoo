@@ -755,3 +755,38 @@ conflicts before Free. All-universe consistency, all specified computation
 preservation, full ownership/borrow soundness and native implementation
 refinement remain unfinished. The whole-kernel goal is NOT complete; keep the
 existing automation active.
+
+
+## 2026-11-15: source-derived read through the actual reader reference
+
+`NativeBindingMachineReferenceIndex` connects the actual reference argument
+of an explicit reader to its input full Loan64 Lend judgment. Generic and
+specialized sources retain their authentic checked read. Source bound evidence
+and the captured owner-size interpretation derive the literal index width,
+strict bound and exact physical Buffer length; the reader annotation agrees
+with that actual sized reference. Six constructed transitions activate the
+reader, read its retained reference slot and perform Index. The I64 result
+has the source-derived reader result type; the post-state retains the complete
+reader inventory, value/owner-size contexts and named source loan slots.
+
+No allocation snapshot, selected numeric value, successful read, arbitrary
+callback judgment or returned-value typing is supplied. The owner-slot and
+source/control/frame associations remain explicit local inputs. This closes
+the earlier explicit bounds-failure branch for this reference-reader schema;
+it does not interpret arbitrary evidence or establish all closed admissions.
+`HasType.named_index_owner` is strengthened to all modes so that this uses the
+actual checked ghost read rather than assuming an original false-mode reader
+callback.
+
+The aggregate passed 905 Lake jobs, 8,919 unique public axiom audits and all
+generated-fixture comparisons (`out/logs/reference-index-full.log`), with only
+the three allowed logical axioms and 3,681.4 MiB sampled peak tree RSS. The
+existing rootless Nix 2.20.6 proof shell, Lean 4.34.1/Lake 5.0.0-src and shared
+resource guard were reused; no native implementation or fixture changed.
+
+Next close that reader and construct both actual continuation bindings at
+canonical scalar/owner meanings while retaining original provenance, source
+resource projection and remaining outer readers. Then derive the common
+admission/control/value/size/loan/resource invariant and general evidence/
+effectful result semantics. Whole-kernel consistency, all specified computation
+preservation, full ownership/borrow soundness and native refinement remain open.

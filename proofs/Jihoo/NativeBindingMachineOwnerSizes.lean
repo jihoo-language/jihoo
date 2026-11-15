@@ -29,6 +29,11 @@ theorem OwnerSize.allocate
   exact ⟨by simp only [SizedBufferHeap.allocate]; omega,
     count,SizedBufferHeap.allocation_length,converted⟩
 
+theorem OwnerSize.realization (size : OwnerSize env heap object type) :
+    LoanTyping.Conversion.Conv env (.buffer (.natural (heap.length object))) type := by
+  obtain ⟨bound,count,length,converted⟩ := size
+  simpa only [length] using converted
+
 theorem OwnerSize.buffer_length (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (size : OwnerSize env heap object (.buffer count)) :
     LoanTyping.Conversion.Conv env (.natural (heap.length object)) count := by

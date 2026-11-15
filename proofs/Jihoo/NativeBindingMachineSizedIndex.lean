@@ -8,9 +8,9 @@ namespace Jihoo.NativeKernel.Environment.LoanTyping
 /-- A Borrow cannot masquerade as an Array reference. Full Index inversion
 retains the actual owner's Buffer typing and the original bound evidence. -/
 theorem HasType.named_index_owner (wf : UnifiedProgram.EnvWellFormed env)
-    (typed : HasType env loans ctx false (.index (.borrow (.var owner)) offset boundEvidence) type) :
+    (typed : HasType env loans ctx mode (.index (.borrow (.var owner)) offset boundEvidence) type) :
     ∃ size, HasType env loans ctx true (.var owner) (.buffer size) ∧
-      HasType env loans ctx false offset .u64 ∧ HasType env loans ctx true boundEvidence (.lt offset size) := by
+      HasType env loans ctx mode offset .u64 ∧ HasType env loans ctx true boundEvidence (.lt offset size) := by
   obtain ⟨size,reference,indexTyped,evidence⟩ := typed.index_inputs
   rcases reference with reference | reference
   · obtain ⟨ownerType,ownerTyped,converted⟩ := reference.principalView

@@ -1276,3 +1276,14 @@ live reference with the actual dependent Buffer length at its exact source
 type. The common admission/control/value/size/loan/resource invariant, arbitrary
 evidence and source-result semantics, complete ownership safety and native
 implementation refinement remain unfinished.
+
+
+`NativeBindingMachineReferenceIndex` constructs six actual activation/read
+transitions through a reader's retained reference argument. The authentic full
+Lend read, bound evidence and captured owner sizes determine the actual physical
+length and strict bound; the input annotation describes the actual live sized
+reference. Reader inventory, canonical value contexts and old owner sizes are
+retained. No allocation snapshot, arbitrary callback or success/output-typing
+certificate is supplied. Source/control/frame and owner-slot association remain
+local preconditions; arbitrary evidence and the whole fundamental theorem are
+still open.
