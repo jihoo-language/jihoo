@@ -110,7 +110,8 @@ Lean's runtime reservations; the tree RSS threshold is 6 GiB. The fallback is
 not a cgroup hard cap.
 See the [executable kernel scope](proofs/KERNEL_CHECKER_SCOPE.md) and
 [native kernel scope](proofs/NATIVE_KERNEL_SCOPE.md) for the guarantees and
-remaining boundaries.
+remaining boundaries. A [rootless verification report](proofs/ROOTLESS_KERNEL_VERIFICATION.md)
+records the checked revision, commands and results.
 
 On Linux without root or a host `/nix`, a working
 [nix-portable](https://github.com/DavHau/nix-portable) installation can run the
