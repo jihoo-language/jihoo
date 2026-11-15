@@ -820,6 +820,20 @@ retained native exporter bytes with that proved function. This is global type
 checking, not a runtime quantity or heap-safety theorem; native parser/exporter
 refinement is not claimed.
 
+`NativeLoanMixedProgram` and `NativeLoanMixedAdmission` now check complete
+mixed declaration streams with the Loan64 checker and its actual recursive
+resource projector. The same history records checked family signatures and
+each global's original expansion, scope/shape checks, sort-derived body mode,
+typing and runtime quantity evidence in the real earlier prefix. Exact-byte
+acceptance constructs that history and a transparent well-formed environment.
+Kernel examples distinguish a well-typed double consumption from resource-safe
+admission and reject incorrect family placement, unscoped source annotations
+and exhausted resource fuel. The new native suite checks 61 source fixtures
+and 48 exact-byte cases, including families interleaved with dependent Lend
+functions. This closes the earlier separate mixed-family quantity interface;
+transporting family-iota preservation to this Loan64 history and a general
+typing-to-runtime ownership theorem are still required.
+
 `NativeCallResourceContracts` extracts exact original application typing,
 actual runtime argument code typing/resource safety, and the opened source
 lambda's body contract from the same successful resource check.

@@ -311,6 +311,7 @@
                 ./proofs/CheckNativeUnifiedProgram.lean
                 ./proofs/CheckNativeLoanTyping.lean
                 ./proofs/CheckNativeLoanProgram.lean
+                ./proofs/CheckNativeLoanMixedProgram.lean
                 ./proofs/CheckNativeLoanQuantity.lean
                 ./proofs/CheckNativeACUNormalizer.lean
                 ./proofs/CheckNativeDelta.lean
@@ -371,6 +372,7 @@
               Jihoo.NativeUnifiedAdmission \
               Jihoo.NativeLoanTypingInput \
               Jihoo.NativeLoanGlobalInput \
+              Jihoo.NativeLoanMixedAdmission \
               Jihoo.NativeLoanQuantityInput \
               Jihoo.NativeACUBoundedNormalizer \
               Jihoo.NativeEnvironmentDeltaBounded \
@@ -406,6 +408,7 @@
             python3 tests/core_native_context_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_loan_typing_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_loan_program_correspondence.py --compiler ${jihoo}/bin/jihoo
+            python3 tests/core_native_loan_mixed_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_loan_quantity_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_producer_gates.py
             python3 tests/core_transform_certificates.py --compiler ${jihoo}/bin/jihoo
