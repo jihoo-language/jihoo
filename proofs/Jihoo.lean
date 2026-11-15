@@ -1077,3 +1077,5 @@ import Jihoo.NativeBindingMachineReturnedBufferCompletionExamples
 import Jihoo.NativeBindingMachineScalarClosing
 import Jihoo.NativeBindingMachineComputedAllocation
 import Jihoo.NativeBindingMachineComputedAllocationExamples
+import Jihoo.NativeBindingMachineValueKinds
+import Jihoo.NativeBindingMachineCapturedAllocation

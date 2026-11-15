@@ -561,3 +561,42 @@ output realization assumptions. Integrate source resource authority and exclude
 old-owner loan conflicts. General universe consistency, all specified
 computation preservation, full ownership/borrow soundness and native
 implementation refinement remain unfinished.
+
+
+## 2026-11-15: type-directed captured values and general slot allocation
+
+`NativeBindingMachineValueKinds` adds a representation-head interpretation
+and a value-context invariant stronger than the one-way `ScalarSlots`.
+Raw-Lend rigid-head disjointness proves that U64/I64 types select actual
+natural/integer representations. The authentic mixed declaration constructs
+its initial context, and arbitrary full-source U64/I64 function entry preserves
+it at actual argument values while retaining the original provenance map.
+Reachability supplies argument widths and captured-slot readiness. A source-
+typed variable now constructs its stored numeric value, canonical meaning,
+width, typing and actual next transition; no selected value or output typing
+certificate is an input.
+
+`NativeBindingMachineCapturedAllocation` uses that context and the full Loan64
+allocation derivation at any reachable allocation boundary. Size and fill may
+occupy arbitrary captured indices. Their representations, source-derived widths
+and canonical meanings are outputs. Five constructed actual transitions either
+return a live Buffer at the SAME closed source allocation result type, with
+its actual size/fill, or report byte-size overflow. This generalizes the prior
+fixed first/second-binder allocation schemas without assuming stored numbers,
+allocation success or post-result typing.
+
+The aggregate passed 898 Lake jobs, 8,890 unique public axiom audits and all
+generated-fixture comparisons (`out/logs/value-context-allocation-full-1.log`);
+sampled peak tree RSS was 3,670.8 MiB. Only `propext`, `Classical.choice` and
+`Quot.sound` occur. Rootless Nix 2.20.6 and the existing proof shell were reused.
+No native implementation or native fixture changed.
+
+The value-head relation is intentionally partial semantic information: closure
+bodies, heap liveness/exclusive authority and reference leases are NOT proved
+by it. Its input-context premise must still be established across all control
+frames, closure creation and reader/resource transitions. Next construct erased
+comparison evidence and branch value contexts from actual scalar comparison,
+without typing arbitrary effectful origin metadata as canonical evidence.
+General effectful annotation semantics, universe consistency, all specified
+computation preservation, whole ownership/borrow soundness and native
+implementation refinement remain unfinished.

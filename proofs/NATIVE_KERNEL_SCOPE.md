@@ -1214,3 +1214,15 @@ The single-count closed instance takes twenty-one steps. These examples have
 actual Loan64/resource admission, but neither equate the effectful source
 result annotation with a numeral by raw conversion nor prove arbitrary
 admission/control/context preservation or native implementation correctness.
+
+
+`NativeBindingMachineValueKinds` now constructs numeric representation-head
+agreement at typed captured lookups, using actual-prefix slot readiness and
+source variable inversion. Mixed entry and actual U64/I64 entry construct and
+preserve this stronger context. `NativeBindingMachineCapturedAllocation`
+then reads arbitrary captured size/fill indices and constructs five actual
+allocation steps at the SAME value-closed source result type, or explicit
+byte overflow. No stored-number, successful-run or output-typing certificate
+is supplied. Representation heads alone do not establish closure bodies,
+heap liveness, exclusive authority or reference leases; general control-stack
+context construction and original effectful annotation semantics remain open.
