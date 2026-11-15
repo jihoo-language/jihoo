@@ -1260,3 +1260,55 @@ budgets through those alias maps and arbitrary saved closures/frames. General
 else/tail execution, complete ownership/borrow soundness, all-universe
 consistency, full specified preservation and native implementation refinement
 remain unfinished. The whole-kernel goal is NOT complete; keep the automation.
+
+
+## 2026-11-15: canonical retained aliases and original continuation CODE authority
+
+The cloud machine was replaced during this run, losing the checkout, Nix store
+and build cache. The pushed `625af6f` branch was cloned from GitHub and the
+rootless-Nix skill installer restored `/workspace/.local/bin/nix-rootless`.
+Nix 2.20.6 / smoke evaluation 42 and the actual pinned Lean 4.34.1 / Lake
+5.0.0-src proof shell were verified. The original flake lock was retained.
+
+`NativeBindingMachineCanonicalView` connects actual retained code to canonical
+source code with a possibly non-injective index map. It preserves exact origins
+and stored values, composes earlier alias layers, lifts through binders, and
+constructs both owner aliases' `openOwner` view from the actual bindings. This
+is source-variable identification, not conversion of effectful provenance to a
+runtime value. Canonical source authority derives the physical Free guard of
+an actual alias without separate source loans for all duplicated runtime slots.
+
+`NativeBindingMachineCanonicalHandoff` constructs the canonical continuation's
+CODE judgment at the ORIGINAL input result type, value/size/loan contexts and
+exact recursive resource budget from one original Lend query. Five actual
+transitions close and install the two runtime bindings. The source view retains
+one scalar-result binder, and its coverage/loan budget is constructed from the
+old source context. No current loan permission for every unused runtime alias,
+rechecked canonical body or caller-provided continuation/output typing is used.
+The original checked restore supplies local CODE typing; actual scalar range
+comes from the reachable prefix, and type uniqueness retains the input type.
+
+`NativeLoanScalarFreeAliases` derives which returned-owner alias is consumed
+from the original restored one-use quantity contract. It removes the previously
+supplied alias-selection premise for this scalar-return shape.
+`NativeBindingMachineCanonicalRelease` uses the constructed canonical authority
+at the real Free boundary. Nine transitions close/bind/Free/return at the original
+runtime result type, preserving valid heap, outer inventory, canonical source
+tail CODE typing, alias view and all old zero budgets plus zero residual owner
+demand. Neither an alias choice, Free-success/no-reader certificate nor output
+typing is supplied. Physical liveness comes from the actual closing reader.
+
+The new target build passed 309 Lake jobs with warnings as errors
+(`out/logs/canonical-release-local-5.log`, 1,103.1 MiB sampled peak RSS).
+Eleven public proof audits and the exact 8,996 aggregate count are registered.
+The full aggregate is rebuilding the lost cache and remains pending at this
+checkpoint; record its actual result before the final report. No native
+implementation, native fixture, dependency lock or store pin changed.
+
+This removes the duplicated-slot coverage requirement at the canonical
+continuation boundary; it is not an all-control fundamental theorem. General
+preservation of canonical views and resource authority across arbitrary saved
+closures, computed calls, reader entry and dependent computation remains open,
+as do general else/tail execution, complete ownership/borrow soundness,
+all-universe consistency, full specified preservation and native implementation
+refinement. Keep the automation active; the whole-kernel goal is NOT complete.

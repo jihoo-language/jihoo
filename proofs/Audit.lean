@@ -8985,3 +8985,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_budgeted_scalar_release
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_raw_budgeted_literal_reader_release
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_mixed_loan_authority
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.identity
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.child
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.compose
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.closed
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.enter
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_canonical_view
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_free_guard
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_scalar_handoff
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_scalar_free_alias
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_scalar_release

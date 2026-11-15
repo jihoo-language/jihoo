@@ -1107,3 +1107,7 @@ import Jihoo.NativeBindingMachineLoanCoverage
 import Jihoo.NativeBindingMachineBudgetedRelease
 import Jihoo.NativeBindingMachineBudgetedReaders
 import Jihoo.NativeBindingMachineLoanAuthorityEntry
+import Jihoo.NativeBindingMachineCanonicalView
+import Jihoo.NativeBindingMachineCanonicalHandoff
+import Jihoo.NativeLoanScalarFreeAliases
+import Jihoo.NativeBindingMachineCanonicalRelease

@@ -1418,3 +1418,14 @@ authority through every control/closure and alias-normalized reborrow remains
 open; the reverse association over all unused owner aliases cannot simply be
 assumed invariant. These conditional operation proofs do not complete general
 progress, universe consistency, full preservation or native refinement.
+
+
+Canonical index views now identify actual retained owner aliases with the
+original source slots, preserving exact origins and values without an injective
+map. The original Lend check constructs canonical continuation CODE typing and
+resource/loan authority at the original result type after five actual close/
+binding steps. Its one-use contract derives the permitted Free alias. The
+nine-step release then derives runtime return typing and canonical tail budget
+without separate source loans for every duplicated runtime slot or a supplied
+alias/output/success premise. General view/authority preservation through
+arbitrary closures/calls/readers and full native refinement remain open.
