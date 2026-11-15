@@ -932,12 +932,31 @@ native annotation and universe candidate is still open.
 `NativeBindingMachine` retains original terms/contexts, captured origin
 substitutions and runtime slots in real closures. It evaluates callees and
 runtime arguments once, skips erased arguments, and executes scalar values,
-conditions, Strict, Alloc and Free. Its heap module connects every observed
+conditions, Strict, Alloc and Free. It now executes Lend reader/continuation
+closures, named code Borrow and borrowed-buffer Index with explicit lease
+identities. The owner is evaluated once; the reader receives a reference and
+the continuation receives its actual result and the original owner after the
+lease closes. Nested readers retain the outer reader's authority. Its heap
+module connects every observed
 prefix, including fault/fuel results, to the existing sized heap steps and
 validity invariant without a successful-run premise. Entry typing preserves
 the original CODE body and ghost origin; ready variable lookup excludes missing
 and erased faults. Execution examples include exact single allocation/release,
 computed closures, erased ghost-borrow arguments and an explicit double-free
-fault with a valid prefix. General runtime-value typing, exclusion of invalid
-variable/value/ownership faults for admitted programs, no-leak, Lend/read/write execution and native evaluator
-refinement remain open.
+fault with a valid prefix. New Loan64/resource-checked examples cover explicit
+named-owner reads, two simultaneously active readers and a fresh owned reader
+result whose identity is distinct from the original owner. Their actual event
+streams include reads, closes and exactly the expected releases. An untyped
+escaped reference faults when read after its lease closes.
+
+`NativeBindingMachineLoans.typed_borrow_executes` derives a live lease and an
+actual successful Borrow action from the full Loan64 permission derivation,
+owner-slot alignment and real reader-frame/heap invariants. These invariants
+do not assume Borrow guard success or output typing. Local begin/body/finish
+lemmas preserve reader correspondence using fresh or distinct lease tokens;
+the close guard follows from the finished reader frame. Closed leases cannot
+be read, and continuation frames grant no reader authority. General runtime
+value typing and preservation of slot/frame alignment across all typed
+transitions remain open. So do exclusion of all invalid value/ownership/index
+faults for admitted programs, general no-leak, Store and the remaining runtime
+constructors, and native evaluator refinement.

@@ -1052,3 +1052,5 @@ import Jihoo.NativeLoanMixedProgramExamples
 import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanMixedPreservation
 import Jihoo.NativeLoanMixedPreservationExamples
+import Jihoo.NativeBindingMachineLoans
+import Jihoo.NativeBindingMachineLoanExamples

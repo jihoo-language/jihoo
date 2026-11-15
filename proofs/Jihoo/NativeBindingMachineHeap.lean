@@ -44,6 +44,32 @@ theorem execute_heap_steps (valid : SizedBufferHeap.Valid heap) (next : Action) 
           exact .cons (.free live (freeGuard_unborrowed valid guarded)) .nil
         · exact .nil
       · exact .nil
+  | lend object name origin reader continuation stack =>
+      simp only [execute]
+      split
+      · rename_i live
+        exact .cons (.beginLease live) .nil
+      · exact .nil
+  | close token object result origin resultOrigin continuation stack =>
+      simp only [execute]
+      split
+      · rename_i present
+        exact .cons (.close present) .nil
+      · exact .nil
+  | borrow key object stack =>
+      simp only [execute]
+      split
+      · split <;> exact .nil
+      · exact .nil
+  | read token index stack =>
+      simp only [execute]
+      split
+      · rename_i object present
+        split
+        · rename_i bound
+          exact .cons (.read present bound) .nil
+        · exact .nil
+      · exact .nil
 
 theorem step_heap_steps (valid : SizedBufferHeap.Valid state.heap)
     (stepped : step state = some (next,event)) :

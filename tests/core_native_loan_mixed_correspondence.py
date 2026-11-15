@@ -16,6 +16,17 @@ CASES = dict(MIXED_CASES)
 CASES.update({f'loan-{name}': (source, accepted, accepted)
               for name, (source, accepted) in LOAN_CASES.items()})
 CASES.update({
+    'nested-active-readers': (
+        f'(def value I64 (app (lam b {BUFFER} (lend b '
+        f'(lam r (Ref {BUFFER}) (lend (alloc 2 (int 7)) '
+        f'(lam s (Ref {BUFFER}) (add (index s 0 (decide-lt 0 2)) '
+        f'(index (borrow b) 0 (decide-lt 0 2)))) {CONTINUATION})) '
+        f'{CONTINUATION})) (alloc 2 (int 0))))', True, True),
+    'fresh-reader-two-owned-resources': (
+        f'(def value U64 (app (lam b {BUFFER} (lend b '
+        f'(lam r (Ref {BUFFER}) (alloc 1 (index r 0 (decide-lt 0 2)))) '
+        f'(lam a (Buffer 1) (lam x {BUFFER} (free a (free x 7)))))) '
+        '(alloc 2 (int 0))))', True, True),
     'loan-explicit-owner-borrow': (
         '(data Bit (zero Bit)) '
         f'(def read (pi b {BUFFER} I64) (lam b {BUFFER} '

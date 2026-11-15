@@ -48,8 +48,24 @@ The remaining core obligations include:
 - The concrete preservation example contains an active named-owner CODE Borrow
   which the earlier program checker rejects. The new checker accepts its mixed
   history, and a real family contraction preserves its original result type.
-- The aggregate proof check currently audits 8,625 declarations. The mixed
-  native regression suite passes 62 source fixtures and 49 exact-byte checks.
+- `NativeBindingMachine` now executes actual Lend reader/continuation closures,
+  named Borrow and borrowed-buffer Index, with distinct lease identities and
+  closing before continuation entry. Its general heap-prefix theorem covers
+  the new actions, including faults and exhausted fuel. Existing call/erasure
+  regressions remain intact.
+- `NativeBindingMachineLoans.typed_borrow_executes` uses the full Loan64 source
+  permission and independent owner-slot/reader-frame invariants to construct
+  the actual Borrow result and derive that its owner is live. Local reader
+  begin/body/finish lemmas preserve lease correspondence and derive the close
+  guard. This is not yet an invariant-preservation theorem for every typed
+  runtime transition.
+- Resource-checked execution examples now include two simultaneously active
+  readers (the inner reader borrows the outer named owner), and a fresh owned
+  reader result followed by separate release of both resources. They retain
+  actual values and exact event streams. Escaping references are rejected by
+  the type checker and untyped post-close reads fault.
+- The aggregate proof check currently audits 8,648 declarations. The mixed
+  native regression suite passes 64 source fixtures and 51 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
 ## Next semantic work
@@ -57,14 +73,20 @@ The remaining core obligations include:
 Prioritize the common typing-to-runtime gap over adding another independent
 byte adapter or finite fixture. The existing binding-retaining runtime is in
 `NativeBindingMachine`, `NativeBindingMachineHeap` and
-`NativeBindingMachineTyping`. It retains original source bodies and captured
-ghost origin stores, but currently executes only a fragment (calls, scalars,
-branches, Strict, Alloc/Free) and reports unsupported syntax for Lend/reads and
-other constructors. Its source-typing bridge uses the earlier judgment.
+`NativeBindingMachineTyping` and `NativeBindingMachineLoans`. It retains
+original source bodies and captured ghost origin stores. Lend/Borrow/Index
+execution is present; do not reimplement those operators as a new fragment.
+The earlier source-typing bridge still uses the sixty-rule judgment, while the
+new Borrow execution theorem uses Loan64 directly.
 
-Connect that runtime to the complete Loan64/resource mixed history, add actual
-Lend reader/continuation and read semantics with explicit lease lifetimes, and
-prove that source permission and runtime-state invariants supply access guards.
+Next derive and preserve `LoanSlots` and `ReadersLive` (with distinct active
+tokens) across all reachable typed machine states, rather than supplying them
+independently at each Borrow. Connect captured source code/origin stores and
+actual runtime values to the complete Loan64/resource mixed history. The
+local reader transition lemmas are available, but a common runtime-value,
+context and control-stack interpretation and its fundamental theorem are not.
+Derive Index bounds from interpreted typed evidence and exact heap lengths;
+the existing runtime bound check alone does not discharge that obligation.
 Retain computed callees, erased arguments and exact dependent result origins;
 do not replace binding execution with generally invalid CODE beta substitution.
 The current heap is uniform-fill/read-only `SizedBufferHeap`; Store and general
