@@ -8866,3 +8866,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.enter_natural_closing
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_mixed_closing_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_natural_closure_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.computed_allocation_entry_typing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_computed_allocation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.enter_integer_closing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.two_scalar_second_entry_typing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_two_scalar_allocation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ComputedAllocationExamples.program_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ComputedAllocationExamples.program_allocates_by_value
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ComputedAllocationExamples.curried_program_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ComputedAllocationExamples.curried_program_allocates_by_value

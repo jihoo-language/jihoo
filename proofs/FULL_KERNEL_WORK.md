@@ -511,3 +511,53 @@ theorem or an interpretation of every captured heap/function value.
 The aggregate passed 894 Lake jobs, 8,866 unique public axiom audits and the
 generated-fixture comparisons. Only the three allowed logical axioms occurred.
 Native compiler/runtime behavior and fixtures were not changed.
+
+The computed-allocation unit uses an actual natural closure-call boundary and
+a dependent `U64 -> Buffer` signature. Its original allocation body reads the
+retained argument variable; no source count literal or caller-provided slot
+lookup is supplied. Source typing closes the body at the actual numeric value
+and derives fill width. Six actual transitions bind that value and allocate a
+live Buffer whose heap length matches the semantic instance of the signature.
+The original effectful argument origin remains in machine metadata. Global
+owner provenance also excludes the new object from all earlier recursive
+captures, including dead aliases. Byte-size overflow is an explicit six-step
+fault. The local input function/context typing is still a premise: general
+admission/control/closure/resource preservation and the interpretation of
+arbitrary source result annotations remain unfinished.
+
+The same value-closing construction now supports arbitrary I64 function
+bodies as well. A first U64 call reconstructs the actual captured second
+closure's dependent input type; a later computed I64 argument supplies the
+fill. Six actual transitions read both retained slots and construct the
+Buffer at the observed count and signed fill. Both original argument origins
+are retained, with no source-origin-to-literal conversion premise.
+
+Two closed actual Loan64/resource admissions instantiate these general
+theorems. Free/addition computes the size in a twenty-one-step program. A
+curried call captures that size, later computes its signed fill with another
+Free/arithmetic effect, and returns an interpreted Buffer of length two and
+signed fill -5 (stored as `encodeInteger(-5)`) after thirty-seven steps. Entry prefixes are checked; allocation
+and output interpretation follow from the generic six-step theorem, not an
+output/success certificate. Admission's source type retains the original
+effectful count expression; the Buffer interpretation uses the source Pi
+signature's instance at the actual value. These are distinct statements, not
+a claimed raw conversion between their annotations.
+
+The final aggregate passed 896 Lake jobs, 8,875 unique public axiom audits and
+all generated-fixture comparisons. Dependencies use only `propext`,
+`Classical.choice` and `Quot.sound`; sampled peak tree RSS was 3,664.8 MiB.
+The existing `/workspace/.local/bin/nix-rootless` was reused (Nix 2.20.6,
+evaluation smoke check 42, actual project `.#proofs` Lean 4.34.1/Lake 5.0.0-src).
+No dependency lock, native compiler/runtime behavior or native fixture changed.
+
+Next preserve a complete typed control/continuation stack and captured value
+interpretation from mixed admission across every call and closure creation.
+`ScalarSlots` only maps observed direct numeric slots to their canonical
+meanings; it does not classify arbitrary nonnumeric values or prove all
+type-directed captured lookups. Relate general effectful source annotations
+and computed branch/evidence operands to their actual-value instances with a
+genuine expression/heap interpretation, not conversion-to-numeral or caller
+output realization assumptions. Integrate source resource authority and exclude
+old-owner loan conflicts. General universe consistency, all specified
+computation preservation, full ownership/borrow soundness and native
+implementation refinement remain unfinished.

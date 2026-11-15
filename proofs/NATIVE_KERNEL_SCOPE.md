@@ -1192,3 +1192,25 @@ initial empty closing and resource evidence. Runtime bounds are derived, not
 an argument/output typing input; effectful origin-to-numeral conversion is never
 assumed. Input closure/capture invariants still need the common all-control
 fundamental theorem, including general value kinds and heap/resource authority.
+
+`NativeBindingMachineComputedAllocation` derives the value-closed dependent
+body type and fill width, then constructs six actual transitions from a
+computed-natural call boundary through retained-variable allocation. The
+resulting live Buffer has the heap length of the source signature instantiated
+at the actual argument. No source numeral, returned slot lookup, guard or output
+typing certificate is an input. Byte overflow remains an explicit fault, and
+the fresh object is absent from every earlier recursive capture. This is a
+semantic signature instance, not an assertion that an arbitrary effectful
+origin converts to a numeral. General function/control/context association and
+the full source-result/resource fundamental theorem remain open.
+
+Integer closing and captured second-call typing also reconstruct actual I64
+fill binding while preserving the earlier U64 size. Both argument source
+origins remain in the real closure environments. The generic six-step
+two-scalar allocation theorem is instantiated by a closed curried program:
+size and fill are computed separately with Free/arithmetic effects, and the
+typed Buffer interpretation/result payload follow after thirty-seven steps.
+The single-count closed instance takes twenty-one steps. These examples have
+actual Loan64/resource admission, but neither equate the effectful source
+result annotation with a numeral by raw conversion nor prove arbitrary
+admission/control/context preservation or native implementation correctness.

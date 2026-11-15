@@ -134,4 +134,25 @@ theorem reachable_natural_closure_entry (term : Term) (fuel : Nat)
     scalars.enter_natural _ _ _ _,slots.enter entered _ _ _ _ _,rfl,rfl,?_⟩
   simp only [step,action,returned,stackShape,returnAction,applyValue,execute,Option.map_some]
 
+theorem enter_integer_closing
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanClosingTyped env loans false
+      ⟨.lam false domain body,context,origins,captured⟩ meanings (.pi false .i64 result))
+    (bounded : ValueReduction.signed64 value) (argumentOrigin : Term) :
+    LoanClosingTyped env loans false
+      (enter false domain body context origins captured argumentOrigin (some (.integer value)))
+      (consValues (.integer value) meanings) (result.subst (single (.integer value))) := by
+  obtain ⟨closing,localType,source,actualType⟩ := typed
+  obtain ⟨sort,bodyType,binder,bodyTyped,sourceType⟩ := source.lamView
+  have converted := (sourceType.substitution meanings history.wellFormed.closed).trans actualType
+  have convertedPi : LoanTyping.Conversion.Conv env
+      (.pi false (domain.subst meanings) (bodyType.subst (liftSubOne meanings))) (.pi false .i64 result) := by
+    simpa only [Term.subst,substArgs,Op.binders,liftSub] using converted
+  obtain ⟨sameFlag,domainConverted,bodyConverted⟩ := convertedPi.pi_injective history.wellFormed.admissible
+  have argumentTyped : LoanTyping.HasType env [] [] true (.integer value) (domain.subst meanings) :=
+    (LoanTyping.HasType.integer bounded.1 bounded.2).convert domainConverted.symm
+  refine ⟨closing.consValues argumentTyped,bodyType,bodyTyped,?_⟩
+  simpa only [subst_lift_consValues] using
+    bodyConverted.substitution (single (.integer value)) history.wellFormed.closed
+
 end Jihoo.NativeKernel.Environment.BindingMachine
