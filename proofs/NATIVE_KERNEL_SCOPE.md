@@ -676,8 +676,20 @@ include arbitrary nested family applications such as `G(H(A))` and arrows.
 Closed family/universe lambdas construct concrete iterated dependent Pi meanings
 and formed native principal types; empty families exclude abstract inhabitants.
 The source example `lambda G, lambda A, lambda x:G A, x` works at all native
-input levels. Value-indexed families, fully interleaved dependent contexts and
-arbitrary native type-code computations/constructors remain open.
+input levels. Fully interleaved dependent contexts and arbitrary native
+type-code computations/constructors remain open.
+
+`NativeDependentFamilyModel`, `Contexts`, `Source`, `Closure` and `Examples`
+add genuine value dependence: finite family declarations `B : A -> Type(j)`
+with any monotype A over mixed universe parameters, including function carriers,
+and finite observations `x : A`. Fibers `B x` occur in program domains/results,
+and observations are also usable as ordinary values. Actual native typing
+derives annotation validity and family/observation domain equality; source
+recognition is syntax-only. Concrete dependent Pi meanings close finite
+universe/family/observation blocks, with a closed dependent identity at every
+native pair of input levels. Arbitrary interleaving, proposition-valued families,
+erased proof binders, unrestricted closing codes and all native constructors
+remain outside this pure contextual fundamental theorem.
 
 The `NativeAuthenticKindArguments`, `NativeTraceInterpretation` and
 `NativeClosing` collection constructs dependent closing interpretations from
@@ -704,3 +716,31 @@ syntactic code rechecking is stronger than the current validator's guarantee:
 an admitted closed application can have a rejected raw beta substitution.
 The actual native Core accepts both forms and retains the effectful argument
 as a runtime binding, so this is not a native soundness counterexample.
+
+`NativeKindValueEvaluation` transports authentic kind realization along actual
+delta/ACU forward paths and the separate Strict/Free/zero-iteration pure value
+roots, retaining the original kind type and avoiding CODE rechecks.
+`NativeInferredKindCoverageBoundary` records the actual low-fuel raw-environment
+kind-spine limitation separately from fully source-expanded program coverage.
+`NativeExactClosing` fixes the final substitution to `pushValues` of the actual
+argument list and proves the exact argument/slot correspondence. Evaluated
+closing and resource-mode transport along actual Forward use typed ghost
+preservation and pointwise substitution conversion, with no final interpretation
+or type-coherence flag supplied. Strict/Free roots outside the installed Conv
+still require heterogeneous model coherence for general dependent annotations;
+heap execution and the full operational fundamental theorem remain open.
+
+`NativeLoanTyping` is a separate loan-indexed extension of the complete shared
+typing rules, with stacks as judgment indices. A dependent code reader enters
+the named owner's saved-depth frame; its continuation returns to the outer stack.
+Generic and dependent ghost Lend rules retain their actual body/owner/result
+premises. `NativeLoanEmbedding` embeds all five existing mutual judgments at
+any stack. `NativeLoanGhostPromotion` proves ghost promotion to any target stack.
+`NativeLoanPermissions` derives active named-owner permission from every code
+Borrow derivation, including result-type conversions, and excludes code Borrow
+without a reader. `NativeLoanExamples` constructs an entire closed allocating
+application, borrowed index reader and owner-returning continuation, and proves
+permission revocation on reader exit. The default HasType/checker/admission
+alias is unchanged. Substitution/type uniqueness for the extended judgment,
+the executable loan-aware checker, internal quantity accounting and the native
+heap/loan fundamental theorem remain open.

@@ -217,6 +217,9 @@ Source reconstruction also handles any finite number of independent mixed-level
 universe parameters and nested first-order type-level beta computations in
 binder annotations. Type-to-type family variables at arbitrary native levels
 also have source-derived interpretations, including nested family applications.
+Value-dependent families `B : A -> Type(j)` also have source-derived meanings
+over arbitrary supported monotypes, with observations `x : A` used as indices
+and ordinary values. The closed dependent identity is checked at all native levels.
 Separate family iota results preserve the exact original
 type for parameterized Case, general indexed recursive Prop/data Elim and
 arbitrary recursive borrowed View. Their integration into conversion remains
@@ -229,6 +232,10 @@ an owner retains its alias identity and that the existing resource gate rejects
 duplicate consumption. Integrated Lend typing and heap lifetime safety remain open.
 The specialized ghost-body checks also construct a typed genuine forward
 contractum of the pure Lend expansion, with exact result-binder scope removal.
+A separate loan-indexed extension covers all existing typing rules plus active
+code borrowing and Lend. Existing derivations embed into it, ghost promotion
+forgets the loan stack, and code borrows require active named owners. Its default
+checker integration, full metatheory and heap/resource execution proof remain open.
 [Checked typing artifacts](docs/internals/typing-certificates.md) independently
 validate closed typing and formation derivations bound to complete exported graphs.
 A [symbolic dependent Buffer judgment](docs/internals/symbolic-core-typing.md)

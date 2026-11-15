@@ -853,3 +853,37 @@ import Jihoo.NativeInferredKindArguments
 import Jihoo.NativeInferredKindExamples
 
 import Jihoo.NativeCodeBetaBoundary
+
+import Jihoo.NativeDependentFamilyModel
+
+import Jihoo.NativeDependentFamilyContexts
+
+import Jihoo.NativeDependentFamilySource
+
+import Jihoo.NativeDependentFamilyClosure
+
+import Jihoo.NativeDependentFamilyExamples
+
+import Jihoo.NativeKindValueEvaluation
+
+import Jihoo.NativeKindValueEvaluationExamples
+
+import Jihoo.NativeInferredKindCoverageBoundary
+
+import Jihoo.NativeEvaluatedClosing
+
+import Jihoo.NativeEvaluatedResourceModes
+
+import Jihoo.NativeExactClosing
+
+import Jihoo.NativeExactClosingExamples
+
+import Jihoo.NativeLoanEmbedding
+
+import Jihoo.NativeLoanExamples
+
+import Jihoo.NativeLoanGhostPromotion
+
+import Jihoo.NativeLoanPermissions
+
+import Jihoo.NativeLoanTyping
