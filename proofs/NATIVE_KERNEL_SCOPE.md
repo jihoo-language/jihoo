@@ -960,3 +960,22 @@ value typing and preservation of slot/frame alignment across all typed
 transitions remain open. So do exclusion of all invalid value/ownership/index
 faults for admitted programs, general no-leak, Store and the remaining runtime
 constructors, and native evaluator refinement.
+
+
+`NativeBindingMachineReaderState` now proves an exact inventory of heap leases
+and concrete reader frames, with distinct tokens, across every actual finite
+machine prefix from the empty initial heap. The proof analyzes all evaluation,
+return and heap-action cases, including fault/fuel results. Reader return derives
+the close guard, closing preserves remaining readers, and an empty stack has no
+outstanding leases. This discharges the global reader-frame/lease invariant;
+it is not an allocated-object no-leak or whole-typing progress theorem.
+Reachable code Borrow derives its actual step from Loan64 typing and `LoanSlots`
+without externally supplied heap validity or `ReadersLive`.
+
+`NativeBindingMachineLoanTyping` supplies the Loan64 counterpart of the earlier
+ordinary-call source bridge using the actual resource-checked mixed history.
+It retains the exact CODE body, captured origin store, dependent result origin,
+and ordinary binder slot permissions, with separate erased argument handling.
+Named reader entry installs the corresponding new permission. A common typed
+control-stack/value invariant, specialized Lend callback entry, all source-derived
+heap/Index preconditions and native implementation refinement remain open.

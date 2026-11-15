@@ -1054,3 +1054,5 @@ import Jihoo.NativeLoanMixedPreservation
 import Jihoo.NativeLoanMixedPreservationExamples
 import Jihoo.NativeBindingMachineLoans
 import Jihoo.NativeBindingMachineLoanExamples
+import Jihoo.NativeBindingMachineReaderState
+import Jihoo.NativeBindingMachineLoanTyping

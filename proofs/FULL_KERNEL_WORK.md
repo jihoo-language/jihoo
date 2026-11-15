@@ -64,7 +64,20 @@ The remaining core obligations include:
   reader result followed by separate release of both resources. They retain
   actual values and exact event streams. Escaping references are rejected by
   the type checker and untyped post-close reads fault.
-- The aggregate proof check currently audits 8,648 declarations. The mixed
+- `NativeBindingMachineReaderState` now derives an exact, distinct-token
+  inventory between concrete reader frames and all active heap leases across
+  every reachable machine prefix, including faults/fuel exhaustion. Reader
+  return supplies its close guard and retains every outer reader. An empty
+  final stack has no outstanding leases; allocated-owner accounting remains
+  separate. Reachable Borrow now needs only source typing and `LoanSlots`,
+  not a caller-supplied heap-validity or reader-liveness invariant.
+- `NativeBindingMachineLoanTyping` connects actual Loan64/resource mixed
+  declarations to original code and exact closing origin stores. Ordinary
+  closure activation retains the source CODE body/type and owner-slot alignment
+  across binders; new named-reader entry supplies its new slot permission.
+  These local source/slot lemmas do not yet give a full control-stack/value
+  interpretation or derive the raw body typing of a specialized Lend callback.
+- The aggregate proof check currently audits 8,676 declarations. The mixed
   native regression suite passes 64 source fixtures and 51 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -76,12 +89,14 @@ byte adapter or finite fixture. The existing binding-retaining runtime is in
 `NativeBindingMachineTyping` and `NativeBindingMachineLoans`. It retains
 original source bodies and captured ghost origin stores. Lend/Borrow/Index
 execution is present; do not reimplement those operators as a new fragment.
-The earlier source-typing bridge still uses the sixty-rule judgment, while the
-new Borrow execution theorem uses Loan64 directly.
+The earlier sixty-rule source-typing bridge is retained; its new Loan64
+counterpart uses the actual mixed-program history.
 
-Next derive and preserve `LoanSlots` and `ReadersLive` (with distinct active
-tokens) across all reachable typed machine states, rather than supplying them
-independently at each Borrow. Connect captured source code/origin stores and
+`ReadersLive`, exact lease coverage and token distinctness now follow from
+initial execution without typing assumptions. Next derive and preserve
+`LoanSlots` across the full typed control stack, rather than supplying it
+independently at each Borrow. Ordinary binder and reader-entry slot lemmas
+are available. Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader transition lemmas are available, but a common runtime-value,
 context and control-stack interpretation and its fundamental theorem are not.
@@ -124,3 +139,13 @@ scripts/proof-limits.sh python3 tests/core_native_loan_mixed_correspondence.py -
 Update this work record when obligations or the next proof dependency change.
 Commit and push meaningful checked increments. Keep reporting whole-kernel
 verification as unfinished until the actual completion obligations are proved.
+
+## Latest checked increment (2026-11-15)
+
+The all-prefix reader inventory and Loan64 ordinary-call/source-slot bridge
+passed `proofs/check.sh`: 875 Lake jobs, 8,676 audited declarations and the
+existing generated-fixture comparisons. The sampled peak tree RSS was
+3,575.1 MiB. Only the three allowed logical axioms occurred. No production
+compiler behavior was changed in this increment. Full verification remains
+unfinished; in particular source permission/owner-value preservation and
+Index evidence interpretation still require the common fundamental theorem.
