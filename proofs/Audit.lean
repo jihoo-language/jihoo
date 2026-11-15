@@ -8922,3 +8922,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.explicitLendValueDomains
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_value_lend_handoff
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_reference_reader_completion
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.dynamic_reference_read_source
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.checked_dynamic_reader_source
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_checked_dynamic_reference_reader

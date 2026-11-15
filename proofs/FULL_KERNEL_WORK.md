@@ -838,3 +838,39 @@ effectful result semantics, all-universe consistency, all specified computation
 preservation, complete ownership/borrow soundness and native implementation
 refinement remain unfinished. The whole-kernel goal is NOT complete; keep the
 existing automation active.
+
+
+## 2026-11-15: authentic checked dynamic reference reader
+
+`NativeBindingMachineCheckedDynamicReader` starts from the actual full resource
+projection of the original Lend. Its checker receipt reconstructs the original
+Loan64 source judgment, specialized false-mode checked read, exact recursive
+resource projections and zero/one owner contract. It does not assume typing
+of the original reader callback at arbitrary arguments. Actual closure capture
+alignment and the constructed value context determine both captured U64
+operands; immutable owner sizes and the source comparison evidence determine
+the physical Buffer length. Removing the erased binder uses only substitution
+of proved conversion equations, never an invented typed comparison proof.
+
+The real reference binder then executes either eleven transitions to a source-
+typed I64 read or six transitions to the original else body at the checked
+reader type. Runtime provenance remains unchanged. Both paths retain exact
+nested reader inventory and the reference value/owner-size contexts. Neither
+selected numeric operands, an allocation snapshot, a strict-bound certificate,
+a generic callback nor successful execution/output typing is an input.
+The owner-slot and source/control/frame association are still local entry
+invariants, not reconstructed for every closed mixed admission.
+
+The aggregate passed 908 Lake jobs, 8,925 unique public audits and all generated
+fixture comparisons (`out/logs/checked-dynamic-reader-full.log`); only the
+three allowed logical axioms occur, with 3,686.6 MiB sampled peak RSS. The
+existing rootless Nix 2.20.6 proof shell (Lean 4.34.1/Lake 5.0.0-src), smoke
+evaluation 42 and shared resource guard were reused. No native implementation,
+fixture, lock or Nix store pin changed.
+
+Next extend canonical continuation binding to guarded scalar readers using
+source-derived scalar conversion, compose the actual dynamic read with close
+and resource handoff, and carry the zero-owner-demand authority through all
+runtime frames. General all-control mixed-admission/resource interpretation,
+arbitrary evidence and result semantics, universe consistency, all specified
+computation preservation and native refinement remain unfinished.

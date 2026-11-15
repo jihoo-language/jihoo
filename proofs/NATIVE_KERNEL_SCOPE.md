@@ -1299,3 +1299,14 @@ constructs the entire eleven-step actual reference-read/close/handoff path and
 its intermediate prefix from those proofs. Arbitrary continuation bodies are
 retained, but their later execution, the all-control mixed-admission invariant,
 enclosing-reader consumption exclusion and native refinement remain open.
+
+
+`NativeBindingMachineCheckedDynamicReader` reconstructs the original Loan64
+source judgment and specialized CODE read directly from the actual resource
+projection. Its zero/one owner contract accompanies actual captured numeric
+lookup and physical-size interpretation. The reference argument executes an
+eleven-step guarded read or six-step original-type else entry, preserving
+nested reader inventory and canonical value/size contexts. No original generic
+callback, selected numeric operands, bound/allocation snapshot or output/success
+certificate is assumed. Source/control/frame and owner-slot association and
+all-control resource authority remain open.
