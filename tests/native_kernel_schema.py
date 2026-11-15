@@ -103,9 +103,9 @@ def validate_wire(native, lean):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', type=Path)
-    parser.add_argument('--emitter', default='lake env lean -DwarningAsError=true --run EmitNativeSchema.lean')
+    parser.add_argument('--emitter', default='lake env lean -M 4096 -j 1 -DwarningAsError=true --run EmitNativeSchema.lean')
     parser.add_argument('--native-writer', type=Path)
-    parser.add_argument('--wire-emitter', default='lake env lean -DwarningAsError=true --run EmitNativeWireNodes.lean')
+    parser.add_argument('--wire-emitter', default='lake env lean -M 4096 -j 1 -DwarningAsError=true --run EmitNativeWireNodes.lean')
     args = parser.parse_args()
     if args.metadata:
         emitted = args.metadata.read_text()
