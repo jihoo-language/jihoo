@@ -8693,3 +8693,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanExamples.specialized_callback_result_origin
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanExamples.specialized_original_body_source_typed
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanExamples.specialized_continuation_original_type
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.decide_truth
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.literal_decide_limits
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.index_inputs
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.index_evidence
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.literal_index_bound
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_allocation_length
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_reader_index_step
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.allocated_named_index_executes

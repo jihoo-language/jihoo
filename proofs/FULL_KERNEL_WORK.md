@@ -89,7 +89,16 @@ The remaining core obligations include:
   runtime execution succeed. Native and Loan64 mixed checking agree. The saved
   continuation argument is the checked reader body origin. No arbitrary-input
   callback typing or post-result typing is supplied to the general theorems.
-- The aggregate proof check currently audits 8,693 declarations. The mixed
+- `NativeBindingMachineIndexBounds` derives Decide numeral bounds from the
+  complete Loan64 judgment, including normalized-operand Decide and type
+  conversions. Index input inversion covers both array and borrowed-buffer
+  rules. For literal Decide, named Borrow and a concrete allocation state,
+  source typing, owner-slot identity and the reader inventory construct the
+  actual five-transition Index execution and exact read event; callers do not
+  supply a numerical read guard, successful execution or output typing.
+  The initial allocation-state/owner-slot association and source/control
+  alignment remain explicit local premises, not a full-program theorem.
+- The aggregate proof check currently audits 8,701 declarations. The mixed
   native regression suite passes 66 source fixtures and 52 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -112,8 +121,11 @@ are available. Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader transition lemmas are available, but a common runtime-value,
 context and control-stack interpretation and its fundamental theorem are not.
-Derive Index bounds from interpreted typed evidence and exact heap lengths;
-the existing runtime bound check alone does not discharge that obligation.
+Extend the new literal-Decide Index bridge to dynamic indices and all Lt
+proof forms. Derive exact heap lengths and the association between the owner
+slot and allocation from the common runtime interpretation, instead of the
+current explicit local allocation-state/slot premises. The runtime bound
+check alone does not discharge those obligations.
 Retain computed callees, erased arguments and exact dependent result origins;
 do not replace binding execution with generally invalid CODE beta substitution.
 The current heap is uniform-fill/read-only `SizedBufferHeap`; Store and general
@@ -168,3 +180,12 @@ judgment. `proofs/check.sh` passed 876 Lake jobs and 8,693 audits; the native
 mixed suite passed 66 source fixtures and 52 exact-byte checks. The sampled
 aggregate peak RSS was 3,582.1 MiB. This does not discharge general runtime
 value/context/stack typing, Index bound interpretation or owner accounting.
+
+The third increment derives literal-Decide Index bounds from complete source
+typing, preserves exact lengths from a concrete allocation state across all
+machine prefixes, and constructs a pending read plus the full named-Index
+five-step execution. The aggregate check passed 877 Lake jobs, 8,701 unique
+public axiom audits and the generated-fixture comparisons (peak sampled RSS
+3,583.4 MiB). No additional native implementation changed after the successful
+66-source/52-byte regression run. General evidence interpretation, source/slot
+fundamental preservation and the original whole-kernel obligations remain open.

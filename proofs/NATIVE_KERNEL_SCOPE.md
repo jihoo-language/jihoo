@@ -998,3 +998,16 @@ source/slot preservation across all computation, capture and continuation
 steps. In particular `LoanSlots` is still an input at the pending source-frame
 boundary, reference lengths/evidence need an interpretation, and source-derived
 Index/no-fault and general ownership accounting remain open.
+
+
+`NativeBindingMachineIndexBounds` inverts both Index source rules in the full
+Loan64 judgment and derives Decide's numeral conversions, widths and strict
+order from its actual typing constructors. Literal Decide thus supplies the
+read bound without a caller truth certificate. Exact lengths from a concrete
+allocation state survive every machine prefix. The named-Borrow Index theorem
+uses those facts, source slot permissions and the reader inventory to construct
+all five actual transitions and the exact read event, including erasure of the
+proof field. It assumes the entry heap's concrete allocation shape, its owner
+slot identity and source/control alignment. Their general typing-derived
+preservation, dynamic indices and arbitrary proof forms remain open; this is
+not the full Index progress or no-leak theorem.
