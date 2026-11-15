@@ -1201,3 +1201,62 @@ zero-demand budgets, and handle arbitrary else/tail computation. Full ownership/
 borrow soundness from the same complete judgment, evidence/effectful result
 semantics, all-universe consistency, all specified computation preservation and
 native implementation refinement remain unfinished. Keep the automation active.
+
+
+## 2026-11-15: enclosing-reader budgets derive old-owner release guards
+
+`NativeLoanBorrowedBudget` defines zero ownership demand for every active
+source loan. The authentic original Lend receipt derives its owner's one-use
+demand and therefore excludes lending an already active owner under that
+budget. It constructs budgets for the entered reader and restored continuation,
+including every enclosing loan. Budgets pass through sequences, either branch,
+ordinary scopes and original single-lambda call opening. A checked variable
+Free is inactive under the same budget. After either restored physical owner
+alias is consumed, the actual recursive tail receipt retains all enclosing
+zero budgets and the consumed owner's zero residual demand.
+
+`NativeBindingMachineLoanCoverage` supplies the converse of the existing
+`LoanSlots`: a retained owner with an actual enclosing reader has a source loan.
+It is an association invariant, not a Free guard or success certificate. Empty
+stacks, non-owner bindings, same-reader administrative frames and fresh owner
+entry construct it. Actual allocation provenance constructs owner-slot
+separation; distinct owner slots permit named reader entry. The converse is
+not yet preserved for every arbitrary call or unused duplicate alias.
+
+`NativeBindingMachineBudgetedRelease` combines those original source budgets
+with the converse association. Nine actual transitions close the lease, bind
+both aliases, Free an arbitrary OLD owner and return the actual scalar at the
+original source result type. Liveness comes from the reachable reader inventory;
+quantity inactivity and physical/source coverage exclude all outer readers of
+that owner. No fresh identity, birth prefix, no-reader/Free-success premise or
+output typing is supplied. Value-size information, both loan directions, valid
+heap, exact outer inventory and all enclosing source tail budgets are retained.
+
+`NativeBindingMachineBudgetedReaders` constructs the read itself before that
+suffix. Actual source/resource typing derives captured numbers, physical size,
+Index bounds and the returned value. Both guarded outcomes now take twenty
+read/close/Free or sixteen literal/close/Free transitions for an arbitrary old
+owner under those entry invariants; literal range is derived. This generalizes
+the fresh-only guard argument. `checked_mixed_loan_authority` initializes the
+source/value/size/loan associations, distinct owner slots and exact full resource
+receipt from the same actual mixed declaration admission, for the full syntax.
+
+The aggregate passed 926 Lake jobs, 8,985 unique public audits and all generated
+fixture comparisons (`out/logs/borrowed-reader-authority-full.log`). All 24 new
+public proofs are audited exactly once with only `propext`, `Classical.choice`
+and `Quot.sound`; sampled peak tree RSS was 3,717.3 MiB. Rootless Nix 2.20.6 and
+the actual Lean 4.34.1/Lake 5.0.0-src proof shell were verified and reused under
+the unchanged shared guard. No native implementation, fixture, dependency lock
+or store pin changed.
+
+This is a conditional generalization of operation preconditions, not a completed
+mixed-admission fundamental theorem. LoanBudget and LoanCoverage are constructed
+initially and through the proved entry cases, but their association with every
+later original control/frame remains open. In particular, LoanCoverage over ALL
+retained owner aliases is too strong after some aliasing reborrows: canonical
+resource-index substitution must account for unused aliases rather than assume
+physical slot injectivity universally. Next transport resource-aware reader
+budgets through those alias maps and arbitrary saved closures/frames. General
+else/tail execution, complete ownership/borrow soundness, all-universe
+consistency, full specified preservation and native implementation refinement
+remain unfinished. The whole-kernel goal is NOT complete; keep the automation.

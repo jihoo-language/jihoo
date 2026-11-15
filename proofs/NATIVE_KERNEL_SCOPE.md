@@ -1405,3 +1405,16 @@ branch/output/success oracle is supplied. This local parameterized scalar/call
 family leaves arbitrary else/tails, old-owner resource conflicts, all-control
 mixed authority, universe consistency, full preservation and native refinement
 open; the full syntax and completion criterion are unchanged.
+
+
+Enclosing-reader zero budgets now propagate through original Lend read/restore
+queries and literal call opening. A converse physical/source loan association
+combines those budgets with exact reachable inventory to derive Free guards for
+arbitrary old owners, without fresh-birth or no-reader premises. The actual
+scalar suffix and both guarded reference-reader outcomes retain source result
+typing, outer readers and source tail budgets. Mixed definition admission
+constructs initial authority for the full syntax. General preservation of that
+authority through every control/closure and alias-normalized reborrow remains
+open; the reverse association over all unused owner aliases cannot simply be
+assumed invariant. These conditional operation proofs do not complete general
+progress, universe consistency, full preservation or native refinement.
