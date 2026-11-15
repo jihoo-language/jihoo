@@ -1044,3 +1044,5 @@ import Jihoo.NativeLoanQuantityInput
 import Jihoo.NativeTermShapeCheck
 import Jihoo.NativeLoanGlobalChecking
 import Jihoo.NativeLoanGlobalExamples
+import Jihoo.NativeLoanGlobalInput
+import Jihoo.NativeLoanGlobalInputExamples

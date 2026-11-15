@@ -807,6 +807,19 @@ include a Lend function called by a later declaration and rejection of forward
 references and discarded malformed annotations. This globals-only layer checks
 types; mixed-family quantity admission is separate.
 
+`NativeLoanGlobalInput` binds that sequential checker to exact canonical
+version-6 bytes with an empty family table. Acceptance constructs the actual
+ordered checking history, complete backward graph representation, transparent
+well-formed environment, and exact declaration count. The existing aggregate
+decoder bounds still apply. Kernel-checked examples include a dependent Lend
+function called by a later declaration and rejection of self/forward references,
+unbound variables, missing roots, malformed unused nodes, family tables,
+trailing bytes and exhausted checker fuel. `CheckNativeLoanProgram.lean` is a
+bounded IO adapter; `tests/core_native_loan_program_correspondence.py` compares
+retained native exporter bytes with that proved function. This is global type
+checking, not a runtime quantity or heap-safety theorem; native parser/exporter
+refinement is not claimed.
+
 `NativeCallResourceContracts` extracts exact original application typing,
 actual runtime argument code typing/resource safety, and the opened source
 lambda's body contract from the same successful resource check.
