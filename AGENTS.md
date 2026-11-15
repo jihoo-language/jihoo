@@ -13,6 +13,10 @@ This workstation has 32 GB of RAM. Unbounded Lean jobs have caused system OOMs.
 - Never bypass these limits or increase them to make a failing proof pass.
   Investigate excessive allocation instead. Read-only inspection and editing
   may run concurrently; compiler/checker jobs must remain serialized.
+- In Linux containers without user systemd, the wrapper uses a shared lock,
+  inherited 6 GiB per-process address-space limit and a subreaper that monitors
+  the complete job tree's RSS at a 6 GiB threshold. This sampled limit is not
+  a cgroup hard cap. Keep Lean's 4 GiB limit and single-thread settings there.
 - Use one Lean thread and one Jihoo code generation unit. Pass `-M 4096 -j 1`
   to standalone Lean invocations. The Lake configuration applies the same
   limits to module compilation.
