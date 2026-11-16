@@ -141,7 +141,7 @@ The remaining core obligations include:
   all derived, rather than supplied. The false comparison arm enters a body
   with the same original source type. Local source/control typing, allocation
   identity/layout and `LoanSlots` association remain explicit inputs.
-- The aggregate proof check currently audits 8,789 declarations. The mixed
+- The aggregate proof check currently audits 9,024 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -1400,3 +1400,35 @@ canonical source loans to physical scoped owner slots through aliases,
 binders and reader entry, and recheck the entire aggregate. General
 source/control/resource/value preservation and all original whole-kernel
 completion obligations remain open.
+
+## 2026-11-16: canonical source loans and physical reader authority
+
+`NativeBindingMachineCanonicalBorrow` introduces `OwnerLoanSlots`, associating
+each active source owner with its actual stored object and an enclosing named
+reader without equating canonical and runtime lexical keys. Existing LoanSlots
+construct it. Initial code, child code, ordinary erased/runtime binders,
+noninjective alias rebasing and reader entry/body transport it. In particular,
+a new reader's runtime name may differ from its canonical source owner's key.
+
+Canonical source Borrow typing now constructs the actual slot, live lease and
+next machine step through an arbitrary CanonicalView. Canonical immutable owner
+sizes additionally construct ReferenceSize at the ORIGINAL closed requested
+type. No actual lexical LoanSlots, name-equality, selected owner/token, successful
+lookup or output interpretation certificate is an input. The nine new public
+theorems passed a 310-job local target build with warnings as errors in
+`out/logs/canonical-borrow-local-2.log`.
+
+This remains a local association, not full stack preservation. In particular
+arbitrary captured closures, computed calls, reader returns and resource/size
+contexts still need a common semantic interpretation. Existence of some
+same-object reader does not by itself identify the source reader that must
+survive a later close. Preserve the source Outlived restriction and prove the
+missing all-value/all-control lifetime bridge rather than assuming it.
+
+The complete aggregate recheck passed 934 Lake jobs, 9,024 distinct public
+axiom audits and all generated-fixture comparisons in
+`out/logs/alias-canonical-full.log`. Only `propext`, `Classical.choice` and
+`Quot.sound` occur. This also completes the full recheck pending at the first
+alias-repair checkpoint. No production compiler or native fixture changed;
+the existing native correspondence evidence is unchanged, not a new native
+implementation-refinement result.

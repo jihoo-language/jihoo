@@ -9015,3 +9015,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.borrowLease_no_reader
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.borrow_without_reader_faults
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_alias_borrow_executes
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSlots.ownerLoanSlots
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.initial
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.child
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.canonical
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.enter
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.begin_reader
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.reader_body
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_borrow
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_sized_borrow

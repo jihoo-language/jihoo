@@ -2,7 +2,8 @@ import Jihoo.NativeBindingMachineReaderState
 
 /-! Runtime owner aliases share the authorization of an actual enclosing named
 reader of the same object. Exact lexical matches retain priority; fallback
-cannot consult a closed reader, continuation frame or unrelated heap lease. -/
+consults only named reader frames, never continuation frames or heap-only
+leases. Execution checks the selected lease; reachability proves it live. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine
 
 theorem readerForOwner_sound (found : readerForOwner object frame = some token) :

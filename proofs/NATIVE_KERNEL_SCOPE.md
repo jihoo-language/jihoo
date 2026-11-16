@@ -1446,3 +1446,12 @@ general source/control/loan preservation, whole-kernel progress and native
 implementation refinement remain open. In particular these immediate Borrow
 steps do not prove lifetime preservation for arbitrary values and closures;
 the source Lend rules' Outlived restriction still needs that semantic bridge.
+
+`OwnerLoanSlots` now carries canonical source permission to physical owner and
+named-reader association independently of lexical keys. Initial construction,
+noninjective alias rebasing, ordinary bindings and reader entry/body preserve
+this association. `CanonicalBorrow` uses it with full source typing to construct
+actual Borrow and, from canonical immutable owner sizes, `ReferenceSize` at the
+original closed requested type. Source control/type, owner-size and loan
+associations remain local entry invariants; their general all-control and
+reader-return preservation is not assumed proved.
