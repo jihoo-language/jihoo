@@ -1,10 +1,9 @@
 import Jihoo.NativeBindingMachineCanonicalView
 
-/-! A concrete boundary of the current named-Borrow runtime. After an owner is
-returned, the checker canonically identifies both aliases. A subsequent Lend
-through the new alias records a new lexical key; Borrow through the old alias
-still asks for the earlier key. This must be repaired before full progress can
-be claimed for the binding-retaining model. It is not a native-execution claim. -/
+/-! A regression for returned-owner aliases. The checker canonically identifies
+both aliases. A subsequent Lend through the new alias and Borrow through the
+old alias must select a reader of the same concrete object despite different
+lexical keys. This checks the source machine, not native implementation fidelity. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.AliasReborrowBoundary
 
 def buffer : Term := .buffer (.natural 1)
@@ -19,6 +18,16 @@ def program : Term := .app (.lam false buffer source) (.alloc (.natural 1) (.int
 theorem source_admitted : LoanTyping.MixedProgram.checkDeclaration 256 512 .empty
     ⟨.i64,program⟩ = some ⟨.i64,program⟩ := by cbv
 
-theorem runtime_alias_fault : observe (run 100 (initial program)) = .fault .inactiveBorrow := by cbv
+theorem runtime_alias_return : observe (run 100 (initial program)) = .integer 7 := by cbv
+
+theorem runtime_alias_events : eventsHeap (run 100 (initial program)).events =
+    [.alloc 0 1 (encodeInteger 7),.beginLease 0 0,.read 0 0 (encodeInteger 7),.close 0,
+      .beginLease 1 0,.read 1 0 (encodeInteger 7),.close 1,.free 0] := by cbv
+
+theorem runtime_alias_released : (run 100 (initial program)).state.heap.heap.live 0 = false := by cbv
+
+theorem runtime_alias_no_leases (token : Nat) :
+    (run 100 (initial program)).state.heap.heap.lease token = none :=
+  initial_run_empty_stack_no_leases program 100 (by cbv) token
 
 end Jihoo.NativeKernel.Environment.BindingMachine.AliasReborrowBoundary

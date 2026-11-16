@@ -1433,11 +1433,16 @@ arbitrary closures/calls/readers and full native refinement remain open.
 
 Canonical variable steps now derive actual stored representations and numeric
 ranges from source CODE typing, and canonical readiness is constructed from
-the actual saved continuation frame. A confirmed remaining model blocker is
-`AliasReborrowBoundary`: authentic complete mixed admission accepts its closed
-I64 program, but returned-owner alias reborrowing reaches `inactiveBorrow` in
-the binding-retaining runtime. Source alias identification and runtime lexical
-reader keys disagree. This refutes the corresponding unrestricted progress/
-Borrow-precondition claim for the CURRENT model; it is not a native compiler
-counterexample or a logical inconsistency. Repair the correspondence while
-retaining source acceptance before claiming the whole-kernel obligations.
+the actual saved continuation frame. Returned-owner aliases now resolve named
+Borrow by preferring the exact lexical reader, then selecting an enclosing
+named reader of the same concrete object. Lookup soundness retains an actual
+reader frame and object identity; an unrelated object, anonymous reader or
+heap-only lease cannot supply this authority. Reachability supplies its lease
+liveness. Exact lexical matches retain their earlier token selection.
+`AliasReborrowBoundary` retains authentic complete mixed admission of its
+closed I64 program and now proves return of 7, both read/close pairs, final Free
+and absence of outstanding leases. This repairs the concrete model blocker;
+general source/control/loan preservation, whole-kernel progress and native
+implementation refinement remain open. In particular these immediate Borrow
+steps do not prove lifetime preservation for arbitrary values and closures;
+the source Lend rules' Outlived restriction still needs that semantic bridge.

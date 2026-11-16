@@ -36,7 +36,7 @@ private theorem sized_read_ten_steps (heap : SizedBufferHeap.State) (code : Code
         [.heap (.read token offset (heap.heap.payload object))],10⟩ := by
   simp only [run,step,action,evaluateAction,shape,Code.child,storedIndex,storedLength,storedOwner,
     returnAction,execute,branchCode,dynamicRead,List.getElem?_cons_succ,List.length_cons,
-    Nat.add_sub_add_right,activeLease,readerFor,Frame.reader?,bind,Option.bind,Option.orElse_none,
+    Nat.add_sub_add_right,borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,bind,Option.bind,Option.orElse_none,
     found,leased,size,compared,decide_true,Bool.false_eq_true,↓reduceIte,Option.map_some]
   rfl
 

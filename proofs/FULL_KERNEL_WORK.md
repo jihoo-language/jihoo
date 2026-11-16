@@ -178,8 +178,10 @@ data layouts require an appropriate runtime heap interpretation as well.
 
 ## Working procedure
 
-Use `/workspace/jihoo` and branch `codex/rootless-kernel-verification` of
-`https://github.com/jihoolang/jihoo`. Preserve existing edits and never force-push.
+Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
+workstation path is `/home/user/jihoo` and the active continuation branch is
+`codex/alias-reborrow-verification`. The earlier verification branch was merged
+into main. Preserve existing edits and never force-push.
 Read `AGENTS.md` and the source theorems before changing them. Continue useful
 work without asking again for already authorized commits, pushes or memory
 configuration. The user explicitly permits choosing memory ceilings to avoid
@@ -188,8 +190,8 @@ OOMs; keep heavy compiler/checker jobs serialized.
 The actual project toolchain is available through:
 
 ```sh
-cd /workspace/jihoo
-/workspace/.local/bin/nix-rootless --option sandbox false develop .#proofs
+cd /home/user/jihoo
+nix develop .#proofs
 ```
 
 Run compiler/checker work through `scripts/proof-limits.sh`. Standalone Lean
@@ -1359,3 +1361,42 @@ Then continue general canonical control/frame/closure preservation, arbitrary
 else/tail computation, complete ownership/borrow soundness, universe consistency,
 full specified preservation and native implementation refinement. The whole-
 kernel goal is NOT complete; keep the automation active.
+
+## 2026-11-16: repair scoped owner-alias reborrowing
+
+The accepted `AliasReborrowBoundary` program retains its complete mixed
+admission. Its runtime fact now proves scalar return 7 instead of
+`inactiveBorrow`, with exact alloc/read/close/free events, the released owner
+and no outstanding leases. The binding machine preserves the existing
+exact-name lookup first, then resolves a retained alias through an enclosing
+named reader of the same concrete object. It does not consult heap-global
+leases or anonymous readers for this fallback.
+
+`NativeBindingMachineAliasLoans` proves lookup soundness/completeness, exact
+lexical-token preference and rejection without an enclosing named reader.
+Actual reachable owner slots plus an enclosing reader under any lexical name
+construct the next Borrow step and derive the live lease and owner liveness.
+No successful execution or returned-value interpretation is an input.
+
+The local builds passed with warnings as errors (308 Lake jobs in each
+dependency closure), including the repaired admission/execution regression
+and the existing canonical variable path. All 15 declarations in the new
+lookup module and repaired regression passed an elaborated dependency audit
+using only the allowed standard logical axioms. Logs are
+`out/logs/alias-baseline.log`, `out/logs/alias-repair-local.log` and
+`out/logs/alias-repair-audit.log`. The aggregate audit target is now 9,015;
+the full aggregate recheck remains pending at this checkpoint.
+
+The pinned Nix proof shell runs directly on `/home/user/jihoo` with Lean
+4.34.1. Every compiler/check ran through `scripts/proof-limits.sh` with the
+unchanged memory limits and single-thread configuration. No native compiler,
+fixture, dependency pin or runtime heap representation changed.
+
+This resolves the concrete immediate-Borrow model blocker, not general
+lifetime preservation. Source Lend's Outlived gate rejects reader results
+that are references or closures; the semantic theorem excluding the closing
+token from every returned value/capture is still missing. Next connect
+canonical source loans to physical scoped owner slots through aliases,
+binders and reader entry, and recheck the entire aggregate. General
+source/control/resource/value preservation and all original whole-kernel
+completion obligations remain open.

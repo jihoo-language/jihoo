@@ -117,7 +117,7 @@ private theorem lend_result_index_ten_steps (heap : SizedBufferHeap.State) (code
   simp only [run,step,action,evaluateAction,shape,returnedBufferRead,returnAction,execute,Code.child,
     applyValue,enter,returnedIndexCode,stored,live,indexBound,SizedBufferHeap.lend,HeapLeases.put,
     List.getElem?_cons_succ,List.getElem?_cons_zero,List.length_cons,key,
-    activeLease,readerFor,Frame.reader?,bind,Option.bind,Option.orElse_none,Option.orElse_some,and_true,
+    borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,bind,Option.bind,Option.orElse_none,and_true,
     size,bound,↓reduceIte,Option.map_some]
   rfl
 

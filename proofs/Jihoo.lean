@@ -1113,3 +1113,4 @@ import Jihoo.NativeLoanScalarFreeAliases
 import Jihoo.NativeBindingMachineCanonicalRelease
 import Jihoo.NativeBindingMachineCanonicalVariables
 import Jihoo.NativeBindingMachineAliasReborrowBoundary
+import Jihoo.NativeBindingMachineAliasLoans
