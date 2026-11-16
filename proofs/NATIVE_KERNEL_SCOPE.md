@@ -807,6 +807,43 @@ include a Lend function called by a later declaration and rejection of forward
 references and discarded malformed annotations. This globals-only layer checks
 types; mixed-family quantity admission is separate.
 
+`NativeLoanGlobalInput` binds that sequential checker to exact canonical
+version-6 bytes with an empty family table. Acceptance constructs the actual
+ordered checking history, complete backward graph representation, transparent
+well-formed environment, and exact declaration count. The existing aggregate
+decoder bounds still apply. Kernel-checked examples include a dependent Lend
+function called by a later declaration and rejection of self/forward references,
+unbound variables, missing roots, malformed unused nodes, family tables,
+trailing bytes and exhausted checker fuel. `CheckNativeLoanProgram.lean` is a
+bounded IO adapter; `tests/core_native_loan_program_correspondence.py` compares
+retained native exporter bytes with that proved function. This is global type
+checking, not a runtime quantity or heap-safety theorem; native parser/exporter
+refinement is not claimed.
+
+`NativeLoanMixedProgram` and `NativeLoanMixedAdmission` now check complete
+mixed declaration streams with the Loan64 checker and its actual recursive
+resource projector. The same history records checked family signatures and
+each global's original expansion, scope/shape checks, sort-derived body mode,
+typing and runtime quantity evidence in the real earlier prefix. Exact-byte
+acceptance constructs that history and a transparent well-formed environment.
+Kernel examples distinguish a well-typed double consumption from resource-safe
+admission and reject incorrect family placement, unscoped source annotations
+and exhausted resource fuel. The new native suite checks 62 source fixtures
+and 49 exact-byte cases, including families interleaved with dependent Lend
+functions and an explicit code Borrow of the active named owner. This closes
+the earlier separate mixed-family quantity interface.
+
+`NativeScopedProgramHistory` extracts the closed transparent global storage
+and actual checked family telescopes needed by family-iota metatheory. Both
+the earlier history and the full Loan64/resource mixed history construct this
+common history. Loan family metadata, Case/Elim/recursive View preservation
+and contextual family evaluation now use it. `NativeLoanMixedPreservation`
+derives exact-original-type ghost preservation directly from the new mixed
+history, with no legacy global-typing premise. A checked example has an active
+owner Borrow declaration rejected by the older program checker, yet its actual
+family contraction retains its original type under the new history. General
+typing-to-runtime ownership and universe consistency remain open.
+
 `NativeCallResourceContracts` extracts exact original application typing,
 actual runtime argument code typing/resource safety, and the opened source
 lambda's body contract from the same successful resource check.
@@ -895,12 +932,512 @@ native annotation and universe candidate is still open.
 `NativeBindingMachine` retains original terms/contexts, captured origin
 substitutions and runtime slots in real closures. It evaluates callees and
 runtime arguments once, skips erased arguments, and executes scalar values,
-conditions, Strict, Alloc and Free. Its heap module connects every observed
+conditions, Strict, Alloc and Free. It now executes Lend reader/continuation
+closures, named code Borrow and borrowed-buffer Index with explicit lease
+identities. The owner is evaluated once; the reader receives a reference and
+the continuation receives its actual result and the original owner after the
+lease closes. Nested readers retain the outer reader's authority. Its heap
+module connects every observed
 prefix, including fault/fuel results, to the existing sized heap steps and
 validity invariant without a successful-run premise. Entry typing preserves
 the original CODE body and ghost origin; ready variable lookup excludes missing
 and erased faults. Execution examples include exact single allocation/release,
 computed closures, erased ghost-borrow arguments and an explicit double-free
-fault with a valid prefix. General runtime-value typing, exclusion of invalid
-variable/value/ownership faults for admitted programs, no-leak, Lend/read/write execution and native evaluator
-refinement remain open.
+fault with a valid prefix. New Loan64/resource-checked examples cover explicit
+named-owner reads, two simultaneously active readers and a fresh owned reader
+result whose identity is distinct from the original owner. Their actual event
+streams include reads, closes and exactly the expected releases. An untyped
+escaped reference faults when read after its lease closes.
+
+`NativeBindingMachineLoans.typed_borrow_executes` derives a live lease and an
+actual successful Borrow action from the full Loan64 permission derivation,
+owner-slot alignment and real reader-frame/heap invariants. These invariants
+do not assume Borrow guard success or output typing. Local begin/body/finish
+lemmas preserve reader correspondence using fresh or distinct lease tokens;
+the close guard follows from the finished reader frame. Closed leases cannot
+be read, and continuation frames grant no reader authority. General runtime
+value typing and preservation of slot/frame alignment across all typed
+transitions remain open. So do exclusion of all invalid value/ownership/index
+faults for admitted programs, general no-leak, Store and the remaining runtime
+constructors, and native evaluator refinement.
+
+
+`NativeBindingMachineReaderState` now proves an exact inventory of heap leases
+and concrete reader frames, with distinct tokens, across every actual finite
+machine prefix from the empty initial heap. The proof analyzes all evaluation,
+return and heap-action cases, including fault/fuel results. Reader return derives
+the close guard, closing preserves remaining readers, and an empty stack has no
+outstanding leases. This discharges the global reader-frame/lease invariant;
+it is not an allocated-object no-leak or whole-typing progress theorem.
+Reachable code Borrow derives its actual step from Loan64 typing and `LoanSlots`
+without externally supplied heap validity or `ReadersLive`.
+
+`NativeBindingMachineLoanTyping` supplies the Loan64 counterpart of the earlier
+ordinary-call source bridge using the actual resource-checked mixed history.
+It retains the exact CODE body, captured origin store, dependent result origin,
+and ordinary binder slot permissions, with separate erased argument handling.
+Named reader entry installs the corresponding new permission. A common typed
+control-stack/value invariant, specialized Lend callback entry, all source-derived
+heap/Index preconditions and native implementation refinement remain open.
+
+
+Reader-result provenance now records the exact body activated with the concrete
+reference and captured origin store, instead of a raw callback application.
+`NativeBindingMachineLendOrigins` proves that explicit-reader entry closes to
+`Lending.read` and that both continuation binders close to `Lending.finish`.
+The input Loan64 Lend derivation and its actual mixed history derive closed
+reader typing and the final continuation's original requested ghost type,
+without assuming callback typing at arbitrary arguments or output-value typing.
+Reachable named-reader activation combines that source provenance, real lease
+liveness and local owner-slot preservation. The erased equality example is
+accepted only after Lend specialization, computes 7, and retains the proved
+body origin; the native mixed checker agrees.
+
+These entry lemmas do not interpret arbitrary returned runtime values or prove
+source/slot preservation across all computation, capture and continuation
+steps. In particular `LoanSlots` is still an input at the pending source-frame
+boundary, reference lengths/evidence need an interpretation, and source-derived
+Index/no-fault and general ownership accounting remain open.
+
+
+`NativeBindingMachineIndexBounds` inverts both Index source rules in the full
+Loan64 judgment and derives Decide's numeral conversions, widths and strict
+order from its actual typing constructors. Literal Decide thus supplies the
+read bound without a caller truth certificate. Exact lengths from a concrete
+allocation state survive every machine prefix. The named-Borrow Index theorem
+uses those facts, source slot permissions and the reader inventory to construct
+all five actual transitions and the exact read event, including erasure of the
+proof field. It assumes the entry heap's concrete allocation shape, its owner
+slot identity and source/control alignment. Their general typing-derived
+preservation, dynamic indices and arbitrary proof forms remain open; this is
+not the full Index progress or no-leak theorem.
+
+
+`NativeBindingMachineAlignment` defines recursive runtime value/capture alignment,
+original-context erasure-slot alignment and concrete control/frame alignment.
+Every evaluation, return and heap action preserves them, so they hold at every
+prefix from any source term in the empty initial context, even at faults or fuel
+exhaustion. This includes computed closures, skipped erased arguments, branch
+proof slots and nested Lend reader/continuation frames. Reachable Loan64 variable
+input typing then constructs its next actual returned value without a supplied
+`Ready` premise. This discharges structural slot/erasure preservation. It does
+not yet establish that runtime values inhabit source types, source typing is
+preserved at every control point, or ownership/loan/length interpretations are
+preserved through arbitrary closures and effects.
+
+
+`NativeBindingMachineDynamicIndex` extends the literal bridge to dynamic scalar
+slots and the actual IfLt hypothesis binder. Full source typing supplies the
+named Borrow permission; actual comparison selects ten read transitions or
+five transitions into the else body. No caller-provided index bound or
+successful-run predicate is used. The general local theorem still assumes the
+entry allocation/slot association and source/control alignment.
+
+`NativeBindingMachineDynamicIndexExamples` connects a whole checked function
+with dynamic Buffer allocation and a Lend reader to the existing machine from
+its empty initial state, quantified over all bounded U64 count/index values
+whose allocation size fits the machine guard. It derives source typing,
+actual in-bounds result 7/out-of-bounds result 0, the exact single allocation,
+lease, optional read, close and Free trace, and final empty live-object/lease
+inventories. The source/resource checker is Loan64; the native mixed checker
+agrees on the source function. This function theorem eliminates local heap/slot
+premises for that composition, not arbitrary source functions or the full
+language. General runtime value/heap/source-stack interpretation, computed
+sizes and arbitrary proof terms, ownership and native refinement remain open.
+
+
+`NativeBindingMachineNumeric` supplies a numeric runtime-value/capture/control-
+stack and heap interpretation, preserved by every actual transition and prefix
+from the empty initial heap. U64/I64 values and saved arithmetic/count operands
+stay in range; uniform heap payloads and allocation byte lengths remain bounded,
+including released identities. I64 typing of actual decoded heap contents is
+constructed from that invariant, not an output-typing or realization premise.
+
+`NativeBindingMachineIndexValues` uses the full Loan64 input derivation and
+actual mixed history to place these integers at the exact original closed
+Index result type, including arbitrary result conversion and IfLt Index arms.
+Actual pending-reader authority follows from the all-prefix reader inventory;
+the read step either returns a constructed original-type integer or explicitly
+faults on bounds. General source/control association, heap layout/slot semantics
+and proof interpretation must still exclude that alternative for arbitrary
+admitted programs. Numeric preservation alone is not type preservation for
+arbitrary runtime values, ownership soundness or native refinement.
+
+
+`NativeBindingMachineLendValues` reconstructs explicit Index-reader result
+formation/type from the full source Lend rule and its mixed history. Reachable
+heap integers inhabit that checked reader type without assuming generic callback
+typing or returned-value realization. The actual scalar can close the original
+continuation body at the original Lend result type, and concrete binding
+equations retain the actual CODE body and owner/result value slots. This is a
+ghost scalar closing derived from actual data, not a claim that the machine
+performs CODE beta substitution or that all captured runtime values satisfy
+their source-dependent heap types. The general source/control/slot/resource
+fundamental theorem, bounds-fault exclusion and native refinement remain open.
+
+
+`NativeBindingMachineIndexExecution` combines the existing constructed literal
+and comparison-guarded Index paths with actual prefix numeric interpretation
+and full Loan64 original-type conversion. Its caller supplies no heap-validity,
+reader-inventory, numeric-realization or post-result typing certificate: these
+are derived from the actual initial execution. Returned integers have the exact
+input closed type, and false comparison enters an else body with the same
+original source type. Earlier entry points remain compatibility wrappers.
+The source/control judgment and allocation/owner-slot/loan association are still
+local inputs. The full fundamental theorem must construct them from admitted
+mixed-program typing/resources, including all captures/effects and arbitrary
+bound proofs. This increment does not close general ownership, consistency,
+full source computation preservation or native implementation refinement.
+
+`NativeBindingMachineLendResources` connects the same dependent Lend resource
+projection to actual close and two retained continuation bindings. Its slot map
+identifies the restored-owner alias with the captured original owner, while
+preserving all outer named-loan slots. For Free at either alias, it constructs
+the eight actual transitions and derives the guard from the remaining concrete
+reader inventory. A still-active outer reader of that object gives a specified
+borrowed-owner fault; absence gives release, without caller-provided liveness
+or guard evidence. The remaining code retains the original ghost result type,
+and the recursive source projection has zero residual owner demand.
+
+This does not prove absence of that conflict from arbitrary admitted programs.
+The local input code typing/resource projection, original owner slot and actual
+reader-frame/control association still need the common fundamental theorem.
+Abstract zero-demand tail prefixes are not yet associated with all concrete tail
+executions. The theorem executes retained source code, not a substituted CODE
+macro, and neither claims general value realization nor native refinement.
+
+`NativeBindingMachineReaderResume` derives an outer Borrow's source permission
+from the actual specialized checked continuation. Pre-existing captured loan
+slots identify its owner; reachability derives a distinct outer lease that
+survives closing the inner reader. It constructs all eight real transitions
+through both continuation bindings, the authorized Borrow and Strict tail
+entry, preserving outer slots and the original ghost result type. Both owner
+aliases are rejected for reborrow when no outer source permission remains.
+No caller supplies post-close heap/slot safety or execution success. Current
+input source/control/resource and captured-slot association are still local
+premises, not yet a closed-admission fundamental theorem or native refinement.
+
+`NativeBindingMachineOwnedReader` reconstructs Buffer first-result linear mode
+from successful actual normalization and derives its separate exact-once source
+contract. The same checked reader supplies literal widths and its declared
+first-result conversion. A live concrete owner and its actual heap length give
+the limited `BufferValue` interpretation; exclusivity is a separate obligation.
+Reachable reader allocation constructs that interpretation, a fresh identity
+distinct from the leased original owner, absence of old leases to the new
+object, its Free guard, and the actual five steps. Byte-size overflow is an
+explicit outcome, not an assumed allocation success. Source/control/reader
+association, general resource authority and the full fundamental theorem still
+remain open. This source-machine result does not refine native allocation.
+
+`NativeBindingMachineOwnedReaderExecution` constructs the allocating reader
+and two-owner continuation together: sixteen actual transitions and exact
+allocation/close/activation/two-Free events, with original ghost tail typing
+and zero residual demand for both source resources. The fresh first result is
+interpreted at its declared closed Buffer type. Fresh identity/guard evidence
+is derived, not an input. Byte overflow and a still-active outer reader of the
+old owner remain explicit outcomes; general admitted-program exclusion of the
+latter and arbitrary tail resource simulation are still unproved.
+
+`NativeBindingMachineOwnerProvenance` gives an unconditional all-prefix
+runtime owner-identity interpretation. Current values, every saved frame and
+all nested closure captures have owner IDs below the actual allocation counter.
+The next allocation cannot alias any of those old captures, even dead owners.
+Each captured/returned owner has an earlier actual allocation event, and its
+current length/payload equal that event's count/payload in this read-only
+uniform-fill heap. No allocation snapshot or provenance oracle is an input.
+
+This is provenance, not live/exclusive ownership: retained dead aliases remain
+possible, and source resource authority must determine which slots may be used.
+The actual allocation length still needs interpretation at arbitrary dependent
+source types, through all calls and continuation control. Unsupported syntax
+continues to fault in this source machine; no native allocator, Store/write,
+general progress or full-kernel correctness claim follows from the invariant.
+
+`NativeBindingMachineReturnedBufferRead` composes an allocating reader with
+its retained continuation, a second Lend and named Borrow/Index on the fresh
+returned owner. Twenty real transitions and exact events are constructed from
+the source Loan64 judgment/resource check and the actual reader entry. Literal
+widths/bounds, fresh owner slot, allocation length, lease guards and the actual
+integer at the reconstructed reader's exact ghost type are derived. The first
+lease is closed before the distinct new lease is opened. Byte overflow remains
+an explicit outcome; ghost allocation origins are not re-executed as CODE.
+Current input source/control/frame association is still local, and the read
+endpoint retains its inner reader frame. General completion, arbitrary bound
+interpretation/resource simulation and native implementation refinement remain
+open.
+
+`NativeBindingMachineReturnedBufferCompletion` closes the fresh-result reader
+and executes both owner releases and scalar return in thirty-two real steps.
+The actual scalar has the original outer source result type; its proof uses
+input typing and actual fill bounds rather than an output certificate. The
+fresh Free guard follows from all-prefix owner provenance plus the concrete
+reader inventory. A still-active outer reader of the old owner gives a specified
+thirty-one-step fault; byte overflow stops after five. General admission/control
+association and old-owner conflict exclusion remain open, as do arbitrary source
+computations/resource simulation and native implementation refinement.
+
+`NativeBindingMachineReturnedBufferCompletionExamples` checks one actual
+closed Loan64/resource admission and contextual reader entry, then applies the
+general thirty-two-step proof after the fourteen-step caller prefix. The
+forty-six-step scalar result is derived through that theorem, not assumed as an
+output certificate. This concrete instantiation does not establish the general
+admission/control fundamental theorem or native checker/evaluator refinement.
+
+`NativeBindingMachineScalarClosing` retains the complete Loan64 body typing
+with a value closing independent of the machine's source-origin map. Actual
+natural closure entry instantiates dependent result types at the observed
+numeral, preserving source code/captures/provenance, direct numeric-slot
+agreement and earlier named loans. Mixed declaration checking reconstructs the
+initial empty closing and resource evidence. Runtime bounds are derived, not
+an argument/output typing input; effectful origin-to-numeral conversion is never
+assumed. Input closure/capture invariants still need the common all-control
+fundamental theorem, including general value kinds and heap/resource authority.
+
+`NativeBindingMachineComputedAllocation` derives the value-closed dependent
+body type and fill width, then constructs six actual transitions from a
+computed-natural call boundary through retained-variable allocation. The
+resulting live Buffer has the heap length of the source signature instantiated
+at the actual argument. No source numeral, returned slot lookup, guard or output
+typing certificate is an input. Byte overflow remains an explicit fault, and
+the fresh object is absent from every earlier recursive capture. This is a
+semantic signature instance, not an assertion that an arbitrary effectful
+origin converts to a numeral. General function/control/context association and
+the full source-result/resource fundamental theorem remain open.
+
+Integer closing and captured second-call typing also reconstruct actual I64
+fill binding while preserving the earlier U64 size. Both argument source
+origins remain in the real closure environments. The generic six-step
+two-scalar allocation theorem is instantiated by a closed curried program:
+size and fill are computed separately with Free/arithmetic effects, and the
+typed Buffer interpretation/result payload follow after thirty-seven steps.
+The single-count closed instance takes twenty-one steps. These examples have
+actual Loan64/resource admission, but neither equate the effectful source
+result annotation with a numeral by raw conversion nor prove arbitrary
+admission/control/context preservation or native implementation correctness.
+
+
+`NativeBindingMachineValueKinds` now constructs numeric representation-head
+agreement at typed captured lookups, using actual-prefix slot readiness and
+source variable inversion. Mixed entry and actual U64/I64 entry construct and
+preserve this stronger context. `NativeBindingMachineCapturedAllocation`
+then reads arbitrary captured size/fill indices and constructs five actual
+allocation steps at the SAME value-closed source result type, or explicit
+byte overflow. No stored-number, successful-run or output-typing certificate
+is supplied. Representation heads alone do not establish closure bodies,
+heap liveness, exclusive authority or reference leases; general control-stack
+context construction and original effectful annotation semantics remain open.
+
+
+`NativeBindingMachineCapturedBranch` constructs canonical erased evidence from
+actual captured-number comparisons, preserves arbitrary original branch-body
+types and value contexts, and retains named-reader loan slots. A true branch
+can execute source-authorized Borrow in six steps using a live lease derived
+from the actual nested reader inventory. Original provenance evidence is not
+used as a canonical proof. The input source/control/value/loan association and
+general Index heap-size/resource interpretation remain unfinished.
+
+
+`NativeBindingMachineAllocatedArgument` now constructs a retained owner value
+context and dependent body typing from the original source allocation and
+pending function judgments, with six actual allocation/call transitions.
+Canonical ghost allocation and original runtime provenance remain distinct.
+A named Lend of that fresh argument then has nine constructed transitions,
+a live correctly sized Buffer, its new concrete lease and the exact complete
+reader inventory including outer readers. Byte overflow is explicit. No
+runtime argument/output typing, allocation snapshot, stored owner, live-owner
+or successful-execution certificate is supplied. Source/control/value contexts
+are still local preconditions, and representation-head interpretation alone
+is not heap/resource authority. Specialized dependent reader activation must
+retain its actual checked read, not assume arbitrary callback typing. General
+reference/Index interpretation, all-control fundamental soundness and native
+implementation refinement remain unfinished.
+
+
+`NativeBindingMachineReaderClosing` reconstructs the reference binder and
+canonical closed reader-body typing from the authentic full Lend input. It
+covers generic and specialized checked reads without assuming an arbitrary-
+argument callback derivation, and connects actual activation to source loan
+slots and the reachable nested reader inventory. Canonical value meanings and
+runtime provenance remain distinct. General control/source association, heap
+size interpretation and exclusive resource authority remain open.
+
+
+`NativeBindingMachineOwnerSizes` now constructs captured source/heap length
+agreement at allocation argument entry and preserves old captured identities'
+lengths through arbitrary actual heap-event suffixes, including released aliases.
+It gives size/provenance information without assigning live/exclusive authority
+to every capture. `NativeBindingMachineSizedIndex` combines this with full bound
+evidence, source named-Borrow permission and the actual reader inventory to
+construct dynamic ten-step reads at the same closed input type. Allocation
+snapshots, selected numeric/owner slots, strict-bound and read-success premises
+are removed from this local theorem. A false comparison has original-type
+five-step else entry. `NativeBindingMachineSizedBorrow` similarly constructs a
+live reference with the actual dependent Buffer length at its exact source
+type. The common admission/control/value/size/loan/resource invariant, arbitrary
+evidence and source-result semantics, complete ownership safety and native
+implementation refinement remain unfinished.
+
+
+`NativeBindingMachineReferenceIndex` constructs six actual activation/read
+transitions through a reader's retained reference argument. The authentic full
+Lend read, bound evidence and captured owner sizes determine the actual physical
+length and strict bound; the input annotation describes the actual live sized
+reference. Reader inventory, canonical value contexts and old owner sizes are
+retained. No allocation snapshot, arbitrary callback or success/output-typing
+certificate is supplied. Source/control/frame and owner-slot association remain
+local preconditions; arbitrary evidence and the whole fundamental theorem are
+still open.
+
+
+`NativeBindingMachineValueHandoff` now constructs the canonical scalar/owner
+continuation bindings, value/size contexts and exact closed original result
+type from the authentic full Lend input. Five actual transitions close before
+binding, retain outer reader inventory and source loans, and connect both
+physical owner aliases to the same zero/one resource projection. No callback/
+output typing is assumed. `NativeBindingMachineReferenceReaderCompletion`
+constructs the entire eleven-step actual reference-read/close/handoff path and
+its intermediate prefix from those proofs. Arbitrary continuation bodies are
+retained, but their later execution, the all-control mixed-admission invariant,
+enclosing-reader consumption exclusion and native refinement remain open.
+
+
+`NativeBindingMachineCheckedDynamicReader` reconstructs the original Loan64
+source judgment and specialized CODE read directly from the actual resource
+projection. Its zero/one owner contract accompanies actual captured numeric
+lookup and physical-size interpretation. The reference argument executes an
+eleven-step guarded read or six-step original-type else entry, preserving
+nested reader inventory and canonical value/size contexts. No original generic
+callback, selected numeric operands, bound/allocation snapshot or output/success
+certificate is assumed. Source/control/frame and owner-slot association and
+all-control resource authority remain open.
+
+
+Guarded reference readers now have a sixteen-step authentic-checker composition
+through read, close and canonical continuation bindings, with original closed
+inferred result typing, owner-alias/resource agreement and outer reader
+inventory. False comparisons keep original-type six-step else entry. The
+scalar-shape helper only classifies local proof cases and leaves the full
+source grammar/Loan64 judgment unchanged. The old direct-Index API remains.
+No callback/output or intermediate-execution certificate is assumed. All-
+control mixed-admission/resource authority and general Free conflict exclusion
+remain unfinished.
+
+
+`NativeBindingMachineFreshDynamicRelease` derives absence of remaining owner
+readers from all-prefix frame provenance at an earlier actual call/birth prefix,
+then derives Free's guard from the constructed close inventory. Twenty actual
+transitions read, close, bind, release through either physical owner alias and
+return the observed I64 at the original inferred source type. The owner is dead,
+the heap/outer reader inventory remain valid and source residual owner demand
+is zero. No no-reader/Unborrowed/Free-success oracle is an input. The local
+birth/current-frame and source/context associations remain explicit; arbitrary
+old-owner conflicts and the all-control mixed-admission authority theorem are
+still unfinished.
+
+
+Original full lambda resource projection now yields its exact internal body
+receipt. Internal Lend source judgments, read/restore scopes and zero/one owner
+contracts feed the actual reader/handoff/release proofs; previous full-query
+APIs remain specializations. These internal-query lemmas do not replace mixed
+admission, source/context guards or the full grammar. Allocation-to-reader
+association and the all-control authority theorem are still to be constructed.
+
+
+`NativeBindingMachineAllocatedDynamicRelease` now constructs actual allocation,
+owner binding, named Lend and original reader-closure entry from the pending
+call's source judgments and original function resource receipt. The body query,
+birth/current-frame and owner-slot associations are derived. Thirty transitions
+read the captured index, close, bind, release and return the actual signed fill
+at the source signature's canonical argument instance. Original provenance is
+retained without a raw-conversion premise. False comparisons have typed else
+entry at sixteen steps; byte overflow faults at five. A closed full-checker/
+resource admission instantiates the theorem to an actual forty-eight-step
+release/return. Pending-call value/size/loan/source contexts and general
+admission/control authority remain open, as do arbitrary else/tail execution,
+old-owner conflict exclusion and native implementation refinement.
+
+
+`NativeBindingMachineCallDynamicRelease` starts at the original full call,
+recovering its lambda/argument typing and exact internal body resource receipt.
+The actual three-transition call prefix constructs the pending frame; composing
+allocation, reader activation, guarded read, close and alias Free gives a
+thirty-three-step return at the EXACT original closed call type. The heap trace
+and enclosing reader inventory are retained. False comparisons give typed
+nineteen-step else entry; allocation-size overflow faults after eight steps.
+The closed dependent example now uses this theorem after scalar entry, without
+separate function/argument checks or a supplied pending frame. Value/size/loan
+contexts at the original call, global mixed-admission authority, arbitrary
+else/tail execution and old-owner conflict exclusion remain open. This does not
+establish general progress, universe consistency or native implementation
+refinement.
+
+
+One authentic mixed declaration check and its earlier history now construct the
+three-scalar entry contexts and exact internal call resource receipt, with no
+separate entry/call checks. `NativeBindingMachineMixedDynamicRelease` derives
+the forty-eight-step allocation/read/close/Free/typed-fill return, dead owner,
+closed lease, heap validity, reader inventory and heap trace. False comparison
+reaches typed else code at thirty-four steps with its lease still live; byte
+overflow faults after twenty-three steps without heap events. The dependent
+example now uses this mixed admission directly. This is a parameterized local
+scalar/call path: arbitrary control stacks, old-owner conflicts, else/tail
+execution and native implementation refinement remain open; the complete
+grammar and whole-kernel obligations are unchanged.
+
+
+For an original integer else body, `NativeBindingMachineLiteralElseRelease`
+now completes both outcomes at the fresh reader boundary: twenty transitions
+read/close/Free or sixteen evaluate the source-typed literal/close/Free. Literal
+width and the Free guard are derived, retaining outer reader inventory and
+original inferred result typing. Composition through allocation and mixed
+entry remains to be updated; arbitrary else bodies and general all-control
+ownership/native-refinement obligations remain open.
+
+
+The literal-fallback suffix is now composed through allocation, original call
+and authentic mixed declaration entry. `ScalarCalls.admitted_literal_release`
+includes the original complete runtime typing of its closed caller and proves
+runtime I64 typing of either returned value: forty-eight-step fill/read/close/
+Free or forty-four-step literal/close/Free. Both have dead fresh owner, closed
+lease, valid heap, empty reader inventory and exact heap trace; byte overflow
+still has a twenty-three-step fault without heap changes. No fallback bound or
+branch/output/success oracle is supplied. This local parameterized scalar/call
+family leaves arbitrary else/tails, old-owner resource conflicts, all-control
+mixed authority, universe consistency, full preservation and native refinement
+open; the full syntax and completion criterion are unchanged.
+
+
+Enclosing-reader zero budgets now propagate through original Lend read/restore
+queries and literal call opening. A converse physical/source loan association
+combines those budgets with exact reachable inventory to derive Free guards for
+arbitrary old owners, without fresh-birth or no-reader premises. The actual
+scalar suffix and both guarded reference-reader outcomes retain source result
+typing, outer readers and source tail budgets. Mixed definition admission
+constructs initial authority for the full syntax. General preservation of that
+authority through every control/closure and alias-normalized reborrow remains
+open; the reverse association over all unused owner aliases cannot simply be
+assumed invariant. These conditional operation proofs do not complete general
+progress, universe consistency, full preservation or native refinement.
+
+
+Canonical index views now identify actual retained owner aliases with the
+original source slots, preserving exact origins and values without an injective
+map. The original Lend check constructs canonical continuation CODE typing and
+resource/loan authority at the original result type after five actual close/
+binding steps. Its one-use contract derives the permitted Free alias. The
+nine-step release then derives runtime return typing and canonical tail budget
+without separate source loans for every duplicated runtime slot or a supplied
+alias/output/success premise. General view/authority preservation through
+arbitrary closures/calls/readers and full native refinement remain open.
+
+
+Canonical variable steps now derive actual stored representations and numeric
+ranges from source CODE typing, and canonical readiness is constructed from
+the actual saved continuation frame. A confirmed remaining model blocker is
+`AliasReborrowBoundary`: authentic complete mixed admission accepts its closed
+I64 program, but returned-owner alias reborrowing reaches `inactiveBorrow` in
+the binding-retaining runtime. Source alias identification and runtime lexical
+reader keys disagree. This refutes the corresponding unrestricted progress/
+Borrow-precondition claim for the CURRENT model; it is not a native compiler
+counterexample or a logical inconsistency. Repair the correspondence while
+retaining source acceptance before claiming the whole-kernel obligations.

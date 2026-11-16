@@ -91,6 +91,45 @@ out/jihoo emit-mir examples/hello.jh
 jihoo run tests/runner.jh                    # the tests
 ```
 
+For the dependent-kernel formalization, `nix develop .#proofs` adds Lean and
+Lake to the native development tools. The proof scripts require the exact
+version in `proofs/lean-toolchain` and reject admitted proofs and unexpected
+axiom dependencies:
+
+```sh
+nix develop .#proofs
+mkdir -p out
+scripts/proof-limits.sh bash proofs/check.sh > out/lean-proofs.log 2>&1
+```
+
+Local checks use the memory limits in [AGENTS.md](AGENTS.md). The guard uses
+systemd cgroups when available; Linux containers without user systemd use a
+serialized process supervisor with inherited address-space limits and sampled
+aggregate RSS monitoring. Its virtual address-space allowance accommodates
+Lean's runtime reservations; the tree RSS threshold is 6 GiB. The fallback is
+not a cgroup hard cap.
+See the [executable kernel scope](proofs/KERNEL_CHECKER_SCOPE.md) and
+[native kernel scope](proofs/NATIVE_KERNEL_SCOPE.md) for the guarantees and
+remaining boundaries. A [rootless verification report](proofs/ROOTLESS_KERNEL_VERIFICATION.md)
+records the checked revision, commands and results.
+
+On Linux without root or a host `/nix`, a working
+[nix-portable](https://github.com/DavHau/nix-portable) installation can run the
+same locked flake. With the rootless Nix skill's launcher installed at
+`/workspace/.local/bin/nix-rootless`, enter the proof environment with:
+
+```sh
+/workspace/.local/bin/nix-rootless develop .#proofs
+```
+
+If the container rejects Nix's build-sandbox hostname/domain setup, use
+`nix-rootless --option sandbox false develop .#proofs` for that invocation.
+The proof process guard still applies inside the resulting shell.
+
+The launcher uses bubblewrap user namespaces. Its executable and private Nix
+store are separate from a system-wide Nix installation; do not replace the
+project's lock file to accommodate a launcher version mismatch.
+
 ## Layout
 
 | path | what |

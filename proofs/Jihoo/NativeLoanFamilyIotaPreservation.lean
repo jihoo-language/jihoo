@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaCasePreservation
 import Jihoo.NativeLoanFamilyIotaPropElimPreservation
 import Jihoo.NativeLoanFamilyIotaViewRecursivePreservation
@@ -9,7 +10,7 @@ open _root_.Jihoo.NativeKernel.Environment.FamilyIota
 open _root_.Jihoo.NativeKernel.Environment.LoanTyping.Conversion
 
 theorem elim_preserves {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
     (typed : HasType env [] ctx true
@@ -20,7 +21,7 @@ theorem elim_preserves {family constructor : Nat} {entry : CheckedFamily} {signa
   | true => exact data_elim_preserves history found sigFound kind selected size typed
 
 theorem contract_elim_preserves {family count : Nat}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env (.node (.elim family count) args) = some result)
     (typed : HasType env [] ctx true (.node (.elim family count) args) type) :
     HasType env [] ctx true result type := by
@@ -28,7 +29,7 @@ theorem contract_elim_preserves {family count : Nat}
   | elim found signature selected count fields => exact elim_preserves history found signature selected fields typed
 
 theorem view_preserves {recursion : Bool} {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
     (planned : viewPlan env family (signature.fields.drop entry.declaration.params) = some plans)
@@ -41,7 +42,7 @@ theorem view_preserves {recursion : Bool} {family constructor : Nat} {entry : Ch
 
 /-- All concrete roots: indexed Prop/data Elim, parameterized Case,
 one-level/recursive borrowed View, and pure Drop. -/
-theorem Root.preserves (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+theorem Root.preserves (history : ScopedProgram.History definitions declarations env)
     (step : Root env term result) (typed : HasType env [] ctx true term type) :
     HasType env [] ctx true result type := by
   cases step with
@@ -53,7 +54,7 @@ theorem Root.preserves (history : UnifiedProgram.UnifiedProgramChecked definitio
 
 /-- The actual executable contractor preserves every independently typed
 input's original result type under authentic mixed declaration history. -/
-theorem contract_preserves (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+theorem contract_preserves (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env term = some result) (typed : HasType env [] ctx true term type) :
     HasType env [] ctx true result type :=
   Root.preserves history (contract_sound accepted) typed

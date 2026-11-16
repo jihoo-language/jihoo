@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaInstantiation
 
 /-! General field application for actual nonparameter Case telescopes.
@@ -38,7 +39,7 @@ theorem arguments_consume (wf : UnifiedProgram.EnvWellFormed env)
 /-- A selected branch from the real generated list consumes exactly the real
 constructor fields. No branch typing or telescope equality is reflected. -/
 theorem case_branch_apply_no_parameters {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (parameters : entry.declaration.params = 0)
     (generated : dataCaseTypes family entry.declaration.params ctx.length entry.signatures [] motive false proof = some types)

@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaDataElimPreservation
 
 /-! Proposition induction computes through the real constructor fields and
@@ -112,7 +113,7 @@ private theorem propResult_instantiation (values hypotheses indices : List Term)
 /-- Generic actual proposition induction preserves the exact original result,
 including all recursive fields and arbitrary independently typed motives. -/
 theorem prop_elim_preserves {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (propIs : entry.declaration.data = false)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)

@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaRecursiveMetadata
 
 /-! Typed recursive fields extracted from real constructor argument derivations.
@@ -46,7 +47,7 @@ private theorem related_of_lookup (size : xs.length = ys.length)
 /-- When View is admitted (arity equals parameters), a recursive self field
 has exactly the outer constructor's actual parameter instance. -/
 theorem recursive_view_argument {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true) (arity : entry.declaration.arity = entry.declaration.params)
     (arguments : Arguments env [] ctx true entry.declaration.data (signatureTerm family signature) values result)

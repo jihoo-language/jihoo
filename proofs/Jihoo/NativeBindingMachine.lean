@@ -5,7 +5,9 @@ import Jihoo.SizedBufferHeap
 code and environments; runtime arguments are evaluated once and inserted as
 values, while erased arguments retain only source provenance. The explicit
 fragment covers U64 addition, signed I64 arithmetic, conditionals, Strict and
-buffer Alloc/Free.
+buffer Alloc/Free, leased Lend/Borrow and borrowed-buffer Index. Reader and
+continuation closures retain their source bindings; the lease closes before
+the continuation receives the reader result and the original owner.
 Unsupported syntax and invalid operations report faults. This is a source
 machine and abstract allocator model, not native evaluator refinement or a
 whole-kernel progress theorem. -/
@@ -17,6 +19,7 @@ inductive Value where
   | integer (value : Int)
   | typeCode (source : Term)
   | owner (object : Nat)
+  | reference (token : Nat)
   | closure (erased : Bool) (domain body : Term) (context : Context)
       (origins : Nat → Term) (captured : List (Option Value))
 
@@ -40,6 +43,9 @@ inductive Fault where
   | allocationOverflow
   | deadOwner
   | borrowedOwner
+  | inactiveBorrow
+  | closedLease
+  | indexBounds
   deriving DecidableEq, Repr
 
 inductive Control where
@@ -60,6 +66,27 @@ inductive Frame where
   | free (rest : Code)
   | branchLeft (equal : Bool) (second yes no : Code) (first : Term)
   | branchRight (equal : Bool) (first : Nat) (yes no : Code) (firstOrigin secondOrigin : Term)
+  | lendOwner (reader continuation : Code) (ownerOrigin : Term) (name : Option Nat)
+  | lendReader (token object : Nat) (name : Option Nat) (ownerOrigin readerOrigin : Term) (continuation : Code)
+  | lendFinish (token object : Nat) (name : Option Nat) (ownerOrigin resultOrigin : Term) (continuation : Code)
+  | lendContinuation (object : Nat) (ownerOrigin resultOrigin : Term) (result : Value)
+  | lendOwnerArgument (object : Nat) (ownerOrigin : Term)
+  | indexReference (index : Code)
+  | indexOffset (token : Nat)
+
+/-- Only the reader's live frames authorize named code Borrow. Continuation
+frames deliberately carry no active reader descriptor. -/
+def Frame.reader? : Frame → Option (Nat × Nat × Option Nat)
+  | .lendReader token object name _ _ _ | .lendFinish token object name _ _ _ => some (token,object,name)
+  | _ => none
+
+def readerFor (key object : Nat) (frame : Frame) : Option Nat := do
+  let (token,owner,some name) ← frame.reader? | none
+  if name = key ∧ owner = object then some token else none
+
+def activeLease (key object : Nat) : List Frame → Option Nat
+  | [] => none
+  | frame :: rest => (readerFor key object frame).orElse (fun _ => activeLease key object rest)
 
 inductive Event where
   | heap (event : SizedBufferHeap.Event)
@@ -84,6 +111,10 @@ inductive Action where
   | control (next : Control) (stack : List Frame) (activation : Option (Bool × Term × Term) := none)
   | allocate (count : Nat) (fill : Int) (stack : List Frame)
   | free (object : Nat) (rest : Code) (stack : List Frame)
+  | lend (object : Nat) (name : Option Nat) (ownerOrigin : Term) (reader continuation : Code) (stack : List Frame)
+  | close (token object : Nat) (result : Value) (ownerOrigin resultOrigin : Term) (continuation : Code) (stack : List Frame)
+  | borrow (key object : Nat) (stack : List Frame)
+  | read (token index : Nat) (stack : List Frame)
 
 def fault (reason : Fault) (stack : List Frame) : Action := .control (.fault reason) stack
 
@@ -130,6 +161,22 @@ def returnAction (value : Value) : List Frame → Option Action
           if (if equal then left == right else left < right) then
             .control (.evaluate (branchCode equal yes firstOrigin secondOrigin)) stack
           else .control (.evaluate no) stack
+      | .lendOwner reader continuation origin name,.owner object => .lend object name origin reader continuation stack
+      | .lendReader token object name origin _ continuation,
+          function@(.closure false domain body context origins captured) =>
+          let resultOrigin := (enter false domain body context origins captured
+            (.borrow origin) (some (.reference token))).origin
+          applyValue function (.borrow origin) (some (.reference token))
+            (.lendFinish token object name origin resultOrigin continuation :: stack)
+      | frame@(.lendReader _ _ _ _ _ _),_ => fault .wrongValue (frame :: stack)
+      | .lendFinish token object _ origin resultOrigin continuation,result =>
+          .close token object result origin resultOrigin continuation stack
+      | .lendContinuation object origin resultOrigin result,function@(.closure false _ _ _ _ _) =>
+          applyValue function resultOrigin (some result) (.lendOwnerArgument object origin :: stack)
+      | .lendOwnerArgument object origin,function@(.closure false _ _ _ _ _) =>
+          applyValue function origin (some (.owner object)) stack
+      | .indexReference index,.reference token => .control (.evaluate index) (.indexOffset token :: stack)
+      | .indexOffset token,.natural index => .read token index stack
       | _,_ => fault .wrongValue stack
 
 def evaluateAction (code : Code) (stack : List Frame) : Action :=
@@ -150,6 +197,17 @@ def evaluateAction (code : Code) (stack : List Frame) : Action :=
   | .arith op left right => .control (.evaluate (code.child left)) (.arithmeticLeft op (code.child right) :: stack)
   | .alloc count fill => .control (.evaluate (code.child count)) (.allocateCount (code.child fill) :: stack)
   | .free owner rest => .control (.evaluate (code.child owner)) (.free (code.child rest) :: stack)
+  | .node .lend [owner,reader,continuation] =>
+      let name := match owner with | .var index => some (code.context.length-index) | _ => none
+      .control (.evaluate (code.child owner))
+        (.lendOwner (code.child reader) (code.child continuation) (owner.subst code.origins) name :: stack)
+  | .borrow (.var index) => match code.values[index]? with
+      | some (some (.owner object)) => .borrow (code.context.length-index) object stack
+      | none => fault .missingVariable stack
+      | some none => fault .erasedVariable stack
+      | _ => fault .wrongValue stack
+  | .index reference index _ =>
+      .control (.evaluate (code.child reference)) (.indexReference (code.child index) :: stack)
   | .ifLt left right yes no => .control (.evaluate (code.child left))
       (.branchLeft false (code.child right) (code.child yes) (code.child no) left :: stack)
   | .ifEq left right yes no => .control (.evaluate (code.child left))
@@ -188,6 +246,32 @@ def execute (heap : SizedBufferHeap.State) : Action → State × Option Event
           (⟨SizedBufferHeap.release heap object,.evaluate rest,stack⟩,some (.heap (.free object)))
         else (⟨heap,.fault .borrowedOwner,stack⟩,none)
       else (⟨heap,.fault .deadOwner,stack⟩,none)
+  | .lend object name origin reader continuation stack =>
+      if heap.heap.live object then
+        let token := heap.heap.nextLease
+        (⟨SizedBufferHeap.lend heap object,.evaluate reader,
+          .lendReader token object name origin reader.origin continuation :: stack⟩,
+          some (.heap (.beginLease token object)))
+      else (⟨heap,.fault .deadOwner,stack⟩,none)
+  | .close token object result origin resultOrigin continuation stack =>
+      if heap.heap.lease token = some object then
+        (⟨SizedBufferHeap.close heap token,.evaluate continuation,
+          .lendContinuation object origin resultOrigin result :: stack⟩,some (.heap (.close token)))
+      else (⟨heap,.fault .closedLease,stack⟩,none)
+  | .borrow key object stack =>
+      match activeLease key object stack with
+      | some token =>
+          if heap.heap.lease token = some object then (⟨heap,.returned (.reference token),stack⟩,none)
+          else (⟨heap,.fault .closedLease,stack⟩,none)
+      | none => (⟨heap,.fault .inactiveBorrow,stack⟩,none)
+  | .read token index stack =>
+      match heap.heap.lease token with
+      | some object =>
+          if index < heap.length object then
+            (⟨heap,.returned (.integer (decodeInteger (heap.heap.payload object))),stack⟩,
+              some (.heap (.read token index (heap.heap.payload object))))
+          else (⟨heap,.fault .indexBounds,stack⟩,none)
+      | none => (⟨heap,.fault .closedLease,stack⟩,none)
 
 def step (state : State) : Option (State × Option Event) :=
   (action state).map (execute state.heap)
@@ -228,6 +312,7 @@ inductive Observation where
   | natural (value : Nat)
   | integer (value : Int)
   | owner (object : Nat)
+  | reference (token : Nat)
   | closure
   | typeCode
   | fault (reason : Fault)
@@ -239,6 +324,7 @@ def observe (result : Result) : Observation :=
   | .returned (.natural value),[] => .natural value
   | .returned (.integer value),[] => .integer value
   | .returned (.owner object),[] => .owner object
+  | .returned (.reference token),[] => .reference token
   | .returned (.closure _ _ _ _ _ _),[] => .closure
   | .returned (.typeCode _),[] => .typeCode
   | .fault reason,_ => .fault reason

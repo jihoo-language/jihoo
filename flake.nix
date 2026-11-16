@@ -310,6 +310,8 @@
                 ./proofs/CheckNativeOwnership.lean
                 ./proofs/CheckNativeUnifiedProgram.lean
                 ./proofs/CheckNativeLoanTyping.lean
+                ./proofs/CheckNativeLoanProgram.lean
+                ./proofs/CheckNativeLoanMixedProgram.lean
                 ./proofs/CheckNativeLoanQuantity.lean
                 ./proofs/CheckNativeACUNormalizer.lean
                 ./proofs/CheckNativeDelta.lean
@@ -369,6 +371,8 @@
               Jihoo.NativeOwnershipAdmission \
               Jihoo.NativeUnifiedAdmission \
               Jihoo.NativeLoanTypingInput \
+              Jihoo.NativeLoanGlobalInput \
+              Jihoo.NativeLoanMixedAdmission \
               Jihoo.NativeLoanQuantityInput \
               Jihoo.NativeACUBoundedNormalizer \
               Jihoo.NativeEnvironmentDeltaBounded \
@@ -403,6 +407,8 @@
             python3 tests/core_native_view_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_context_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_loan_typing_correspondence.py --compiler ${jihoo}/bin/jihoo
+            python3 tests/core_native_loan_program_correspondence.py --compiler ${jihoo}/bin/jihoo
+            python3 tests/core_native_loan_mixed_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_native_loan_quantity_correspondence.py --compiler ${jihoo}/bin/jihoo
             python3 tests/core_producer_gates.py
             python3 tests/core_transform_certificates.py --compiler ${jihoo}/bin/jihoo
@@ -545,6 +551,12 @@
         in
         {
           default = pkgs.mkShell shell;
+
+          # The native development tools plus the Lean/Lake version pinned by
+          # nixpkgs. proofs/check.sh also checks proofs/lean-toolchain exactly.
+          proofs = pkgs.mkShell (shell // {
+            nativeBuildInputs = shell.nativeBuildInputs ++ [ pkgs.lean4 ];
+          });
 
           # The default shell with QEMU, OVMF and the UEFI shell, which the
           # uefi suite of tests/runner.jh runs UEFI programs with (x86_64).

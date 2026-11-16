@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaElimCongruence
 
 /-! Principal Elim inputs and independently typed actual recursive calls for
@@ -36,7 +37,7 @@ private theorem related_refl (xs : List Term) : Conversion.ListRel (Conversion.C
 /-- Recursive calls reuse the actual source motive/branches at its observed
 parameter instance; checked recursive parameters align the real field to it. -/
 theorem recursive_data_hypothesis {family constructor j : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true) (parameterSize : ps.length = entry.declaration.params)
     (motiveTyped : HasType env [] ctx true motive

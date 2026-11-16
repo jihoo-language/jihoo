@@ -41,6 +41,8 @@ jobs:
           python3 tests/bootstrap_seed_update.py
           python3 tests/release_version.py
       - uses: cachix/install-nix-action@v31
+      - name: Check proof supervisor cleanup and resource limits
+        run: nix develop --command python3 tests/proof_limits.py
       # Includes aggregate and recursive Data/Buffer erasure axiom audits.
       - name: nix flake check
         run: nix flake check -L

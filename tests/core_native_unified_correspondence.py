@@ -43,7 +43,9 @@ CASES.update({
 })
 
 
-def run(compiler, checker, output, exporter=None):
+def run(compiler, checker, output, exporter=None, *, cases=None,
+        acknowledgement=b'exact native unified program accepted\n'):
+    cases = CASES if cases is None else cases
     output.mkdir(parents=True, exist_ok=True)
     if exporter is None:
         exporter = output / 'core-native-snapshots'
@@ -59,12 +61,12 @@ def run(compiler, checker, output, exporter=None):
         require(result.returncode == (0 if accepted else 1),
                 f'{name}: unified admission changed: {(result.stdout + result.stderr)!r}')
         if accepted:
-            require(result.stdout == b'exact native unified program accepted\n',
+            require(result.stdout == acknowledgement,
                     f'{name}: missing exact-byte acknowledgement')
         return {'case': name, 'origin': origin, 'accepted': accepted,
                 'sha256': hashlib.sha256(payload).hexdigest()}
 
-    for name, (source, native, admitted) in CASES.items():
+    for name, (source, native, admitted) in cases.items():
         (output / f'{name}.jhc').write_text(source + '\n')
         result = command([exporter, 'families'], source.encode())
         (output / f'{name}.native.stderr').write_bytes(result.stderr)

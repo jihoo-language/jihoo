@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaViewPreservation
 
 /-! Recursive field shape and parameter equations are recovered from the
@@ -94,7 +95,7 @@ private theorem telescope_shapes
 /-- Every stored field's recursive shape is authenticated by the original
 source telescope and transported through the real environment prefix. -/
 theorem signature_recursive_metadata {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature) :
     ∀ j field,signature.fields[j]? = some field → RecursiveShape env family entry.declaration j field := by
   obtain ⟨defs,families,earlier,source,prior,size,checked,extension⟩ := history.family_prefix found

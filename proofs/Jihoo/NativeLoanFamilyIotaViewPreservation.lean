@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaViewInstantiation
 
 /-! Original-type View iota preservation from authentic checked declarations,
@@ -59,7 +60,7 @@ private theorem plan_generated
 dependent field domains, owned external fields, dependent motives and
 surrounding result conversions are all retained. -/
 theorem view_preserves_one_level {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
     (planned : viewPlan env family (signature.fields.drop entry.declaration.params) = some plans)
@@ -142,7 +143,7 @@ theorem view_preserves_one_level {family constructor : Nat} {entry : CheckedFami
 /-- Every accepted one-level executable View contraction preserves the exact
 original result type, extracting all metadata from actual computation. -/
 theorem contract_view_one_level_preserves {family count : Nat}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (accepted : contract env (.node (.view false family count) args) = some result)
     (typed : HasType env [] ctx true (.node (.view false family count) args) type) :
     HasType env [] ctx true result type := by

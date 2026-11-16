@@ -281,7 +281,7 @@ def run(compiler, checker, output):
     transform_bytes = success(command([transformer]))
     transform_path = output / 'native-transform-observations.tsv'
     transform_path.write_bytes(transform_bytes)
-    transforms = success(command(['lake', 'env', 'lean', '-DwarningAsError=true', '--run',
+    transforms = success(command(['lake', 'env', 'lean', '-M', '4096', '-j', '1', '-DwarningAsError=true', '--run',
                                   'CheckNativeTransforms.lean', transform_path], cwd=ROOT / 'proofs'))
     (output / 'transform-report.txt').write_bytes(transforms)
     observations, additional, retained = [], [], {}

@@ -1,3 +1,4 @@
+import Jihoo.NativeScopedProgramHistory
 import Jihoo.NativeLoanFamilyIotaElimPositions
 
 /-! Generic indexed data Elim iota preservation from actual source typing,
@@ -8,7 +9,7 @@ open _root_.Jihoo.NativeKernel.Environment.LoanTyping.Conversion
 set_option linter.unusedSimpArgs false
 
 private theorem authentic_recursive_enabled {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true) :
     (if entry.boxed then instantiatedRecursive depth ps (signature.fields.drop params) else []) =
@@ -51,7 +52,7 @@ private theorem related_drop (related : Conversion.ListRel (Conversion.Conv env)
 /-- Every genuine data Elim constructor contraction preserves its exact
 original type, with arbitrary indices, parameters, recursive fields and motives. -/
 theorem data_elim_preserves {family constructor : Nat} {entry : CheckedFamily} {signature : Signature}
-    (history : UnifiedProgram.UnifiedProgramChecked definitions declarations env)
+    (history : ScopedProgram.History definitions declarations env)
     (found : env.families[family]? = some entry) (sigFound : entry.signatures[constructor]? = some signature)
     (dataIs : entry.declaration.data = true)
     (selected : cases[constructor]? = some branch) (size : values.length = signature.fields.length)
