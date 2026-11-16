@@ -9024,3 +9024,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.OwnerLoanSlots.reader_body
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_borrow
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_sized_borrow
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_index

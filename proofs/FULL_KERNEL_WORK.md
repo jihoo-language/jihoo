@@ -141,7 +141,7 @@ The remaining core obligations include:
   all derived, rather than supplied. The false comparison arm enters a body
   with the same original source type. Local source/control typing, allocation
   identity/layout and `LoanSlots` association remain explicit inputs.
-- The aggregate proof check currently audits 9,024 declarations. The mixed
+- The aggregate proof check currently audits 9,025 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -1432,3 +1432,29 @@ axiom audits and all generated-fixture comparisons in
 alias-repair checkpoint. No production compiler or native fixture changed;
 the existing native correspondence evidence is unchanged, not a new native
 implementation-refinement result.
+
+## 2026-11-16: canonical alias Index execution from source evidence
+
+`NativeBindingMachineCanonicalIndex.reachable_canonical_index` derives an
+actual five-transition read through an arbitrary retained owner alias from
+the complete source Index judgment, canonical owner sizes and OwnerLoanSlots.
+Source literal-Decide evidence supplies both U64 bounds, the strict comparison
+and the exact physical allocation length. Reachability derives the selected
+lease's liveness and actual heap payload width. The resulting integer has the
+ORIGINAL requested closed type in runtime mode. No selected owner/token,
+alias-key equality, allocation snapshot, numerical read guard, successful run
+or output typing is an input. Noninjective alias maps are supported.
+
+The target passed 311 Lake jobs with warnings as errors in
+`out/logs/canonical-index-local-2.log`. The original helper's rewriting of the
+pending Index frame needed normalization of Code.child before simplification;
+no memory limits, runtime behavior or theorem premises were changed to fix it.
+General computed index/evidence interpretation and all-control preservation of
+source, sizes, resources and scoped owner authority remain unfinished.
+
+The complete aggregate passed 935 Lake jobs, 9,025 distinct public axiom audits
+and all generated-fixture comparisons in `out/logs/canonical-index-full.log`.
+Only the three allowed standard logical axioms occur. No native implementation
+or native fixture changed. This extends the local canonical typing-to-runtime
+bridge; it does not complete general ownership/borrow soundness, universe
+consistency, specified preservation or native refinement.

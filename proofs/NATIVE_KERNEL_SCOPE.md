@@ -1455,3 +1455,12 @@ actual Borrow and, from canonical immutable owner sizes, `ReferenceSize` at the
 original closed requested type. Source control/type, owner-size and loan
 associations remain local entry invariants; their general all-control and
 reader-return preservation is not assumed proved.
+
+`CanonicalIndex` derives the actual five-transition literal-Decide read under
+the same canonical entry invariants, allowing noninjective aliases and differing
+reader keys. The full source judgment derives both numerical bounds and the
+physical length; reachability supplies the live lease and numeric heap width.
+The actual read integer is typed in runtime mode at the original requested
+closed type, without a supplied success or output interpretation. This remains
+conditional on source/control, size and scoped-owner entry associations;
+arbitrary computed indices/evidence and the full fundamental theorem remain open.

@@ -1115,3 +1115,4 @@ import Jihoo.NativeBindingMachineCanonicalVariables
 import Jihoo.NativeBindingMachineAliasReborrowBoundary
 import Jihoo.NativeBindingMachineAliasLoans
 import Jihoo.NativeBindingMachineCanonicalBorrow
+import Jihoo.NativeBindingMachineCanonicalIndex
