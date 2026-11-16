@@ -1496,3 +1496,19 @@ value and actual two-step close, leaving its token absent from the entire
 post-state control/stack and closed in the heap. No returned-value kind or
 successful close is supplied. General value-interpretation preservation for
 arbitrary reader computations and the full fundamental theorem remain open.
+
+`VariableHandoff` constructs an actual six-transition variable return, reader
+close and double continuation binding from the same original Lend/resource
+query and current canonical source-variable judgment. It derives the result
+value and its checked ghost meaning, original-type canonical CODE, value/size
+contexts, surviving ordered loan scope and no occurrence of the closed token.
+Owned results retain a source expression instead of a fabricated heap-identity
+literal. No returned-value typing or successful execution is supplied. General
+owned-result LoanCoverage/exclusive accounting remains separate.
+
+The current head-only ValueKind cannot represent rigid Refine, Back, Array or
+family result types at all. Its Outlived shape theorem is a sound local fact
+about this interpretation, not an exhaustive model of every accepted result.
+A full runtime relation must account for refined witnesses/proofs, Back pairs,
+constructor fields, recursive closure environments, heap identity and scoped
+reader authority. Do not remove those source constructors to close the goal.

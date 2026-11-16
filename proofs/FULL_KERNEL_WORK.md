@@ -146,7 +146,7 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,109 declarations. The mixed
+- The aggregate proof check currently audits 9,110 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -1558,3 +1558,35 @@ source-variable results, then connect these relations through full captured
 closures and arbitrary source computation. All original consistency,
 specified preservation, complete ownership/borrow soundness and native
 refinement obligations remain unfinished. Keep the active goal running.
+
+## 2026-11-16: arbitrary interpreted variable-result continuation entry
+
+`NativeBindingMachineVariableHandoff.reachable_canonical_variable_handoff`
+constructs the actual six-step variable return, close and two retained
+continuation bindings from the full original Lend/resource query. It preserves
+canonical CODE at the ORIGINAL requested Lend result type, actual value/size
+contexts, ordered outer LoanScope, reader inventory and absence of the closed
+token from the complete resulting runtime state. The private ghost finish
+proof accepts the source variable's derived checked meaning: observed scalars
+retain their numeral, while owners retain their checked source expression and
+physical allocation size. No physical-owner literal, returned-value typing,
+successful run or injected alias choice is supplied.
+
+The target passed 316 Lake jobs on its first build with warnings as errors.
+The aggregate passed 942 jobs, 9,110 distinct audits and all generated fixture
+comparisons (`out/logs/variable-handoff-full.log`), with only the three allowed
+logical axioms and unchanged resource limits. No production/native fixture
+or dependency pin changed.
+
+Owned-result converse LoanCoverage/exclusive accounting is still missing;
+an added owned binder may physically alias an outer borrowed object unless
+the actual returned source slot is connected to resource/control preservation.
+Do not silently assume it fresh or use enter_nonowner for that binder. The
+current head-only ValueKind also cannot model rigid Refine, Back, Array or
+family result heads: a richer value/heap interpretation is needed for those
+accepted constructors, not a restriction of the source language.
+
+Next compose existing canonical source views through ACTUAL saved Lend frames:
+the current handoff still identifies its original Code with the actual saved
+snapshot, which prevents direct use after arbitrary earlier alias layers.
+Keep the active goal running. All original completion obligations remain open.
