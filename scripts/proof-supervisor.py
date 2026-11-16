@@ -68,18 +68,25 @@ def kill_children(job):
         os.killpg(job.pid, signal.SIGKILL)
     except ProcessLookupError:
         pass
-    # Subreaping also retains descendants that create their own sessions.
-    for pid in descendants(processes()):
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    job.wait()
     while True:
-        try:
-            os.waitpid(-1, 0)
-        except ChildProcessError:
-            return
+        # A detached descendant can fork after the snapshot. Keep scanning and
+        # killing until the subreaper has no children, including newly adopted
+        # orphans; a blocking wait would let a missed descendant run forever.
+        for pid in descendants(processes()):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        # Let Popen reap the direct job so its exit status remains available.
+        if job.poll() is not None:
+            while True:
+                try:
+                    pid, _ = os.waitpid(-1, os.WNOHANG)
+                except ChildProcessError:
+                    return
+                if pid == 0:
+                    break
+        time.sleep(0.01)
 
 
 def main():
