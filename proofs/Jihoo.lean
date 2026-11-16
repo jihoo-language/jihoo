@@ -1124,3 +1124,4 @@ import Jihoo.NativeBindingMachineReaderCaptures
 import Jihoo.NativeBindingMachineOutlivedReferences
 import Jihoo.NativeBindingMachineVariableHandoff
 import Jihoo.NativeBindingMachineCanonicalFrameHandoff
+import Jihoo.NativeLoanHigherKindSource

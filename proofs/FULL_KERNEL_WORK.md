@@ -146,7 +146,7 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,112 declarations. The mixed
+- The aggregate proof check currently audits 9,124 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -1616,3 +1616,35 @@ Do not assert generic CODE typing of a raw callback body: admitted specialized
 readers can depend on the actual Borrow argument. General owned-result
 coverage/exclusivity, full control/value interpretation and all original
 whole-kernel completion obligations remain open. Keep the active goal running.
+
+## 2026-11-16: reconstruct higher-kind codes from actual Loan64 admission
+
+`NativeLoanHigherKindSource` reuses the ENTIRE existing HigherKinds.Recognized
+grammar, intrinsic Expression and concrete finite denotation. It reconstructs
+them from the authentic LoanTyping.HasType judgment using genuine RawLend
+conversion, rather than asking for an earlier Environment.HasType derivation
+or an old-conversion witness. Raw kind validity/injectivity/classification
+support source principal reconstruction under arbitrary loan stacks and source
+prefix frames. Mixed histories and actual checkDeclaration acceptance supply
+closed derivations at the exact expanded annotation. No semantic candidate,
+normal form or output-realization certificate is supplied.
+
+The native source universe rule requires n < 32 (compiler/core.jh and the full
+Loan64 univ rule agree). Existing finite levels include the required
+administrative successors; the remaining consistency gap is source-to-model
+reconstruction for arbitrary annotations/computation, not an absent infinite
+universe hierarchy. Recognized is deliberately still an explicit premise.
+
+The target passed 229 jobs after adapting the mutually defined Loan64 recursor
+arity and using its full PrincipalView for Pi formation. The complete aggregate
+passed 944 Lake jobs, 9,124 distinct audits and all generated fixture comparisons
+(`out/logs/loan-higher-kind-full.log`), using only the three standard logical
+axioms under unchanged resource limits. No native implementation, fixture or
+dependency pin changed.
+
+Next reconstruct the semantic substitution itself from an actual Loan64 ghost
+substitution on this source grammar, with syntax/denotation coherence, rather
+than accepting an arbitrary semantic substitution certificate. General
+dependent annotation interpretation/coherence, arbitrary proof consistency,
+full specified preservation, runtime fundamental preservation and native
+refinement remain open. Keep the active goal running.

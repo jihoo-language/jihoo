@@ -1523,3 +1523,14 @@ Closed-token exclusion uses the actual saved capture snapshot. No raw actual-
 code typing, lexical-key equality, output certificate or successful run is
 supplied. This is saved-frame composition, not all-control preservation or
 owned-result exclusive resource accounting.
+
+`NativeLoanHigherKindSource` ports the entire existing higher-kind Recognized
+reconstruction to actual Loan64 typing. Raw kind injectivity/classification
+uses the genuine RawLend relation, including arbitrary converted result
+representatives. Mixed-history and checked-declaration corollaries construct
+the intrinsic expression, exact original-type conversion and concrete semantic
+value/code. No earlier HasType or old-conversion proof is supplied. Universe
+input bounds follow from the complete Loan64 judgment; the native input ceiling
+is 32 and the existing finite administrative hierarchy covers those levels.
+Recognized remains a source-coverage premise, and no arbitrary dependent
+annotation interpretation or complete consistency theorem is claimed.

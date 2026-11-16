@@ -9113,3 +9113,16 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_variable_handoff
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_composed_canonical_view
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_frame_variable_handoff
+
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.universe_input_bound
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.kind_valid_of_typed
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.kind_syntax_injective
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.kind_classified_sort
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.recognized_principal_frame
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.recognized_principal
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.native_fundamental
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_fundamental
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.native_code_fundamental
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_code_fundamental
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_declaration_fundamental
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.admitted_declaration_fundamental
