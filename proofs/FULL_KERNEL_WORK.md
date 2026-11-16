@@ -2,7 +2,9 @@
 
 The user's active goal is to continue implementing and checking proofs until
 the entire Jihoo dependent-type kernel is formally verified, committing and
-pushing intermediate results. **The goal is not complete.** Passing fixture or
+pushing intermediate results. The user subsequently requested finishing the
+current work and pausing; that request supersedes continuous execution until
+the user resumes it. **The goal is not complete.** Passing fixture or
 theorem counts are not a completion percentage.
 
 ## Completion obligations
@@ -146,7 +148,7 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,124 declarations. The mixed
+- The aggregate proof check currently audits 9,156 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -191,6 +193,9 @@ The user's explicit continuation instruction on 2026-11-16 is to keep working
 until Codex usage is exhausted, the user asks to stop, or the full dependent
 kernel proof obligations are actually completed. An active goal records that
 instruction. Checked increments and pushes do not complete or pause the goal.
+The subsequent explicit user pause request overrides that instruction: finish
+the current checked checkpoint, commit and push it, then pause the active goal.
+Do not begin another proof task until the user resumes work.
 
 Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
 workstation path is `/home/user/jihoo` and the active continuation branch is
@@ -1648,3 +1653,55 @@ than accepting an arbitrary semantic substitution certificate. General
 dependent annotation interpretation/coherence, arbitrary proof consistency,
 full specified preservation, runtime fundamental preservation and native
 refinement remain open. Keep the active goal running.
+
+## 2026-11-16: completed reference-world and typed-substitution checkpoint
+
+The user requested completing only the current work and pausing. This
+checkpoint finishes five modules and records the remaining obligations for
+resumption; it does not complete the whole-kernel proof.
+
+`NativeBindingMachineCanonicalReaderEntry` constructs actual reader activation
+under distinct actual and canonical snapshots. It retains the reference-binder
+ghost view and the specialized original-context CODE read as separate source
+judgments. Raw specialized callback bodies need not have generic CODE typing.
+
+`NativeBindingMachineCanonicalCaptures` strengthens CanonicalView with an
+ordered sublist of actual retained captures. Recursive reference bounds then
+transport to the canonical snapshot, including after composed owner restoration.
+A proved counterexample shows why a plain alias view alone cannot transport
+all source capture bounds: unused phantom source slots may lie outside its map.
+
+`NativeBindingMachineReferenceSizes` relates every stored Buffer reference to
+its live physical lease, length and original closed source type. Actual reader
+entry constructs that relation and the stronger captured view from the original
+Lend judgment, source owner sizes and actual reader inventory. Close transport
+uses actual saved snapshots rather than a caller-supplied source token bound.
+
+`NativeBindingMachineReaderLeaseWorld` proves that an enclosing reader protects
+older lease slots through arbitrary actual execution intervals, including nested
+readers and partial/fault prefixes. Fresh-token monotonicity and expiration
+exclude closing and reopening the enclosing reader. The saved-reference interval
+theorem derives endpoint reference liveness, length and post-close reference
+contexts from entry relations and actual frame shapes.
+
+`NativeLoanHigherKindSubstitution` reconstructs intrinsic replacements from an
+actual Loan64 ghost substitution over the existing complete Recognized grammar.
+Its valuation map is induced by those replacements. The source theorem supplies
+exact substituted syntax, denotation coherence, genuine substituted HasType and
+original-kind conversion, without a semantic substitution certificate.
+
+The final aggregate passed 949 Lake jobs, 9,156 distinct public declaration
+audits and all generated fixture comparisons
+(`out/logs/reader-world-and-substitution-full.log`). The five modules add 32
+audited public theorems. Only the three allowed logical axioms occur. All checks
+used the unchanged resource wrapper, Lean memory/thread limits and Nix shell.
+No native implementation, native fixture, dependency pin or resource limit changed.
+
+After committing and pushing this checkpoint, pause the active goal as requested.
+On resumption, connect richer source/control specialization through saved frames
+and use the interval theorem where endpoint liveness was previously supplied.
+Derive owned-result coverage and exclusive resources from actual source receipts.
+A richer value/heap relation must interpret accepted Refine, Back, Array and
+family values. Arbitrary dependent annotation interpretation, general logical
+consistency, complete specified preservation, runtime fundamental preservation
+and native implementation refinement all remain open.

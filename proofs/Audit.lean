@@ -9126,3 +9126,37 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_code_fundamental
 #print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_declaration_fundamental
 #print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.admitted_declaration_fundamental
+
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_reader_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ValuesReferences.sublist
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CanonicalView.reference_bounds_not_implied
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.identity
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.child
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.compose
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.enter
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.references
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_captured_canonical_view
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.restored
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.initial_finish_snapshot
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.CapturedCanonicalView.initial_finish_absent
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSize.convert
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSize.lend
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSize.close
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.initial
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.child
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.typed_variable
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.lend
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.enter_nonreference
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.enter_reference
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.close
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReferenceSizes.close_snapshot
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_reader_reference_entry
+
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.IntrinsicSubstitution.apply_syntax
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.IntrinsicSubstitution.apply_meaning
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.typed_substitution
+#print axioms Jihoo.NativeKernel.Environment.Semantics.HigherKinds.Loan64.checked_substitution_coherence
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ReaderCaptureBounds.head_token_bound
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.step_reader_older_lease
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_reader_older_leases
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_saved_reference_interval

@@ -1534,3 +1534,28 @@ input bounds follow from the complete Loan64 judgment; the native input ceiling
 is 32 and the existing finite administrative hierarchy covers those levels.
 Recognized remains a source-coverage premise, and no arbitrary dependent
 annotation interpretation or complete consistency theorem is claimed.
+
+Canonical reader entry now distinguishes the reference-binder ghost snapshot
+from the specialized original-context CODE read. Actual original Lend typing,
+owner sizes and reader inventory construct entry authority; generic raw callback
+CODE typing is not assumed. CapturedCanonicalView additionally requires every
+canonical capture to occur in the actual saved snapshot, allowing recursive
+reference bounds to transport through composed alias views. A formal boundary
+example shows that plain CanonicalView permits unused phantom source references.
+
+ReferenceSizes connects stored Buffer references with original closed source
+types, physical lengths and live leases. It is constructed at actual canonical
+reader entry and transported through saved-snapshot close. ReaderLeaseWorld
+proves that older lease slots survive arbitrary intervals protected by an
+enclosing reader, including nested readers and partial/fault prefixes; expiration
+and fresh-token monotonicity derive intermediate barrier presence. Entry reference
+contexts and actual saved-frame shapes therefore supply the saved references'
+endpoint liveness and size. These are local bridges, not full admission/control
+preservation or owned-result coverage and exclusive resource accounting.
+
+NativeLoanHigherKindSubstitution reconstructs intrinsic replacements and their
+induced semantic valuation map from actual Loan64 ghost substitution over the
+existing Recognized grammar. Exact syntax, denotation coherence, substituted
+HasType and original-kind conversion follow from actual source typing. The
+explicit grammar coverage remains; general dependent annotation interpretation,
+logical consistency and native implementation refinement are still open.
