@@ -146,7 +146,7 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,026 declarations. The mixed
+- The aggregate proof check currently audits 9,109 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -186,6 +186,11 @@ The current heap is uniform-fill/read-only `SizedBufferHeap`; Store and general
 data layouts require an appropriate runtime heap interpretation as well.
 
 ## Working procedure
+
+The user's explicit continuation instruction on 2026-11-16 is to keep working
+until Codex usage is exhausted, the user asks to stop, or the full dependent
+kernel proof obligations are actually completed. An active goal records that
+instruction. Checked increments and pushes do not complete or pause the goal.
 
 Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
 workstation path is `/home/user/jihoo` and the active continuation branch is
@@ -1500,3 +1505,56 @@ computed index/count terms and Lt evidence. General else/tail evaluation,
 complete ownership/borrow soundness, all-universe consistency, full specified
 preservation and native implementation refinement remain open. The whole-
 kernel verification goal is NOT complete.
+
+## 2026-11-16: ordered reader authority and source-derived nonescaping close
+
+`NativeBindingMachineLoanScope` pairs SOURCE LOAN OCCURRENCES positionally with
+concrete ordered reader identities. Equal source frames and noninjective alias
+rebasing retain distinct occurrences. Initial, child, binder, reader entry/body
+and canonical transport construct the association. Pop/finish remove source and
+runtime heads together and derive outer authority, distinct surviving tokens and
+their live leases from the actual reader inventory. This projects to the older
+OwnerLoanSlots interface without requiring a post-close authority certificate.
+
+`NativeBindingMachineReferenceProvenance` proves strict reference-token bounds
+through actual values, recursively captured closures, source Code, every frame
+and control state across ALL execution prefixes, including faults/fuel. Reader
+and Index descriptor tokens are included. Fresh reader tokens cannot occur in
+previously captured values or saved outer frames. This is provenance, not
+current reference liveness. The module imports ReaderState so its generated
+Lean evaluateAction case helpers share the established dependency chain.
+
+`NativeBindingMachineReaderCaptures` preserves a stronger birth snapshot for
+each reader: its saved continuation and complete stack tail retain reference
+tokens strictly older than its own token. These bounds hold unconditionally
+at every reachable prefix. They exclude the closing token from saved captures,
+but deliberately say nothing about the current reader result by themselves.
+
+`NativeBindingMachineOutlivedValues` proves that the current ValueKind relation
+cannot realize Outlived with a reference, closure or type code. The full
+original Lend judgment derives Outlived for the actual first continuation
+domain after source value closing. `NativeBindingMachineOutlivedReferences`
+then uses canonical source VARIABLE typing to select a real result and perform
+the actual two-transition return/close. The token is closed in the heap and
+absent from the entire resulting runtime control and stack, including every
+recursive capture. No supplied result value/kind, successful close, post-state
+interpretation or no-token oracle is an input to this source-to-execution result.
+
+All five target modules passed with warnings as errors. The complete aggregate
+passed 941 Lake jobs, 9,109 distinct public audits and every generated-fixture
+comparison (`out/logs/loan-lifetime-foundations-full.log`). All 83 additional
+public theorems are audited exactly once with only `propext`, `Classical.choice`
+and `Quot.sound`. Every compiler/check used the unchanged resource wrapper,
+single-thread settings and pinned Nix proof shell. No production compiler,
+fixture, dependency pin or memory limit changed.
+
+This does not supply the common all-control semantic interpretation: source
+LoanScope/value/size/resource authority through arbitrary saved closures/calls
+and arbitrary reader results is still open. The no-escape result currently
+constructs the final VARIABLE return; it does not assume and then claim that
+ValueKind is preserved for every reader computation. Next generalize original-
+type continuation entry beyond the existing scalar-only handoff using actual
+source-variable results, then connect these relations through full captured
+closures and arbitrary source computation. All original consistency,
+specified preservation, complete ownership/borrow soundness and native
+refinement obligations remain unfinished. Keep the active goal running.

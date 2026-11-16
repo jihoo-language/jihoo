@@ -1476,3 +1476,23 @@ for actual code, numerical guard, selected number/token or successful execution
 is supplied.
 These remain local entry invariants, not a closed-admission fundamental theorem
 for arbitrary computed terms, proof forms, closures or saved control frames.
+
+`LoanScope` strengthens existential owner authority to ordered source-loan
+occurrences paired with concrete reader identities. It supports duplicate
+source frames, noninjective alias rebasing, binder transport and reader pop;
+actual inventory derives outer links' surviving leases. This supplies an
+authority relation suitable for saved contexts, without claiming it has been
+constructed through every admitted execution.
+
+Reference-token bounds through recursive closure captures, Code, all frames
+and runtime control now hold for every initial machine prefix. Reader capture
+snapshots separately retain strictly older tokens in each saved continuation
+and its complete outer stack. These unconditional results exclude a closing
+token from saved captures. Under the current ValueKind interpretation, the
+source Outlived policy excludes returned references, closures and type codes.
+The full original Lend judgment derives that policy for the actual first
+continuation domain. A canonical source-variable return constructs the real
+value and actual two-step close, leaving its token absent from the entire
+post-state control/stack and closed in the heap. No returned-value kind or
+successful close is supplied. General value-interpretation preservation for
+arbitrary reader computations and the full fundamental theorem remain open.
