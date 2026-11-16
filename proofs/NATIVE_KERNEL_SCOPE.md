@@ -1464,3 +1464,15 @@ The actual read integer is typed in runtime mode at the original requested
 closed type, without a supplied success or output interpretation. This remains
 conditional on source/control, size and scoped-owner entry associations;
 arbitrary computed indices/evidence and the full fundamental theorem remain open.
+
+`CanonicalDynamicIndex` extends this bridge to captured IfLt index/length
+comparisons. Full source typing, aligned canonical slots and value meanings
+construct both actual numbers; the source erased branch hypothesis identifies
+the real owner length. True branches perform ten transitions and return a
+runtime-typed integer at the original closed requested type. False branches
+perform five transitions and retain canonical original-type else typing,
+value/size/loan contexts, alignment and the alias view. No separate LoanSlots
+for actual code, numerical guard, selected number/token or successful execution
+is supplied.
+These remain local entry invariants, not a closed-admission fundamental theorem
+for arbitrary computed terms, proof forms, closures or saved control frames.

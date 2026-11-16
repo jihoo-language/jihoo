@@ -141,7 +141,12 @@ The remaining core obligations include:
   all derived, rather than supplied. The false comparison arm enters a body
   with the same original source type. Local source/control typing, allocation
   identity/layout and `LoanSlots` association remain explicit inputs.
-- The aggregate proof check currently audits 9,025 declarations. The mixed
+- Canonical owner aliases now resolve Borrow through a scoped same-object
+  reader while retaining exact-name priority. Canonical source typing and
+  physical owner-size/loan contexts construct Borrow and literal/dynamic Index
+  steps without alias-key equality. These remain explicit local associations,
+  not an all-control or all-value lifetime fundamental theorem.
+- The aggregate proof check currently audits 9,026 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -158,9 +163,13 @@ counterpart uses the actual mixed-program history.
 
 `ReadersLive`, exact lease coverage and token distinctness now follow from
 initial execution without typing assumptions. Next derive and preserve
-`LoanSlots` across the full typed control stack, rather than supplying it
-independently at each Borrow. Ordinary binder and reader-entry slot lemmas
-are available. Connect captured source code/origin stores and
+canonical source/control, resource/value and scoped owner authority across
+the full typed control stack. `OwnerLoanSlots` now transports ordinary
+binders, noninjective alias rebasing, reader entry/body and captured IfLt
+else entry without requiring every runtime alias to share a lexical key.
+Source-to-reader lifetime association must additionally identify which reader
+survives closing; same-object reader existence alone is insufficient.
+Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader, structural erasure and numeric value/heap components are
 available, but a common source-type/resource interpretation for every runtime
@@ -169,7 +178,7 @@ Dynamic IfLt hypothesis reads now supplement the literal-Decide bridge.
 Extend this to all Lt proof forms and arbitrary computed index/count terms.
 Derive exact heap lengths and the association between the owner slot and
 allocation from the common runtime interpretation, instead of the
-current explicit local allocation-state/slot premises. The runtime bound
+current explicit local source/slot/size entry premises. The runtime bound
 check alone does not discharge those obligations.
 Retain computed callees, erased arguments and exact dependent result origins;
 do not replace binding execution with generally invalid CODE beta substitution.
@@ -1458,3 +1467,36 @@ Only the three allowed standard logical axioms occur. No native implementation
 or native fixture changed. This extends the local canonical typing-to-runtime
 bridge; it does not complete general ownership/borrow soundness, universe
 consistency, specified preservation or native refinement.
+
+## 2026-11-16: captured dynamic canonical Index and typed else entry
+
+`NativeBindingMachineCanonicalDynamicIndex.reachable_canonical_dynamic_index`
+extends canonical owner-alias execution to actual captured IfLt index/length
+comparisons. Complete source CODE typing, source slot alignment and value
+meanings construct the actual scalar slots and widths. A true comparison
+constructs the erased source proof, identifies physical owner length from
+canonical size realization, selects an enclosing same-object live reader and
+performs ten transitions with the exact read event. The resulting integer has
+the ORIGINAL requested closed type in runtime mode. The false comparison
+performs five transitions into the original actual else body and retains its
+canonical original-type judgment, value/size/loan contexts, alignment and alias
+view. Noninjective index maps and differing source/runtime keys are supported.
+No numerical guard, selected scalar/owner/token, actual-code LoanSlots,
+successful run or output-typing certificate is supplied.
+
+The target passed 312 Lake jobs on its first build with warnings as errors
+(`out/logs/canonical-dynamic-index-local.log`). The complete aggregate then
+passed 936 Lake jobs, 9,026 distinct public audits and every generated-fixture
+comparison (`out/logs/canonical-dynamic-index-full.log`). Only the three
+allowed logical axioms occur. All compiler/checker jobs used the unchanged
+shared resource wrapper and pinned Nix proof shell. No production compiler,
+native fixture, dependency pin or memory limit changed.
+
+This is local progress from canonical source entry invariants, not a general
+closed-admission/control-stack fundamental theorem. Next carry the source
+owner/value/size/resource and reader-lifetime associations through arbitrary
+saved closures, computed calls and reader returns, and cover arbitrary
+computed index/count terms and Lt evidence. General else/tail evaluation,
+complete ownership/borrow soundness, all-universe consistency, full specified
+preservation and native implementation refinement remain open. The whole-
+kernel verification goal is NOT complete.

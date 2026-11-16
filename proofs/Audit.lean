@@ -9025,3 +9025,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_borrow
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_sized_borrow
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_index
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_dynamic_index
