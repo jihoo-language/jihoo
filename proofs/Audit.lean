@@ -9111,3 +9111,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.ValueKind.outlived_reference_absent
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_lend_variable_close
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_variable_handoff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.restored_composed_canonical_view
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_frame_variable_handoff

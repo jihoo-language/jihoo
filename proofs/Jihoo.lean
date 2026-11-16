@@ -1123,3 +1123,4 @@ import Jihoo.NativeBindingMachineLoanScope
 import Jihoo.NativeBindingMachineReaderCaptures
 import Jihoo.NativeBindingMachineOutlivedReferences
 import Jihoo.NativeBindingMachineVariableHandoff
+import Jihoo.NativeBindingMachineCanonicalFrameHandoff

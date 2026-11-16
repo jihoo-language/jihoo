@@ -146,7 +146,7 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,110 declarations. The mixed
+- The aggregate proof check currently audits 9,112 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -1590,3 +1590,29 @@ Next compose existing canonical source views through ACTUAL saved Lend frames:
 the current handoff still identifies its original Code with the actual saved
 snapshot, which prevents direct use after arbitrary earlier alias layers.
 Keep the active goal running. All original completion obligations remain open.
+
+## 2026-11-16: compose canonical views through actual saved Lend frames
+
+`NativeBindingMachineCanonicalFrameHandoff` removes the original-Code-equals-
+actual-snapshot restriction. The actual saved continuation has an arbitrary
+prior CanonicalView into its source snapshot. Both real bindings lift that
+view, and source owner restoration composes the resulting index map; neither
+layer is required to be injective. Actual raw lambda annotations, bodies and
+captured values drive all six transitions, while original source Lend/resource
+typing constructs original-type canonical CODE and value/size/ordered-loan
+contexts. No actual-snapshot source typing, reader-key equality, selected
+result, successful run or output interpretation is supplied. Closed-token
+absence follows from the actual reader snapshot and source-derived result.
+
+The target passed 317 Lake jobs after normalizing the source owner provenance
+in the two view witnesses. The complete aggregate passed 943 jobs, 9,112
+distinct public audits and all generated fixtures
+(`out/logs/canonical-frame-handoff-full.log`), using only the standard allowed
+axioms and unchanged resource guard. No native implementation or fixture changed.
+
+The next reader-entry bridge must distinguish the runtime/reference-binder
+source view from the specialized original-context read typed by the checker.
+Do not assert generic CODE typing of a raw callback body: admitted specialized
+readers can depend on the actual Borrow argument. General owned-result
+coverage/exclusivity, full control/value interpretation and all original
+whole-kernel completion obligations remain open. Keep the active goal running.

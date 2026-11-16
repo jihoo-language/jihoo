@@ -1512,3 +1512,14 @@ about this interpretation, not an exhaustive model of every accepted result.
 A full runtime relation must account for refined witnesses/proofs, Back pairs,
 constructor fields, recursive closure environments, heap identity and scoped
 reader authority. Do not remove those source constructors to close the goal.
+
+`CanonicalFrameHandoff` distinguishes the actual saved Code from its canonical
+source snapshot. It lifts an arbitrary prior view through both real bindings
+and composes owner restoration with that existing noninjective alias map.
+The actual six-transition return/close/bind executes raw runtime annotations
+and bodies, while source typing/resource projection construct canonical CODE
+at the original requested type and preserve value/size/ordered-loan contexts.
+Closed-token exclusion uses the actual saved capture snapshot. No raw actual-
+code typing, lexical-key equality, output certificate or successful run is
+supplied. This is saved-frame composition, not all-control preservation or
+owned-result exclusive resource accounting.
