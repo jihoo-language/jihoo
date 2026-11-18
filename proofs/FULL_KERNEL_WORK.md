@@ -2005,3 +2005,36 @@ and `Classical.choice`. Typed beta replay passed 12 accepts, 24 rejections,
 and two gated handoffs with both standalone Lean checkers under the project
 memory and thread limits. Those limits are also the defaults for graph
 certificate and canonical replay validation.
+
+## 2026-11-18: unsigned arithmetic and source use of pure conversion
+
+`NativeCoreArithmeticMachine` now models the unsigned constant accumulator.
+At most one U64 literal is added for each successful literal tick and guarded
+cancellation never increases the sum. With at most one million such visits,
+the U128 accumulator agrees exactly with mathematical naturals, including
+repeated visits to a shared node. The balanced `natural_sum` reconstruction
+uses valid U64 literals and represents the exact sum. With that tick bound,
+the unfolded result has at most 21 levels. The actual traversal and its tick
+accounting still need implementation refinement.
+
+The indexed binding machine now evaluates unsigned subtraction left to right,
+skips the erased evidence, and reports arithmetic overflow on underflow.
+The step preserves heap and reader invariants, numeric widths, and active and
+suspended frame alignment. Source typing of literal operands and supported
+evidence derives the runtime guard and original result type, including maximum
+U64 minus zero. The exact event fixture checks source operand order and proof
+erasure. The older runtime equivalence applies to prefixes that select none of
+Store, Load, and unsigned subtraction.
+
+`NativeLoanPureTyping` connects the expanded pure conversion to a structural
+ghost judgment over authentic Loan64 derivations. It keeps the original binder
+policy and checks formation of conversion targets. The Pi, lambda, and
+application fragment has typed ghost substitution and beta preservation
+at the original requested codomain. The earlier Free equality program has a
+derivation here. Applying it to a Free-containing argument and contracting the
+beta redex both give `Eq(0,0)`. This covers a fragment of the source judgment.
+Extension to all constructors and executable checker admission remains open.
+
+The full check passed 990 Lake jobs, 9,406 declaration audits, and every
+generated fixture comparison under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`.

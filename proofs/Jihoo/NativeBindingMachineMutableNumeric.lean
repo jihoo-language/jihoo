@@ -9,8 +9,8 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 
 def BufferFrameNumbers : BufferFrame → Prop
   | .owner index fill | .loadOwner _ index fill => CodeNumbers index ∧ CodeNumbers fill
-  | .index _ fill | .loadIndex _ _ fill => CodeNumbers fill
-  | .value _ index => index < 2^64
+  | .index _ fill | .loadIndex _ _ fill | .usubLeft fill => CodeNumbers fill
+  | .value _ index | .usubRight index => index < 2^64
   | .loadContinuation _ _ value => ValueReduction.signed64 value
   | .loadOwnerArgument _ _ => True
 
@@ -191,6 +191,13 @@ private theorem resumeBuffer_numbers (bounded : StateNumbers state)
         ⟨bounded.legacy,outer,bounded.cells⟩
         (applyValue_numbers_retained ready .owner top.2)
     · exact ⟨⟨bounded.legacy.1,True.intro,StackNumbers.empty⟩,bounded.pending,bounded.cells⟩
+  case usubLeft.natural =>
+    exact ⟨⟨bounded.legacy.1,top.1,bounded.legacy.2.2⟩,outer.cons ready.naturalBound top.2,bounded.cells⟩
+  case usubRight.natural =>
+    split
+    · exact ⟨⟨bounded.legacy.1,.natural (Nat.lt_of_le_of_lt (Nat.sub_le _ _) top.1),top.2⟩,
+        outer,bounded.cells⟩
+    · exact ⟨⟨bounded.legacy.1,True.intro,top.2⟩,outer,bounded.cells⟩
 
 /-- Every indexed-buffer transition preserves numeric widths, including
 faults and nested Load and Store continuations. -/
@@ -210,6 +217,9 @@ theorem step_numbers (bounded : StateNumbers state) (stepped : step state = some
       · cases stepped
         exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
           bounded.pending.cons ⟨controlReady,controlReady⟩ bounded.legacy.2.2,bounded.cells⟩
+      · cases stepped
+        exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+          bounded.pending.cons controlReady bounded.legacy.2.2,bounded.cells⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

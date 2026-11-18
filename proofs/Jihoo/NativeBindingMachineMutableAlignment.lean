@@ -1,14 +1,14 @@
 import Jihoo.NativeBindingMachineAlignment
 import Jihoo.NativeBindingMachineMutable
 
-/-! Store and Load suspend ordinary frames while evaluating their operands.
+/-! Extended instructions suspend ordinary frames while evaluating their operands.
 The indexed machine retains the usual erasure and captured-slot alignment in
 both the active stack and every pending operand or callback. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 
 def BufferFrameAligned : BufferFrame → Prop
   | .owner index value | .loadOwner _ index value => CodeAligned index ∧ CodeAligned value
-  | .index _ value | .loadIndex _ _ value => CodeAligned value
+  | .index _ value | .loadIndex _ _ value | .usubLeft value => CodeAligned value
   | _ => True
 
 def PendingAligned (pending : List (BufferFrame × List Frame)) : Prop :=
@@ -103,6 +103,11 @@ private theorem resumeBuffer_aligned (aligned : StateAligned state)
     · exact executeLegacy_aligned (state := { state with pending := rest }) outer
         (applyValue_retained_aligned ready rfl ValueAligned.owner top.2)
     · exact ⟨True.intro,StackAligned.empty,aligned.pending⟩
+  case usubLeft.natural => exact ⟨top.1,aligned.stack,outer.cons True.intro top.2⟩
+  case usubRight.natural =>
+    split
+    · exact ⟨ValueAligned.natural,top.2,outer⟩
+    · exact ⟨True.intro,top.2,outer⟩
 
 theorem step_aligned (aligned : StateAligned state) (stepped : step state = some (next,event)) :
     StateAligned next := by
@@ -117,6 +122,8 @@ theorem step_aligned (aligned : StateAligned state) (stepped : step state = some
         exact ⟨ready,StackAligned.empty,aligned.pending.cons ⟨ready,ready⟩ aligned.stack⟩
       · cases stepped
         exact ⟨ready,StackAligned.empty,aligned.pending.cons ⟨ready,ready⟩ aligned.stack⟩
+      · cases stepped
+        exact ⟨ready,StackAligned.empty,aligned.pending.cons ready aligned.stack⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

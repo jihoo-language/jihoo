@@ -23,7 +23,8 @@ end Jihoo.SizedBufferHeap
 /-! The binding-retaining evaluator with indexed Buffer contents. Store and
 Load evaluate operands in source order while keeping enclosing readers
 visible. Load retains both continuation arguments, the observed cell value
-and the original owner. -/
+and the original owner. Unsigned subtraction uses the same suspended
+continuation stack and skips its erased evidence. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open CodeKinds
 variable {resource : Jihoo.Quantity.Control}
@@ -36,6 +37,8 @@ inductive BufferFrame where
   | loadIndex (object : Nat) (origin : Term) (continuation : Code)
   | loadContinuation (object : Nat) (origin : Term) (value : Int)
   | loadOwnerArgument (object : Nat) (origin : Term)
+  | usubLeft (right : Code)
+  | usubRight (left : Nat)
 
 structure State where
   heap : SizedBufferHeap.IndexedState
@@ -111,6 +114,11 @@ def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMach
   | .loadOwnerArgument object origin,callback@(.closure false _ _ _ _ _) =>
       executeLegacy { state with pending := rest }
         (applyValue callback origin (some (.owner object)) saved)
+  | .usubLeft right,.natural left =>
+      ({ state with control := .evaluate right, pending := (.usubRight left,saved) :: rest },none)
+  | .usubRight left,.natural right =>
+      let control := if right ≤ left then .returned (.natural (left - right)) else .fault .arithmeticOverflow
+      (⟨state.heap,control,saved,rest⟩,none)
   | _,_ => fail state .wrongValue []
 
 def step (state : State) : Option (State × Option Event) :=
@@ -124,6 +132,9 @@ def step (state : State) : Option (State × Option Event) :=
           some (⟨state.heap,.evaluate (code.child owner),[],
             (.loadOwner (code.child owner).origin (code.child index) (code.child continuation),state.stack) ::
               state.pending⟩,none)
+      | .usub left right _ =>
+          some (⟨state.heap,.evaluate (code.child left),[],
+            (.usubLeft (code.child right),state.stack) :: state.pending⟩,none)
       | _ => some (executeLegacy state (evaluateAction code state.stack))
   | .returned value =>
       match returnAction value state.stack with
@@ -276,6 +287,8 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
   | evaluate code =>
       simp only [step,control] at stepped
       split at stepped
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped
         exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped

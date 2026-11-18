@@ -1,7 +1,7 @@
 import Jihoo.NativeBindingMachineMutable
 
 /-! The indexed machine agrees with the read-only machine until the latter
-selects Store or Load. An old heap embeds with the original object's
+selects Store, Load, or unsigned subtraction. An old heap embeds with the original object's
 payload at every index. The correspondence includes faults, step counts,
 and the complete event sequence. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
@@ -65,16 +65,17 @@ theorem executeLegacy_embedReadOnly (state : BindingMachine.State) (action : Act
               SizedBufferHeap.IndexedState.read, leased, fits]
             rfl
 
-def NoIndexedOwnerControl (state : BindingMachine.State) : Prop :=
+def LegacyControl (state : BindingMachine.State) : Prop :=
   match state.control with
   | .evaluate code =>
       (∀ owner index value evidence, code.term ≠ .store owner index value evidence) ∧
-      (∀ owner index evidence continuation, code.term ≠ .load owner index evidence continuation)
+      (∀ owner index evidence continuation, code.term ≠ .load owner index evidence continuation) ∧
+      (∀ left right evidence, code.term ≠ .usub left right evidence)
   | _ => True
 
-/-- An old transition agrees with the indexed transition outside Store and
-Load. Either operation may occur in suspended code. -/
-theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : NoIndexedOwnerControl state) :
+/-- An old transition agrees with the indexed transition outside the three
+additional operations. Each operation may occur in suspended code. -/
+theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : LegacyControl state) :
     step (embedReadOnly state) = (BindingMachine.step state).map embedReadOnlyTransition := by
   cases state with
   | mk heap control stack =>
@@ -85,7 +86,9 @@ theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : NoIndexedO
           · rename_i owner index value evidence shape
             exact False.elim (ordinary.1 owner index value evidence shape)
           · rename_i owner index evidence continuation shape
-            exact False.elim (ordinary.2 owner index evidence continuation shape)
+            exact False.elim (ordinary.2.1 owner index evidence continuation shape)
+          · rename_i left right evidence shape
+            exact False.elim (ordinary.2.2 left right evidence shape)
           · exact congrArg some (executeLegacy_embedReadOnly ⟨heap,.evaluate code,stack⟩ (evaluateAction code stack))
       | returned value =>
           cases chosen : returnAction value stack with
@@ -96,10 +99,10 @@ theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : NoIndexedO
       | fault reason => rfl
 
 /-- The bounded old execution steps through ordinary control. Its final state
-may select Store or Load when the fuel ends before that step. -/
+may select a newer operation when the fuel ends before that step. -/
 def ReadOnlyPrefix : Nat → BindingMachine.State → Prop
   | 0, _ => True
-  | fuel + 1, state => NoIndexedOwnerControl state ∧
+  | fuel + 1, state => LegacyControl state ∧
       match BindingMachine.step state with
       | none => True
       | some (next, _) => ReadOnlyPrefix fuel next

@@ -1169,3 +1169,5 @@ import Jihoo.NativeCoreArithmeticMachine
 import Jihoo.NativeLoanProofContextualObservation
 import Jihoo.NativeLoanPureConversion
 import Jihoo.NativeBindingMachineMutableLoadFree
+import Jihoo.NativeBindingMachineMutableUnsignedSubtraction
+import Jihoo.NativeLoanPureTyping
