@@ -1433,11 +1433,129 @@ arbitrary closures/calls/readers and full native refinement remain open.
 
 Canonical variable steps now derive actual stored representations and numeric
 ranges from source CODE typing, and canonical readiness is constructed from
-the actual saved continuation frame. A confirmed remaining model blocker is
-`AliasReborrowBoundary`: authentic complete mixed admission accepts its closed
-I64 program, but returned-owner alias reborrowing reaches `inactiveBorrow` in
-the binding-retaining runtime. Source alias identification and runtime lexical
-reader keys disagree. This refutes the corresponding unrestricted progress/
-Borrow-precondition claim for the CURRENT model; it is not a native compiler
-counterexample or a logical inconsistency. Repair the correspondence while
-retaining source acceptance before claiming the whole-kernel obligations.
+the actual saved continuation frame. Returned-owner aliases now resolve named
+Borrow by preferring the exact lexical reader, then selecting an enclosing
+named reader of the same concrete object. Lookup soundness retains an actual
+reader frame and object identity; an unrelated object, anonymous reader or
+heap-only lease cannot supply this authority. Reachability supplies its lease
+liveness. Exact lexical matches retain their earlier token selection.
+`AliasReborrowBoundary` retains authentic complete mixed admission of its
+closed I64 program and now proves return of 7, both read/close pairs, final Free
+and absence of outstanding leases. This repairs the concrete model blocker;
+general source/control/loan preservation, whole-kernel progress and native
+implementation refinement remain open. In particular these immediate Borrow
+steps do not prove lifetime preservation for arbitrary values and closures;
+the source Lend rules' Outlived restriction still needs that semantic bridge.
+
+`OwnerLoanSlots` now carries canonical source permission to physical owner and
+named-reader association independently of lexical keys. Initial construction,
+noninjective alias rebasing, ordinary bindings and reader entry/body preserve
+this association. `CanonicalBorrow` uses it with full source typing to construct
+actual Borrow and, from canonical immutable owner sizes, `ReferenceSize` at the
+original closed requested type. Source control/type, owner-size and loan
+associations remain local entry invariants; their general all-control and
+reader-return preservation is not assumed proved.
+
+`CanonicalIndex` derives the actual five-transition literal-Decide read under
+the same canonical entry invariants, allowing noninjective aliases and differing
+reader keys. The full source judgment derives both numerical bounds and the
+physical length; reachability supplies the live lease and numeric heap width.
+The actual read integer is typed in runtime mode at the original requested
+closed type, without a supplied success or output interpretation. This remains
+conditional on source/control, size and scoped-owner entry associations;
+arbitrary computed indices/evidence and the full fundamental theorem remain open.
+
+`CanonicalDynamicIndex` extends this bridge to captured IfLt index/length
+comparisons. Full source typing, aligned canonical slots and value meanings
+construct both actual numbers; the source erased branch hypothesis identifies
+the real owner length. True branches perform ten transitions and return a
+runtime-typed integer at the original closed requested type. False branches
+perform five transitions and retain canonical original-type else typing,
+value/size/loan contexts, alignment and the alias view. No separate LoanSlots
+for actual code, numerical guard, selected number/token or successful execution
+is supplied.
+These remain local entry invariants, not a closed-admission fundamental theorem
+for arbitrary computed terms, proof forms, closures or saved control frames.
+
+`LoanScope` strengthens existential owner authority to ordered source-loan
+occurrences paired with concrete reader identities. It supports duplicate
+source frames, noninjective alias rebasing, binder transport and reader pop;
+actual inventory derives outer links' surviving leases. This supplies an
+authority relation suitable for saved contexts, without claiming it has been
+constructed through every admitted execution.
+
+Reference-token bounds through recursive closure captures, Code, all frames
+and runtime control now hold for every initial machine prefix. Reader capture
+snapshots separately retain strictly older tokens in each saved continuation
+and its complete outer stack. These unconditional results exclude a closing
+token from saved captures. Under the current ValueKind interpretation, the
+source Outlived policy excludes returned references, closures and type codes.
+The full original Lend judgment derives that policy for the actual first
+continuation domain. A canonical source-variable return constructs the real
+value and actual two-step close, leaving its token absent from the entire
+post-state control/stack and closed in the heap. No returned-value kind or
+successful close is supplied. General value-interpretation preservation for
+arbitrary reader computations and the full fundamental theorem remain open.
+
+`VariableHandoff` constructs an actual six-transition variable return, reader
+close and double continuation binding from the same original Lend/resource
+query and current canonical source-variable judgment. It derives the result
+value and its checked ghost meaning, original-type canonical CODE, value/size
+contexts, surviving ordered loan scope and no occurrence of the closed token.
+Owned results retain a source expression instead of a fabricated heap-identity
+literal. No returned-value typing or successful execution is supplied. General
+owned-result LoanCoverage/exclusive accounting remains separate.
+
+The current head-only ValueKind cannot represent rigid Refine, Back, Array or
+family result types at all. Its Outlived shape theorem is a sound local fact
+about this interpretation, not an exhaustive model of every accepted result.
+A full runtime relation must account for refined witnesses/proofs, Back pairs,
+constructor fields, recursive closure environments, heap identity and scoped
+reader authority. Do not remove those source constructors to close the goal.
+
+`CanonicalFrameHandoff` distinguishes the actual saved Code from its canonical
+source snapshot. It lifts an arbitrary prior view through both real bindings
+and composes owner restoration with that existing noninjective alias map.
+The actual six-transition return/close/bind executes raw runtime annotations
+and bodies, while source typing/resource projection construct canonical CODE
+at the original requested type and preserve value/size/ordered-loan contexts.
+Closed-token exclusion uses the actual saved capture snapshot. No raw actual-
+code typing, lexical-key equality, output certificate or successful run is
+supplied. This is saved-frame composition, not all-control preservation or
+owned-result exclusive resource accounting.
+
+`NativeLoanHigherKindSource` ports the entire existing higher-kind Recognized
+reconstruction to actual Loan64 typing. Raw kind injectivity/classification
+uses the genuine RawLend relation, including arbitrary converted result
+representatives. Mixed-history and checked-declaration corollaries construct
+the intrinsic expression, exact original-type conversion and concrete semantic
+value/code. No earlier HasType or old-conversion proof is supplied. Universe
+input bounds follow from the complete Loan64 judgment; the native input ceiling
+is 32 and the existing finite administrative hierarchy covers those levels.
+Recognized remains a source-coverage premise, and no arbitrary dependent
+annotation interpretation or complete consistency theorem is claimed.
+
+Canonical reader entry now distinguishes the reference-binder ghost snapshot
+from the specialized original-context CODE read. Actual original Lend typing,
+owner sizes and reader inventory construct entry authority; generic raw callback
+CODE typing is not assumed. CapturedCanonicalView additionally requires every
+canonical capture to occur in the actual saved snapshot, allowing recursive
+reference bounds to transport through composed alias views. A formal boundary
+example shows that plain CanonicalView permits unused phantom source references.
+
+ReferenceSizes connects stored Buffer references with original closed source
+types, physical lengths and live leases. It is constructed at actual canonical
+reader entry and transported through saved-snapshot close. ReaderLeaseWorld
+proves that older lease slots survive arbitrary intervals protected by an
+enclosing reader, including nested readers and partial/fault prefixes; expiration
+and fresh-token monotonicity derive intermediate barrier presence. Entry reference
+contexts and actual saved-frame shapes therefore supply the saved references'
+endpoint liveness and size. These are local bridges, not full admission/control
+preservation or owned-result coverage and exclusive resource accounting.
+
+NativeLoanHigherKindSubstitution reconstructs intrinsic replacements and their
+induced semantic valuation map from actual Loan64 ghost substitution over the
+existing Recognized grammar. Exact syntax, denotation coherence, substituted
+HasType and original-kind conversion follow from actual source typing. The
+explicit grammar coverage remains; general dependent annotation interpretation,
+logical consistency and native implementation refinement are still open.

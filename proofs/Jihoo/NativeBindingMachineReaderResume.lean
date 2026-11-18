@@ -126,7 +126,7 @@ private theorem close_resume_eight_steps (heap : SizedBufferHeap.State) (code : 
   have key : code.context.length+1+1-(outer+2) = code.context.length-outer := by omega
   simp only [run,step,action,returnAction,execute,leased,↓reduceIte,evaluateAction,
     Code.child,applyValue,enter,restoredContinuation,Option.map_some,List.getElem?_cons_succ,
-    List.length_cons,key,stored,activeLease,readerFor,Frame.reader?,bind,Option.bind,
+    List.length_cons,key,stored,borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,bind,Option.bind,
     Option.orElse_none,found,outerLease]
   rfl
 

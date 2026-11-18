@@ -44,6 +44,6 @@ theorem reachable_sized_borrow (term : Term) (fuel : Nat)
     (some (code.context.length-owner)) descriptor
   have live := (initial_run_heap_valid term fuel).leased token object leased |>.2
   refine ⟨token,⟨object,count,leased,live,length,actualReference⟩,?_⟩
-  simp only [step,action,evaluating,evaluateAction,shape,stored,execute,found,leased,ite_true,Option.map_some]
+  simp only [step,action,evaluating,evaluateAction,shape,stored,execute,borrowLease,found,Option.orElse_some,leased,ite_true,Option.map_some]
 
 end Jihoo.NativeKernel.Environment.BindingMachine

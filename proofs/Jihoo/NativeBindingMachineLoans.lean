@@ -130,7 +130,7 @@ theorem typed_borrow_executes
   obtain ⟨frame,member,descriptor⟩ := activeLease_sound found
   have leased := liveReaders frame member token object (some (code.context.length-index)) descriptor
   exact ⟨token,object,leased,(valid.leased token object leased).2,
-    by simp only [evaluateAction,shape,stored,execute,found,leased,ite_true]⟩
+    by simp only [evaluateAction,shape,stored,execute,borrowLease,found,Option.orElse_some,leased,ite_true]⟩
 
 theorem closed_lease_cannot_be_read (heap : SizedBufferHeap.State) (token index : Nat) (stack : List Frame) :
     execute (SizedBufferHeap.close heap token) (.read token index stack) =

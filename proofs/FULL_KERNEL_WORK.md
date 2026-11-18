@@ -2,7 +2,9 @@
 
 The user's active goal is to continue implementing and checking proofs until
 the entire Jihoo dependent-type kernel is formally verified, committing and
-pushing intermediate results. **The goal is not complete.** Passing fixture or
+pushing intermediate results. The user subsequently requested finishing the
+current work and pausing; that request supersedes continuous execution until
+the user resumes it. **The goal is not complete.** Passing fixture or
 theorem counts are not a completion percentage.
 
 ## Completion obligations
@@ -141,7 +143,12 @@ The remaining core obligations include:
   all derived, rather than supplied. The false comparison arm enters a body
   with the same original source type. Local source/control typing, allocation
   identity/layout and `LoanSlots` association remain explicit inputs.
-- The aggregate proof check currently audits 8,789 declarations. The mixed
+- Canonical owner aliases now resolve Borrow through a scoped same-object
+  reader while retaining exact-name priority. Canonical source typing and
+  physical owner-size/loan contexts construct Borrow and literal/dynamic Index
+  steps without alias-key equality. These remain explicit local associations,
+  not an all-control or all-value lifetime fundamental theorem.
+- The aggregate proof check currently audits 9,156 declarations. The mixed
   native regression suite passes 67 source fixtures and 53 exact-byte checks.
   These counts are validation evidence, not a whole-kernel soundness claim.
 
@@ -158,9 +165,13 @@ counterpart uses the actual mixed-program history.
 
 `ReadersLive`, exact lease coverage and token distinctness now follow from
 initial execution without typing assumptions. Next derive and preserve
-`LoanSlots` across the full typed control stack, rather than supplying it
-independently at each Borrow. Ordinary binder and reader-entry slot lemmas
-are available. Connect captured source code/origin stores and
+canonical source/control, resource/value and scoped owner authority across
+the full typed control stack. `OwnerLoanSlots` now transports ordinary
+binders, noninjective alias rebasing, reader entry/body and captured IfLt
+else entry without requiring every runtime alias to share a lexical key.
+Source-to-reader lifetime association must additionally identify which reader
+survives closing; same-object reader existence alone is insufficient.
+Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader, structural erasure and numeric value/heap components are
 available, but a common source-type/resource interpretation for every runtime
@@ -169,7 +180,7 @@ Dynamic IfLt hypothesis reads now supplement the literal-Decide bridge.
 Extend this to all Lt proof forms and arbitrary computed index/count terms.
 Derive exact heap lengths and the association between the owner slot and
 allocation from the common runtime interpretation, instead of the
-current explicit local allocation-state/slot premises. The runtime bound
+current explicit local source/slot/size entry premises. The runtime bound
 check alone does not discharge those obligations.
 Retain computed callees, erased arguments and exact dependent result origins;
 do not replace binding execution with generally invalid CODE beta substitution.
@@ -178,8 +189,18 @@ data layouts require an appropriate runtime heap interpretation as well.
 
 ## Working procedure
 
-Use `/workspace/jihoo` and branch `codex/rootless-kernel-verification` of
-`https://github.com/jihoolang/jihoo`. Preserve existing edits and never force-push.
+The user's explicit continuation instruction on 2026-11-16 is to keep working
+until Codex usage is exhausted, the user asks to stop, or the full dependent
+kernel proof obligations are actually completed. An active goal records that
+instruction. Checked increments and pushes do not complete or pause the goal.
+The subsequent explicit user pause request overrides that instruction: finish
+the current checked checkpoint, commit and push it, then pause the active goal.
+Do not begin another proof task until the user resumes work.
+
+Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
+workstation path is `/home/user/jihoo` and the active continuation branch is
+`codex/alias-reborrow-verification`. The earlier verification branch was merged
+into main. Preserve existing edits and never force-push.
 Read `AGENTS.md` and the source theorems before changing them. Continue useful
 work without asking again for already authorized commits, pushes or memory
 configuration. The user explicitly permits choosing memory ceilings to avoid
@@ -188,8 +209,8 @@ OOMs; keep heavy compiler/checker jobs serialized.
 The actual project toolchain is available through:
 
 ```sh
-cd /workspace/jihoo
-/workspace/.local/bin/nix-rootless --option sandbox false develop .#proofs
+cd /home/user/jihoo
+nix develop .#proofs
 ```
 
 Run compiler/checker work through `scripts/proof-limits.sh`. Standalone Lean
@@ -1359,3 +1380,328 @@ Then continue general canonical control/frame/closure preservation, arbitrary
 else/tail computation, complete ownership/borrow soundness, universe consistency,
 full specified preservation and native implementation refinement. The whole-
 kernel goal is NOT complete; keep the automation active.
+
+## 2026-11-16: repair scoped owner-alias reborrowing
+
+The accepted `AliasReborrowBoundary` program retains its complete mixed
+admission. Its runtime fact now proves scalar return 7 instead of
+`inactiveBorrow`, with exact alloc/read/close/free events, the released owner
+and no outstanding leases. The binding machine preserves the existing
+exact-name lookup first, then resolves a retained alias through an enclosing
+named reader of the same concrete object. It does not consult heap-global
+leases or anonymous readers for this fallback.
+
+`NativeBindingMachineAliasLoans` proves lookup soundness/completeness, exact
+lexical-token preference and rejection without an enclosing named reader.
+Actual reachable owner slots plus an enclosing reader under any lexical name
+construct the next Borrow step and derive the live lease and owner liveness.
+No successful execution or returned-value interpretation is an input.
+
+The local builds passed with warnings as errors (308 Lake jobs in each
+dependency closure), including the repaired admission/execution regression
+and the existing canonical variable path. All 15 declarations in the new
+lookup module and repaired regression passed an elaborated dependency audit
+using only the allowed standard logical axioms. Logs are
+`out/logs/alias-baseline.log`, `out/logs/alias-repair-local.log` and
+`out/logs/alias-repair-audit.log`. The aggregate audit target is now 9,015;
+the full aggregate recheck remains pending at this checkpoint.
+
+The pinned Nix proof shell runs directly on `/home/user/jihoo` with Lean
+4.34.1. Every compiler/check ran through `scripts/proof-limits.sh` with the
+unchanged memory limits and single-thread configuration. No native compiler,
+fixture, dependency pin or runtime heap representation changed.
+
+This resolves the concrete immediate-Borrow model blocker, not general
+lifetime preservation. Source Lend's Outlived gate rejects reader results
+that are references or closures; the semantic theorem excluding the closing
+token from every returned value/capture is still missing. Next connect
+canonical source loans to physical scoped owner slots through aliases,
+binders and reader entry, and recheck the entire aggregate. General
+source/control/resource/value preservation and all original whole-kernel
+completion obligations remain open.
+
+## 2026-11-16: canonical source loans and physical reader authority
+
+`NativeBindingMachineCanonicalBorrow` introduces `OwnerLoanSlots`, associating
+each active source owner with its actual stored object and an enclosing named
+reader without equating canonical and runtime lexical keys. Existing LoanSlots
+construct it. Initial code, child code, ordinary erased/runtime binders,
+noninjective alias rebasing and reader entry/body transport it. In particular,
+a new reader's runtime name may differ from its canonical source owner's key.
+
+Canonical source Borrow typing now constructs the actual slot, live lease and
+next machine step through an arbitrary CanonicalView. Canonical immutable owner
+sizes additionally construct ReferenceSize at the ORIGINAL closed requested
+type. No actual lexical LoanSlots, name-equality, selected owner/token, successful
+lookup or output interpretation certificate is an input. The nine new public
+theorems passed a 310-job local target build with warnings as errors in
+`out/logs/canonical-borrow-local-2.log`.
+
+This remains a local association, not full stack preservation. In particular
+arbitrary captured closures, computed calls, reader returns and resource/size
+contexts still need a common semantic interpretation. Existence of some
+same-object reader does not by itself identify the source reader that must
+survive a later close. Preserve the source Outlived restriction and prove the
+missing all-value/all-control lifetime bridge rather than assuming it.
+
+The complete aggregate recheck passed 934 Lake jobs, 9,024 distinct public
+axiom audits and all generated-fixture comparisons in
+`out/logs/alias-canonical-full.log`. Only `propext`, `Classical.choice` and
+`Quot.sound` occur. This also completes the full recheck pending at the first
+alias-repair checkpoint. No production compiler or native fixture changed;
+the existing native correspondence evidence is unchanged, not a new native
+implementation-refinement result.
+
+## 2026-11-16: canonical alias Index execution from source evidence
+
+`NativeBindingMachineCanonicalIndex.reachable_canonical_index` derives an
+actual five-transition read through an arbitrary retained owner alias from
+the complete source Index judgment, canonical owner sizes and OwnerLoanSlots.
+Source literal-Decide evidence supplies both U64 bounds, the strict comparison
+and the exact physical allocation length. Reachability derives the selected
+lease's liveness and actual heap payload width. The resulting integer has the
+ORIGINAL requested closed type in runtime mode. No selected owner/token,
+alias-key equality, allocation snapshot, numerical read guard, successful run
+or output typing is an input. Noninjective alias maps are supported.
+
+The target passed 311 Lake jobs with warnings as errors in
+`out/logs/canonical-index-local-2.log`. The original helper's rewriting of the
+pending Index frame needed normalization of Code.child before simplification;
+no memory limits, runtime behavior or theorem premises were changed to fix it.
+General computed index/evidence interpretation and all-control preservation of
+source, sizes, resources and scoped owner authority remain unfinished.
+
+The complete aggregate passed 935 Lake jobs, 9,025 distinct public axiom audits
+and all generated-fixture comparisons in `out/logs/canonical-index-full.log`.
+Only the three allowed standard logical axioms occur. No native implementation
+or native fixture changed. This extends the local canonical typing-to-runtime
+bridge; it does not complete general ownership/borrow soundness, universe
+consistency, specified preservation or native refinement.
+
+## 2026-11-16: captured dynamic canonical Index and typed else entry
+
+`NativeBindingMachineCanonicalDynamicIndex.reachable_canonical_dynamic_index`
+extends canonical owner-alias execution to actual captured IfLt index/length
+comparisons. Complete source CODE typing, source slot alignment and value
+meanings construct the actual scalar slots and widths. A true comparison
+constructs the erased source proof, identifies physical owner length from
+canonical size realization, selects an enclosing same-object live reader and
+performs ten transitions with the exact read event. The resulting integer has
+the ORIGINAL requested closed type in runtime mode. The false comparison
+performs five transitions into the original actual else body and retains its
+canonical original-type judgment, value/size/loan contexts, alignment and alias
+view. Noninjective index maps and differing source/runtime keys are supported.
+No numerical guard, selected scalar/owner/token, actual-code LoanSlots,
+successful run or output-typing certificate is supplied.
+
+The target passed 312 Lake jobs on its first build with warnings as errors
+(`out/logs/canonical-dynamic-index-local.log`). The complete aggregate then
+passed 936 Lake jobs, 9,026 distinct public audits and every generated-fixture
+comparison (`out/logs/canonical-dynamic-index-full.log`). Only the three
+allowed logical axioms occur. All compiler/checker jobs used the unchanged
+shared resource wrapper and pinned Nix proof shell. No production compiler,
+native fixture, dependency pin or memory limit changed.
+
+This is local progress from canonical source entry invariants, not a general
+closed-admission/control-stack fundamental theorem. Next carry the source
+owner/value/size/resource and reader-lifetime associations through arbitrary
+saved closures, computed calls and reader returns, and cover arbitrary
+computed index/count terms and Lt evidence. General else/tail evaluation,
+complete ownership/borrow soundness, all-universe consistency, full specified
+preservation and native implementation refinement remain open. The whole-
+kernel verification goal is NOT complete.
+
+## 2026-11-16: ordered reader authority and source-derived nonescaping close
+
+`NativeBindingMachineLoanScope` pairs SOURCE LOAN OCCURRENCES positionally with
+concrete ordered reader identities. Equal source frames and noninjective alias
+rebasing retain distinct occurrences. Initial, child, binder, reader entry/body
+and canonical transport construct the association. Pop/finish remove source and
+runtime heads together and derive outer authority, distinct surviving tokens and
+their live leases from the actual reader inventory. This projects to the older
+OwnerLoanSlots interface without requiring a post-close authority certificate.
+
+`NativeBindingMachineReferenceProvenance` proves strict reference-token bounds
+through actual values, recursively captured closures, source Code, every frame
+and control state across ALL execution prefixes, including faults/fuel. Reader
+and Index descriptor tokens are included. Fresh reader tokens cannot occur in
+previously captured values or saved outer frames. This is provenance, not
+current reference liveness. The module imports ReaderState so its generated
+Lean evaluateAction case helpers share the established dependency chain.
+
+`NativeBindingMachineReaderCaptures` preserves a stronger birth snapshot for
+each reader: its saved continuation and complete stack tail retain reference
+tokens strictly older than its own token. These bounds hold unconditionally
+at every reachable prefix. They exclude the closing token from saved captures,
+but deliberately say nothing about the current reader result by themselves.
+
+`NativeBindingMachineOutlivedValues` proves that the current ValueKind relation
+cannot realize Outlived with a reference, closure or type code. The full
+original Lend judgment derives Outlived for the actual first continuation
+domain after source value closing. `NativeBindingMachineOutlivedReferences`
+then uses canonical source VARIABLE typing to select a real result and perform
+the actual two-transition return/close. The token is closed in the heap and
+absent from the entire resulting runtime control and stack, including every
+recursive capture. No supplied result value/kind, successful close, post-state
+interpretation or no-token oracle is an input to this source-to-execution result.
+
+All five target modules passed with warnings as errors. The complete aggregate
+passed 941 Lake jobs, 9,109 distinct public audits and every generated-fixture
+comparison (`out/logs/loan-lifetime-foundations-full.log`). All 83 additional
+public theorems are audited exactly once with only `propext`, `Classical.choice`
+and `Quot.sound`. Every compiler/check used the unchanged resource wrapper,
+single-thread settings and pinned Nix proof shell. No production compiler,
+fixture, dependency pin or memory limit changed.
+
+This does not supply the common all-control semantic interpretation: source
+LoanScope/value/size/resource authority through arbitrary saved closures/calls
+and arbitrary reader results is still open. The no-escape result currently
+constructs the final VARIABLE return; it does not assume and then claim that
+ValueKind is preserved for every reader computation. Next generalize original-
+type continuation entry beyond the existing scalar-only handoff using actual
+source-variable results, then connect these relations through full captured
+closures and arbitrary source computation. All original consistency,
+specified preservation, complete ownership/borrow soundness and native
+refinement obligations remain unfinished. Keep the active goal running.
+
+## 2026-11-16: arbitrary interpreted variable-result continuation entry
+
+`NativeBindingMachineVariableHandoff.reachable_canonical_variable_handoff`
+constructs the actual six-step variable return, close and two retained
+continuation bindings from the full original Lend/resource query. It preserves
+canonical CODE at the ORIGINAL requested Lend result type, actual value/size
+contexts, ordered outer LoanScope, reader inventory and absence of the closed
+token from the complete resulting runtime state. The private ghost finish
+proof accepts the source variable's derived checked meaning: observed scalars
+retain their numeral, while owners retain their checked source expression and
+physical allocation size. No physical-owner literal, returned-value typing,
+successful run or injected alias choice is supplied.
+
+The target passed 316 Lake jobs on its first build with warnings as errors.
+The aggregate passed 942 jobs, 9,110 distinct audits and all generated fixture
+comparisons (`out/logs/variable-handoff-full.log`), with only the three allowed
+logical axioms and unchanged resource limits. No production/native fixture
+or dependency pin changed.
+
+Owned-result converse LoanCoverage/exclusive accounting is still missing;
+an added owned binder may physically alias an outer borrowed object unless
+the actual returned source slot is connected to resource/control preservation.
+Do not silently assume it fresh or use enter_nonowner for that binder. The
+current head-only ValueKind also cannot model rigid Refine, Back, Array or
+family result heads: a richer value/heap interpretation is needed for those
+accepted constructors, not a restriction of the source language.
+
+Next compose existing canonical source views through ACTUAL saved Lend frames:
+the current handoff still identifies its original Code with the actual saved
+snapshot, which prevents direct use after arbitrary earlier alias layers.
+Keep the active goal running. All original completion obligations remain open.
+
+## 2026-11-16: compose canonical views through actual saved Lend frames
+
+`NativeBindingMachineCanonicalFrameHandoff` removes the original-Code-equals-
+actual-snapshot restriction. The actual saved continuation has an arbitrary
+prior CanonicalView into its source snapshot. Both real bindings lift that
+view, and source owner restoration composes the resulting index map; neither
+layer is required to be injective. Actual raw lambda annotations, bodies and
+captured values drive all six transitions, while original source Lend/resource
+typing constructs original-type canonical CODE and value/size/ordered-loan
+contexts. No actual-snapshot source typing, reader-key equality, selected
+result, successful run or output interpretation is supplied. Closed-token
+absence follows from the actual reader snapshot and source-derived result.
+
+The target passed 317 Lake jobs after normalizing the source owner provenance
+in the two view witnesses. The complete aggregate passed 943 jobs, 9,112
+distinct public audits and all generated fixtures
+(`out/logs/canonical-frame-handoff-full.log`), using only the standard allowed
+axioms and unchanged resource guard. No native implementation or fixture changed.
+
+The next reader-entry bridge must distinguish the runtime/reference-binder
+source view from the specialized original-context read typed by the checker.
+Do not assert generic CODE typing of a raw callback body: admitted specialized
+readers can depend on the actual Borrow argument. General owned-result
+coverage/exclusivity, full control/value interpretation and all original
+whole-kernel completion obligations remain open. Keep the active goal running.
+
+## 2026-11-16: reconstruct higher-kind codes from actual Loan64 admission
+
+`NativeLoanHigherKindSource` reuses the ENTIRE existing HigherKinds.Recognized
+grammar, intrinsic Expression and concrete finite denotation. It reconstructs
+them from the authentic LoanTyping.HasType judgment using genuine RawLend
+conversion, rather than asking for an earlier Environment.HasType derivation
+or an old-conversion witness. Raw kind validity/injectivity/classification
+support source principal reconstruction under arbitrary loan stacks and source
+prefix frames. Mixed histories and actual checkDeclaration acceptance supply
+closed derivations at the exact expanded annotation. No semantic candidate,
+normal form or output-realization certificate is supplied.
+
+The native source universe rule requires n < 32 (compiler/core.jh and the full
+Loan64 univ rule agree). Existing finite levels include the required
+administrative successors; the remaining consistency gap is source-to-model
+reconstruction for arbitrary annotations/computation, not an absent infinite
+universe hierarchy. Recognized is deliberately still an explicit premise.
+
+The target passed 229 jobs after adapting the mutually defined Loan64 recursor
+arity and using its full PrincipalView for Pi formation. The complete aggregate
+passed 944 Lake jobs, 9,124 distinct audits and all generated fixture comparisons
+(`out/logs/loan-higher-kind-full.log`), using only the three standard logical
+axioms under unchanged resource limits. No native implementation, fixture or
+dependency pin changed.
+
+Next reconstruct the semantic substitution itself from an actual Loan64 ghost
+substitution on this source grammar, with syntax/denotation coherence, rather
+than accepting an arbitrary semantic substitution certificate. General
+dependent annotation interpretation/coherence, arbitrary proof consistency,
+full specified preservation, runtime fundamental preservation and native
+refinement remain open. Keep the active goal running.
+
+## 2026-11-16: completed reference-world and typed-substitution checkpoint
+
+The user requested completing only the current work and pausing. This
+checkpoint finishes five modules and records the remaining obligations for
+resumption; it does not complete the whole-kernel proof.
+
+`NativeBindingMachineCanonicalReaderEntry` constructs actual reader activation
+under distinct actual and canonical snapshots. It retains the reference-binder
+ghost view and the specialized original-context CODE read as separate source
+judgments. Raw specialized callback bodies need not have generic CODE typing.
+
+`NativeBindingMachineCanonicalCaptures` strengthens CanonicalView with an
+ordered sublist of actual retained captures. Recursive reference bounds then
+transport to the canonical snapshot, including after composed owner restoration.
+A proved counterexample shows why a plain alias view alone cannot transport
+all source capture bounds: unused phantom source slots may lie outside its map.
+
+`NativeBindingMachineReferenceSizes` relates every stored Buffer reference to
+its live physical lease, length and original closed source type. Actual reader
+entry constructs that relation and the stronger captured view from the original
+Lend judgment, source owner sizes and actual reader inventory. Close transport
+uses actual saved snapshots rather than a caller-supplied source token bound.
+
+`NativeBindingMachineReaderLeaseWorld` proves that an enclosing reader protects
+older lease slots through arbitrary actual execution intervals, including nested
+readers and partial/fault prefixes. Fresh-token monotonicity and expiration
+exclude closing and reopening the enclosing reader. The saved-reference interval
+theorem derives endpoint reference liveness, length and post-close reference
+contexts from entry relations and actual frame shapes.
+
+`NativeLoanHigherKindSubstitution` reconstructs intrinsic replacements from an
+actual Loan64 ghost substitution over the existing complete Recognized grammar.
+Its valuation map is induced by those replacements. The source theorem supplies
+exact substituted syntax, denotation coherence, genuine substituted HasType and
+original-kind conversion, without a semantic substitution certificate.
+
+The final aggregate passed 949 Lake jobs, 9,156 distinct public declaration
+audits and all generated fixture comparisons
+(`out/logs/reader-world-and-substitution-full.log`). The five modules add 32
+audited public theorems. Only the three allowed logical axioms occur. All checks
+used the unchanged resource wrapper, Lean memory/thread limits and Nix shell.
+No native implementation, native fixture, dependency pin or resource limit changed.
+
+After committing and pushing this checkpoint, pause the active goal as requested.
+On resumption, connect richer source/control specialization through saved frames
+and use the interval theorem where endpoint liveness was previously supplied.
+Derive owned-result coverage and exclusive resources from actual source receipts.
+A richer value/heap relation must interpret accepted Refine, Back, Array and
+family values. Arbitrary dependent annotation interpretation, general logical
+consistency, complete specified preservation, runtime fundamental preservation
+and native implementation refinement all remain open.

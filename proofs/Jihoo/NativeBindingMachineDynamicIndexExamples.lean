@@ -41,7 +41,7 @@ theorem all_bounded_inputs_compute (count index : Nat) (countBound : count < 2^6
   all_goals repeat' (
     rw [observe_run_succ]
     simp only [step,action,evaluateAction,returnAction,applyValue,enter,Code.initial,Code.child,Code.origin,
-      branchCode,execute,countBound,indexBound,allocationFits,compared,freeGuard,activeLease,readerFor,Frame.reader?,
+      branchCode,execute,countBound,indexBound,allocationFits,compared,freeGuard,borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,
       SizedBufferHeap.empty,HeapLeases.empty,SizedBufferHeap.allocate,SizedBufferHeap.lend,
       SizedBufferHeap.close,SizedBufferHeap.release,HeapLeases.put,seven,zero,encode_decode_integer seven,
       List.getElem?_cons_zero,List.getElem?_cons_succ,List.getElem?_nil,List.length_cons,List.length_nil,
@@ -64,7 +64,7 @@ theorem all_bounded_inputs_events (count index : Nat) (countBound : count < 2^64
   all_goals repeat' (
     rw [heap_events_run_succ]
     simp only [step,action,evaluateAction,returnAction,applyValue,enter,Code.initial,Code.child,Code.origin,
-      branchCode,execute,eventHeap,countBound,indexBound,allocationFits,compared,freeGuard,activeLease,readerFor,Frame.reader?,
+      branchCode,execute,eventHeap,countBound,indexBound,allocationFits,compared,freeGuard,borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,
       SizedBufferHeap.empty,HeapLeases.empty,SizedBufferHeap.allocate,SizedBufferHeap.lend,
       SizedBufferHeap.close,SizedBufferHeap.release,HeapLeases.put,seven,zero,encode_decode_integer seven,
       List.getElem?_cons_zero,List.getElem?_cons_succ,List.getElem?_nil,List.length_cons,List.length_nil,

@@ -151,7 +151,7 @@ private theorem named_index_five_steps (heap : SizedBufferHeap.State) (code : Co
       ⟨⟨heap,.returned (.integer (decodeInteger (heap.heap.payload object))),stack⟩,
         [.heap (.read token offset (heap.heap.payload object))],5⟩ := by
   simp only [run,step,action,evaluateAction,shape,Code.child,stored,returnAction,execute,
-    literalBound,readBound,leased,ite_true,Option.map_some,activeLease,readerFor,Frame.reader?,
+    literalBound,readBound,leased,ite_true,Option.map_some,borrowLease,Option.orElse_some,activeLease,readerFor,Frame.reader?,
     bind,Option.bind,Option.orElse_none,found]
   rfl
 

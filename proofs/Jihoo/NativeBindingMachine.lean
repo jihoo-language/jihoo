@@ -88,6 +88,23 @@ def activeLease (key object : Nat) : List Frame → Option Nat
   | [] => none
   | frame :: rest => (readerFor key object frame).orElse (fun _ => activeLease key object rest)
 
+/-- Retained owner aliases have the same object identity even when their
+lexical keys differ. Only an enclosing named reader can authorize the alias;
+an anonymous reader or a heap lease outside the stack supplies no authority. -/
+def readerForOwner (object : Nat) (frame : Frame) : Option Nat := do
+  let (token,owner,some _) ← frame.reader? | none
+  if owner = object then some token else none
+
+def activeOwnerLease (object : Nat) : List Frame → Option Nat
+  | [] => none
+  | frame :: rest => (readerForOwner object frame).orElse (fun _ => activeOwnerLease object rest)
+
+/-- Preserve exact-name selection for existing readers. If the source has
+identified owner aliases, resolve the same physical owner in the live reader
+stack instead of requiring the retained runtime slots to share a lexical key. -/
+def borrowLease (key object : Nat) (stack : List Frame) : Option Nat :=
+  (activeLease key object stack).orElse (fun _ => activeOwnerLease object stack)
+
 inductive Event where
   | heap (event : SizedBufferHeap.Event)
   | activate (erased : Bool) (body argumentOrigin : Term)
@@ -259,7 +276,7 @@ def execute (heap : SizedBufferHeap.State) : Action → State × Option Event
           .lendContinuation object origin resultOrigin result :: stack⟩,some (.heap (.close token)))
       else (⟨heap,.fault .closedLease,stack⟩,none)
   | .borrow key object stack =>
-      match activeLease key object stack with
+      match borrowLease key object stack with
       | some token =>
           if heap.heap.lease token = some object then (⟨heap,.returned (.reference token),stack⟩,none)
           else (⟨heap,.fault .closedLease,stack⟩,none)
