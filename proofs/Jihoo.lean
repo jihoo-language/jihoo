@@ -1148,5 +1148,6 @@ import Jihoo.NativeLoanCodeRenaming
 import Jihoo.NativeLoanProofLoopUnrolling
 import Jihoo.NativeLoanProofNormalization
 import Jihoo.NativeLoanProofLoopObservation
+import Jihoo.NativeLoanProofObservation
 import Jihoo.NativeCoreGraph
 import Jihoo.NativeCoreGraphWire

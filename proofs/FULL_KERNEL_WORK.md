@@ -1817,6 +1817,9 @@ eliminated by using its induction hypothesis and reaching actual `Decide`
 evidence. `NativeLoanProofLoopObservation` normalizes the unrolling at the
 original dependent type, including a computed count and actual erased
 induction hypothesis. The residual truth theorems require supported outcomes.
+`NativeLoanProofObservation` checks that residual syntax in the executable
+observer. Its successful observation of a stored global supplies all of the
+reduction, typing, and arithmetic recognition needed to rule out `Lt(_,0)`.
 General typed normalization and consistency remain open.
 
 `NativeCoreGraph` models the native arena cap, first failing ordered reference,
@@ -1827,7 +1830,13 @@ position. A successful exact-byte Loan64 check implies the observed reference
 scan passes. Validated prefix immutability, generated nodes, and the actual
 native scan and inference execution still need refinement.
 
-The aggregate passed 969 Lake jobs, 9,265 declaration audits, and all generated
+The aggregate passed 970 Lake jobs, 9,269 declaration audits, and all generated
 fixture comparisons under the resource wrapper. Native checks matched 162
 writer rows with distinct high `UInt32` references, 665 Core transformations,
 89 source fixtures, and 31 additional checks.
+
+A direct production Core API probe checked a one-node arena, replaced the
+public node with a self-reference, then ran both check paths. `Core.extend`
+accepted the changed cached prefix. `Core.check` rejected it. The actual
+implementation must enforce immutability of the cached prefix and account for
+nodes generated during inference before using the proved suffix-scan rule.

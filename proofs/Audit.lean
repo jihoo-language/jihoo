@@ -9272,3 +9272,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGraph.parseObservedProgram
 #print axioms Jihoo.NativeKernel.NativeCoreGraph.checkObservedGraph_parse
 #print axioms Jihoo.NativeKernel.NativeCoreGraph.checkBytes_observedGraph
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofObservation.supported_iff
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofObservation.observeProof?_sound
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofObservation.checked_global_observation_truth
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofObservation.no_checked_global_observation_less_zero
