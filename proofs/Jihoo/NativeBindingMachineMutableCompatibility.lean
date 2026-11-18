@@ -1,7 +1,7 @@
 import Jihoo.NativeBindingMachineMutable
 
 /-! The indexed machine agrees with the read-only machine until the latter
-selects a Store operation. An old heap embeds with the original object's
+selects Store or Load. An old heap embeds with the original object's
 payload at every index. The correspondence includes faults, step counts,
 and the complete event sequence. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
@@ -65,14 +65,16 @@ theorem executeLegacy_embedReadOnly (state : BindingMachine.State) (action : Act
               SizedBufferHeap.IndexedState.read, leased, fits]
             rfl
 
-def NoStoreControl (state : BindingMachine.State) : Prop :=
+def NoIndexedOwnerControl (state : BindingMachine.State) : Prop :=
   match state.control with
-  | .evaluate code => ∀ owner index value evidence, code.term ≠ .store owner index value evidence
+  | .evaluate code =>
+      (∀ owner index value evidence, code.term ≠ .store owner index value evidence) ∧
+      (∀ owner index evidence continuation, code.term ≠ .load owner index evidence continuation)
   | _ => True
 
-/-- An old transition agrees with the new transition whenever its current
-control does not select Store. A Store may occur in suspended code. -/
-theorem step_embedReadOnly (state : BindingMachine.State) (beforeWrite : NoStoreControl state) :
+/-- An old transition agrees with the indexed transition outside Store and
+Load. Either operation may occur in suspended code. -/
+theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : NoIndexedOwnerControl state) :
     step (embedReadOnly state) = (BindingMachine.step state).map embedReadOnlyTransition := by
   cases state with
   | mk heap control stack =>
@@ -81,7 +83,9 @@ theorem step_embedReadOnly (state : BindingMachine.State) (beforeWrite : NoStore
           simp only [step, embedReadOnly, BindingMachine.step, BindingMachine.action, Option.map_some]
           split
           · rename_i owner index value evidence shape
-            exact False.elim (beforeWrite owner index value evidence shape)
+            exact False.elim (ordinary.1 owner index value evidence shape)
+          · rename_i owner index evidence continuation shape
+            exact False.elim (ordinary.2 owner index evidence continuation shape)
           · exact congrArg some (executeLegacy_embedReadOnly ⟨heap,.evaluate code,stack⟩ (evaluateAction code stack))
       | returned value =>
           cases chosen : returnAction value stack with
@@ -91,11 +95,11 @@ theorem step_embedReadOnly (state : BindingMachine.State) (beforeWrite : NoStore
                 using congrArg some (executeLegacy_embedReadOnly ⟨heap,.returned value,stack⟩ action)
       | fault reason => rfl
 
-/-- The actual bounded old execution consults no Store control. The final
-state may select Store if the fuel ends before that step. -/
+/-- The bounded old execution steps through ordinary control. Its final state
+may select Store or Load when the fuel ends before that step. -/
 def ReadOnlyPrefix : Nat → BindingMachine.State → Prop
   | 0, _ => True
-  | fuel + 1, state => NoStoreControl state ∧
+  | fuel + 1, state => NoIndexedOwnerControl state ∧
       match BindingMachine.step state with
       | none => True
       | some (next, _) => ReadOnlyPrefix fuel next
@@ -104,15 +108,15 @@ private theorem event_toList_embed (event : Option BindingMachine.Event) :
     (event.map Event.legacy).toList = event.toList.map Event.legacy := by
   cases event <;> rfl
 
-/-- Every Store-free old prefix gives exact agreement of the final state,
+/-- Every such old prefix gives exact agreement of the final state,
 the full trace, and the number of executed transitions. -/
 theorem run_embedReadOnly (fuel : Nat) (state : BindingMachine.State) (readOnly : ReadOnlyPrefix fuel state) :
     run fuel (embedReadOnly state) = embedReadOnlyResult (BindingMachine.run fuel state) := by
   induction fuel generalizing state with
   | zero => rfl
   | succ fuel ih =>
-      obtain ⟨beforeWrite, after⟩ := readOnly
-      rw [run, BindingMachine.run, step_embedReadOnly state beforeWrite]
+      obtain ⟨ordinary, after⟩ := readOnly
+      rw [run, BindingMachine.run, step_embedReadOnly state ordinary]
       cases chosen : BindingMachine.step state with
       | none => rfl
       | some transition =>

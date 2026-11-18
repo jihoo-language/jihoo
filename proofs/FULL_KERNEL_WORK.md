@@ -1840,3 +1840,48 @@ public node with a self-reference, then ran both check paths. `Core.extend`
 accepted the changed cached prefix. `Core.check` rejected it. The actual
 implementation must enforce immutability of the cached prefix and account for
 nodes generated during inference before using the proved suffix-scan rule.
+
+## 2026-11-18: incremental Core cache, indexed Load, and nested proof observation
+
+The production Core stores the node, definition, and family vectors privately.
+Read APIs return detached terms and declarations or scalar metadata. A change
+to constructors of a checked family invalidates the declaration cursors.
+`Core.extend` checks both the input suffix and the suffix created by inference,
+uses pure conversion, and commits all cursors only after both scans and
+declaration checking succeed. On failure it restores visible counts and
+trims temporary signature and representation rows to the committed prefix.
+Regression tests exercise generated nodes, retry after a failed declaration,
+and isolation of exported copies. External compiler checks reject mutable
+access to each of the three private vectors.
+
+`NativeCoreGraphState` models the two ordered scans and cursor commit and
+proves exact frame preservation for earlier decoded definition and constructor
+roots under append-only inference. `NativeCoreDeclarationCache` proves that
+the rollback loop retains exactly the committed signature and representation
+rows and restores visibility. These proofs use an abstract inference callback.
+The actual native inference implementation still needs refinement.
+
+`NativeBindingMachineMutable` executes indexed Load by evaluating the owner
+and offset, reading the guarded cell, and entering the callback with the I64
+and original owner. Its numeric invariant proves the width of every indexed
+cell for all reachable states. The typed named-owner literal Load theorem
+derives the physical read guard, executes nine transitions through both
+callback binders, and proves the original Loan64 result type. The checked
+Store-then-Load regression reads 17 from the changed cell. This local theorem
+uses canonical alignment, owner liveness and size, and loan coverage.
+
+`NativeLoanProofTreeObservation` finds nested computed Loop evidence, including
+inside `LtAdd`, and checks the resulting residual at its exact source type.
+`NativeLoanProofNormalForms` proves uniqueness, replay stability, and absence
+of visited redexes for successful bounded normalization. General termination,
+canonical proof coverage, and universe-aware consistency remain open.
+
+The aggregate passed 976 Lake jobs, 9,301 declaration audits, and every
+generated fixture comparison under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`. The rebuilt compiler
+passed 64 Core unit tests, 89 native kernel fixtures and 31 additional
+correspondence checks, 68 mixed source fixtures and 54 exact-byte checks.
+Typed beta replay accepted 12 inputs, rejected 24, and gated two handoffs.
+The transform and canonical replay suites passed 18 native snapshots and
+25 graph/root handoffs. Both now require native rejection at the `UInt32`
+shift limit and test Lean rejection of a forged wrapping result.

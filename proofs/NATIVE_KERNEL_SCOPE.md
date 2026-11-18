@@ -277,15 +277,17 @@ are discharged, rather than replaced with more passing fixtures:
    open.
 4. Connect the complete source judgment to runtime ownership, quantities,
    borrow and continuation boundaries, and first-order representation. The
-   extended binding machine executes indexed Store and reads the changed
-   content through live leases. The local typed Store theorem derives the
-   bounds and guards from the source receipt and the runtime owner world.
-   Load execution and a full source-to-runtime invariant remain open.
+   extended binding machine executes indexed Store and Load and reads the
+   changed content through live leases or the original owner. The local typed
+   Store and Load theorems derive bounds and guards from the source receipt
+   and runtime owner world. A full source-to-runtime invariant remains open.
 5. Refine native graph operations, normalization and proof-irrelevant
    comparison, inference, family declaration, and whole-program checking
    against the actual implementation. The scalar transform and wire results
    cover integer and byte operations, and the graph-phase model proves
    backward-reference checking over the observed ordered native references.
+   The incremental graph and declaration-cache models track both suffix scans,
+   cursor commit, and the restoration of committed family metadata after errors.
 
 The existing top-level proof goal remains active until these native-kernel
 obligations are actually completed. LLVM/compiler backend verification is a

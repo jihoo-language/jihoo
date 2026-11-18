@@ -1151,3 +1151,9 @@ import Jihoo.NativeLoanProofLoopObservation
 import Jihoo.NativeLoanProofObservation
 import Jihoo.NativeCoreGraph
 import Jihoo.NativeCoreGraphWire
+import Jihoo.NativeCoreGraphState
+import Jihoo.NativeCoreDeclarationCache
+import Jihoo.NativeBindingMachineMutableNumeric
+import Jihoo.NativeBindingMachineMutableLoad
+import Jihoo.NativeLoanProofNormalForms
+import Jihoo.NativeLoanProofTreeObservation

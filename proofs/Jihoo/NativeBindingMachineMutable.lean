@@ -1,23 +1,47 @@
 import Jihoo.NativeBindingMachineBufferStore
 
-/-! The binding-retaining evaluator with indexed Buffer contents. Store
-evaluates the owner, index and value in order. The ordinary continuation stack
-is saved across those operands. Borrow searches the full stack, including
-the enclosing readers saved by Store, and Index observes the indexed cells. -/
+namespace Jihoo.SizedBufferHeap
+open NativeKernel.Environment.BindingMachine
+
+/-- An owned read observes a live unborrowed cell without changing the heap. -/
+def IndexedState.load (state : IndexedState) (object index : Nat) : Option Nat :=
+  if state.metadata.heap.live object = true ∧ freeGuard state.metadata object = true ∧
+      index < state.metadata.length object then some (state.cell object index) else none
+
+theorem IndexedState.load_spec {state : IndexedState} (valid : Valid state.metadata)
+    (read : state.load object index = some value) :
+    state.metadata.heap.live object = true ∧ HeapLeases.Unborrowed state.metadata.heap object ∧
+    index < state.metadata.length object ∧ value = state.cell object index := by
+  unfold IndexedState.load at read
+  split at read
+  · rename_i guard
+    exact ⟨guard.1,freeGuard_unborrowed valid guard.2.1,guard.2.2,(Option.some.inj read).symm⟩
+  · contradiction
+
+end Jihoo.SizedBufferHeap
+
+/-! The binding-retaining evaluator with indexed Buffer contents. Store and
+Load evaluate operands in source order while keeping enclosing readers
+visible. Load retains both continuation arguments, the observed cell value
+and the original owner. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open CodeKinds
 variable {resource : Jihoo.Quantity.Control}
 
-inductive StoreFrame where
+inductive BufferFrame where
   | owner (index value : Code)
   | index (object : Nat) (value : Code)
   | value (object index : Nat)
+  | loadOwner (origin : Term) (index continuation : Code)
+  | loadIndex (object : Nat) (origin : Term) (continuation : Code)
+  | loadContinuation (object : Nat) (origin : Term) (value : Int)
+  | loadOwnerArgument (object : Nat) (origin : Term)
 
 structure State where
   heap : SizedBufferHeap.IndexedState
   control : BindingMachine.Control
   stack : List BindingMachine.Frame
-  pending : List (StoreFrame × List BindingMachine.Frame)
+  pending : List (BufferFrame × List BindingMachine.Frame)
 
 def State.activeStack (state : State) : List BindingMachine.Frame :=
   state.stack ++ state.pending.flatMap Prod.snd
@@ -25,11 +49,12 @@ def State.activeStack (state : State) : List BindingMachine.Frame :=
 inductive Event where
   | legacy (event : BindingMachine.Event)
   | store (object index value : Nat)
+  | load (object index value : Nat)
 
 def initial (term : Term) (heap : SizedBufferHeap.State := SizedBufferHeap.empty) : State :=
   ⟨⟨heap,fun object _ => heap.heap.payload object⟩,.evaluate (.initial term),[],[]⟩
 
-private def fail (state : State) (reason : Fault) (stack : List BindingMachine.Frame) : State × Option Event :=
+def fail (state : State) (reason : Fault) (stack : List BindingMachine.Frame) : State × Option Event :=
   ({ state with control := .fault reason, stack },none)
 
 def executeLegacy (state : State) (action : BindingMachine.Action) : State × Option Event :=
@@ -52,8 +77,14 @@ def executeLegacy (state : State) (action : BindingMachine.Action) : State × Op
         | _ => state.heap.cell
       (⟨⟨next.1.heap,cell⟩,next.1.control,next.1.stack,state.pending⟩,next.2.map .legacy)
 
-private def resumeStore (state : State) (frame : StoreFrame) (saved : List BindingMachine.Frame)
-    (rest : List (StoreFrame × List BindingMachine.Frame)) (value : Value) : State × Option Event :=
+def ownedAccessFailure (state : State) (object : Nat) : State × Option Event :=
+  let heap := state.heap.metadata
+  if !heap.heap.live object then fail state .deadOwner []
+  else if !freeGuard heap object then fail state .borrowedOwner []
+  else fail state .indexBounds []
+
+def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMachine.Frame)
+    (rest : List (BufferFrame × List BindingMachine.Frame)) (value : Value) : State × Option Event :=
   match frame,value with
   | .owner offset fill,.owner object =>
       ({ state with control := .evaluate offset, pending := (.index object fill,saved) :: rest },none)
@@ -63,11 +94,23 @@ private def resumeStore (state : State) (frame : StoreFrame) (saved : List Bindi
       let payload := encodeInteger number
       match state.heap.store object offset payload with
       | some heap => (⟨heap,.returned (.owner object),saved,rest⟩,some (.store object offset payload))
-      | none =>
-          let old := state.heap.metadata
-          if !old.heap.live object then fail state .deadOwner []
-          else if !freeGuard old object then fail state .borrowedOwner []
-          else fail state .indexBounds []
+      | none => ownedAccessFailure state object
+  | .loadOwner origin offset continuation,.owner object =>
+      ({ state with control := .evaluate offset, pending := (.loadIndex object origin continuation,saved) :: rest },none)
+  | .loadIndex object origin continuation,.natural offset =>
+      match state.heap.load object offset with
+      | some payload =>
+          ({ state with
+            control := .evaluate continuation
+            pending := (.loadContinuation object origin (decodeInteger payload),saved) :: rest },
+            some (.load object offset payload))
+      | none => ownedAccessFailure state object
+  | .loadContinuation object origin number,callback@(.closure false _ _ _ _ _) =>
+      executeLegacy { state with pending := (.loadOwnerArgument object origin,saved) :: rest }
+        (applyValue callback (.integer number) (some (.integer number)) [])
+  | .loadOwnerArgument object origin,callback@(.closure false _ _ _ _ _) =>
+      executeLegacy { state with pending := rest }
+        (applyValue callback origin (some (.owner object)) saved)
   | _,_ => fail state .wrongValue []
 
 def step (state : State) : Option (State × Option Event) :=
@@ -77,13 +120,17 @@ def step (state : State) : Option (State × Option Event) :=
       | .store owner index value _ =>
           some (⟨state.heap,.evaluate (code.child owner),[],
             (.owner (code.child index) (code.child value),state.stack) :: state.pending⟩,none)
+      | .load owner index _ continuation =>
+          some (⟨state.heap,.evaluate (code.child owner),[],
+            (.loadOwner (code.child owner).origin (code.child index) (code.child continuation),state.stack) ::
+              state.pending⟩,none)
       | _ => some (executeLegacy state (evaluateAction code state.stack))
   | .returned value =>
       match returnAction value state.stack with
       | some action => some (executeLegacy state action)
       | none => match state.pending with
         | [] => none
-        | (frame,saved) :: rest => some (resumeStore state frame saved rest value)
+        | (frame,saved) :: rest => some (resumeBuffer state frame saved rest value)
   | .fault _ => none
 
 structure Result where
@@ -126,7 +173,7 @@ theorem pending_store_executes (state : State)
     let next : State := ⟨heap,.returned (.owner object),saved,rest⟩
     step state = some (next,some (.store object index (encodeInteger value))) ∧
       next.activeStack = state.activeStack := by
-  simp [step,returned,empty,returnAction,pending,resumeStore,written,State.activeStack]
+  simp [step,returned,empty,returnAction,pending,resumeBuffer,written,State.activeStack]
 
 private def withOuter (outer : List Frame) : Action → Action
   | .control control stack activation => .control control (stack ++ outer) activation
@@ -192,25 +239,36 @@ private theorem executeLegacy_invariant (state : State) (action : Action)
   exact ⟨SizedBufferHeap.steps_valid invariant.1 (execute_heap_steps invariant.1 _),
     execute_reader_inventory invariant.1 invariant.2 adjusted⟩
 
-private theorem resumeStore_invariant (state : State) (invariant : Invariant state)
+private theorem resumeBuffer_invariant (state : State) (invariant : Invariant state)
     (empty : state.stack = []) (pending : state.pending = (frame,saved) :: rest) (value : Value) :
-    Invariant (resumeStore state frame saved rest value).1 := by
+    Invariant (resumeBuffer state frame saved rest value).1 := by
   have old : ReaderInventory state.heap.metadata (readerFrames (saved ++ rest.flatMap Prod.snd)) := by
     simpa [State.activeStack,empty,pending] using invariant.2
-  cases frame <;> cases value <;> simp only [resumeStore,fail]
+  have accessFailure (object : Nat) : Invariant (ownedAccessFailure state object).1 := by
+    simp only [ownedAccessFailure]
+    split <;> try split
+    all_goals exact ⟨invariant.1,by simpa [fail,State.activeStack,pending] using old⟩
+  cases frame <;> cases value <;> simp only [resumeBuffer,fail]
   all_goals first
     | exact ⟨invariant.1,by simpa [State.activeStack,empty,pending] using old⟩
     | skip
-  split
-  · rename_i heap written
-    have unchanged := (SizedBufferHeap.IndexedState.store_spec invariant.1 written).2.2.2.1
-    exact ⟨unchanged ▸ invariant.1,unchanged ▸ old⟩
-  · split
-    · exact ⟨invariant.1,by simpa [State.activeStack,pending] using old⟩
-    · split <;> exact ⟨invariant.1,by simpa [State.activeStack,pending] using old⟩
+  case value.integer =>
+    split
+    · rename_i heap written
+      have unchanged := (SizedBufferHeap.IndexedState.store_spec invariant.1 written).2.2.2.1
+      exact ⟨unchanged ▸ invariant.1,unchanged ▸ old⟩
+    · exact accessFailure _
+  case loadIndex.natural =>
+    split
+    · exact ⟨invariant.1,by simpa [State.activeStack,empty] using old⟩
+    · exact accessFailure _
+  all_goals
+    rename_i erased domain body context origins captured
+    cases erased <;>
+      exact ⟨invariant.1,by simpa [applyValue,executeLegacy,execute,fail,State.activeStack,empty,pending] using old⟩
 
 /-- Every extended step preserves valid allocation metadata and the exact
-inventory of outstanding reader leases, including across Store operands. -/
+inventory of outstanding reader leases, including across buffer operands. -/
 theorem step_invariant (invariant : Invariant state) (stepped : step state = some (next,event)) :
     Invariant next := by
   cases control : state.control with
@@ -218,6 +276,8 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
   | evaluate code =>
       simp only [step,control] at stepped
       split at stepped
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped
         exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
@@ -247,7 +307,7 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
               have same := congrArg Prod.fst (Option.some.inj stepped)
               change _ = next at same
               rw [← same]
-              exact resumeStore_invariant state invariant empty pending value
+              exact resumeBuffer_invariant state invariant empty pending value
 
 theorem run_invariant (fuel : Nat) (invariant : Invariant state) : Invariant (run fuel state).state := by
   induction fuel generalizing state with
@@ -270,7 +330,7 @@ private theorem literal_store_steps (state : State) (evaluating : state.control 
     run 7 state =
       ⟨⟨heap,.returned (.owner object),state.stack,state.pending⟩,[.store object offset (encodeInteger value)],7⟩ := by
   simp only [run,step,evaluating,shape,evaluateAction,Code.child,stored,executeLegacy,execute,
-    Option.map_none,returnAction,resumeStore,offsetWidth,valueWidth,ite_true,written]
+    Option.map_none,returnAction,resumeBuffer,offsetWidth,valueWidth,ite_true,written]
   rfl
 
 /-- A typed literal Store with an actual owner slot constructs the complete
@@ -301,6 +361,26 @@ theorem typed_literal_store (state : State)
     canonical_store_cell history state.heap invariant.1 invariant.2 view typed sizes shape stored live coverage checked budget
   exact ⟨heap,literal_store_steps state evaluating shape stored offsetWidth valueWidth written,
     metadata,metadata ▸ length,result,cell,SizedBufferHeap.IndexedState.store_keeps_reader invariant.1 written⟩
+
+/-- A literal owned Load retains the read value and the existing owner in the
+two callback bindings. Both enclosing continuation stacks and the heap are
+identical to those at entry. -/
+theorem literal_load_steps (state : State) (evaluating : state.control = .evaluate code)
+    (shape : code.term = .load (.var owner) (.natural offset) evidence
+      (.lam false first (.lam false again body)))
+    (stored : code.values[owner]? = some (some (.owner object)))
+    (offsetWidth : offset < 2^64)
+    (loaded : state.heap.load object offset = some payload) :
+    let origin := (code.child (.var owner)).origin
+    let result := Term.integer (decodeInteger payload)
+    let next := restoredContinuation code first again body origin result object (.integer (decodeInteger payload))
+    run 9 state = ⟨⟨state.heap,.evaluate next,state.stack,state.pending⟩,
+      [.load object offset payload,.legacy (.activate false (.lam false again body) result),
+        .legacy (.activate false body origin)],9⟩ := by
+  simp only [run,step,evaluating,shape,evaluateAction,Code.child,stored,executeLegacy,execute,
+    Option.map_none,returnAction,resumeBuffer,offsetWidth,ite_true,loaded,applyValue,enter,restoredContinuation,
+    Option.map_some]
+  rfl
 
 namespace Examples
 
@@ -340,6 +420,19 @@ theorem outer_reader_admitted : LoanTyping.MixedProgram.checkDeclaration 32 64 .
     ⟨.i64,outer_reader⟩ = some ⟨.i64,outer_reader⟩ := by cbv
 
 theorem outer_reader_store_returns : observe (run 45 (initial outer_reader)) = .integer 5 := by rfl
+
+private def store_then_load : Term :=
+  .load (.store (.alloc (.natural 2) (.integer 3)) (.natural 1) (.integer 17) (bound 1 2))
+    (.natural 1) (bound 1 2) (release 2)
+
+theorem store_then_load_admitted : LoanTyping.MixedProgram.checkDeclaration 32 64 .empty
+    ⟨.i64,store_then_load⟩ = some ⟨.i64,store_then_load⟩ := by cbv
+
+theorem store_then_load_returns : observe (run 40 (initial store_then_load)) = .integer 17 := by rfl
+
+theorem store_then_load_events : memoryEvents (run 40 (initial store_then_load)).events =
+    [.legacy (.heap (.alloc 0 2 (encodeInteger 3))),.store 0 1 (encodeInteger 17),
+      .load 0 1 (encodeInteger 17),.legacy (.heap (.free 0))] := by rfl
 
 end Examples
 
