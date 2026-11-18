@@ -1157,3 +1157,7 @@ import Jihoo.NativeBindingMachineMutableNumeric
 import Jihoo.NativeBindingMachineMutableLoad
 import Jihoo.NativeLoanProofNormalForms
 import Jihoo.NativeLoanProofTreeObservation
+import Jihoo.NativeLoanMixedIncremental
+import Jihoo.NativeBindingMachineMutableAlignment
+import Jihoo.NativeBindingMachineMutableDynamicLoad
+import Jihoo.NativeLoanHigherKindObservation

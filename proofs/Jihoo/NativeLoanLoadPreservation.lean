@@ -5,39 +5,63 @@ Both arguments satisfy the actual dependent callback telescope, including
 converted domains and the checked removal of both result binders. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping
 
-private def LoadView (env : Environment) (ctx : Context) : Term → Term → Prop
+private def LoadView (env : Environment) (loans : Loans.Stack) (ctx : Context)
+    (mode : Bool) : Term → Term → Prop
   | .load owner _ _ continuation, type =>
       ∃ count valueDomain ownerDomain result normal outside,
-        HasType env [] ctx true owner (.buffer count) ∧
-        HasType env [] ctx true continuation (.pi false valueDomain (.pi false ownerDomain result)) ∧
+        HasType env loans ctx mode owner (.buffer count) ∧
+        HasType env loans ctx mode continuation (.pi false valueDomain (.pi false ownerDomain result)) ∧
         Conversion.Conv env valueDomain .i64 ∧
         Conversion.Conv env ownerDomain (.buffer (count.rename Nat.succ)) ∧
         Conversion.Conv env result normal ∧ PartialRenaming.shift (-2) 0 normal = some outside ∧
         Conversion.Conv env outside type
   | _, _ => True
 
-private theorem LoadView.convert (view : LoadView env ctx term type)
-    (converted : Conversion.Conv env type target) : LoadView env ctx term target := by
-  fun_cases LoadView env ctx term type <;> simp only [LoadView] at view ⊢
+private theorem LoadView.convert (view : LoadView env loans ctx mode term type)
+    (converted : Conversion.Conv env type target) : LoadView env loans ctx mode term target := by
+  fun_cases LoadView env loans ctx mode term type <;> simp only [LoadView] at view ⊢
   · obtain ⟨count,valueDomain,ownerDomain,result,normal,outside,owner,continuation,
       valueChecked,ownerChecked,resultChecked,lowered,requested⟩ := view
     exact ⟨count,valueDomain,ownerDomain,result,normal,outside,owner,continuation,
       valueChecked,ownerChecked,resultChecked,lowered,requested.trans converted⟩
 
-private theorem load_view (typed : HasType env loans ctx mode term type) : LoadView env ctx term type := by
+private theorem load_view (typed : HasType env loans ctx mode term type) :
+    LoadView env loans ctx mode term type := by
   apply HasType.rec (t := typed)
     (motive_1 := fun _ _ _ _ _ _ => True)
-    (motive_2 := fun _ ctx _ term type _ => LoadView env ctx term type)
+    (motive_2 := fun loans ctx mode term type _ => LoadView env loans ctx mode term type)
     (motive_3 := fun _ _ _ _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ => True)
     (motive_5 := fun _ _ _ _ _ _ => True)
   all_goals intros
   all_goals first | trivial | skip
   case load owner _ _ continuation valueDomain ownerDomain result lowered _ _ _ _ _ =>
-      exact ⟨_,_,_,_,_,_,owner.ghost [],continuation.ghost [],
+      exact ⟨_,_,_,_,_,_,owner,continuation,
         valueDomain,ownerDomain,result,lowered,.refl _⟩
   case dataElim => split <;> trivial
   case convert _ converted ih => exact ih.convert converted
+
+/-- Running a two-binder Load callback retains its original CODE body under
+the actual I64 and buffer binders. The result type is the caller's requested
+type weakened twice, even when the stored callback annotations use conversion. -/
+theorem load_retained_body (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : HasType env loans ctx mode
+      (.load owner index proof (.lam false first (.lam false again body))) type) :
+    ∃ count, HasType env loans ctx mode owner (.buffer count) ∧
+      Conversion.Conv env first .i64 ∧ Conversion.Conv env again (.buffer (count.rename Nat.succ)) ∧
+      HasType env loans (⟨again,false⟩ :: ⟨first,false⟩ :: ctx) mode body
+        (type.rename (fun index => index + 2)) := by
+  obtain ⟨count,_,_,_,normal,outside,ownerTyped,callback,valueChecked,ownerChecked,
+    resultChecked,lowered,requested⟩ := load_view typed
+  obtain ⟨_,_,_,inner,firstPi⟩ := callback.lamView
+  obtain ⟨_,firstDomain,innerType⟩ := firstPi.pi_injective wf.admissible
+  obtain ⟨_,_,_,bodyTyped,againPi⟩ := inner.lamView
+  obtain ⟨_,againDomain,bodyResult⟩ := (againPi.trans innerType).pi_injective wf.admissible
+  have result : Conversion.Conv env normal (type.rename (fun index => index + 2)) := by
+    rw [← load_result_reweakens lowered]
+    exact requested.renaming _ wf.closed
+  exact ⟨count,ownerTyped,firstDomain.trans valueChecked,againDomain.trans ownerChecked,
+    bodyTyped.convert (bodyResult.trans (resultChecked.trans result))⟩
 
 /-- A well-typed I64 observation and the original buffer inhabit the complete
 Load continuation telescope. The application retains the original result type. -/
@@ -52,12 +76,12 @@ theorem load_ghost_resume
   have ownerType : Conversion.Conv env (ownerDomain.subst (single value)) (.buffer count) := by
     simpa only [Term.buffer,Term.subst,substArgs,Op.binders,liftSub,Term.shift_subst_single] using
       ownerChecked.substitution (single value) wf.closed
-  have ownerArgument := ownerTyped.convert ownerType.symm
+  have ownerArgument := (ownerTyped.ghost []).convert ownerType.symm
   have application : HasType env [] ctx true (.app continuation value)
       (.pi false (ownerDomain.subst (single value)) (result.subst (liftSub 1 (single value)))) := by
     have applied : HasType env [] ctx true (.app continuation value)
         ((Term.pi false ownerDomain result).subst (single value)) :=
-      .app callback valueArgument (Or.inl rfl)
+      .app (callback.ghost []) valueArgument (Or.inl rfl)
     simpa only [Term.pi,Term.subst,substArgs,Op.binders,liftSub] using applied
   have resultType := (resultChecked.substitution (liftSub 1 (single value)) wf.closed).substitution
     (single owner) wf.closed

@@ -1885,3 +1885,45 @@ Typed beta replay accepted 12 inputs, rejected 24, and gated two handoffs.
 The transform and canonical replay suites passed 18 native snapshots and
 25 graph/root handoffs. Both now require native rejection at the `UInt32`
 shift limit and test Lean rejection of a forged wrapping result.
+
+## 2026-11-18: mixed checker replay and reachable Load callback typing
+
+`NativeLoanMixedIncremental` proves exact equivalence between reusing a
+checked Loan64 declaration environment and running the complete Lean mixed
+checker with the same typing and quantity fuel. Appended families start at or
+after the prior global count. Families at the checkpoint follow older families
+in table order. Invalid suffix scheduling and checker rejection propagate
+through the equivalence. A successful suffix extends both earlier tables
+and constructs a checked combined history.
+
+`NativeBindingMachineMutableAlignment` preserves slot and erasure alignment
+through every indexed transition, including suspended operand stacks,
+captured closures, both Load callback activations and faults. A source-typed
+CODE variable in any reachable machine state selects its actual retained value.
+`NativeBindingMachineMutableDynamicLoad` uses the reachable alignment,
+lease inventory and cell widths to derive the selected U64 slot and physical
+read bound from the closed source `Decide` evidence. Nine real transitions
+read the indexed cell and activate the two callback binders. The lifted
+canonical view relates the actual callback to retained source CODE and its
+original result type, including both observed arguments in the ghost closing.
+The admitted branch example performs one read at index 1 and returns 17.
+
+The Load theorem still uses a live owner slot and local source-to-runtime
+value, size, erasure and loan correspondence. Extending this result to all
+reachable typed control states is part of the outstanding runtime obligation.
+
+`NativeLoanHigherKindObservation` decides the existing higher-kind grammar
+using a bound computed from the term tree. For actual typed ghost replacement,
+the recognizer supplies the grammar evidence at every index of the finite
+source context and the checked substitution produces its denotational action.
+The byte observer runs the Lean Loan64 mixed checker on a version-6 snapshot,
+then computes a typed residual at the exact stored annotation and reconstructs
+its intrinsic kind and finite semantic carrier. A checked example observes a
+higher-kind identity whose definition and annotation both contain a comparison.
+Successful normalization and membership of the residual in the grammar remain
+conditions of the observer. Full type-to-model coverage and production checker
+refinement remain open.
+
+The aggregate passed 980 Lake jobs, 9,327 declaration audits, and all
+generated fixture comparisons under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`.

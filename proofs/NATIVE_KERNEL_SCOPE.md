@@ -1568,3 +1568,19 @@ existing Recognized grammar. Exact syntax, denotation coherence, substituted
 HasType and original-kind conversion follow from actual source typing. The
 explicit grammar coverage remains; general dependent annotation interpretation,
 logical consistency and native implementation refinement are still open.
+
+`NativeLoanMixedIncremental` proves exact cached/full-check agreement for the
+executable Lean mixed checker at equal fuel, including malformed suffix
+rejection. Earlier global and family entries retain their indices. The actual
+Jihoo inference implementation still needs a refinement relation.
+
+`NativeBindingMachineMutableAlignment` covers all active and suspended frames
+with Store and Load. `NativeBindingMachineMutableDynamicLoad` constructs the
+read and both real callback entries from a retained index variable and closed
+source `Decide` evidence. It retains canonical source CODE and the original
+result type. Owner liveness and local world correspondence remain premises.
+
+`NativeLoanHigherKindObservation` checks ghost replacement grammar coverage
+and recovers a finite denotation from an observed higher-kind residual at the
+exact original annotation of a version-6 checked snapshot. Full dependent
+annotation coverage remains open.
