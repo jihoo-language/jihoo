@@ -9414,3 +9414,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureTyping.free_equality_function_formation
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureTyping.dependent_free_application
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureTyping.dependent_free_application_beta
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.wireRank_schema
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.wirePayload_schema
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.wireChildren_schema
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.wireView_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.parse_comparison_view
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.wirePayload_fits
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.writtenInteger_payload
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.compareShape_eq
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.compareGraph_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.compareGraph_zero_iff

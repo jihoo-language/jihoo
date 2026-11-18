@@ -2038,3 +2038,18 @@ Extension to all constructors and executable checker admission remains open.
 The full check passed 990 Lake jobs, 9,406 declaration audits, and every
 generated fixture comparison under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`.
+
+## 2026-11-18: graph comparison and proof irrelevance
+
+`NativeCoreCompareWire` proves that the version-6 node words carry the native
+constructor rank, exact signed payload order and comparison child selection.
+Its graph comparator follows shared references with depth and work bounds.
+Every successful result on the parsed graph agrees with the structural
+ordering on represented trees. A zero result is equivalent to equality after
+stripping `Strict` and omitting the designated evidence of `USub`, `Pack` and
+erased `Give`. The separate `Core.identical` traversal and refinement of
+compiled checker execution remain open.
+
+The full check passed 991 Lake jobs, 9,416 declaration audits, and every
+generated fixture comparison under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`.

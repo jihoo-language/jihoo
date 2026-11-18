@@ -1171,3 +1171,4 @@ import Jihoo.NativeLoanPureConversion
 import Jihoo.NativeBindingMachineMutableLoadFree
 import Jihoo.NativeBindingMachineMutableUnsignedSubtraction
 import Jihoo.NativeLoanPureTyping
+import Jihoo.NativeCoreCompareWire
