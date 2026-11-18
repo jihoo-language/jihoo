@@ -263,8 +263,11 @@ are discharged, rather than replaced with more passing fixtures:
 
 1. Contextual ghost preservation covers ordinary and arithmetic computation,
    family and Lend reduction, and transparent global unfolding through actual
-   Loan64 mixed history. Code substitution still needs preservation of mode
-   and representation restrictions. The pure value, Take/Give, and Load root results
+   Loan64 mixed history. Variable renaming and matching-variable beta preserve
+   CODE mode under explicit loan transport. A checked counterexample to raw
+   beta replaces a required named owner with an expression. Evaluation must
+   retain the binding or preserve the named-owner restriction. The pure value,
+   Take/Give, and Load root results
    need to be connected to the remaining evaluation contexts.
 2. A general consistency and typed normalization argument for the universe-aware
    judgment. The current truth theorems recognize specific proof syntax or
@@ -274,13 +277,15 @@ are discharged, rather than replaced with more passing fixtures:
    open.
 4. Connect the complete source judgment to runtime ownership, quantities,
    borrow and continuation boundaries, and first-order representation. The
-   binding machine currently implements read-only allocated buffers. Indexed
-   heap rules specify Store and prove local source-derived bounds and lease
-   guards. Store control frames and the full runtime invariant remain open.
+   extended binding machine executes indexed Store and reads the changed
+   content through live leases. The local typed Store theorem derives the
+   bounds and guards from the source receipt and the runtime owner world.
+   Load execution and a full source-to-runtime invariant remain open.
 5. Refine native graph operations, normalization and proof-irrelevant
    comparison, inference, family declaration, and whole-program checking
    against the actual implementation. The scalar transform and wire results
-   cover the integer and byte operations within those implementations.
+   cover integer and byte operations, and the graph-phase model proves
+   backward-reference checking over the observed ordered native references.
 
 The existing top-level proof goal remains active until these native-kernel
 obligations are actually completed. LLVM/compiler backend verification is a

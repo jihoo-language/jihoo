@@ -1141,3 +1141,12 @@ import Jihoo.NativeLoanDeltaPreservation
 import Jihoo.NativeLoanArithmeticProofConsistency
 import Jihoo.NativeBindingMachineBufferStore
 import Jihoo.NativeLoanLoadPreservation
+import Jihoo.NativeBindingMachineMutable
+import Jihoo.NativeBindingMachineMutableCompatibility
+import Jihoo.NativeLoanCodeBetaBoundary
+import Jihoo.NativeLoanCodeRenaming
+import Jihoo.NativeLoanProofLoopUnrolling
+import Jihoo.NativeLoanProofNormalization
+import Jihoo.NativeLoanProofLoopObservation
+import Jihoo.NativeCoreGraph
+import Jihoo.NativeCoreGraphWire

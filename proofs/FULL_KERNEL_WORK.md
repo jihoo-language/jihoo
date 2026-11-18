@@ -1787,3 +1787,47 @@ load observations still need the runtime control invariant.
 The aggregate check passed 960 Lake jobs, 9,206 declaration audits, and all
 generated fixture comparisons under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`.
+
+## 2026-11-18: executable Store, CODE renaming, and proof evaluation
+
+`NativeBindingMachineMutable` executes Store by evaluating its owner, index,
+and value in order. The mutable heap supplies indexed contents for both
+writes and leased reads. Borrow sees the enclosing frames saved while Store
+evaluates an operand. Every finite prefix preserves heap validity and the
+exact inventory of active readers. A named-owner literal Store with the
+source typing, quantity receipt, and owner world constructs seven actual
+transitions and preserves all existing lease reads. Checked examples execute
+distinct writes and reads within one buffer and an outer Borrow while a
+different buffer's write is pending. `NativeBindingMachineMutableCompatibility`
+embeds uniform contents and proves exact agreement with every old execution
+prefix that has yet to select Store, including states and events on faults.
+
+`NativeLoanCodeBetaBoundary` gives a checked counterexample to arbitrary
+raw CODE beta. Substituting an allocation for an owner variable makes the
+chosen Borrow untypable in CODE. The retained binding executes the original
+program. `NativeLoanCodeRenaming` preserves all Loan64 rules in their original
+mode under context and loan transport, including canonical alias rebasing and
+opening a binder with a matching variable.
+
+`NativeLoanProofLoopUnrolling` constructs typed finite applications of a
+checked proof Loop's base and induction step at its original dependent type.
+`NativeLoanProofNormalization` runs bounded typed computation, delta, and
+family elimination. A mixed admitted indexed recursive proposition is
+eliminated by using its induction hypothesis and reaching actual `Decide`
+evidence. `NativeLoanProofLoopObservation` normalizes the unrolling at the
+original dependent type, including a computed count and actual erased
+induction hypothesis. The residual truth theorems require supported outcomes.
+General typed normalization and consistency remain open.
+
+`NativeCoreGraph` models the native arena cap, first failing ordered reference,
+and cached suffix check. The snapshot writer and `Core.extend` now use the
+same `Core.children` extraction. `NativeCoreGraphWire` proves that parsing
+those version-6 writer words preserves the graph scan result at any prefix
+position. A successful exact-byte Loan64 check implies the observed reference
+scan passes. Validated prefix immutability, generated nodes, and the actual
+native scan and inference execution still need refinement.
+
+The aggregate passed 969 Lake jobs, 9,265 declaration audits, and all generated
+fixture comparisons under the resource wrapper. Native checks matched 162
+writer rows with distinct high `UInt32` references, 665 Core transformations,
+89 source fixtures, and 31 additional checks.

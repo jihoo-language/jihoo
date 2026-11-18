@@ -146,13 +146,14 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine
 open CodeKinds
 variable {control : Jihoo.Quantity.Control}
 
-/-- For Store at a reachable heap snapshot, original typing and its checked
+/-- For Store at a heap snapshot with its exact reader inventory, original typing and its checked
 quantity receipt supply the signed value width, physical index bound and
 absence of a reader. Ambient ownership supplies the owner's current liveness.
 The indexed heap writes that exact cell and retains the Loan64 result type. -/
-theorem reachable_canonical_store_cell (term : Term) (fuel : Nat)
+theorem canonical_store_cell
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
-    (heap : SizedBufferHeap.IndexedState) (metadata : heap.metadata = (run fuel (initial term)).state.heap)
+    (heap : SizedBufferHeap.IndexedState) (valid : SizedBufferHeap.Valid heap.metadata)
+    (inventory : ReaderInventory heap.metadata (readerFrames stack))
     (view : CanonicalView actual source indices)
     (typed : LoanClosingTyped env loans false source meanings type)
     (sizes : OwnerSizes env heap.metadata source meanings)
@@ -160,12 +161,13 @@ theorem reachable_canonical_store_cell (term : Term) (fuel : Nat)
       (.decide (.natural offset) (.natural count)))
     (stored : actual.values[owner]? = some (some (.owner object)))
     (live : heap.metadata.heap.live object = true)
-    (coverage : LoanCoverage source loans (run fuel (initial term)).state.stack)
+    (coverage : LoanCoverage source loans stack)
     (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+2) env loans source.context
       source.term = some control)
     (budget : LoanTyping.ResourceQuantity.LoanBudget source.context.length loans control) :
     ∃ next, heap.store object offset (encodeInteger value) = some next ∧
       next.metadata = heap.metadata ∧ heap.metadata.length object = count ∧
+      offset < 2^64 ∧ ValueReduction.signed64 value ∧
       LoanTyping.Conversion.Conv env (.buffer (.natural count)) type ∧
       decodeInteger (next.cell object offset) = value ∧
       ∀ queried index, queried ≠ object ∨ index ≠ offset → next.cell queried index = heap.cell queried index := by
@@ -187,14 +189,11 @@ theorem reachable_canonical_store_cell (term : Term) (fuel : Nat)
       evidence.ghostSubstitution history.wellFormed closing
   have sizeConverted := (closedEvidence.principalView.lt_injective history.wellFormed.admissible).2
   have length := (physical.trans sizeConverted.symm).natural_injective history.wellFormed.admissible
-  have ordered := (evidence.literal_decide_limits history.wellFormed).2.2
+  have limits := evidence.literal_decide_limits history.wellFormed
   have outside := (LoanTyping.ResourceQuantity.projectRaw_literal_store_inactive checked budget).2
   have noReader := coverage.inactive sourceStored outside
-  have guard := (ReaderInventory.free_guard_iff (initial_run_heap_valid term fuel)
-    (initial_reader_inventory term fuel)).mpr noReader
-  rw [← metadata] at guard
-  have valid : SizedBufferHeap.Valid heap.metadata := metadata ▸ initial_run_heap_valid term fuel
-  have within : offset < heap.metadata.length object := by rwa [length]
+  have guard := (inventory.free_guard_iff valid).mpr noReader
+  have within : offset < heap.metadata.length object := length ▸ limits.2.2
   have written : heap.store object offset (encodeInteger value) = some
       { heap with cell := HeapLeases.put heap.cell object (HeapLeases.put (heap.cell object) offset (encodeInteger value)) } := by
     simp [SizedBufferHeap.IndexedState.store,live,guard,within]
@@ -203,8 +202,36 @@ theorem reachable_canonical_store_cell (term : Term) (fuel : Nat)
     simpa only [Term.subst,substArgs,Op.binders,liftSub] using
       (principal.substitution meanings history.wellFormed.closed).trans converted
   have resultType := (RawLend.Conv.node .buffer (.cons sizeConverted .nil)).trans outsideTyped
-  refine ⟨_,written,metadataEq,length,resultType,?_,otherCells⟩
+  refine ⟨_,written,metadataEq,length,limits.1,valueTyped.integer_bound,resultType,?_,otherCells⟩
   rw [cell]
   exact encode_decode_integer valueTyped.integer_bound
+
+/-- The original read-only machine provides the metadata and reader inventory
+at every reachable snapshot. Indexed cells can be supplied at that snapshot. -/
+theorem reachable_canonical_store_cell (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (heap : SizedBufferHeap.IndexedState) (metadata : heap.metadata = (run fuel (initial term)).state.heap)
+    (view : CanonicalView actual source indices)
+    (typed : LoanClosingTyped env loans false source meanings type)
+    (sizes : OwnerSizes env heap.metadata source meanings)
+    (shape : actual.term = .store (.var owner) (.natural offset) (.integer value)
+      (.decide (.natural offset) (.natural count)))
+    (stored : actual.values[owner]? = some (some (.owner object)))
+    (live : heap.metadata.heap.live object = true)
+    (coverage : LoanCoverage source loans (run fuel (initial term)).state.stack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+2) env loans source.context
+      source.term = some control)
+    (budget : LoanTyping.ResourceQuantity.LoanBudget source.context.length loans control) :
+    ∃ next, heap.store object offset (encodeInteger value) = some next ∧
+      next.metadata = heap.metadata ∧ heap.metadata.length object = count ∧
+      LoanTyping.Conversion.Conv env (.buffer (.natural count)) type ∧
+      decodeInteger (next.cell object offset) = value ∧
+      ∀ queried index, queried ≠ object ∨ index ≠ offset → next.cell queried index = heap.cell queried index := by
+  have valid : SizedBufferHeap.Valid heap.metadata := metadata ▸ initial_run_heap_valid term fuel
+  have inventory : ReaderInventory heap.metadata (readerFrames (run fuel (initial term)).state.stack) :=
+    metadata ▸ initial_reader_inventory term fuel
+  obtain ⟨next,written,same,length,_,_,result,cell,otherCells⟩ :=
+    canonical_store_cell history heap valid inventory view typed sizes shape stored live coverage checked budget
+  exact ⟨next,written,same,length,result,cell,otherCells⟩
 
 end Jihoo.NativeKernel.Environment.BindingMachine
