@@ -48,6 +48,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compiler', required=True)
     compiler = str(Path(parser.parse_args().compiler).resolve())
+    free_equality = Path(__file__).resolve().parent / 'core_preserves/pure-free-equality.jhc'
+    command([compiler, 'core', 'check', free_equality])
+    command([compiler, 'core', 'preserves', free_equality])
     with tempfile.TemporaryDirectory(prefix='pure-erasure-') as directory:
         tmp = Path(directory)
         all_sources, specs = [], []

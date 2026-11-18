@@ -1161,3 +1161,7 @@ import Jihoo.NativeLoanMixedIncremental
 import Jihoo.NativeBindingMachineMutableAlignment
 import Jihoo.NativeBindingMachineMutableDynamicLoad
 import Jihoo.NativeLoanHigherKindObservation
+import Jihoo.NativeBindingMachineMutableLoadContexts
+import Jihoo.NativeLoanProofTransportObservation
+import Jihoo.NativeLoanPureFreeBoundary
+import Jihoo.NativeCoreTransformWire

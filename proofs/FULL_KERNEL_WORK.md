@@ -1927,3 +1927,43 @@ refinement remain open.
 The aggregate passed 980 Lake jobs, 9,327 declaration audits, and all
 generated fixture comparisons under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`.
+
+## 2026-11-18: Load context transport and pure conversion coverage
+
+`NativeBindingMachineMutableLoadContexts` carries the complete local value and
+buffer-size contexts and coverage of actual readers across both Load callback
+binders. The heap and reader frames keep their identities. The canonical view
+equates the returned owner with the original owner slot, with the same sizes
+and coverage. When the owner binder has the exact captured annotation, typed
+variable renaming also transports open CODE into the one-owner view. The
+two-binder view retains its original CODE type when annotations only convert.
+
+`NativeLoanProofTransportObservation` shows that an admitted closed less-than
+proof can be normal for the earlier contractor and outside its supported
+arithmetic syntax. In the example a literal `Strict` prefix protects `Refl`
+inside `Transport`. The checked observer exposes the equality evidence and
+contracts the transport at the original Loan64 result type. An actual compiler
+probe reaches `Decide(0,1)` by normalizing the same checked declaration.
+
+`NativeLoanPureFreeBoundary` proves the existing Lean conversion cannot equate
+a variable with a pure `Free` returning it. The Lean mixed declaration checker
+rejects the corresponding reflexivity proof at every budget. The production
+compiler accepts `tests/core_preserves/pure-free-equality.jhc` and checks its
+normal result at the original type. The wrapped Lean version-6 checker rejected
+the exact snapshot written from that input. Projecting the annotation with
+`NativeLoanValueProjection` yields ordinary reflexivity. Connecting that
+projection to source typing and production conversion remains open.
+
+`NativeCoreTransformWire` connects version-6 child references and the four
+binding edges to arbitrary paths in the represented syntax tree. The selected
+subtree sees exactly the lifting of renaming, signed shift and substitution
+determined by the crossed binders. The model of the `UInt32` cutoff increments
+rejects exactly on overflow along that path. Whole native traversal execution,
+resource accounting, and the append of the new arena nodes remain separate
+refinement obligations.
+
+The aggregate passed 984 Lake jobs, 9,352 declaration audits, and all
+generated fixture comparisons under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`. Both Python modes of the
+native pure erasure suite passed the new assertion, 18 MIR twin comparisons,
+300 executed results, 60 expected runtime traps and three rejection cases.
