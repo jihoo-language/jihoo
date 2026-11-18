@@ -9189,3 +9189,26 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeWire.integerPayloadWords_refines
 #print axioms Jihoo.NativeKernel.NativeWire.writeInteger_refines
 #print axioms Jihoo.NativeKernel.NativeWire.parseWrittenInteger
+
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.affine_conversion_value
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.Truth.affine_less
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.supported_truth
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.no_supported_less_zero
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_residual_truth
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.no_checked_residual_less_zero
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_declaration_truth
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_global_delta_residual_truth
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.no_checked_global_delta_residual_less_zero
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.extend
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.MixedProgram.History.global_typing
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.MixedProgram.History.delta_preserves
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.DeltaEvaluation.Steps.ghost_transform
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.MixedProgram.History.delta_computation_preservation
+#print axioms Jihoo.SizedBufferHeap.IndexedState.store_spec
+#print axioms Jihoo.SizedBufferHeap.IndexedState.read_spec
+#print axioms Jihoo.SizedBufferHeap.IndexedState.store_keeps_reader
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.store_inputs
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_literal_store_inactive
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_store_cell
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.load_ghost_resume
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.load_ghost_finish

@@ -261,25 +261,26 @@ validate all local scopes, so the stricter cases are not equivalence claims.
 The full native kernel is verified only when the following remaining obligations
 are discharged, rather than replaced with more passing fixtures:
 
-1. Extend the proved contextual ghost preservation and typed substitution to the
-   remaining typing/computation rules. Code substitution additionally needs
-   preservation of mode and representation restrictions.
-2. A consistency/normalization argument for the universe-aware judgment, beyond
-   forward reachability of a bounded untyped simplifier.
-3. The remaining typing rules: Lend and active-loan runtime Borrow,
-   together with exact native opaque-global behavior. Owned/effectful iteration,
-   checked families, dependent constructors, proposition/data elimination,
-   Case/Drop, borrowed View, owned Ref and Back/Give/Take already share the unified judgment.
-   Family Elim/Case/View/Drop computation is integrated; loan computation and
-   the remaining native equations still require integration.
-4. Runtime ownership, quantities, borrow/continuation boundaries and first-order
-   representation, connected to the same complete native judgment. Existing
-   restricted resource proofs do not automatically supply this connection.
-5. The remaining native conversion equations and formation-aware
-   proof-irrelevant comparison, and refinement of native graph operations,
-   normalization/comparison, inference,
-   family declaration and whole-program checking by their actual implementation
-   semantics. A Lean port or syntactic interface audit alone does not discharge it.
+1. Contextual ghost preservation covers ordinary and arithmetic computation,
+   family and Lend reduction, and transparent global unfolding through actual
+   Loan64 mixed history. Code substitution still needs preservation of mode
+   and representation restrictions. The pure value, Take/Give, and Load root results
+   need to be connected to the remaining evaluation contexts.
+2. A general consistency and typed normalization argument for the universe-aware
+   judgment. The current truth theorems recognize specific proof syntax or
+   supported residuals after typed reduction.
+3. Lend and active-loan Borrow share the Loan64 typing judgment. Exact native
+   opaque-global behavior and its connection to formation-aware checking remain
+   open.
+4. Connect the complete source judgment to runtime ownership, quantities,
+   borrow and continuation boundaries, and first-order representation. The
+   binding machine currently implements read-only allocated buffers. Indexed
+   heap rules specify Store and prove local source-derived bounds and lease
+   guards. Store control frames and the full runtime invariant remain open.
+5. Refine native graph operations, normalization and proof-irrelevant
+   comparison, inference, family declaration, and whole-program checking
+   against the actual implementation. The scalar transform and wire results
+   cover the integer and byte operations within those implementations.
 
 The existing top-level proof goal remains active until these native-kernel
 obligations are actually completed. LLVM/compiler backend verification is a

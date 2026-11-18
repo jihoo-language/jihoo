@@ -1755,3 +1755,35 @@ parser and checker execution refinement are still open.
 The aggregate check passed 955 Lake jobs, 9,184 axiom checks and 12 fixture
 comparisons. The native kernel suite passed 89 native fixtures, 31 additional
 checks, 162 exact writer comparisons and 665 actual Core transformations.
+
+## 2026-11-18: transparent globals, affine evidence, and buffer operations
+
+`NativeLoanEnvironmentExtension` preserves the full 64-rule Loan64 judgment
+under environment extension. `NativeLoanDeltaPreservation` recovers the body
+from the original mixed declaration history and composes transparent unfolding
+with the typed computation rules at the original type.
+
+`NativeLoanArithmeticProofConsistency` interprets Loan64 `ZeroLe`, `LtAdd`,
+`LtCancel`, `LtLe` and `Decide` over supported affine evidence. Its checked
+example unfolds a checked global and cancels through an intermediate sum of
+`2^64`. Transparent global unfolding and contextual computation can connect a
+checked global to its supported residual proof. Arbitrary dependent
+elimination and induction still need a semantic or typed-normalization theorem.
+
+`NativeBindingMachineBufferStore` specifies executable indexed-heap writes and
+lease reads. A checked literal Store obtains its physical bounds from source
+typing and OwnerSizes and excludes active readers through the original loan
+budget and coverage. A write retains metadata and every other cell, including
+all existing leased observations. The whole binding machine still needs Store
+control frames. An isolated Lean check confirms that the mixed checker admits
+`Free(Store(Alloc(1, 0), 0, 7, Decide(0, 1)), 0)` and the current binding machine
+reports `unsupported` for it.
+
+`NativeLoanLoadPreservation` obtains the complete Load continuation telescope
+from source typing. An observed signed I64 and the unchanged owner instantiate
+both binders, preserving the original type of the specialized body. Physical
+load observations still need the runtime control invariant.
+
+The aggregate check passed 960 Lake jobs, 9,206 declaration audits, and all
+generated fixture comparisons under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`.

@@ -1136,3 +1136,8 @@ import Jihoo.NativeLoanComputationPreservation
 import Jihoo.NativeLoanProofConsistency
 import Jihoo.NativeTransformMachine
 import Jihoo.NativeWireMachine
+import Jihoo.NativeLoanEnvironmentExtension
+import Jihoo.NativeLoanDeltaPreservation
+import Jihoo.NativeLoanArithmeticProofConsistency
+import Jihoo.NativeBindingMachineBufferStore
+import Jihoo.NativeLoanLoadPreservation
