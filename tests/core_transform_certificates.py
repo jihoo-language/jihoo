@@ -292,7 +292,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", default=os.environ.get("JIHOO_COMPILER", "jihoo"),
                         help="compiler command used to rebuild the actual Core test driver")
-    parser.add_argument("--checker", default="lake env lean --run CheckGraph.lean",
+    parser.add_argument("--checker", default="lake env lean -M 4096 -j 1 --run CheckGraph.lean",
                         help="validator command, run with proofs/ as working directory")
     parser.add_argument("--output-dir", type=Path, help="retain snapshots and source provenance here")
     args = parser.parse_args()

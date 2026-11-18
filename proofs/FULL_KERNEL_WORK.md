@@ -1967,3 +1967,41 @@ generated fixture comparisons under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`. Both Python modes of the
 native pure erasure suite passed the new assertion, 18 MIR twin comparisons,
 300 executed results, 60 expected runtime traps and three rejection cases.
+
+## 2026-11-18: pure conversion algebra and signed Core arithmetic
+
+`NativeLoanPureConversion` extends the raw relation with the shaped `Free`
+and `Strict` equations. Every term has a finite path to the existing combined
+Lend and value projection. In an admissible environment, the extended raw
+relation is equivalent to family conversion of those projections and is
+confluent. Renaming, substitution, and `Eq` and `Pi` injectivity hold. The
+projection explains the native dependent reflexivity example. The existing
+Loan64 typing judgment and checker still need to incorporate the extension.
+
+`NativeCoreArithmeticMachine` models the signed arithmetic branch after Core
+has normalized both operands. It proves that sign extension to `I128` and
+addition, subtraction or multiplication are exact for all `I64` arguments.
+The guard and narrowing agree with the old pure value contraction for every
+input. A successful fold has the original Loan64 result type. The complete
+native normalization traversal remains an implementation-refinement goal.
+
+`NativeLoanProofContextualObservation` extends both prior proof observers
+at identical budgets, retaining their exact successful output. It exposes a
+`Transport` inside supported proof operands and follows the typed finite Loop
+unrolling. The regression uses real dependent induction hypotheses under
+computed equality witnesses to prove `Lt(3,4)`.
+
+`NativeBindingMachineMutableLoadFree` composes the actual Load handoff with
+the returned owner's immediate Free in twelve transitions. The original
+quantity receipt, inherited loan budget, and actual reader inventory supply
+the physical release guard. The source tail retains its original CODE type,
+value and size contexts, and reader coverage. Both slots still identify the
+same owner, and the original captured owner slot has zero remaining demand.
+The theorem is local to the specified callback and its source/runtime world.
+
+The aggregate passed 988 Lake jobs, 9,378 declaration audits, and every
+generated fixture comparison. The audits report only `propext`, `Quot.sound`,
+and `Classical.choice`. Typed beta replay passed 12 accepts, 24 rejections,
+and two gated handoffs with both standalone Lean checkers under the project
+memory and thread limits. Those limits are also the defaults for graph
+certificate and canonical replay validation.

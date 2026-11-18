@@ -1165,3 +1165,7 @@ import Jihoo.NativeBindingMachineMutableLoadContexts
 import Jihoo.NativeLoanProofTransportObservation
 import Jihoo.NativeLoanPureFreeBoundary
 import Jihoo.NativeCoreTransformWire
+import Jihoo.NativeCoreArithmeticMachine
+import Jihoo.NativeLoanProofContextualObservation
+import Jihoo.NativeLoanPureConversion
+import Jihoo.NativeBindingMachineMutableLoadFree

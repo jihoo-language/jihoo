@@ -271,7 +271,9 @@ are discharged, rather than replaced with more passing fixtures:
    need to be connected to the remaining evaluation contexts. The native pure
    `Free` equation accepts a dependent reflexivity proof rejected by the
    current Loan64 conversion. The existing value projection identifies the
-   annotations, and the source typing and checker need to account for it.
+   annotations. `NativeLoanPureConversion` establishes the confluent raw
+   extension and its exact projection equivalence. The source typing and
+   executable checker need to incorporate that extension.
 2. A general consistency and typed normalization argument for the universe-aware
    judgment. The current truth theorems recognize specific proof syntax or
    supported residuals after typed reduction.

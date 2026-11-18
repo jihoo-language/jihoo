@@ -300,7 +300,7 @@ def test(compiler, checker, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", default=os.environ.get("JIHOO_COMPILER", "jihoo"))
-    parser.add_argument("--checker", default="lake env lean --run CheckArtifact.lean")
+    parser.add_argument("--checker", default="lake env lean -M 4096 -j 1 --run CheckArtifact.lean")
     parser.add_argument("--output-dir", type=Path)
     args = parser.parse_args()
     compiler, checker = shlex.split(args.compiler), shlex.split(args.checker)

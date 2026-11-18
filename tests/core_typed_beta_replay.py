@@ -68,7 +68,7 @@ def test(compiler, checker, output):
     exporter, driver = output / 'snapshot', output / 'replay'
     for source, binary in [('core_typing_snapshots.jh', exporter), ('core_typed_beta_replay.jh', driver)]:
         success(command([*compiler, 'build', '-O2', '-I', 'compiler', f'tests/{source}', '-o', binary]))
-    typing_checker = ['lake', 'env', 'lean', '--run', 'CheckTyping.lean']
+    typing_checker = ['lake', 'env', 'lean', '-M', '4096', '-j', '1', '--run', 'CheckTyping.lean']
     replay = Replay(typing_checker, checker, driver)
     cases = {}
     for name, (source, path) in FIXTURES.items():
@@ -179,7 +179,7 @@ def test(compiler, checker, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compiler', default='jihoo')
-    parser.add_argument('--checker', default='lake env lean --run CheckBetaReplay.lean')
+    parser.add_argument('--checker', default='lake env lean -M 4096 -j 1 --run CheckBetaReplay.lean')
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
     compiler, checker = shlex.split(args.compiler), shlex.split(args.checker)
