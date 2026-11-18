@@ -298,4 +298,3 @@ theorem reachable_canonical_frame_variable_handoff (term : Term) (fuel : Nat)
     canonicalContext,canonicalSizes,canonicalScope,remaining,valid,live,absent,rest,restProjected⟩
 
 end Jihoo.NativeKernel.Environment.BindingMachine
-

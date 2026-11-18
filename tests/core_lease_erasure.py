@@ -30,6 +30,13 @@ def source(name='run', reader=READ, continuation='(free y a)'):
    (lam a I64 (lam y (Buffer 1) {continuation})))) (alloc 1 value))))'''
 
 
+def alias_reborrow(name='run'):
+    # Lend uses the returned owner y while Borrow names the original owner xs.
+    return source(name, continuation=f'''(lend y
+      (lam s (Ref (Buffer 1)) {OWNER_READ})
+      (lam b I64 (lam z (Buffer 1) (free z b))))''')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compiler', required=True)
@@ -47,6 +54,7 @@ def main():
                 'Borrow introduced runtime structure')
         require(ordinary == mir(source(continuation='(free xs a)'), 'owner-original'),
                 'returned-owner alias changed lowered pointer identity')
+        reborrowed = mir(alias_reborrow(), 'owner-alias-reborrow')
         identity_store = mir(source(continuation='(free (store y 0 a (decide-lt 0 1)) a)'),
                              'stored-identity')
         # This changed result is also expressible by formal Reader.seq/read/scalar.
@@ -57,7 +65,7 @@ def main():
         stored_reader = f'(add {READ} (int 1))'
         stored = mir(source(reader=stored_reader,
                             continuation='(free (store y 0 a (decide-lt 0 1)) a)'), 'stored')
-        for text in (ordinary, identity_store, changed, stored):
+        for text in (ordinary, reborrowed, identity_store, changed, stored):
             require(re.findall(r'call ([A-Za-z_][A-Za-z_0-9]*)\(', text) == ['malloc', 'free'],
                     'unexpected runtime calls (possibly lease management)')
             # Normalization may discard the changed fixture's unused pure read.
@@ -75,7 +83,8 @@ def main():
                         source('stored_identity', continuation='(free (store y 0 a (decide-lt 0 1)) a)') + '\n' +
                         source('stored_changed', changed_reader, '(free (store y 0 a (decide-lt 0 1)) a)') + '\n' +
                         source('stored_result', stored_reader,
-                        '(free (store y 0 a (decide-lt 0 1)) a)'))
+                        '(free (store y 0 a (decide-lt 0 1)) a)') + '\n' +
+                        alias_reborrow('alias_reborrow'))
         counter = tmp / 'counter.c'
         counter.write_text(COUNTER)
         cc = shlex.split(os.environ.get('JIHOO_CC', 'clang'))
@@ -90,7 +99,8 @@ def main():
             allocs = ctypes.c_long.in_dll(native, 'allocations')
             frees = ctypes.c_long.in_dll(native, 'frees')
             last = ctypes.c_int64.in_dll(native, 'at_free')
-            for name in ('read_result', 'stored_identity', 'stored_changed', 'stored_result'):
+            for name in ('read_result', 'stored_identity', 'stored_changed',
+                         'stored_result', 'alias_reborrow'):
                 function = getattr(native, name)
                 function.argtypes = [ctypes.c_int64]
                 function.restype = ctypes.c_int64
@@ -107,7 +117,7 @@ def main():
                     if level == '-O0':
                         require(last.value == expected, 'store/read payload incorrect at free')
                     cases += 1
-        print(f'lease erasure: 6 MIR fixtures, {cases} native results/lifecycles')
+        print(f'lease erasure: 7 MIR fixtures, {cases} native results/lifecycles')
 
 
 if __name__ == '__main__':
