@@ -34,7 +34,7 @@ theorem StateReferenceOccurs.before_limit (occurs : StateReferenceOccurs token s
 theorem ValueKind.outlived_reference_absent (admissible : EnvironmentDelta.Admissible env)
     (kind : ValueKind env value type) (allowed : LoanTyping.Outlived env type) (token : Nat) :
     ¬ ReferenceOccurs token value := by
-  rcases kind.outlived_shape admissible allowed with ⟨number,rfl⟩ | ⟨number,rfl⟩ | ⟨object,rfl⟩
+  rcases kind.outlived_shape admissible allowed with ⟨number,rfl⟩ | ⟨number,rfl⟩ | ⟨object,rfl⟩ | ⟨elements,rfl⟩
   all_goals intro occurs; cases occurs
 
 private theorem variable_reader_close_two_steps (heap : SizedBufferHeap.State) (code : Code)

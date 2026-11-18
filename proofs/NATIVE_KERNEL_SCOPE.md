@@ -274,11 +274,16 @@ are discharged, rather than replaced with more passing fixtures:
    annotations. `NativeLoanPureConversion` establishes the confluent raw
    extension and its exact projection equivalence. `NativeLoanPureTyping`
    incorporates it in a ghost Pi/lambda/application fragment with separately
-   checked formation. The complete Loan64 judgment and executable checker
-   need to incorporate the extension.
+   checked formation. `NativeLoanPureMixedAdmission` adds sound ordered
+   version-6 program admission for ghost aliases and dependent applications,
+   alongside the existing CODE and family checks. The complete Loan64
+   judgment and inference under arbitrary nested constructors still need
+   the extension.
 2. A general consistency and typed normalization argument for the universe-aware
    judgment. The current truth theorems recognize specific proof syntax or
-   supported residuals after typed reduction.
+   supported residuals after typed reduction. The pure mixed checker now
+   supplies authentic stored typing for recognized dependent affine proofs
+   using the Free and Strict equations.
 3. Lend and active-loan Borrow share the Loan64 typing judgment. Exact native
    opaque-global behavior and its connection to formation-aware checking remain
    open.
@@ -297,8 +302,10 @@ are discharged, rather than replaced with more passing fixtures:
    cursor commit, and the restoration of committed family metadata after errors.
    The version-6 comparison models prove structural ordering and identity from
    exact node words and model their distinct work and depth checks. The
-   implementation correspondence for compiler inference and normalization
-   remains open.
+   transparent-global normalization model and equality composition cover
+   admitted alias chains ending in atomic heads. The implementation
+   correspondence for compiler inference and composite normalization remains
+   open.
 
 The existing top-level proof goal remains active until these native-kernel
 obligations are actually completed. LLVM/compiler backend verification is a

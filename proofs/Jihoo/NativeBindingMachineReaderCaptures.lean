@@ -92,6 +92,7 @@ theorem return_action_reader_captures (value : Value) (captures : ReaderCaptureB
         by_cases compared : (if equal then left == right else decide (left < right)) = true
         all_goals simp only [compared,↓reduceIte]
         all_goals exact outerCaptures
+      all_goals split <;> exact outerCaptures
 
 theorem action_reader_captures (captures : ReaderCaptureBounds state.stack)
     (chosen : action state = some next) : ActionReaderCaptureBounds next := by

@@ -9,6 +9,7 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 def BufferFrameAligned : BufferFrame → Prop
   | .owner index value | .loadOwner _ index value => CodeAligned index ∧ CodeAligned value
   | .index _ value | .loadIndex _ _ value | .usubLeft value => CodeAligned value
+  | .arrayElements source _ _ => CodeAligned source
   | _ => True
 
 def PendingAligned (pending : List (BufferFrame × List Frame)) : Prop :=
@@ -109,6 +110,10 @@ private theorem resumeBuffer_aligned (aligned : StateAligned state)
     · exact ⟨ValueAligned.natural,top.2,outer⟩
     · exact ⟨True.intro,top.2,outer⟩
   case refinement.natural => exact ⟨ready,top.2,outer⟩
+  case arrayElements.integer =>
+    split
+    · exact ⟨ValueAligned.array,top.2,outer⟩
+    · exact ⟨top.1,aligned.stack,outer.cons top.1 top.2⟩
 
 theorem step_aligned (aligned : StateAligned state) (stepped : step state = some (next,event)) :
     StateAligned next := by
@@ -129,6 +134,15 @@ theorem step_aligned (aligned : StateAligned state) (stepped : step state = some
         exact ⟨ready,StackAligned.empty,aligned.pending.cons True.intro aligned.stack⟩
       · cases stepped
         exact ⟨ready,StackAligned.empty,aligned.pending.cons True.intro aligned.stack⟩
+      · have same := congrArg Prod.fst (Option.some.inj stepped)
+        change _ = next at same
+        rw [← same]
+        simp only [beginArray]
+        split
+        · split
+          · exact ⟨ValueAligned.array,aligned.stack,aligned.pending⟩
+          · exact ⟨ready,StackAligned.empty,aligned.pending.cons ready aligned.stack⟩
+        · exact ⟨True.intro,aligned.stack,aligned.pending⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

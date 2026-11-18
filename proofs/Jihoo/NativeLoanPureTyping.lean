@@ -95,7 +95,7 @@ theorem HasType.ghostInstantiate (wellFormed : UnifiedProgram.EnvWellFormed env)
     HasType env ctx (source.subst (single value)) (codomain.subst (single value)) :=
   body.ghostSubstitution wellFormed (Ghost.Substitution.single erased argument)
 
-private theorem lambda_replay (typed : HasType env ctx expression type) :
+theorem lambda_replay (typed : HasType env ctx expression type) :
     ∀ erased domain body, expression = .lam erased domain body →
       ∃ result, HasType env (⟨domain, erased⟩ :: ctx) body result ∧
         RawValue.Conv env (.pi erased domain result) type := by
@@ -115,6 +115,28 @@ private theorem lambda_replay (typed : HasType env ctx expression type) :
     exact ⟨_, bodyTyped, .refl _⟩
   | pi _ _ _ => intro erased domain body shape; cases shape
   | app _ _ _ _ => intro erased domain body shape; cases shape
+
+theorem application_replay (typed : HasType env ctx expression type) :
+    ∀ function argument, expression = .app function argument →
+      ∃ erased domain result, HasType env ctx function (.pi erased domain result) ∧
+        LoanTyping.HasType env [] ctx true argument domain ∧
+        RawValue.Conv env (result.subst (single argument)) type := by
+  induction typed with
+  | native original =>
+      intro function argument shape
+      cases shape
+      obtain ⟨erased,domain,result,callee,operand,_,converted⟩ := original.appView
+      exact ⟨erased,domain,result,.native callee,operand.ghost [],.old converted⟩
+  | convert _ _ converted ih =>
+      intro function argument shape
+      obtain ⟨erased,domain,result,callee,operand,original⟩ := ih function argument shape
+      exact ⟨erased,domain,result,callee,operand,original.trans converted⟩
+  | pi _ _ _ => intro function argument shape; cases shape
+  | lam _ _ _ _ => intro function argument shape; cases shape
+  | app callee _ operand _ =>
+      intro function argument shape
+      cases shape
+      exact ⟨_,_,_,callee,operand,.refl _⟩
 
 /-- Beta uses the original binder and a raw Loan64-typed argument. RawValue
 Pi injectivity transports the instantiated body to the independently formed

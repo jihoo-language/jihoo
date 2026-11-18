@@ -10,6 +10,7 @@ mutual
     | natural : ValueAligned (.natural value)
     | integer : ValueAligned (.integer value)
     | typeCode : ValueAligned (.typeCode source)
+    | array : ValueAligned (.array elements)
     | owner : ValueAligned (.owner object)
     | reference : ValueAligned (.reference token)
     | closure : SlotsAligned context captured →
@@ -189,6 +190,7 @@ theorem return_action_aligned (valueReady : ValueAligned value) (stackReady : St
           exact ⟨frameReady.1.branch equal firstOrigin secondOrigin,restReady⟩
         · simp only [compared]
           exact ⟨frameReady.2,restReady⟩
+      all_goals split <;> first | exact ⟨ValueAligned.integer,restReady⟩ | exact ⟨True.intro,restReady⟩
 
 theorem action_aligned (aligned : StateAligned state) (chosen : action state = some next) :
     ActionAligned next := by

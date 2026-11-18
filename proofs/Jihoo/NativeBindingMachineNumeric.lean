@@ -5,10 +5,14 @@ machine prefix. Guards and actual heap contents supply bounds; no returned
 value typing or successful-evaluation certificate is an input. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine
 
+def ArrayNumbers (elements : List Int) : Prop :=
+  ∀ value ∈ elements, ValueReduction.signed64 value
+
 mutual
   inductive ValueNumbers : Value → Prop where
     | natural : value < 2^64 → ValueNumbers (.natural value)
     | integer : ValueReduction.signed64 value → ValueNumbers (.integer value)
+    | array : ArrayNumbers elements → ValueNumbers (.array elements)
     | typeCode : ValueNumbers (.typeCode source)
     | owner : ValueNumbers (.owner object)
     | reference : ValueNumbers (.reference token)
@@ -25,6 +29,9 @@ theorem ValueNumbers.naturalBound (bounded : ValueNumbers (.natural value)) : va
   cases bounded; assumption
 
 theorem ValueNumbers.integerBound (bounded : ValueNumbers (.integer value)) : ValueReduction.signed64 value := by
+  cases bounded; assumption
+
+theorem ValueNumbers.arrayBounds (bounded : ValueNumbers (.array elements)) : ArrayNumbers elements := by
   cases bounded; assumption
 
 theorem ValuesNumbers.valueAt {index : Nat} (bounded : ValuesNumbers values)
@@ -95,6 +102,7 @@ def FrameNumbers : Frame → Prop
   | .argument function _ => ValueNumbers function
   | .addRight left | .allocateFill left => left < 2^64
   | .arithmeticRight _ left => ValueReduction.signed64 left
+  | .indexArrayOffset elements => ArrayNumbers elements
   | .branchLeft _ second yes no _ => CodeNumbers second ∧ CodeNumbers yes ∧ CodeNumbers no
   | .branchRight _ first yes no _ _ => first < 2^64 ∧ CodeNumbers yes ∧ CodeNumbers no
   | .lendOwner reader continuation _ _ => CodeNumbers reader ∧ CodeNumbers continuation
@@ -182,6 +190,7 @@ theorem return_action_numbers (valueReady : ValueNumbers value) (stackReady : St
         | exact ⟨frameReady,restReady⟩
         | exact ⟨frameReady,restReady.cons valueReady.naturalBound⟩
         | exact ⟨frameReady,restReady.cons valueReady.integerBound⟩
+        | exact ⟨frameReady,restReady.cons valueReady.arrayBounds⟩
         | exact ⟨frameReady,restReady.cons valueReady⟩
         | exact ⟨frameReady,restReady.cons True.intro⟩
         | exact ⟨frameReady.1,frameReady.2,restReady⟩
@@ -214,6 +223,11 @@ theorem return_action_numbers (valueReady : ValueNumbers value) (stackReady : St
           exact ⟨frameReady.2.1.branch equal firstOrigin secondOrigin,restReady⟩
         · simp only [compared]
           exact ⟨frameReady.2.2,restReady⟩
+      case h_24 =>
+        split
+        · rename_i found
+          exact ⟨ValueNumbers.integer (frameReady _ (List.mem_of_getElem? found)),restReady⟩
+        · exact ⟨True.intro,restReady⟩
 
 theorem action_numbers (control : ControlNumbers state.control) (stack : StackNumbers state.stack)
     (chosen : action state = some next) : ActionNumbers next := by

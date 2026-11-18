@@ -13,6 +13,7 @@ def BufferFrameNumbers : BufferFrame → Prop
   | .value _ index | .usubRight index => index < 2^64
   | .loadContinuation _ _ value => ValueReduction.signed64 value
   | .loadOwnerArgument _ _ | .refinement => True
+  | .arrayElements source _ reversed => CodeNumbers source ∧ ArrayNumbers reversed
 
 def PendingNumbers (pending : List (BufferFrame × List Frame)) : Prop :=
   ∀ frame ∈ pending, BufferFrameNumbers frame.1 ∧ StackNumbers frame.2
@@ -200,6 +201,18 @@ private theorem resumeBuffer_numbers (bounded : StateNumbers state)
     · exact ⟨⟨bounded.legacy.1,True.intro,top.2⟩,outer,bounded.cells⟩
   case refinement.natural =>
     exact ⟨⟨bounded.legacy.1,ready,top.2⟩,outer,bounded.cells⟩
+  case arrayElements.integer =>
+    rename_i source remaining reversed number
+    have accumulated : ArrayNumbers (number :: reversed) := by
+      intro value member
+      rcases List.mem_cons.mp member with rfl | member
+      · exact ready.integerBound
+      · exact top.1.2 value member
+    split
+    · exact ⟨⟨bounded.legacy.1,.array (fun value member => accumulated value (List.mem_reverse.mp member)),top.2⟩,
+        outer,bounded.cells⟩
+    · exact ⟨⟨bounded.legacy.1,top.1.1,bounded.legacy.2.2⟩,
+        outer.cons ⟨top.1.1,accumulated⟩ top.2,bounded.cells⟩
 
 /-- Every indexed-buffer transition preserves numeric widths, including
 faults and nested Load and Store continuations. -/
@@ -228,6 +241,17 @@ theorem step_numbers (bounded : StateNumbers state) (stepped : step state = some
       · cases stepped
         exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
           bounded.pending.cons True.intro bounded.legacy.2.2,bounded.cells⟩
+      · have same := congrArg Prod.fst (Option.some.inj stepped)
+        change _ = next at same
+        rw [← same]
+        simp only [beginArray]
+        split
+        · split
+          · exact ⟨⟨bounded.legacy.1,.array (fun _ member => by cases member),bounded.legacy.2.2⟩,
+              bounded.pending,bounded.cells⟩
+          · exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+              bounded.pending.cons ⟨controlReady,fun _ member => by cases member⟩ bounded.legacy.2.2,bounded.cells⟩
+        · exact ⟨⟨bounded.legacy.1,True.intro,bounded.legacy.2.2⟩,bounded.pending,bounded.cells⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

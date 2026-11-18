@@ -22,6 +22,7 @@ inductive Value where
   | reference (token : Nat)
   | closure (erased : Bool) (domain body : Term) (context : Context)
       (origins : Nat → Term) (captured : List (Option Value))
+  | array (elements : List Int)
 
 structure Code where
   term : Term
@@ -73,6 +74,7 @@ inductive Frame where
   | lendOwnerArgument (object : Nat) (ownerOrigin : Term)
   | indexReference (index : Code)
   | indexOffset (token : Nat)
+  | indexArrayOffset (elements : List Int)
 
 /-- Only the reader's live frames authorize named code Borrow. Continuation
 frames deliberately carry no active reader descriptor. -/
@@ -194,6 +196,11 @@ def returnAction (value : Value) : List Frame → Option Action
           applyValue function origin (some (.owner object)) stack
       | .indexReference index,.reference token => .control (.evaluate index) (.indexOffset token :: stack)
       | .indexOffset token,.natural index => .read token index stack
+      | .indexReference index,.array elements => .control (.evaluate index) (.indexArrayOffset elements :: stack)
+      | .indexArrayOffset elements,.natural index =>
+          match elements[index]? with
+          | some value => .control (.returned (.integer value)) stack
+          | none => fault .indexBounds stack
       | _,_ => fault .wrongValue stack
 
 def evaluateAction (code : Code) (stack : List Frame) : Action :=
@@ -328,6 +335,7 @@ def status (result : Result) : Status :=
 inductive Observation where
   | natural (value : Nat)
   | integer (value : Int)
+  | array (elements : List Int)
   | owner (object : Nat)
   | reference (token : Nat)
   | closure
@@ -344,6 +352,7 @@ def observe (result : Result) : Observation :=
   | .returned (.reference token),[] => .reference token
   | .returned (.closure _ _ _ _ _ _),[] => .closure
   | .returned (.typeCode _),[] => .typeCode
+  | .returned (.array elements),[] => .array elements
   | .fault reason,_ => .fault reason
   | _,_ => .fuel
 

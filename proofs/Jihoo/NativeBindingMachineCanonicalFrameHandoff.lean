@@ -280,10 +280,11 @@ theorem reachable_canonical_frame_variable_handoff (term : Term) (fuel : Nat)
   obtain ⟨continuationReady,outerReady⟩ := initial_run_finish_capture_bounds term fuel stackShape
   have valueReady : ValueReferences token value := by
     rcases kind.outlived_shape history.wellFormed.admissible allowed with
-      ⟨number,rfl⟩ | ⟨number,rfl⟩ | ⟨returnedObject,rfl⟩
+      ⟨number,rfl⟩ | ⟨number,rfl⟩ | ⟨returnedObject,rfl⟩ | ⟨elements,rfl⟩
     · exact .natural
     · exact .integer
     · exact .owner
+    · exact .array
   have nextReady : CodeReferences token next :=
     .retained .owner (.retained valueReady continuationReady)
   have absent : ¬ StateReferenceOccurs token

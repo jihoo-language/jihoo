@@ -2092,3 +2092,46 @@ shared-reference example uses five ticks and fails with four.
 The full check passed 995 Lake jobs, 9,449 declaration audits, and every
 generated fixture comparison under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`.
+
+## 2026-11-18: mixed pure admission, arithmetic truth, and arrays
+
+`NativeLoanPureMixedAdmission` uses the real declaration order and family
+checker, checks the original CODE and quantity obligations, and retains a
+typed history of expanded ghost definitions. Ghost aliases and dependent
+applications reuse the previously accepted value at its exact stored type.
+The mixed byte checker accepted 1,101 bytes from the rebuilt native compiler,
+including four definitions and an intervening family. Arbitrary nested ghost
+inference under the extended conversion still needs support.
+
+`NativeLoanPureArithmetic` derives arithmetic truth from the extended ghost
+typing and bounded recognition. Affine equality and order, including under
+dependent U64 quantifiers, respect the new conversion and capture-avoiding
+substitution. A checked application recovers the affine argument after bounded
+pure projection of a Free expression. The theorem rules out false numeral
+inequalities in the recognized grammar and reads actual stored types from
+successful mixed version-6 admission. General universe-aware consistency and
+coverage of all well-typed evidence remain open.
+
+`NativeCoreGlobalNormal` verifies allocation-free normalization of transparent
+global aliases to atomic heads. Successful mixed history bounds the chain by
+the declaration count even when a global body jumps forward in the arena.
+The equal model shares the native counter across left, right, and identity.
+For represented admitted inputs of this form, it returns true exactly when
+their expansions agree. The proof covers visibility and diagnostic precedence
+within the model. Composite normalization and compiled refinement remain open.
+
+The binding machine now retains actual immutable Array values in closures,
+evaluates literal elements in source order, and reads both arrays and leased
+buffers by their distinct Index paths. The proofs preserve numeric bounds and
+heap, reader and binding invariants. Typed literal construction and typed
+Index of a retained array derive the length and result from the source rules.
+A checked example performs two allocation and release effects in order and
+returns the second element, -6. General runtime interpretation of every
+accepted source value remains open.
+
+The full check passed 999 Lake jobs, 9,502 declaration audits, and every
+generated fixture comparison under the resource wrapper. Only `propext`,
+`Quot.sound`, and `Classical.choice` occur in the audits. Native mixed
+correspondence passed 69 source fixtures and 55 raw exact-byte checks. The
+suite also passed the pure admission check of the same 1,101 native bytes
+that the raw checker rejected.

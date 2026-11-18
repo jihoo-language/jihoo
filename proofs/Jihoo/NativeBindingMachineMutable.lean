@@ -40,6 +40,7 @@ inductive BufferFrame where
   | usubLeft (right : Code)
   | usubRight (left : Nat)
   | refinement
+  | arrayElements (source : Code) (remaining : List Term) (reversed : List Int)
 
 structure State where
   heap : SizedBufferHeap.IndexedState
@@ -87,6 +88,15 @@ def ownedAccessFailure (state : State) (object : Nat) : State × Option Event :=
   else if !freeGuard heap object then fail state .borrowedOwner []
   else fail state .indexBounds []
 
+def beginArray (state : State) (code : Code) (count : Nat) (elements : List Term) : State × Option Event :=
+  if elements.length = count ∧ count < 2^64 then
+    match elements with
+    | [] => ({ state with control := .returned (.array []) },none)
+    | element :: remaining =>
+        (⟨state.heap,.evaluate (code.child element),[],
+          (.arrayElements code remaining [],state.stack) :: state.pending⟩,none)
+  else fail state .literalRange state.stack
+
 def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMachine.Frame)
     (rest : List (BufferFrame × List BindingMachine.Frame)) (value : Value) : State × Option Event :=
   match frame,value with
@@ -122,6 +132,13 @@ def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMach
       (⟨state.heap,control,saved,rest⟩,none)
   | .refinement,.natural number =>
       (⟨state.heap,.returned (.natural number),saved,rest⟩,none)
+  | .arrayElements source remaining reversed,.integer number =>
+      match remaining with
+      | [] => (⟨state.heap,.returned (.array (number :: reversed).reverse),saved,rest⟩,none)
+      | element :: remaining =>
+          ({ state with
+            control := .evaluate (source.child element)
+            pending := (.arrayElements source remaining (number :: reversed),saved) :: rest },none)
   | _,_ => fail state .wrongValue []
 
 def step (state : State) : Option (State × Option Event) :=
@@ -141,6 +158,7 @@ def step (state : State) : Option (State × Option Event) :=
       | .pack _ witness _ | .witness witness =>
           some (⟨state.heap,.evaluate (code.child witness),[],
             (.refinement,state.stack) :: state.pending⟩,none)
+      | .node (.elements count) elements => some (beginArray state code count elements)
       | _ => some (executeLegacy state (evaluateAction code state.stack))
   | .returned value =>
       match returnAction value state.stack with
@@ -279,6 +297,8 @@ private theorem resumeBuffer_invariant (state : State) (invariant : Invariant st
     split
     · exact ⟨invariant.1,by simpa [State.activeStack,empty] using old⟩
     · exact accessFailure _
+  case arrayElements.integer =>
+    split <;> exact ⟨invariant.1,by simpa [State.activeStack,empty] using old⟩
   all_goals
     rename_i erased domain body context origins captured
     cases erased <;>
@@ -303,6 +323,13 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
         exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped
         exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
+      · have same := congrArg Prod.fst (Option.some.inj stepped)
+        change _ = next at same
+        rw [← same]
+        simp only [beginArray]
+        split
+        · split <;> exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
+        · exact invariant
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

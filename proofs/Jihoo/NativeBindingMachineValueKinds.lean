@@ -12,6 +12,7 @@ def ValueKind (env : Environment) (value : Value) (type : Term) : Prop :=
   match value with
   | .natural _ => LoanTyping.Conversion.Conv env .u64 type
   | .integer _ => LoanTyping.Conversion.Conv env .i64 type
+  | .array elements => LoanTyping.Conversion.Conv env (.array (.natural elements.length)) type
   | .owner _ => ∃ size, LoanTyping.Conversion.Conv env (.buffer size) type
   | .reference _ => ∃ domain, LoanTyping.Conversion.Conv env (.ref domain) type
   | .closure erased _ _ _ _ _ => ∃ domain body, LoanTyping.Conversion.Conv env (.pi erased domain body) type
@@ -22,6 +23,7 @@ theorem ValueKind.convert (kind : ValueKind env value type)
   cases value with
   | natural => exact kind.trans converted
   | integer => exact kind.trans converted
+  | array => exact kind.trans converted
   | owner => obtain ⟨size,kind⟩ := kind; exact ⟨size,kind.trans converted⟩
   | reference => obtain ⟨domain,kind⟩ := kind; exact ⟨domain,kind.trans converted⟩
   | closure => obtain ⟨domain,body,kind⟩ := kind; exact ⟨domain,body,kind.trans converted⟩
@@ -32,6 +34,7 @@ theorem ValueKind.natural_shape (admissible : EnvironmentDelta.Admissible env)
   cases value with
   | natural number => exact ⟨number,rfl⟩
   | integer => exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
+  | array => exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
   | owner =>
       obtain ⟨size,kind⟩ := kind
       exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
@@ -50,6 +53,7 @@ theorem ValueKind.integer_shape (admissible : EnvironmentDelta.Admissible env)
   cases value with
   | integer number => exact ⟨number,rfl⟩
   | natural => exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
+  | array => exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
   | owner =>
       obtain ⟨size,kind⟩ := kind
       exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)

@@ -1176,3 +1176,7 @@ import Jihoo.NativeCoreEffectAnalysis
 import Jihoo.NativeBindingMachineMutableRefinement
 import Jihoo.NativeLoanPureTypingChecker
 import Jihoo.NativeCoreIdentical
+import Jihoo.NativeLoanPureMixedAdmission
+import Jihoo.NativeLoanPureArithmetic
+import Jihoo.NativeCoreGlobalNormal
+import Jihoo.NativeBindingMachineMutableArray

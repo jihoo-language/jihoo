@@ -13,6 +13,7 @@ mutual
     | natural : ValueReferences limit (.natural value)
     | integer : ValueReferences limit (.integer value)
     | typeCode : ValueReferences limit (.typeCode source)
+    | array : ValueReferences limit (.array elements)
     | owner : ValueReferences limit (.owner object)
     | reference : token < limit → ValueReferences limit (.reference token)
     | closure : ValuesReferences limit captured →
@@ -34,7 +35,7 @@ theorem ValueReferences.mono (ready : ValueReferences before value) (grows : bef
     (motive_2 := fun values _ => ValuesReferences after values)
   all_goals intros
   all_goals first
-    | exact .natural | exact .integer | exact .typeCode | exact .owner
+    | exact .natural | exact .integer | exact .typeCode | exact .array | exact .owner
     | exact .reference (by omega) | exact .closure (by assumption)
     | exact .nil | exact .erased (by assumption) | exact .retained (by assumption) (by assumption)
 
@@ -214,6 +215,7 @@ theorem return_action_references (valueReady : ValueReferences limit value)
           exact ⟨frameReady.1.branch equal firstOrigin secondOrigin,restReady⟩
         · simp only [compared]
           exact ⟨frameReady.2,restReady⟩
+      all_goals split <;> first | exact ⟨ValueReferences.integer,restReady⟩ | exact ⟨True.intro,restReady⟩
 
 theorem action_references (control : ControlReferences limit state.control)
     (stack : StackReferences limit state.stack) (chosen : action state = some next) :

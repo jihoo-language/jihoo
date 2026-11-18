@@ -45,7 +45,7 @@ theorem return_frame_change (value : Value) (stack : List Frame) (result : Actio
         by_cases compared : (if equal then left == right else decide (left < right)) = true
         all_goals simp only [compared,↓reduceIte]
         all_goals rfl
-      case h_23 =>
+      case h_25 =>
         change readerFrames (frame :: rest) = readerFrames rest
         have noReader : frame.reader? = none := by
           cases frame <;> simp_all [Frame.reader?]

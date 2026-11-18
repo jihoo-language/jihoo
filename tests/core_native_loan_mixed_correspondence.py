@@ -9,8 +9,12 @@ from pathlib import Path
 import shlex
 import tempfile
 
+from core_certificate_process import ROOT, command
 from core_native_unified_correspondence import CASES as MIXED_CASES, run
 from core_native_loan_typing_correspondence import CASES as LOAN_CASES, BUFFER, FUNCTION, CONTINUATION
+from core_typing_producer import require
+
+DEFAULT_CHECKER = 'lake env lean -M 4096 -j 1 -DwarningAsError=true --run CheckNativeLoanMixedProgram.lean'
 
 CASES = dict(MIXED_CASES)
 CASES.update({f'loan-{name}': (source, accepted, accepted)
@@ -65,19 +69,35 @@ CASES.update({
         f'(def read (pi b {BUFFER} I64) {FUNCTION}) '
         '(data Box (box (pi b (Buffer 2) Box))) '
         '(def value Box (box (alloc 2 (int 0))))', True, True),
+    'pure-mixed-admission': (
+        '(def freed_eq (pi x U64 (Eq (free (alloc 1 (int 0)) x) x)) (lam x U64 (refl x)))\n'
+        '(def inherited (pi x U64 (Eq (free (alloc 1 (int 0)) x) x)) freed_eq)\n'
+        '(data Bit (Off Bit) (On (pi x U64 Bit)))\n'
+        '(def applied (Eq (free (alloc 1 (int 0)) 0) 0) (app inherited 0))\n'
+        '(def scalar I64 (int 7))', True, False),
 })
 
 
 def execute(args, output):
     run(shlex.split(args.compiler), shlex.split(args.checker), output, args.exporter,
         cases=CASES, acknowledgement=b'exact native loan mixed program accepted\n')
+    # The raw checker above rejects these bytes. Replay exactly the same bytes
+    # through the extension that checks ghost aliases at their stored types.
+    payload = (output / 'pure-mixed-admission.snapshot').read_bytes()
+    result = command([*shlex.split(args.pure_checker), '64', '128', '--pure'], payload, cwd=ROOT / 'proofs')
+    (output / 'pure-mixed-admission.pure-checker.stdout').write_bytes(result.stdout)
+    (output / 'pure-mixed-admission.pure-checker.stderr').write_bytes(result.stderr)
+    require(result.returncode == 0 and result.stdout == b'exact native pure mixed program accepted\n',
+            f'pure mixed admission changed: {(result.stdout + result.stderr)!r}')
+    print('native pure mixed correspondence: pure admission accepted the exact native snapshot bytes')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compiler', default='jihoo')
     parser.add_argument('--exporter', type=Path)
-    parser.add_argument('--checker', default='lake env lean -M 4096 -j 1 -DwarningAsError=true --run CheckNativeLoanMixedProgram.lean')
+    parser.add_argument('--checker', default=DEFAULT_CHECKER)
+    parser.add_argument('--pure-checker', default=DEFAULT_CHECKER)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.output:

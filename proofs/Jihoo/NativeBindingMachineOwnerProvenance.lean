@@ -11,6 +11,7 @@ mutual
     | natural : ValueOwners limit (.natural value)
     | integer : ValueOwners limit (.integer value)
     | typeCode : ValueOwners limit (.typeCode source)
+    | array : ValueOwners limit (.array elements)
     | reference : ValueOwners limit (.reference token)
     | owner : object < limit → ValueOwners limit (.owner object)
     | closure : ValuesOwners limit captured → ValueOwners limit (.closure erased domain body context origins captured)
@@ -29,7 +30,7 @@ theorem ValueOwners.mono (ready : ValueOwners before value) (grows : before ≤ 
     (motive_2 := fun values _ => ValuesOwners after values)
   all_goals intros
   all_goals first
-    | exact .natural | exact .integer | exact .typeCode | exact .reference
+    | exact .natural | exact .integer | exact .typeCode | exact .array | exact .reference
     | exact .owner (by omega) | exact .closure (by assumption)
     | exact .nil | exact .erased (by assumption) | exact .retained (by assumption) (by assumption)
 
@@ -196,6 +197,7 @@ theorem return_action_owners (valueReady : ValueOwners limit value) (stackReady 
           exact ⟨frameReady.1.branch equal firstOrigin secondOrigin,restReady⟩
         · simp only [compared]
           exact ⟨frameReady.2,restReady⟩
+      all_goals split <;> first | exact ⟨ValueOwners.integer,restReady⟩ | exact ⟨True.intro,restReady⟩
 
 theorem action_owners (control : ControlOwners limit state.control) (stack : StackOwners limit state.stack)
     (chosen : action state = some next) : ActionOwners limit next := by

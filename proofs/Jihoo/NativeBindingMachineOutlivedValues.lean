@@ -68,16 +68,17 @@ theorem LoanClosingTyped.reader_domain_outlived
   have allowed := LoanTyping.Outlived.of_conversion (firstConverted.trans sameType) outlived
   exact allowed.substitution history.wellFormed.closed meanings
 
-/-- Only scalar and owned Buffer values can realize an Outlived type in the
+/-- Only scalar, array and owned Buffer values can realize an Outlived type in the
 current machine. In particular no returned closure can hide a reader token. -/
 theorem ValueKind.outlived_shape (admissible : EnvironmentDelta.Admissible env)
     (kind : ValueKind env value type) (allowed : LoanTyping.Outlived env type) :
     (∃ number, value = .natural number) ∨ (∃ number, value = .integer number) ∨
-      (∃ object, value = .owner object) := by
+      (∃ object, value = .owner object) ∨ (∃ elements, value = .array elements) := by
   cases value with
   | natural number => exact Or.inl ⟨number,rfl⟩
   | integer number => exact Or.inr (Or.inl ⟨number,rfl⟩)
-  | owner object => exact Or.inr (Or.inr ⟨object,rfl⟩)
+  | owner object => exact Or.inr (Or.inr (Or.inl ⟨object,rfl⟩))
+  | array elements => exact Or.inr (Or.inr (Or.inr ⟨elements,rfl⟩))
   | reference =>
       obtain ⟨domain,converted⟩ := kind
       exact False.elim (allowed.reference_excluded admissible converted)
@@ -101,7 +102,7 @@ theorem reachable_canonical_outlived_variable (term : Term) (fuel : Nat)
     (shape : actual.term = .var index) :
     ∃ value, actual.values[index]? = some (some value) ∧ ValueKind env value type ∧
       ((∃ number, value = .natural number) ∨ (∃ number, value = .integer number) ∨
-        (∃ object, value = .owner object)) ∧
+        (∃ object, value = .owner object) ∨ (∃ elements, value = .array elements)) ∧
       step (run fuel (initial term)).state = some
         (⟨(run fuel (initial term)).state.heap,.returned value,(run fuel (initial term)).state.stack⟩,none) := by
   obtain ⟨value,stored,kind,next⟩ := reachable_canonical_variable_kind

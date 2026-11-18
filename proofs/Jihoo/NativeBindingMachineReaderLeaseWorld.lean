@@ -275,7 +275,7 @@ private theorem return_snapshot (value : Value) (stack : List Frame) (token : Na
       case h_18 =>
         intro different
         simp only [readerSnapshot,Frame.reader?,different,ite_false]
-      case h_23 =>
+      case h_25 =>
         change readerSnapshot token (frame :: rest) = readerSnapshot token rest
         have noReader : frame.reader? = none := by
           cases frame <;> simp_all [Frame.reader?]
