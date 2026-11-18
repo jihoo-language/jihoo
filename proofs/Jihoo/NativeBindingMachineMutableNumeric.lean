@@ -12,7 +12,7 @@ def BufferFrameNumbers : BufferFrame → Prop
   | .index _ fill | .loadIndex _ _ fill | .usubLeft fill => CodeNumbers fill
   | .value _ index | .usubRight index => index < 2^64
   | .loadContinuation _ _ value => ValueReduction.signed64 value
-  | .loadOwnerArgument _ _ => True
+  | .loadOwnerArgument _ _ | .refinement => True
 
 def PendingNumbers (pending : List (BufferFrame × List Frame)) : Prop :=
   ∀ frame ∈ pending, BufferFrameNumbers frame.1 ∧ StackNumbers frame.2
@@ -198,6 +198,8 @@ private theorem resumeBuffer_numbers (bounded : StateNumbers state)
     · exact ⟨⟨bounded.legacy.1,.natural (Nat.lt_of_le_of_lt (Nat.sub_le _ _) top.1),top.2⟩,
         outer,bounded.cells⟩
     · exact ⟨⟨bounded.legacy.1,True.intro,top.2⟩,outer,bounded.cells⟩
+  case refinement.natural =>
+    exact ⟨⟨bounded.legacy.1,ready,top.2⟩,outer,bounded.cells⟩
 
 /-- Every indexed-buffer transition preserves numeric widths, including
 faults and nested Load and Store continuations. -/
@@ -220,6 +222,12 @@ theorem step_numbers (bounded : StateNumbers state) (stepped : step state = some
       · cases stepped
         exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
           bounded.pending.cons controlReady bounded.legacy.2.2,bounded.cells⟩
+      · cases stepped
+        exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+          bounded.pending.cons True.intro bounded.legacy.2.2,bounded.cells⟩
+      · cases stepped
+        exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+          bounded.pending.cons True.intro bounded.legacy.2.2,bounded.cells⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

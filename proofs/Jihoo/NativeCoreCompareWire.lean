@@ -330,7 +330,7 @@ private theorem conversionChildren_represented (op : Op) (children : RepresentsL
   case pack => exact represented_take 2 children
   case give erased => cases erased <;> first | exact children | exact represented_take 2 children
 
-private def ViewMatches (arena : Arena) (view : View Nat) (term : Term) : Prop :=
+def ViewMatches (arena : Arena) (view : View Nat) (term : Term) : Prop :=
   match view with
   | .strict root => ∃ inner, Represents arena root inner ∧ project term = project inner
   | .plain head refs => ∃ children, RepresentsList arena refs children ∧
@@ -370,7 +370,9 @@ private theorem mapM_read {index : Nat} {words : List NodeWords} {nodes : List N
           exact ⟨word, rfl, head⟩
       | succ index => exact ih tail read
 
-private theorem wire_matches {words : List NodeWords} {arena : Arena}
+/-- An observed row at a represented root is related to the same projected
+subtree or to the exact ordered list of retained child terms. -/
+theorem wire_matches {words : List NodeWords} {arena : Arena}
     (aligned : words.mapM NodeWords.toNode = some arena.toList)
     (represented : Represents arena root term) :
     ∃ word, words[root]? = some word ∧ ViewMatches arena (wireView word) term := by

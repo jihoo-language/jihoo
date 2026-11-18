@@ -39,6 +39,7 @@ inductive BufferFrame where
   | loadOwnerArgument (object : Nat) (origin : Term)
   | usubLeft (right : Code)
   | usubRight (left : Nat)
+  | refinement
 
 structure State where
   heap : SizedBufferHeap.IndexedState
@@ -119,6 +120,8 @@ def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMach
   | .usubRight left,.natural right =>
       let control := if right ≤ left then .returned (.natural (left - right)) else .fault .arithmeticOverflow
       (⟨state.heap,control,saved,rest⟩,none)
+  | .refinement,.natural number =>
+      (⟨state.heap,.returned (.natural number),saved,rest⟩,none)
   | _,_ => fail state .wrongValue []
 
 def step (state : State) : Option (State × Option Event) :=
@@ -135,6 +138,9 @@ def step (state : State) : Option (State × Option Event) :=
       | .usub left right _ =>
           some (⟨state.heap,.evaluate (code.child left),[],
             (.usubLeft (code.child right),state.stack) :: state.pending⟩,none)
+      | .pack _ witness _ | .witness witness =>
+          some (⟨state.heap,.evaluate (code.child witness),[],
+            (.refinement,state.stack) :: state.pending⟩,none)
       | _ => some (executeLegacy state (evaluateAction code state.stack))
   | .returned value =>
       match returnAction value state.stack with
@@ -287,6 +293,10 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
   | evaluate code =>
       simp only [step,control] at stepped
       split at stepped
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped
         exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · cases stepped

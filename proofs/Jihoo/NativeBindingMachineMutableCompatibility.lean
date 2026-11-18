@@ -1,9 +1,9 @@
 import Jihoo.NativeBindingMachineMutable
 
 /-! The indexed machine agrees with the read-only machine until the latter
-selects Store, Load, or unsigned subtraction. An old heap embeds with the original object's
-payload at every index. The correspondence includes faults, step counts,
-and the complete event sequence. -/
+selects one of the extended operations. An old heap embeds with the original
+object's payload at every index. The correspondence includes faults, step
+counts, and the complete event sequence. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 
 def embedReadOnly (state : BindingMachine.State) : State :=
@@ -70,10 +70,12 @@ def LegacyControl (state : BindingMachine.State) : Prop :=
   | .evaluate code =>
       (∀ owner index value evidence, code.term ≠ .store owner index value evidence) ∧
       (∀ owner index evidence continuation, code.term ≠ .load owner index evidence continuation) ∧
-      (∀ left right evidence, code.term ≠ .usub left right evidence)
+      (∀ left right evidence, code.term ≠ .usub left right evidence) ∧
+      (∀ predicate witness evidence, code.term ≠ .pack predicate witness evidence) ∧
+      (∀ refinement, code.term ≠ .witness refinement)
   | _ => True
 
-/-- An old transition agrees with the indexed transition outside the three
+/-- An old transition agrees with the indexed transition outside the
 additional operations. Each operation may occur in suspended code. -/
 theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : LegacyControl state) :
     step (embedReadOnly state) = (BindingMachine.step state).map embedReadOnlyTransition := by
@@ -88,7 +90,11 @@ theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : LegacyCont
           · rename_i owner index evidence continuation shape
             exact False.elim (ordinary.2.1 owner index evidence continuation shape)
           · rename_i left right evidence shape
-            exact False.elim (ordinary.2.2 left right evidence shape)
+            exact False.elim (ordinary.2.2.1 left right evidence shape)
+          · rename_i predicate witness evidence shape
+            exact False.elim (ordinary.2.2.2.1 predicate witness evidence shape)
+          · rename_i refinement shape
+            exact False.elim (ordinary.2.2.2.2 refinement shape)
           · exact congrArg some (executeLegacy_embedReadOnly ⟨heap,.evaluate code,stack⟩ (evaluateAction code stack))
       | returned value =>
           cases chosen : returnAction value stack with

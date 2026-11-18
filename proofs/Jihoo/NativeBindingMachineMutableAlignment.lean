@@ -108,6 +108,7 @@ private theorem resumeBuffer_aligned (aligned : StateAligned state)
     split
     · exact ⟨ValueAligned.natural,top.2,outer⟩
     · exact ⟨True.intro,top.2,outer⟩
+  case refinement.natural => exact ⟨ready,top.2,outer⟩
 
 theorem step_aligned (aligned : StateAligned state) (stepped : step state = some (next,event)) :
     StateAligned next := by
@@ -124,6 +125,10 @@ theorem step_aligned (aligned : StateAligned state) (stepped : step state = some
         exact ⟨ready,StackAligned.empty,aligned.pending.cons ⟨ready,ready⟩ aligned.stack⟩
       · cases stepped
         exact ⟨ready,StackAligned.empty,aligned.pending.cons ready aligned.stack⟩
+      · cases stepped
+        exact ⟨ready,StackAligned.empty,aligned.pending.cons True.intro aligned.stack⟩
+      · cases stepped
+        exact ⟨ready,StackAligned.empty,aligned.pending.cons True.intro aligned.stack⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

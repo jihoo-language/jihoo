@@ -295,6 +295,10 @@ are discharged, rather than replaced with more passing fixtures:
    backward-reference checking over the observed ordered native references.
    The incremental graph and declaration-cache models track both suffix scans,
    cursor commit, and the restoration of committed family metadata after errors.
+   The version-6 comparison models prove structural ordering and identity from
+   exact node words and model their distinct work and depth checks. The
+   implementation correspondence for compiler inference and normalization
+   remains open.
 
 The existing top-level proof goal remains active until these native-kernel
 obligations are actually completed. LLVM/compiler backend verification is a

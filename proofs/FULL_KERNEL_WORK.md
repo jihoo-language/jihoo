@@ -2053,3 +2053,42 @@ compiled checker execution remain open.
 The full check passed 991 Lake jobs, 9,416 declaration audits, and every
 generated fixture comparison under the resource wrapper. The audits report
 only `propext`, `Quot.sound`, and `Classical.choice`.
+
+## 2026-11-18: checked pure admission, identity, and refinement values
+
+`NativeLoanPureTypingChecker` reuses Loan64 inference and independent type
+formation, then proves the requested `RawValue` conversion with checked
+projection and family/delta/ACU comparison. Projection enforces work and
+Lend expansion bounds before materializing the tree. The checker has a sound
+single-declaration version-6 entry for closed ghost code with no families.
+It accepts the exact 329 bytes exported from the native pure Free equality
+fixture. The original Loan64 checker rejected those bytes. Integrating the
+extension throughout inference, family admission and CODE remains open.
+
+`NativeCoreEffectAnalysis` links a bounded graph traversal of the observed
+version-6 rows to `iterationMemoryFree`. It handles the skipped `Give`,
+`Loop`, `Absurd`, and `Back` children and the actual boxed family flags in the
+supplied checked environment. It rejects missing nodes or family entries.
+With sufficient depth the graph result agrees exactly with the syntactic
+test. This concerns the structural analysis, with runtime effect and compiled
+implementation correspondence still to be proved.
+
+The indexed binding machine now carries `Pack` and `Witness` using an
+unsigned runtime word. It evaluates the runtime operand and erases the
+predicate and evidence. The local `RefinementWord` relation retains the
+source witness and its proof. The typed literal Pack and retained-slot
+Witness theorems use the Loan64 source rules. A checked closure retains the
+original Pack provenance and returns its captured witness, 3.
+
+`NativeCoreIdentical` models the distinct identity path, including budget
+diagnostic priority, stripping Strict, eager vector length checks, and
+checking the motive before the case vector for eliminations. It charges
+equal references again. Successful identity agrees with retained shape
+equality and with compare-zero whenever both computations succeed. The
+structural self-cost theorem counts every retained child occurrence and both
+strict descents with sufficient depth and step budget. The checked
+shared-reference example uses five ticks and fails with four.
+
+The full check passed 995 Lake jobs, 9,449 declaration audits, and every
+generated fixture comparison under the resource wrapper. The audits report
+only `propext`, `Quot.sound`, and `Classical.choice`.
