@@ -79,12 +79,19 @@ def validate(root, emitted):
                     f'{name}, count {count}: expected {(tag, arity, binders)}, '
                     f'got {actual.get((count, name))}')
     # Every implicit binder must actually increment cutoff in Core.transform.
-    transform = source.split('    fn transform(', 1)[1].split('    fn transform_all(', 1)[0]
+    transform, binder_transform = source.split('    fn transform(', 1)[1].split(
+        '    fn transform_under_binder(', 1)
+    binder_transform = binder_transform.split('    fn transform_all(', 1)[0]
+    require(re.search(r'\(inner,\s*overflow\)\s*=\s*overflowing_add\(cutoff,\s*1\)', binder_transform)
+            and re.search(r'self\.transform\(id,\s*inner,\s*delta,\s*replacement,\s*depth\)', binder_transform),
+            'native binder helper no longer increments cutoff and delegates')
     branches = re.split(r'^            (?=[A-Z][A-Za-z0-9]*\()', transform, flags=re.M)
     increments = set()
     for branch in branches[1:]:
         name = branch.split('(', 1)[0]
-        calls = re.findall(r'self\.transform\((\w+),\s*cutoff\s*\+\s*1,', branch)
+        require(not re.search(r'self\.transform\(\w+,\s*cutoff\s*\+\s*1,', branch),
+                f'unchecked binder transform in {name}')
+        calls = re.findall(r'self\.transform_under_binder\((\w+),\s*cutoff,', branch)
         if calls:
             increments.add(name)
             require(calls == (['b'] if name in ('Pi', 'Lam') else ['yes']),

@@ -16,6 +16,11 @@ private def decoded (s : Snapshot) (root : Nat) : IO Term := do
   let some t := decode 128 s.arena root | throw (IO.userError "invalid selected root")
   return t
 
+private def boundedVariableShift (delta : Int) (body : Term) : Option Term :=
+  (PartialRenaming.shift delta 0 body).filter fun
+    | .var index => decide (index < 2 ^ 32)
+    | _ => false
+
 private def checkLine (line : String) : IO Unit := do
   let [countText, name, mode, status, beforeText, afterText] := line.splitOn "\t" |
     throw (IO.userError "invalid transform observation shape")
@@ -31,6 +36,12 @@ private def checkLine (line : String) : IO Unit := do
   let expected ← match mode with
     | "shift-up" => pure (PartialRenaming.shift 2 0 body)
     | "shift-down" => pure (PartialRenaming.shift (-1) 0 body)
+    | "shift-u32-max" | "shift-u32-wrap" => pure (boundedVariableShift 1 body)
+    | "shift-i64-max" => pure (boundedVariableShift (2 ^ 63 - 1) body)
+    | "shift-i64-min" => pure (boundedVariableShift (-(2 ^ 63)) body)
+    | "shift-cutoff-wrap" => do
+        let .node (.lam _) [_, _] := body | throw (IO.userError "invalid cutoff-overflow fixture")
+        pure none
     | "substitute" => pure (some (body.subst (single value)))
     | "rewrite" => pure (some (PartialRenaming.rewrite 0 value body))
     | _ => throw (IO.userError "unknown native operation")
@@ -46,9 +57,9 @@ def main (args : List String) : IO UInt32 := do
     let bytes ← Jihoo.GraphCertificates.TypingInput.input args
     let some text := String.fromUTF8? bytes | throw (IO.userError "invalid observation text")
     let lines := (text.splitOn "\n").filter (· != "")
-    unless lines.length = 660 do throw (IO.userError "incomplete constructor/operation coverage")
+    unless lines.length = 665 do throw (IO.userError "incomplete transform observations")
     for line in lines do checkLine line
-    IO.println "native transforms: 660 actual Core operations match proved binding transformations"
+    IO.println "native transforms: 665 actual Core operations matched (including five machine boundaries)"
     return 0
   catch error =>
     IO.eprintln s!"native transform correspondence rejected: {error}"

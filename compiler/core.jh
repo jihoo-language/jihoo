@@ -290,30 +290,31 @@ impl Core {
                     }
                     None => {
                         if k < cutoff { return Ok(id) }
-                        let next = k as i64 + delta
-                        if next < cutoff as i64 { return Err(self.error(
+                        let next = k as i128 + delta as i128
+                        if next < cutoff as i128 { return Err(self.error(
                             id,
                             "branch evidence escapes its scope"
                         )) }
+                        if next > 4294967295 { return Err(self.error(id, "variable index exceeds u32")) }
                         Term.Var(next as u32)
                     }
                 }
             }
             Pi(e, a, b) => Term.Pi(e,
                 self.transform(a, cutoff, delta, replacement, depth - 1)?,
-                self.transform(b, cutoff + 1, delta, replacement, depth - 1)?)
+                self.transform_under_binder(b, cutoff, delta, replacement, depth - 1)?)
             Lam(e, a, b) => Term.Lam(e,
                 self.transform(a, cutoff, delta, replacement, depth - 1)?,
-                self.transform(b, cutoff + 1, delta, replacement, depth - 1)?)
+                self.transform_under_binder(b, cutoff, delta, replacement, depth - 1)?)
             IfLt(a, b, yes, no) => Term.IfLt(
                 self.transform(a, cutoff, delta, replacement, depth - 1)?,
                 self.transform(b, cutoff, delta, replacement, depth - 1)?,
-                self.transform(yes, cutoff + 1, delta, replacement, depth - 1)?,
+                self.transform_under_binder(yes, cutoff, delta, replacement, depth - 1)?,
                 self.transform(no, cutoff, delta, replacement, depth - 1)?)
             IfEq(a, b, yes, no) => Term.IfEq(
                 self.transform(a, cutoff, delta, replacement, depth - 1)?,
                 self.transform(b, cutoff, delta, replacement, depth - 1)?,
-                self.transform(yes, cutoff + 1, delta, replacement, depth - 1)?,
+                self.transform_under_binder(yes, cutoff, delta, replacement, depth - 1)?,
                 self.transform(no, cutoff, delta, replacement, depth - 1)?)
             Eq(a, b) => Term.Eq(self.transform(a, cutoff, delta, replacement, depth - 1)?,
                 self.transform(b, cutoff, delta, replacement, depth - 1)?)
@@ -452,6 +453,14 @@ impl Core {
         // An unchanged term is the same node: most of a type shifts to itself.
         if term == self.nodes[id as i64].term { return Ok(id) }
         self.add(term, sp)
+    }
+
+    fn transform_under_binder(
+        inout self, id: u32, cutoff: u32, delta: i64, replacement: Option(u32), depth: u32
+    ) -> Result(u32, diag.Diag) {
+        let (inner, overflow) = overflowing_add(cutoff, 1)
+        if overflow { return Err(self.error(id, "binder cutoff exceeds u32")) }
+        self.transform(id, inner, delta, replacement, depth)
     }
 
     fn transform_all(

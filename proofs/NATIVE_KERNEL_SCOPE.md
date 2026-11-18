@@ -235,9 +235,10 @@ Native code rejection of erased proof variables is also checked.
 
 The production shift/substitute/rewrite routines are also exercised directly
 on every constructor, three vector lengths and four operations, with an extra
-free-variable case: **660 actual Core calls**. Independent before/after snapshots
-preserve old-prefix comparisons; expected results come from the proved Lean
-binding transformations, including explicit negative-shift rejection.
+free-variable case and five integer-boundary cases: **665 actual Core calls**.
+Independent before/after snapshots preserve old-prefix comparisons. Expected
+results cover out-of-range shifts, exact `UInt32` limits, and overflowing
+binder-cutoff rejection.
 
 These comparisons are regression evidence. Native parser/exporter behavior,
 source execution, process association and IO are outside the pure theorems.
