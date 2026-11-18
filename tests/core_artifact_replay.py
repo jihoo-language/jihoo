@@ -266,12 +266,17 @@ def test(compiler, checker, output):
         result = replay.consume(good, *requested)
         assert result.returncode == 1 and not result.stdout
         rejected += 1
-    # The only observed regression artifact here is an actual u32-overflow
-    # result. The next consumer is never called because validation fails first.
+    # A maximal variable is valid, but shifting it by one is out of range.
     overflow = json.loads(require(command([str(snapshot), "shift", "overflow", "0"])))
     prior = replay.seed(overflow)
-    invalid = require(replay.consume(prior, "shift", 1, 0))
-    assert replay.lean(invalid).returncode == 1
+    result = replay.consume(prior, "shift", 1, 0)
+    assert result.returncode == 1 and not result.stdout
+    assert b"variable index exceeds u32" in result.stderr
+    rejected += 1
+
+    # A forged wrapping output also fails validation before the next consumer.
+    # Shift 1 maps the maximal variable at node 0 to a claimed zero at node 1.
+    invalid = canonical_tokens([1, 0, 1, 0, 1, 1, 0, 2**32 - 1, 2, 0, 2**32 - 1, 0, 0])
     called = False
 
     def forbidden(*_):

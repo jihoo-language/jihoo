@@ -96,7 +96,7 @@ impl Search {
         facts: [Fact],
         depth: u32
     ) -> Result(Option(u32), diag.Diag) {
-        if self.visits >= VISITS || c.nodes.len() - self.start > NODES {
+        if self.visits >= VISITS || c.node_count() - self.start > NODES {
             return Err(failure(self.span, "auto search limit reached"))
         }
         self.visits += 1
@@ -224,13 +224,13 @@ pub fn prove(
         Eq(_, _) | Lt(_, _) => {}
         _ => return Err(failure(sp, "auto needs an expected Eq or Lt proposition"))
     }
-    var search = Search { visits: 0, start: c.nodes.len(), span: sp, limited: false }
+    var search = Search { visits: 0, start: c.node_count(), span: sp, limited: false }
     let Some(proof) = search.goal(&c, normalized, facts, DEPTH)? else {
-        return Err(failure(sp, if search.limited || c.nodes.len() - search.start > NODES {
+        return Err(failure(sp, if search.limited || c.node_count() - search.start > NODES {
             "auto search limit reached"
         } else { "auto could not synthesize the expected proof" }))
     }
-    if c.nodes.len() - search.start > NODES { return Err(failure(sp, "auto search limit reached")) }
+    if c.node_count() - search.start > NODES { return Err(failure(sp, "auto search limit reached")) }
     c.require(proof, goal, ctx, true, core.DEPTH)?
     Ok(proof)
 }

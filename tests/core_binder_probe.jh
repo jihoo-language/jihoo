@@ -28,12 +28,12 @@ fn observe(provenance: bool) -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 {
+    if c.definition_count() != 1 {
         return Err("expected exactly one definition".to_string())
     }
     match c.check() { Ok(_) => {}
         Err(e) => return Err(e.msg.clone()) }
-    var at = c.definitions[0].value
+    var at = c.definition(0).value
     var context = Vec(core.Binding).new()
     var out = String.new()
     loop {

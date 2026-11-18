@@ -95,8 +95,8 @@ pub fn write_node(inout out: String, term: core.Term) {
 pub fn arena(c: core.Core, ghost: bool, term_root: u32, type_root: u32) -> String {
     var out = String.new()
     for field in [4 as u64, if ghost { 1 } else { 0 }, term_root as u64,
-        type_root as u64, c.nodes.len() as u64] { token(&out, field) }
-    for n in c.nodes { write_node(&out, n.term) }
+        type_root as u64, c.node_count() as u64] { token(&out, field) }
+    for node_index in 0..c.node_count() { write_node(&out, c.term(node_index as u32)) }
     out
 }
 
@@ -105,13 +105,14 @@ pub fn arena(c: core.Core, ghost: bool, term_root: u32, type_root: u32) -> Strin
 pub fn program_arena(c: core.Core) -> String {
     var out = String.new()
     token(&out, 5)
-    token(&out, c.definitions.len() as u64)
-    for definition in c.definitions {
+    token(&out, c.definition_count() as u64)
+    for definition_index in 0..c.definition_count() {
+        let definition = c.definition(definition_index)
         token(&out, definition.ty as u64)
         token(&out, definition.value as u64)
     }
-    token(&out, c.nodes.len() as u64)
-    for n in c.nodes { write_node(&out, n.term) }
+    token(&out, c.node_count() as u64)
+    for node_index in 0..c.node_count() { write_node(&out, c.term(node_index as u32)) }
     out
 }
 
@@ -120,7 +121,7 @@ pub fn program_snapshot(source: str) -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.families.len() != 0 {
+    if c.family_count() != 0 {
         return Err("program snapshot does not yet support families".to_string())
     }
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
@@ -132,13 +133,15 @@ pub fn program_snapshot(source: str) -> Result(String, String) {
 pub fn family_program_arena(c: core.Core) -> String {
     var out = String.new()
     token(&out, 6)
-    token(&out, c.definitions.len() as u64)
-    for definition in c.definitions {
+    token(&out, c.definition_count() as u64)
+    for definition_index in 0..c.definition_count() {
+        let definition = c.definition(definition_index)
         token(&out, definition.ty as u64)
         token(&out, definition.value as u64)
     }
-    token(&out, c.families.len() as u64)
-    for family in c.families {
+    token(&out, c.family_count() as u64)
+    for family_index in 0..c.family_count() {
+        let family = c.family(family_index)
         token(&out, if family.data { 1 } else { 0 })
         token(&out, family.params as u64)
         token(&out, family.arity as u64)
@@ -146,8 +149,8 @@ pub fn family_program_arena(c: core.Core) -> String {
         token(&out, family.constructors.len() as u64)
         for constructor in family.constructors { token(&out, constructor.ty as u64) }
     }
-    token(&out, c.nodes.len() as u64)
-    for n in c.nodes { write_node(&out, n.term) }
+    token(&out, c.node_count() as u64)
+    for node_index in 0..c.node_count() { write_node(&out, c.term(node_index as u32)) }
     out
 }
 
@@ -169,11 +172,11 @@ pub fn snapshot(source: str, mode: str) -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 || c.families.len() != 0 {
+    if c.definition_count() != 1 || c.family_count() != 0 {
         return Err("expected exactly one definition and no families".to_string())
     }
-    let value = c.definitions[0].value
-    let declared = c.definitions[0].ty
+    let value = c.definition(0).value
+    let declared = c.definition(0).ty
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
     let inferred = match c.infer(value, [], ghost, core.DEPTH) {
         Ok(ty) => ty

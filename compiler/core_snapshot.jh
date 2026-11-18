@@ -76,11 +76,11 @@ pub fn snapshot(source: str, mode: str) -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 || c.families.len() != 0 {
+    if c.definition_count() != 1 || c.family_count() != 0 {
         return Err("expected exactly one core definition and no families".to_string())
     }
-    let value = c.definitions[0].value
-    let declared = c.definitions[0].ty
+    let value = c.definition(0).value
+    let declared = c.definition(0).ty
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
     let inferred = match c.infer(value, [], true, core.DEPTH) {
         Ok(t) => t
@@ -139,8 +139,8 @@ pub fn snapshot(source: str, mode: str) -> Result(String, String) {
         for index in 0..observations.len() {
             if index != 0 { trace.push('\n') }
             fields(&trace, [3, observations[index].term as u64,
-                observations[index].ty as u64, c.nodes.len() as u64])
-            for node in c.nodes { write_node(&trace, node.term)? }
+                observations[index].ty as u64, c.node_count() as u64])
+            for node_index in 0..c.node_count() { write_node(&trace, c.term(node_index as u32))? }
         }
         return Ok(trace)
     }
@@ -159,30 +159,30 @@ pub fn snapshot(source: str, mode: str) -> Result(String, String) {
         // Freeze all observations after the last actual Core call. Keep the
         // original inference roots; do not synthesize a substitute output type.
         var trace = String.new()
-        fields(&trace, [3, function as u64, function_type as u64, c.nodes.len() as u64])
-        for n in c.nodes { write_node(&trace, n.term)? }
+        fields(&trace, [3, function as u64, function_type as u64, c.node_count() as u64])
+        for node_index in 0..c.node_count() { write_node(&trace, c.term(node_index as u32))? }
         trace.push('\n')
-        fields(&trace, [3, function as u64, normalized as u64, c.nodes.len() as u64])
-        for n in c.nodes { write_node(&trace, n.term)? }
+        fields(&trace, [3, function as u64, normalized as u64, c.node_count() as u64])
+        for node_index in 0..c.node_count() { write_node(&trace, c.term(node_index as u32))? }
         trace.push('\n')
-        fields(&trace, [3, value as u64, inferred as u64, c.nodes.len() as u64])
-        for n in c.nodes { write_node(&trace, n.term)? }
+        fields(&trace, [3, value as u64, inferred as u64, c.node_count() as u64])
+        for node_index in 0..c.node_count() { write_node(&trace, c.term(node_index as u32))? }
         trace.push('\n')
-        fields(&trace, [3, value as u64, declared as u64, c.nodes.len() as u64])
-        for n in c.nodes { write_node(&trace, n.term)? }
+        fields(&trace, [3, value as u64, declared as u64, c.node_count() as u64])
+        for node_index in 0..c.node_count() { write_node(&trace, c.term(node_index as u32))? }
         return Ok(trace)
     }
     // Freeze the full arena immediately after the actual operation. Snapshot
     // schema 3 is distinct from the theorem checker's certificate schema 2.
     var out = String.new()
-    fields(&out, [3, value as u64, selected as u64, c.nodes.len() as u64])
-    for n in c.nodes { write_node(&out, n.term)? }
+    fields(&out, [3, value as u64, selected as u64, c.node_count() as u64])
+    for node_index in 0..c.node_count() { write_node(&out, c.term(node_index as u32))? }
     // Joint mode retains the exact inferred root as well as the requested
     // root in the same post-require arena; serialization performs no Core calls.
     if mode == "both" {
         out.push('\n')
-        fields(&out, [3, value as u64, inferred as u64, c.nodes.len() as u64])
-        for n in c.nodes { write_node(&out, n.term)? }
+        fields(&out, [3, value as u64, inferred as u64, c.node_count() as u64])
+        for node_index in 0..c.node_count() { write_node(&out, c.term(node_index as u32))? }
     }
     Ok(out)
 }

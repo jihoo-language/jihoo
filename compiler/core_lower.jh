@@ -112,7 +112,7 @@ impl Lower {
         depth: u32
     ) -> Result(Value, diag.Diag) {
         if depth == 0 { return Err(c.error(id, "lowering nesting limit reached")) }
-        let sp = c.nodes[id as i64].span
+        let sp = c.span(id)
         match c.term(id) {
             Var(k) => {
                 if k as i64 >= env.len { return Err(c.error(id, "unbound lowering variable")) }
@@ -638,7 +638,7 @@ impl Lower {
         env: [Option(Value)],
         depth: u32
     ) -> Result(Value, diag.Diag) {
-        let sp = c.nodes[id as i64].span
+        let sp = c.span(id)
         if args.len != self.hypotheses[h].erased.len() { return Err(c.error(
             id,
             "a recursion's function result is called with all its arguments"
@@ -785,7 +785,7 @@ impl Lower {
         depth: u32
     ) -> Result(Value, diag.Diag) {
         if depth == 0 { return Err(c.error(id, "lowering nesting limit reached")) }
-        let sp = c.nodes[id as i64].span
+        let sp = c.span(id)
         let at = self.local(x.ty, mir.LocalKind.Temp, sp)
         self.assign(at, mir.Rvalue.Use(x.op.clone()), sp)
         let tag = self.get(at, 0, types.I64, sp)
@@ -802,7 +802,7 @@ impl Lower {
         for k, case in cases {
             self.block = blocks[k]
             let erased = layout(c, f, k as u32)?
-            let params = c.families[f as i64].params as i64
+            let params = c.family_params(f as i64) as i64
             var scope = copy_env(env)
             var body = case
             var slot: u64 = 1
@@ -936,7 +936,7 @@ impl Lower {
         applied: [Option(Value)],
         depth: u32
     ) -> Result(Value, diag.Diag) {
-        let sp = c.nodes[id as i64].span
+        let sp = c.span(id)
         // The function is built in another body, which cannot free this node.
         self.flush()
         // A function result's arguments: parameters of the function, passed
@@ -949,7 +949,7 @@ impl Lower {
         var ret: Option(u32) = None
         for k, case in cases {
             let erased = layout(c, f, k as u32)?
-            let params = c.families[f as i64].params as i64
+            let params = c.family_params(f as i64) as i64
             var body = case
             for _ in params..erased.len() {
                 let core.Term.Lam(_, _, rest) = c.term(body) else { break }
@@ -1094,7 +1094,7 @@ impl Lower {
         self.flush()
         let function = self.free + 1 + self.generated.len() as u32
         self.drops.insert(f, function)
-        let name = c.families[f as i64].name.clone()
+        let name = c.family(f as i64).name.clone()
         self.generated.push(mir.Function {
             name: ("drop." + name.as_str()).to_string(),
             symbol: ("__jihoo_core_drop_" + function.to_string().as_str()).to_string()
@@ -1115,7 +1115,7 @@ impl Lower {
         let ptr = self.pointer()
         let node = self.local(ptr, mir.LocalKind.Arg, sp)
         self.body.arg_count = 1
-        let count = c.families[f as i64].constructors.len()
+        let count = c.constructor_count(f as i64)
         let join = self.block()
         if count > 0 {
             let tag = self.get(node, 0, types.I64, sp)
@@ -1132,11 +1132,11 @@ impl Lower {
                 var owned = Vec((u32, Value)).new()
                 var buffers = Vec(Value).new()
                 var slot: u64 = 1
-                var ty = c.families[f as i64].constructors[k].ty
+                var ty = c.constructor_type(f as i64, k)
                 var j = 0
                 loop {
                     let core.Term.Pi(erased, domain, rest) = c.term(ty) else { break }
-                    if j >= c.families[f as i64].params as i64 && !erased {
+                    if j >= c.family_params(f as i64) as i64 && !erased {
                         match c.term(domain) {
                             Ind(g, _) if c.is_boxed(g) => {
                                 let v = self.get(node, slot, ptr, sp)
@@ -1213,10 +1213,10 @@ impl Lower {
         depth: u32
     ) -> Result((), diag.Diag) {
         if depth == 0 { return Err(c.error(id, "lowering nesting limit reached")) }
-        let sp = c.nodes[id as i64].span
+        let sp = c.span(id)
         match c.term(id) {
             Con(f, k, fields) => {
-                var ty = c.families[f as i64].constructors[k as i64].ty
+                var ty = c.constructor_type(f as i64, k as i64)
                 for x in fields {
                     let core.Term.Pi(erased, _, rest) = c.term(ty) else {
                         return Err(c.error(id, "constructor layout mismatch"))
@@ -1272,7 +1272,7 @@ impl Lower {
 // (no slot in the node).
 fn layout(c: core.Core, f: u32, k: u32) -> Result(Vec(bool), diag.Diag) {
     var out = Vec(bool).new()
-    var ty = c.families[f as i64].constructors[k as i64].ty
+    var ty = c.constructor_type(f as i64, k as i64)
     loop {
         let core.Term.Pi(erased, _, rest) = c.term(ty) else { break }
         out.push(erased)
@@ -1283,7 +1283,7 @@ fn layout(c: core.Core, f: u32, k: u32) -> Result(Vec(bool), diag.Diag) {
 
 // Whether field j of constructor k is recursive.
 fn recursive_field(c: core.Core, f: u32, k: u32, j: i64) -> bool {
-    var ty = c.families[f as i64].constructors[k as i64].ty
+    var ty = c.constructor_type(f as i64, k as i64)
     var i = 0
     loop {
         let core.Term.Pi(_, domain, rest) = c.term(ty) else { return false }
@@ -1336,27 +1336,24 @@ pub fn compile(sink c: core.Core, tgt: target.Target) -> Result(mir.Program, dia
     c.check()?
     // A field's type may be written as an alias or a computation; layout and
     // drop glue read the types themselves.
-    for f in 0..c.families.len() {
-        for k in 0..c.families[f].constructors.len() {
-            let ty = c.families[f].constructors[k].ty
-            let ty = c.normal(ty, core.DEPTH)?
-            c.families[f].constructors[k].ty = ty
-        }
-    }
+    c.normalize_constructor_types()?
     var out = Vec(mir.Function).new()
     var runtime_types = types.Types.new()
-    let count = c.definitions.len()
+    let count = c.definition_count()
     // malloc and free follow the exports, declared only when used.
     var exports: u32 = 0
-    for d in c.definitions { if d.exported { exports += 1 } }
+    for i in 0..count {
+        if c.definition(i).exported { exports += 1 }
+    }
     var heap = false
     var generated = Vec(mir.Function).new()
     var drops = Map(u32, u32).new()
     for i in 0..count {
-        if !c.definitions[i].exported { continue }
-        let sp = c.definitions[i].span
-        let mut_ty = c.definitions[i].ty
-        let mut_body = c.definitions[i].value
+        let definition = c.definition(i)
+        if !definition.exported { continue }
+        let sp = definition.span
+        let mut_ty = definition.ty
+        let mut_body = definition.value
         var ty = c.normal(mut_ty, core.DEPTH)?
         // The body runs: arguments that touch memory are evaluated once.
         c.runtime = true
@@ -1411,7 +1408,7 @@ pub fn compile(sink c: core.Core, tgt: target.Target) -> Result(mir.Program, dia
         generated = made
         drops = known
         out.push(mir.Function {
-            name: c.definitions[i].name.clone(), symbol: c.definitions[i].name.clone()
+            name: definition.name.clone(), symbol: definition.name.clone()
             sig: types.Sig { c_abi: true, variadic: false, params, ret }
             pass, body: Some(body), linkage: mir.Linkage.Export, variadic: false,
             returns_ref: false, span: sp

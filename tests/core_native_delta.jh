@@ -10,8 +10,8 @@ fn run(source: str) -> Result((), String) {
         Err(e) => return Err(e.msg.clone())
     }
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
-    if c.definitions.len() == 0 { return Err("expected a final definition".to_string()) }
-    let root = c.definitions[c.definitions.len() - 1].value
+    if c.definition_count() == 0 { return Err("expected a final definition".to_string()) }
+    let root = c.definition(c.definition_count() - 1).value
     let program = core_native_snapshot.family_program_arena(c)
     let before = core_native_snapshot.arena(c, true, root, root)
     let result = match c.normal(root, core.DEPTH) {

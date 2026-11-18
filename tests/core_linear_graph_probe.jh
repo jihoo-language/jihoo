@@ -41,19 +41,19 @@ fn snapshot() -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 || c.families.len() != 0 {
+    if c.definition_count() != 1 || c.family_count() != 0 {
         return Err("expected one definition and no families".to_string())
     }
-    let root = c.definitions[0].value
-    let ty = c.definitions[0].ty
+    let root = c.definition(0).value
+    let ty = c.definition(0).ty
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
-    if c.nodes.len() > 4096 { return Err("graph exceeds 4096 nodes".to_string()) }
+    if c.node_count() > 4096 { return Err("graph exceeds 4096 nodes".to_string()) }
     var out = "[1,".to_string() + root.to_string() + "," + ty.to_string() + ",["
     var first = true
-    for n in c.nodes {
+    for node_index in 0..c.node_count() {
         if !first { out += "," }
         first = false
-        out += node(n.term)
+        out += node(c.term(node_index as u32))
     }
     Ok(out + "]]\n")
 }

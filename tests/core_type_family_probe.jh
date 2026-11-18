@@ -24,7 +24,7 @@ fn run() -> Result(String, String) {
     let input = stdin_once()?
     var c = match core_parse.parse(input.as_str(), 0) { Ok(c) => c, Err(e) => return Err(e.msg.clone()) }
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
-    let value = c.definitions[0].value
+    let value = c.definition(0).value
     let Lam(false, ty, body) = c.term(value) else { return Err("expected lambda".to_string()) }
     let ctx = [core.Binding { ty, erased: false }]
     let before = match c.runtime_uses(body, 0, ctx, []) { Ok(n) => n, Err(e) => return Err(e.msg.clone()) }

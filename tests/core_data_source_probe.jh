@@ -55,14 +55,14 @@ fn snapshot() -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 || c.families.len() != 1 {
+    if c.definition_count() != 1 || c.family_count() != 1 {
         return Err("expected one definition and one family".to_string())
     }
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
-    let root = c.definitions[0].value
-    let ty = c.definitions[0].ty
-    if c.nodes.len() > 4096 { return Err("graph exceeds 4096 nodes".to_string()) }
-    let family = c.families[0]
+    let root = c.definition(0).value
+    let ty = c.definition(0).ty
+    if c.node_count() > 4096 { return Err("graph exceeds 4096 nodes".to_string()) }
+    let family = c.family(0)
     var descriptor = "[".to_string() + (if family.data { "1" } else { "0" }) + "," + family.params.to_string() + "," + family.arity.to_string() + "," + family.globals.to_string() + ",["
     var first_type = true
     for constructor in family.constructors {
@@ -73,10 +73,10 @@ fn snapshot() -> Result(String, String) {
     descriptor += "]]"
     var out = "[1,".to_string() + root.to_string() + "," + ty.to_string() + "," + descriptor + ",["
     var first = true
-    for n in c.nodes {
+    for node_index in 0..c.node_count() {
         if !first { out += "," }
         first = false
-        out += node(n.term)
+        out += node(c.term(node_index as u32))
     }
     Ok(out + "]]\n")
 }

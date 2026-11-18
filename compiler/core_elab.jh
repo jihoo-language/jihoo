@@ -91,8 +91,8 @@ fn natural_alias(
             inner.push(core.Binding { ty: domain, erased: false })
             natural_alias(c, body, inner.as_slice(), depth - 1, &fuel)
         }
-        Global(g) if g as i64 < c.definitions.len() =>
-            natural_alias(c, c.definitions[g as i64].value, [], depth - 1, &fuel)
+        Global(g) if g as i64 < c.definition_count() =>
+            natural_alias(c, c.definition(g as i64).value, [], depth - 1, &fuel)
         _ => false
     }
 }
@@ -170,7 +170,7 @@ impl Elaborator {
 
     // free(Var(v), body): a buffer is freed, heap data with every node it owns.
     fn release(inout self, v: u32, ty: u32, body: u32) -> Result(u32, diag.Diag) {
-        let sp = self.c.nodes[body as i64].span
+        let sp = self.c.span(body)
         let x = self.c.add(core.Term.Var(v), sp)?
         let ty = self.c.normal(ty, core.DEPTH)?
         match self.c.term(ty) {
@@ -455,7 +455,7 @@ impl Elaborator {
         value: u32,
         shift: i64
     ) -> Result(u32, diag.Diag) {
-        let sp = self.c.nodes[value as i64].span
+        let sp = self.c.span(value)
         var out = value
         var j = flags.len
         while j > 0 {
@@ -481,7 +481,7 @@ impl Elaborator {
         expected: Option(u32),
         depth: u32
     ) -> Result(u32, diag.Diag) {
-        let sp = self.c.nodes[value as i64].span
+        let sp = self.c.span(value)
         let normal = self.c.normal(ty, core.DEPTH)?
         let core.Term.Back(erased, t, m) = self.c.term(normal) else {
             return Err(error(sp, "only an inout parameter takes &x"))
@@ -1061,10 +1061,10 @@ impl Elaborator {
             return Err(error(sp, "induct on a borrow requires heap data"))
         }
         self.exposed(f, sp)?
-        let count = self.c.families[f as i64].constructors.len()
+        let count = self.c.constructor_count(f as i64)
         if args.len != count + 2 { return Err(error(sp, "induct requires one case per constructor")) }
         var ps = Vec(u32).new()
-        for j in 0..self.c.families[f as i64].params as i64 { ps.push(xs[j]) }
+        for j in 0..self.c.family_params(f as i64) as i64 { ps.push(xs[j]) }
         let p = self.data_motive(args[0], f, ps.as_slice(), true, depth - 1)?
         // Into a proposition: a proof by induction over the value the borrow
         // reads, Deref(r), as over an owned value. Evidence never runs.
@@ -1141,7 +1141,7 @@ impl Elaborator {
     // A term of type ty, with one lambda for each of the function type's
     // arguments.
     fn expand(inout self, term: u32, ty: u32) -> Result(u32, diag.Diag) {
-        let sp = self.c.nodes[term as i64].span
+        let sp = self.c.span(term)
         let normal = self.c.normal(ty, core.DEPTH)?
         let core.Term.Pi(erased, domain, rest) = self.c.term(normal) else { return Ok(term) }
         match self.c.term(term) {
@@ -1216,7 +1216,7 @@ impl Elaborator {
 
     // Lambdas (erased, domain) around a body.
     fn wrap(inout self, binders: [(bool, u32)], body: u32) -> Result(u32, diag.Diag) {
-        let sp = self.c.nodes[body as i64].span
+        let sp = self.c.span(body)
         var value = body
         var i = binders.len
         while i > 0 {
@@ -1285,7 +1285,8 @@ impl Elaborator {
             }
         }
         match self.scope(name) {
-            Some((module, n)) => for i, d in self.c.definitions {
+            Some((module, n)) => for i in 0..self.c.definition_count() {
+                let d = self.c.definition(i)
                 let (owner, public) = self.definitions[i]
                 if owner == module && d.name == n && (module == self.module || public) {
                     return self.c.add(core.Term.Global(i as u32), sp)
@@ -1366,7 +1367,8 @@ impl Elaborator {
 
     fn find_family(self, name: str) -> Option(u32) {
         let Some((module, n)) = self.scope(name) else { return None }
-        for i, f in self.c.families {
+        for i in 0..self.c.family_count() {
+            let f = self.c.family(i)
             let (owner, public) = self.families[i]
             if owner == module && f.name == n && (module == self.module || public) {
                 return Some(i as u32)
@@ -1411,7 +1413,8 @@ impl Elaborator {
     // A proposition's constructor; data constructors are qualified.
     fn find_constructor(self, name: str) -> Option((u32, u32)) {
         let Some((module, n)) = self.scope(name) else { return None }
-        for i, f in self.c.families {
+        for i in 0..self.c.family_count() {
+            let f = self.c.family(i)
             let (owner, public) = self.families[i]
             if f.data || owner != module || (module != self.module && !public) { continue }
             for k, c in f.constructors { if c.name == n { return Some((i as u32, k as u32)) } }
@@ -1428,8 +1431,8 @@ impl Elaborator {
         }
         let Some(name) = self.path_name(family) else { return None }
         let Some(f) = self.find_family(name.as_str()) else { return None }
-        if !self.c.families[f as i64].data { return None }
-        for k, c in self.c.families[f as i64].constructors {
+        if !self.c.is_data(f) { return None }
+        for k, c in self.c.family(f as i64).constructors {
             if c.name == variant { return Some((f, k as u32)) }
         }
         None
@@ -1477,10 +1480,10 @@ impl Elaborator {
         depth: u32
     ) -> Result(u32, diag.Diag) {
         self.exposed(f, sp)?
-        var ty = self.c.families[f as i64].constructors[k as i64].ty
+        var ty = self.c.constructor_type(f as i64, k as i64)
         var fields = Vec(u32).new()
         // A data type's parameters come from the expected type.
-        let params = self.c.families[f as i64].params as i64
+        let params = self.c.family_params(f as i64) as i64
         if params > 0 {
             let message = "a value of a parameterized type needs its expected type"
             let Some(t) = expected else { return Err(error(sp, message)) }
@@ -1562,7 +1565,7 @@ impl Elaborator {
         let core.Term.Ind(f, _) = self.c.term(ty) else {
             return Err(error(scrutinee.span, "match requires a value of a data type"))
         }
-        if !self.c.families[f as i64].data {
+        if !self.c.is_data(f) {
             return Err(error(scrutinee.span, "match requires a value of a data type; use induct"))
         }
         let core.Term.Ind(_, xs) = self.c.term(ty) else { return Err(error(sp, "unreachable")) }
@@ -1572,7 +1575,7 @@ impl Elaborator {
         )) }
         let (initial_p, ps) = self.constant_motive(f, xs.as_slice(), t, sp)?
         var p = initial_p
-        let count = self.c.families[f as i64].constructors.len()
+        let count = self.c.constructor_count(f as i64)
         if arms.len != count { return Err(error(sp, "match requires one arm per variant")) }
         if count == 0 && expected.is_none() { return Err(error(
             sp,
@@ -1585,7 +1588,7 @@ impl Elaborator {
         var general = Vec(i64).new()
         var scrutinee_var: Option(u32) = None
         if expected.is_some() && (
-            borrowed || (self.c.is_boxed(f) && !ghost && params_only(self.c.families[f as i64]))
+            borrowed || (self.c.is_boxed(f) && !ghost && params_only(self.c.family(f as i64)))
         ) {
             match self.c.term(x) {
                 Var(v) => {
@@ -1645,7 +1648,7 @@ impl Elaborator {
         var cases = Vec(u32).new()
         var arities = Vec(i64).new()
         for k in 0..count {
-            let name = self.c.families[f as i64].constructors[k].name.clone()
+            let name = self.c.family(f as i64).constructors[k].name.clone()
             var found: Option(i64) = None
             for i, arm in arms {
                 if self.variant_name(arm.pat, f) == Some(name.clone()) {
@@ -1862,7 +1865,7 @@ impl Elaborator {
         t: u32,
         sp: diag.Span
     ) -> Result((u32, Vec(u32)), diag.Diag) {
-        let params = self.c.families[f as i64].params as i64
+        let params = self.c.family_params(f as i64) as i64
         let r = xs.len - params
         var ps = Vec(u32).new()
         for j in 0..params { ps.push(xs[j]) }
@@ -1912,7 +1915,7 @@ impl Elaborator {
             body.span,
             "a data motive is one proposition"
         )) }
-        if self.c.families[f as i64].arity as i64 != params.len {
+        if self.c.family_arity(f as i64) as i64 != params.len {
             return Err(error(e.span, "induct on an indexed data type needs a .jhc motive"))
         }
         var indices = Vec(u32).new()
@@ -1965,7 +1968,8 @@ impl Elaborator {
 
     fn taken(self, name: str) -> bool {
         if self.imported(name) { return true }
-        for i, d in self.c.definitions {
+        for i in 0..self.c.definition_count() {
+            let d = self.c.definition(i)
             if self.definitions[i].0 == self.module && d.name == name { return true }
         }
         self.find_family(name).is_some() || self.find_constructor(name).is_some() || self.find_alias(
@@ -1981,7 +1985,7 @@ impl Elaborator {
             Struct(path, _, _) => {
                 let name = self.type_path(path.as_slice())
                 if self.find_family(name.as_str()) == Some(family) {
-                    Some(self.c.families[family as i64].name.clone())
+                    Some(self.c.family(family as i64).name.clone())
                 } else { None }
             }
             Variant(path, _) => {
@@ -2012,7 +2016,7 @@ impl Elaborator {
         sp: diag.Span,
         depth: u32
     ) -> Result(u32, diag.Diag) {
-        if args.len != self.c.families[f as i64].arity as i64 {
+        if args.len != self.c.family_arity(f as i64) as i64 {
             return Err(error(sp, "wrong number of family indices"))
         }
         let u = self.u64(sp)?
@@ -3223,16 +3227,16 @@ impl Elaborator {
                         ))
                     }
                     self.exposed(f, sp)?
-                    let data = self.c.families[f as i64].data
+                    let data = self.c.is_data(f)
                     var ps = Vec(u32).new()
-                    for j in 0..self.c.families[f as i64].params as i64 { ps.push(xs[j]) }
-                    let count = self.c.families[f as i64].constructors.len()
+                    for j in 0..self.c.family_params(f as i64) as i64 { ps.push(xs[j]) }
+                    let count = self.c.constructor_count(f as i64)
                     if args.len() != count + 2 { return Err(error(
                         sp,
                         "induct requires one case per constructor"
                     )) }
                     let p = if data { self.data_motive(args[0], f, ps.as_slice(), false, depth - 1)? }
-                    else { self.family(args[0], self.c.families[f as i64].arity as i64, depth - 1)? }
+                    else { self.family(args[0], self.c.family_arity(f as i64) as i64, depth - 1)? }
                     var cases = Vec(u32).new()
                     var arities = Vec(i64).new()
                     for k in 0..count {
@@ -3355,15 +3359,15 @@ impl Elaborator {
                 if t.params[j].name == p.name { return Err(error(p.span, "duplicate index")) }
             }
         }
-        let f = self.c.families.len() as u32
+        let f = self.c.family_count() as u32
         self.families.push((self.module, item.public))
-        self.c.families.push(core.Family {
+        self.c.push_family(core.Family {
             name: t.name.clone(),
             data: false,
             params: 0,
             arity: t.params.len() as u32,
             constructors: Vec(core.Constructor).new(),
-            globals: self.c.definitions.len() as u32,
+            globals: self.c.definition_count() as u32,
             span: item.span
         })
         for it in t.items {
@@ -3405,7 +3409,7 @@ impl Elaborator {
                 ty = self.c.add(core.Term.Pi(erased, domain, ty), it.span)?
                 self.pop()
             }
-            self.c.families[f as i64].constructors.push(core.Constructor {
+            self.c.push_constructor(f as i64, core.Constructor {
                 name: c.name.clone(),
                 ty
             })
@@ -3438,15 +3442,15 @@ impl Elaborator {
             }
         }
         let params = e.params.len()
-        let f = self.c.families.len() as u32
+        let f = self.c.family_count() as u32
         self.families.push((self.module, item.public))
-        self.c.families.push(core.Family {
+        self.c.push_family(core.Family {
             name: e.name.clone(),
             data: true,
             params: params as u32,
             arity: params as u32,
             constructors: Vec(core.Constructor).new(),
-            globals: self.c.definitions.len() as u32,
+            globals: self.c.definition_count() as u32,
             span: item.span
         })
         let u = self.u64(item.span)?
@@ -3481,15 +3485,15 @@ impl Elaborator {
             }
         }
         let params = s.params.len()
-        let f = self.c.families.len() as u32
+        let f = self.c.family_count() as u32
         self.families.push((self.module, item.public))
-        self.c.families.push(core.Family {
+        self.c.push_family(core.Family {
             name: s.name.clone(),
             data: true,
             params: params as u32,
             arity: params as u32,
             constructors: Vec(core.Constructor).new(),
-            globals: self.c.definitions.len() as u32,
+            globals: self.c.definition_count() as u32,
             span: item.span
         })
         let u = self.u64(item.span)?
@@ -3548,7 +3552,7 @@ impl Elaborator {
             }
         }
         match failure { Some(d) => return Err(d), None => {} }
-        self.c.families[f as i64].constructors.push(core.Constructor {
+        self.c.push_constructor(f as i64, core.Constructor {
             name: s.name.clone(),
             ty: ty_result?
         })
@@ -3585,7 +3589,7 @@ impl Elaborator {
             }
             let u = self.u64(v.span)?
             for _ in 0..params { ty = self.c.add(core.Term.Pi(true, u, ty), v.span)? }
-            self.c.families[f as i64].constructors.push(core.Constructor {
+            self.c.push_constructor(f as i64, core.Constructor {
                 name: v.name.clone(),
                 ty
             })
@@ -3767,14 +3771,15 @@ impl Elaborator {
         }
         // Foreign symbol names remain global even though source names do not.
         if exported {
-            for d in self.c.definitions {
+            for definition_index in 0..self.c.definition_count() {
+                let d = self.c.definition(definition_index)
                 if d.exported && d.name == f.name {
                     return Err(error(f.name_span, "duplicate exported symbol"))
                 }
             }
         }
         self.definitions.push((self.module, item.public))
-        self.c.definitions.push(core.Definition {
+        self.c.push_definition(core.Definition {
             name: f.name.clone(),
             ty,
             value,

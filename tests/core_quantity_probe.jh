@@ -28,10 +28,10 @@ fn probe(checked: bool) -> Result(String, String) {
         Ok(c) => c
         Err(e) => return Err(e.msg.clone())
     }
-    if c.definitions.len() != 1 || c.families.len() != 0 {
+    if c.definition_count() != 1 || c.family_count() != 0 {
         return Err("expected one definition without families".to_string())
     }
-    let Lam(false, domain, body) = c.term(c.definitions[0].value) else {
+    let Lam(false, domain, body) = c.term(c.definition(0).value) else {
         return Err("expected one runtime lambda".to_string())
     }
     let context = [core.Binding { ty: domain, erased: false }]

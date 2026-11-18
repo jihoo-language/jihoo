@@ -241,16 +241,15 @@ def test(compiler, checker, output):
         validate(checker, path, success=False)
         failures += 1
 
-    # This is an actual compiler result, not JSON tampering: the implementation
-    # casts the shifted index back to u32. On a maximal index it wraps to zero;
-    # mathematical renaming must reject that result. This open, untyped graph
-    # is not an accepted program and is not evidence of infer unsoundness.
-    overflow = run([str(driver), "shift", "overflow", "1"])
-    overflow_path = output / "reject-actual-u32-shift-overflow.json"
-    overflow_path.write_text(overflow.stdout)
+    # Verify the checker rejects a forged wrapping result built from the
+    # exporter snapshot of the maximal, unshifted index.
+    overflow = run([str(driver), "shift", "overflow", "0"])
     overflow_document = json.loads(overflow.stdout)
     assert overflow_document["before"][overflow_document["input"]] == ["var", 2**32 - 1]
-    assert overflow_document["after"][overflow_document["output"]] == ["var", 0]
+    overflow_document.update(amount=1, output=len(overflow_document["after"]))
+    overflow_document["after"].append(["var", 0])
+    overflow_path = output / "reject-wrapped-u32-shift.json"
+    overflow_path.write_text(json.dumps(overflow_document) + "\n")
     validate(checker, overflow_path, success=False)
     failures += 1
 
@@ -259,6 +258,7 @@ def test(compiler, checker, output):
         ("shift", "unsupported", "1", "unsupported constructor"),
         ("substitute", "unsupported", "0", "unsupported constructor"),
         ("shift", "invalid", "1", "invalid term reference"),
+        ("shift", "overflow", "1", "variable index exceeds u32"),
         ("shift", "universe-overflow", "0", "universe level exceeds transport bound"),
         ("shift", "mixed", "-1", "unsupported amount"),
         ("shift", "mixed", "4294967296", "unsupported amount"),

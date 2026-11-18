@@ -268,6 +268,14 @@ class Snapshot:
 
 def run(compiler, checker, output):
     output.mkdir(parents=True, exist_ok=True)
+    for field in ('nodes', 'definitions', 'families'):
+        source = output / f'private-{field}.jh'
+        source.write_text(f'import core\n\nfn main() {{\n    var c = core.Core.new()\n'
+                          f'    c.{field}.pop()\n}}\n')
+        result = command([*compiler, 'check', '-I', 'compiler', source])
+        diagnostic = f'the field `{field}` of `core.Core` is private'.encode()
+        require(result.returncode == 1 and diagnostic in result.stderr,
+                f'cached Core field {field} must reject mutable access: {result.stderr!r}')
     exporter = output / 'core-native-snapshots'
     writer = output / 'core-native-schema'
     transformer = output / 'core-native-transforms'

@@ -148,6 +148,7 @@ pub struct Node {
     pub span: diag.Span
 }
 
+#[derive(Clone)]
 pub struct Definition {
     pub name: String
     pub ty: u32
@@ -156,6 +157,7 @@ pub struct Definition {
     pub span: diag.Span
 }
 
+#[derive(Clone)]
 pub struct Constructor {
     pub name: String
     // A closed Pi telescope of U64 data and erased proof fields, ending
@@ -165,6 +167,7 @@ pub struct Constructor {
 
 // Families and definitions form one sequence: a family follows the first
 // `globals` definitions and may use them and earlier families.
+#[derive(Clone)]
 pub struct Family {
     pub name: String
     // A data type, of Type 0, rather than a proposition.
@@ -198,9 +201,9 @@ pub struct Binding {
 }
 
 pub struct Core {
-    pub nodes: Vec(Node)
-    pub definitions: Vec(Definition)
-    pub families: Vec(Family)
+    nodes: Vec(Node)
+    definitions: Vec(Definition)
+    families: Vec(Family)
     signatures: Vec(Vec(Signature))
     // Per checked family: a data type whose values live on the heap, because
     // a field is recursive or itself on the heap. Computed by the kernel.
@@ -259,6 +262,47 @@ impl Core {
     }
 
     pub fn term(self, id: u32) -> Term { self.nodes[id as i64].term.clone() }
+
+    pub fn node_count(self) -> i64 { self.nodes.len() }
+    pub fn span(self, id: u32) -> diag.Span { self.nodes[id as i64].span }
+    pub fn definition_count(self) -> i64 { self.definitions.len() }
+    pub fn definition(self, i: i64) -> Definition { self.definitions[i].clone() }
+    pub fn family_count(self) -> i64 { self.families.len() }
+    pub fn family(self, i: i64) -> Family { self.families[i].clone() }
+    pub fn family_params(self, i: i64) -> u32 { self.families[i].params }
+    pub fn family_arity(self, i: i64) -> u32 { self.families[i].arity }
+    pub fn constructor_count(self, i: i64) -> i64 { self.families[i].constructors.len() }
+    pub fn constructor_type(self, family: i64, constructor: i64) -> u32 {
+        self.families[family].constructors[constructor].ty
+    }
+
+    pub fn push_definition(inout self, sink definition: Definition) { self.definitions.push(definition) }
+    pub fn push_family(inout self, sink family: Family) { self.families.push(family) }
+
+    pub fn push_constructor(inout self, family: i64, sink constructor: Constructor) {
+        if family < self.checked_families {
+            self.checked_definitions = 0
+            self.checked_families = 0
+            self.restore_checked_declarations()
+        }
+        self.families[family].constructors.push(constructor)
+    }
+
+    // Layout and drop glue use the normalized constructor types. Keep the
+    // checked signatures available to lowering, and force declaration checks
+    // to rebuild them if the Core returns to the checker.
+    pub fn normalize_constructor_types(inout self) -> Result((), diag.Diag) {
+        self.checked_definitions = 0
+        self.checked_families = 0
+        for f in 0..self.families.len() {
+            for k in 0..self.families[f].constructors.len() {
+                let ty = self.families[f].constructors[k].ty
+                let ty = self.normal(ty, DEPTH)?
+                self.families[f].constructors[k].ty = ty
+            }
+        }
+        Ok(())
+    }
 
     fn tick(inout self, id: u32, depth: u32) -> Result((), diag.Diag) {
         self.steps += 1
@@ -3567,8 +3611,6 @@ impl Core {
     // Check graph integrity independently of the parser. Definitions are
     // checked in order; no definition can use itself or a later one.
     pub fn check(inout self) -> Result((), diag.Diag) {
-        self.signatures = Vec(Vec(Signature)).new()
-        self.boxed = Vec(bool).new()
         self.checked_nodes = 0
         self.checked_definitions = 0
         self.checked_families = 0
@@ -3592,9 +3634,25 @@ impl Core {
     // Check what was added since the last check: the elaborator's way of
     // making a definition available to the next, which a full check repeats.
     pub fn extend(inout self) -> Result((), diag.Diag) {
-        self.steps = 0
+        self.restore_checked_declarations()
+        let runtime = self.runtime
+        self.runtime = false
+        let result = self.extend_pending()
+        self.runtime = runtime
+        if result.is_err() { self.restore_checked_declarations() }
+        result
+    }
+
+    fn restore_checked_declarations(inout self) {
+        while self.signatures.len() > self.checked_families { self.signatures.pop() }
+        while self.boxed.len() > self.checked_families { self.boxed.pop() }
+        self.visible = self.checked_definitions as u32
+        self.visible_families = self.checked_families as u32
+    }
+
+    fn check_nodes(self, start: i64) -> Result((), diag.Diag) {
         if self.nodes.len() > LIMIT { return Err(self.error(0, "term limit reached")) }
-        for i in self.checked_nodes..self.nodes.len() {
+        for i in start..self.nodes.len() {
             for child in children(self.nodes[i].term) {
                 if child as i64 >= i { return Err(self.error(
                     i as u32,
@@ -3602,6 +3660,13 @@ impl Core {
                 )) }
             }
         }
+        Ok(())
+    }
+
+    fn extend_pending(inout self) -> Result((), diag.Diag) {
+        self.steps = 0
+        let input_nodes = self.nodes.len()
+        self.check_nodes(self.checked_nodes)?
         let count = self.definitions.len()
         var f = self.checked_families
         for i in self.checked_definitions..count + 1 {
@@ -3625,6 +3690,7 @@ impl Core {
             self.families[f].span,
             "core: inductive families must follow the definitions they use, in order"
         )) }
+        self.check_nodes(input_nodes)?
         self.visible = count as u32
         self.visible_families = f as u32
         self.checked_nodes = self.nodes.len()
@@ -3754,6 +3820,63 @@ fn rejects_graphs_without_trusting_the_parser() {
     c.definitions.push(Definition { name: "bad".to_string(), ty: u,
         value: 999, exported: false, span: sp })
     assert(c.check().is_err(), "out-of-range definition body")
+}
+
+#[test]
+fn incremental_check_commits_generated_nodes() {
+    let sp = diag.Span.nowhere()
+    var c = Core.new()
+    let ty = c.add(Term.I64, sp).unwrap()
+    c.extend().unwrap()
+    let value = c.add(Term.Integer(7), sp).unwrap()
+    c.push_definition(Definition { name: "value".to_string(), ty, value, exported: false, span: sp })
+    let input_nodes = c.node_count()
+    c.extend().unwrap()
+    assert(c.checked_nodes == c.node_count() && c.node_count() > input_nodes,
+        "incremental checking commits generated nodes")
+    let cycle = c.node_count() as u32
+    c.add(Term.Array(cycle), sp).unwrap()
+    assert(c.extend().is_err() && c.checked_nodes == cycle as i64,
+        "an invalid suffix leaves the checked prefix unchanged")
+}
+
+#[test]
+fn failed_incremental_check_restores_family_metadata() {
+    let sp = diag.Span.nowhere()
+    var c = Core.new()
+    for i in 0..2 {
+        let ty = c.add(Term.Ind(i as u32, Vec(u32).new()), sp).unwrap()
+        c.push_family(Family { name: "Data".to_string(), data: true, params: 0, arity: 0,
+            constructors: Vec(Constructor).new(), globals: 0, span: sp })
+        c.push_constructor(i, Constructor { name: "Make".to_string(), ty })
+        if i == 0 { c.extend().unwrap() }
+    }
+    let ty = c.add(Term.I64, sp).unwrap()
+    let value = c.add(Term.Natural(7), sp).unwrap()
+    c.push_definition(Definition { name: "bad".to_string(), ty, value, exported: false, span: sp })
+    for _ in 0..2 {
+        assert(c.extend().is_err(), "the appended definition has the wrong type")
+        assert(c.checked_families == 1 && c.signatures.len() == 1 && c.boxed.len() == 1 &&
+            c.visible_families == 1 && c.visible == 0, "retry sees the committed declaration prefix")
+    }
+}
+
+#[test]
+fn changing_a_constructor_rechecks_its_family() {
+    let sp = diag.Span.nowhere()
+    var c = Core.new()
+    let ty = c.add(Term.Ind(0, Vec(u32).new()), sp).unwrap()
+    let invalid = c.add(Term.I64, sp).unwrap()
+    c.push_family(Family { name: "Data".to_string(), data: true, params: 0, arity: 0,
+        constructors: Vec(Constructor).new(), globals: 0, span: sp })
+    c.push_constructor(0, Constructor { name: "Good".to_string(), ty })
+    c.extend().unwrap()
+    var detached = c.family(0)
+    detached.constructors[0].ty = invalid
+    c.extend().unwrap()
+    assert(c.family(0).constructors[0].ty == ty, "editing a copied family cannot mutate the cached prefix")
+    c.push_constructor(0, Constructor { name: "Bad".to_string(), ty: invalid })
+    assert(c.extend().is_err(), "a constructor added to a checked family is validated")
 }
 
 #[test]

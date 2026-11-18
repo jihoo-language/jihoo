@@ -147,10 +147,10 @@ fn run() -> Result(String, String) {
     if budget < 1 || budget > 4096 { return Err("invalid work budget".to_string()) }
     let source = stdin_once()?
     var c = match core_parse.parse(source.as_str(), 0) { Ok(value) => value, Err(e) => return Err(e.msg.clone()) }
-    if c.definitions.len() != 1 { return Err("one definition required".to_string()) }
+    if c.definition_count() != 1 { return Err("one definition required".to_string()) }
     match c.check() { Ok(_) => {}, Err(e) => return Err(e.msg.clone()) }
     if args[1] == "check" { return Ok("checked\n".to_string()) }
-    var root = c.definitions[0].value
+    var root = c.definition(0).value
     var ctx = Vec(core.Binding).new()
     loop {
         let Lam(erased, ty, body) = c.term(root) else { break }

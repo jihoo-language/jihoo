@@ -108,10 +108,12 @@ impl Parser {
                 return Some(core.Term.Var((self.names.len() - 1 - i) as u32))
             }
         }
-        for i, d in self.core.definitions {
+        for i in 0..self.core.definition_count() {
+            let d = self.core.definition(i)
             if d.name == word { return Some(core.Term.Global(i as u32)) }
         }
-        for f, family in self.core.families {
+        for f in 0..self.core.family_count() {
+            let family = self.core.family(f)
             if family.name == word { return Some(core.Term.Ind(f as u32, Vec(u32).new())) }
             for k, constructor in family.constructors {
                 if constructor.name == word {
@@ -186,7 +188,8 @@ impl Parser {
         } else if kind == "induct" {
             let name = self.name()?
             var family: Option(u32) = None
-            for f, declared in self.core.families {
+            for f in 0..self.core.family_count() {
+                let declared = self.core.family(f)
                 if declared.name == name { family = Some(f as u32); break }
             }
             let Some(f) = family else { return Err(self.error("unknown inductive family")) }
@@ -201,7 +204,8 @@ impl Parser {
             // (case F P case... v): one level of case analysis of heap data.
             let name = self.name()?
             var family: Option(u32) = None
-            for f, declared in self.core.families {
+            for f in 0..self.core.family_count() {
+                let declared = self.core.family(f)
                 if declared.name == name { family = Some(f as u32); break }
             }
             let Some(f) = family else { return Err(self.error("unknown data type")) }
@@ -238,7 +242,8 @@ impl Parser {
             // (view F T case... r): reading borrowed heap data; view-rec recurses.
             let name = self.name()?
             var family: Option(u32) = None
-            for f, declared in self.core.families {
+            for f in 0..self.core.family_count() {
+                let declared = self.core.family(f)
                 if declared.name == name { family = Some(f as u32); break }
             }
             let Some(f) = family else { return Err(self.error("unknown data type")) }
@@ -251,7 +256,8 @@ impl Parser {
             // (drop F v rest): free heap data v of type F, then the rest.
             let name = self.name()?
             var family: Option(u32) = None
-            for f, declared in self.core.families {
+            for f in 0..self.core.family_count() {
+                let declared = self.core.family(f)
                 if declared.name == name { family = Some(f as u32); break }
             }
             let Some(f) = family else { return Err(self.error("unknown data type")) }
@@ -423,14 +429,14 @@ impl Parser {
                 )) }
                 n = count
             }
-            let f = self.core.families.len()
-            self.core.families.push(core.Family {
+            let f = self.core.family_count()
+            self.core.push_family(core.Family {
                 name,
                 data,
                 params: params as u32,
                 arity: n as u32,
                 constructors: Vec(core.Constructor).new(),
-                globals: self.core.definitions.len() as u32,
+                globals: self.core.definition_count() as u32,
                 span: mode.span
             })
             while !self.at(")") {
@@ -438,7 +444,7 @@ impl Parser {
                 let name = self.declaration_name()?
                 let ty = self.expr(core.DEPTH)?
                 self.expect(")")?
-                self.core.families[f].constructors.push(core.Constructor { name, ty })
+                self.core.push_constructor(f, core.Constructor { name, ty })
             }
             self.expect(")")?
             return Ok(())
@@ -453,7 +459,7 @@ impl Parser {
         let ty = self.expr(core.DEPTH)?
         let value = self.expr(core.DEPTH)?
         self.expect(")")?
-        self.core.definitions.push(core.Definition { name, ty, value, exported, span: mode.span })
+        self.core.push_definition(core.Definition { name, ty, value, exported, span: mode.span })
         Ok(())
     }
 }

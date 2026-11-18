@@ -55,8 +55,8 @@ fn write_node(inout out: String, term: core.Term) -> Result((), String) {
 }
 
 fn write_graph(inout out: String, graph: core.Core) -> Result((), String) {
-    token(&out, graph.nodes.len() as u64)
-    for n in graph.nodes { write_node(&out, n.term)? }
+    token(&out, graph.node_count() as u64)
+    for i in 0..graph.node_count() { write_node(&out, graph.term(i as u32))? }
     Ok(())
 }
 
@@ -286,7 +286,7 @@ fn replay(path: [u32], type_mode: bool) -> Result(String, String) {
     let root = r.bounded(0xffffffff)? as u32
     let ty = r.bounded(0xffffffff)? as u32
     var c = r.read_graph()?
-    if r.pos != text.len() || root as i64 >= c.nodes.len() || ty as i64 >= c.nodes.len() {
+    if r.pos != text.len() || root as i64 >= c.node_count() || ty as i64 >= c.node_count() {
         return Err("invalid snapshot roots or trailing data".to_string())
     }
     var before = String.new()
@@ -319,7 +319,7 @@ fn normal_replay(depth: u32, fuel: u32) -> Result(String, String) {
     let root = r.bounded(0xffffffff)? as u32
     let ty = r.bounded(0xffffffff)? as u32
     var c = r.read_graph()?
-    if r.pos != text.len() || root as i64 >= c.nodes.len() || ty as i64 >= c.nodes.len() {
+    if r.pos != text.len() || root as i64 >= c.node_count() || ty as i64 >= c.node_count() {
         return Err("invalid snapshot roots or trailing data".to_string())
     }
     var before = String.new()

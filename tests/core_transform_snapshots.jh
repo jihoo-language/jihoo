@@ -53,7 +53,7 @@ fn encode(term: core.Term) -> Result(json.Json, String) {
 
 fn snapshot(c: core.Core) -> Result(json.Json, String) {
     var nodes = Vec(json.Json).new()
-    for n in c.nodes { nodes.push(encode(n.term)?) }
+    for node_index in 0..c.node_count() { nodes.push(encode(c.term(node_index as u32))?) }
     Ok(json.Json.Arr(nodes))
 }
 

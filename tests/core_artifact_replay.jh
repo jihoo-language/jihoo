@@ -56,8 +56,8 @@ fn write_node(inout out: String, term: core.Term) -> Result((), String) {
 }
 
 fn write_graph(inout out: String, graph: core.Core) -> Result((), String) {
-    token(&out, graph.nodes.len() as u64)
-    for n in graph.nodes { write_node(&out, n.term)? }
+    token(&out, graph.node_count() as u64)
+    for i in 0..graph.node_count() { write_node(&out, graph.term(i as u32))? }
     Ok(())
 }
 
@@ -189,8 +189,8 @@ fn read_artifact(text: str) -> Result(Artifact, String) {
     let before = r.read_graph()?
     let after = r.read_graph()?
     if r.pos != text.len { return Err("trailing canonical bytes".to_string()) }
-    if input as i64 >= before.nodes.len() || output as i64 >= after.nodes.len() ||
-        (operation == 1 && payload >= before.nodes.len() as u64) {
+    if input as i64 >= before.node_count() || output as i64 >= after.node_count() ||
+        (operation == 1 && payload >= before.node_count() as u64) {
         return Err("canonical root or replacement out of range".to_string())
     }
     let artifact = Artifact { input, output, operation, payload, before, after }
@@ -232,7 +232,7 @@ fn replay(operation: str, amount_text: str, replacement_text: str) -> Result(Str
     // This is the only read. The root is selected solely from this artifact.
     let text = stdin_once()?
     var a = read_artifact(text.as_str())?
-    if operation == "substitute" && replacement >= a.after.nodes.len() {
+    if operation == "substitute" && replacement >= a.after.node_count() {
         return Err("replacement outside consumed graph".to_string())
     }
     let input = a.output as u32
