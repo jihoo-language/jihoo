@@ -1131,3 +1131,8 @@ import Jihoo.NativeBindingMachineReferenceSizes
 import Jihoo.NativeLoanHigherKindSubstitution
 import Jihoo.NativeBindingMachineReaderLeaseWorld
 import Jihoo.NativeBindingMachineReferenceHandoff
+import Jihoo.NativeBindingMachineCapturedOwnerHandoff
+import Jihoo.NativeLoanComputationPreservation
+import Jihoo.NativeLoanProofConsistency
+import Jihoo.NativeTransformMachine
+import Jihoo.NativeWireMachine

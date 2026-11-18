@@ -1,11 +1,8 @@
 # Active whole-kernel verification work
 
-The user's active goal is to continue implementing and checking proofs until
-the entire Jihoo dependent-type kernel is formally verified, committing and
-pushing intermediate results. The user subsequently requested finishing the
-current work and pausing; that request supersedes continuous execution until
-the user resumes it. **The goal is not complete.** Passing fixture or
-theorem counts are not a completion percentage.
+The whole-kernel verification work has resumed. Verified checkpoints are
+committed and pushed as the work progresses. The completion obligations below
+remain open.
 
 ## Completion obligations
 
@@ -1725,3 +1722,36 @@ The local aggregate passed 950 Lake jobs, 9,158 axiom checks and all generated
 fixture comparisons under the resource wrapper. The native mixed-program suite
 passed 68 source fixtures and 54 exact-byte checks, including the returned-owner
 alias reborrow.
+
+## 2026-11-18: Loan64 computation, captured-owner transfer, and machine boundaries
+
+`NativeLoanComputationPreservation` preserves the original Loan64 type across
+all `ACU.Computes` roots and arithmetic equations, and composes them with typed
+family and Lend reduction. It also proves the five pure value-contraction roots
+and the dependent Take/Give endpoint. The pure value and Take/Give endpoints are
+root theorems. The contextual relation uses the reduction rules that supply a
+raw conversion.
+
+`NativeLoanProofConsistency` reconstructs truth from authentic Loan64 typing
+and mixed-history global declarations for its recognized proof syntax. For
+that syntax, a closed derivation of `Lt(0,0)` is impossible even with genuine
+raw conversion. General proof elimination and iteration are still open.
+
+`NativeBindingMachineCapturedOwnerHandoff` derives the seven real transitions
+for a named reader returning a captured Buffer variable. The original source
+receipt transfers the unit of demand to the continuation result slot,
+preserves exclusive demand for the other owners, and keeps older aliases at
+zero demand for that allocation. It preserves converse loan coverage under
+the entry coverage premise. This proof needs the saved resource and control
+invariants at reader activation.
+
+The native `Core.transform` checks widened variable shifts and binder cutoff
+increments before narrowing. `NativeTransformMachine` proves the scalar
+variable and cutoff operations against the partial renaming model.
+`NativeWireMachine` proves the fixed-width token, vector and signed integer
+encoding operations, including `Int64.minValue`. Complete graph traversal,
+parser and checker execution refinement are still open.
+
+The aggregate check passed 955 Lake jobs, 9,184 axiom checks and 12 fixture
+comparisons. The native kernel suite passed 89 native fixtures, 31 additional
+checks, 162 exact writer comparisons and 665 actual Core transformations.
