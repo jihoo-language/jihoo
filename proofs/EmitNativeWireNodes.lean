@@ -11,5 +11,6 @@ def main : IO Unit := do
   for count in [0, 1, 3] do
     IO.println s!"{count}\tVar\t{encoded (.var 0)}"
     for op in NativeSchema.representatives count do
-      let node := NativeArena.Node.node op (List.replicate op.arity 0)
+      let refs := (List.range op.arity).map (4294967295 - ·)
+      let node := NativeArena.Node.node op refs
       IO.println s!"{count}\t{op.nativeName}\t{encoded node}"
