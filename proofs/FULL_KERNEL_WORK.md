@@ -1705,3 +1705,23 @@ A richer value/heap relation must interpret accepted Refine, Back, Array and
 family values. Arbitrary dependent annotation interpretation, general logical
 consistency, complete specified preservation, runtime fundamental preservation
 and native implementation refinement all remain open.
+
+## 2026-11-18: preserve saved references through canonical variable handoff
+
+`reachable_reader_finish_snapshot` derives the saved continuation and exact
+outer stack at the finish from a reader entry and finish with the same token.
+Fresh-token monotonicity and lease expiration ensure that intermediate steps
+preserve the snapshot.
+
+`NativeBindingMachineReferenceHandoff` composes the reader interval with the
+six actual transitions that close a reader and enter its continuation with a
+variable result and the restored owner. The saved owner sizes and Buffer
+reference context come from reader entry. The live reference context, capture
+coverage, original-type CODE typing, and remaining loan scope follow for the
+resulting canonical continuation. Source `Outlived` excludes a reference in the
+new result slot.
+
+The local aggregate passed 950 Lake jobs, 9,158 axiom checks and all generated
+fixture comparisons under the resource wrapper. The native mixed-program suite
+passed 68 source fixtures and 54 exact-byte checks, including the returned-owner
+alias reborrow.

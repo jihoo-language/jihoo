@@ -218,4 +218,183 @@ theorem reachable_saved_reference_interval (term : Term) (entryFuel bodyFuel : N
   obtain ⟨leased,closedInventory⟩ := finalInventory.finish
   exact ⟨world,finalSizes,finalSizes.close sourceReady,leased,closedInventory⟩
 
+private abbrev ReaderSnapshot := Nat × Option Nat × Term × Code × List Frame
+
+private def Frame.savedCode? : Frame → Option (Term × Code)
+  | .lendReader _ _ _ origin _ continuation
+  | .lendFinish _ _ _ origin _ continuation => some (origin,continuation)
+  | _ => none
+
+private def readerSnapshot (token : Nat) : List Frame → Option ReaderSnapshot
+  | [] => none
+  | frame :: outer =>
+      match frame.reader? with
+      | some (selected,object,name) =>
+          if selected = token then
+            frame.savedCode?.map (fun (origin,continuation) => (object,name,origin,continuation,outer))
+          else readerSnapshot token outer
+      | none => readerSnapshot token outer
+
+private def SnapshotChange (token : Nat) (before : List Frame) : Action → Prop
+  | .control _ after _ | .allocate _ _ after | .free _ _ after |
+      .lend _ _ _ _ _ after | .borrow _ _ after | .read _ _ after =>
+      readerSnapshot token before = readerSnapshot token after
+  | .close closing _ _ _ _ _ after =>
+      closing ≠ token → readerSnapshot token before = readerSnapshot token after
+
+private theorem applyValue_snapshot (function : Value) (origin : Term)
+    (argument : Option Value) (stack : List Frame) (token : Nat) :
+    SnapshotChange token stack (applyValue function origin argument stack) := by
+  cases function <;> rfl
+
+private theorem evaluate_snapshot (code : Code) (stack : List Frame) (token : Nat) :
+    SnapshotChange token stack (evaluateAction code stack) := by
+  fun_cases evaluateAction code stack
+  all_goals try simp only [evaluateAction, *]
+  all_goals rfl
+
+private theorem return_snapshot (value : Value) (stack : List Frame) (token : Nat)
+    (computed : returnAction value stack = some result) : SnapshotChange token stack result := by
+  cases stack with
+  | nil => cases computed
+  | cons frame rest =>
+      simp only [returnAction] at computed
+      split at computed
+      all_goals have same := Option.some.inj computed
+      all_goals rw [← same]
+      all_goals clear computed same
+      all_goals try { simp only [applyValue] }
+      all_goals first | rfl | skip
+      all_goals try { split <;> rfl }
+      case h_4 => exact applyValue_snapshot _ _ _ _ _
+      case h_14 =>
+        rename_i equal left yes no firstOrigin secondOrigin right
+        by_cases compared : (if equal then left == right else decide (left < right)) = true
+        all_goals simp only [compared,↓reduceIte]
+        all_goals rfl
+      case h_18 =>
+        intro different
+        simp only [readerSnapshot,Frame.reader?,different,ite_false]
+      case h_23 =>
+        change readerSnapshot token (frame :: rest) = readerSnapshot token rest
+        have noReader : frame.reader? = none := by
+          cases frame <;> simp_all [Frame.reader?]
+          all_goals rename_i selected object name ownerOrigin readerOrigin continuation impossible
+          all_goals exact impossible selected object name ownerOrigin readerOrigin continuation rfl rfl rfl rfl rfl rfl
+        simp only [readerSnapshot,noReader]
+
+private theorem action_snapshot (token : Nat) (chosen : action state = some next) :
+    SnapshotChange token state.stack next := by
+  cases state with
+  | mk heap control stack =>
+      cases control with
+      | evaluate code =>
+          have same : evaluateAction code stack = next := Option.some.inj chosen
+          rw [← same]
+          exact evaluate_snapshot code stack token
+      | returned value => exact return_snapshot value stack token chosen
+      | fault reason => cases chosen
+
+private theorem execute_snapshot (inventory : ReaderInventory heap (readerFrames before))
+    (frameChanged : FrameChange before next) (snapshotChanged : SnapshotChange token before next)
+    (old : token < heap.heap.nextLease) (live : (execute heap next).1.heap.heap.lease token = some owner) :
+    readerSnapshot token (execute heap next).1.stack = readerSnapshot token before := by
+  cases next with
+  | control control stack activation => exact snapshotChanged.symm
+  | allocate count fill stack =>
+      simp only [execute]
+      split <;> exact snapshotChanged.symm
+  | free object rest stack =>
+      simp only [execute]
+      split
+      · split <;> exact snapshotChanged.symm
+      · exact snapshotChanged.symm
+  | lend object name readerOrigin reader continuation stack =>
+      have different : heap.heap.nextLease ≠ token := by omega
+      simp only [execute]
+      split
+      · simpa only [readerSnapshot,Frame.reader?,different,ite_false] using snapshotChanged.symm
+      · exact snapshotChanged.symm
+  | close closing object result origin resultOrigin continuation stack =>
+      obtain ⟨name,shape⟩ := frameChanged
+      have member : (closing,object,name) ∈ readerFrames before := by
+        rw [shape]
+        exact List.mem_cons_self
+      have leased := inventory.live (closing,object,name) member
+      change heap.heap.lease closing = some object at leased
+      simp only [execute,leased,ite_true] at live ⊢
+      have different : closing ≠ token := by
+        intro same
+        subst closing
+        simp [SizedBufferHeap.close,HeapLeases.put] at live
+      exact (snapshotChanged different).symm
+  | borrow key object stack =>
+      simp only [execute]
+      split
+      · split <;> exact snapshotChanged.symm
+      · exact snapshotChanged.symm
+  | read token index stack =>
+      simp only [execute]
+      split
+      · split <;> exact snapshotChanged.symm
+      · exact snapshotChanged.symm
+
+private theorem step_snapshot (inventory : ReaderInventory state.heap (readerFrames state.stack))
+    (old : token < state.heap.heap.nextLease) (live : next.heap.heap.lease token = some object)
+    (stepped : step state = some (next,event)) :
+    readerSnapshot token next.stack = readerSnapshot token state.stack := by
+  obtain ⟨nextAction,chosen,same⟩ := Option.map_eq_some_iff.mp stepped
+  have actual : (execute state.heap nextAction).1 = next := congrArg Prod.fst same
+  rw [← actual] at live ⊢
+  exact execute_snapshot inventory (action_frame_change chosen) (action_snapshot token chosen) old live
+
+private theorem run_snapshot (fuel : Nat) (valid : SizedBufferHeap.Valid state.heap)
+    (inventory : ReaderInventory state.heap (readerFrames state.stack))
+    (old : token < state.heap.heap.nextLease) (live : (run fuel state).state.heap.heap.lease token = some object) :
+    readerSnapshot token (run fuel state).state.stack = readerSnapshot token state.stack := by
+  induction fuel generalizing state with
+  | zero => rfl
+  | succ fuel ih =>
+      cases observed : step state with
+      | none => simp only [run,observed]
+      | some result =>
+          obtain ⟨next,event⟩ := result
+          have steps := step_heap_steps valid observed
+          have nextValid := SizedBufferHeap.steps_valid valid steps
+          have nextInventory := step_reader_inventory valid inventory observed
+          have monotone := lease_counter_steps (SizedBufferHeap.steps_project steps)
+          have nextOld : token < next.heap.heap.nextLease := by omega
+          have nextLive : (run fuel next).state.heap.heap.lease token = some object := by
+            simpa only [run,observed] using live
+          obtain ⟨owner,leased⟩ := barrier_present_before_run nextValid nextOld nextLive
+          have first := step_snapshot inventory old leased observed
+          have tail := ih nextValid nextInventory nextOld nextLive
+          simpa only [run,observed] using tail.trans first
+
+/-- If an actual run reaches a finishing reader with the entry token, that
+frame retains the same owner, reader name, original owner term, saved code,
+and entire outer stack. The reader's result origin is computed on activation. -/
+theorem reachable_reader_finish_snapshot (term : Term) (entryFuel bodyFuel : Nat)
+    (entryShape : (run entryFuel (initial term)).state.stack =
+      .lendReader token owner name origin readerOrigin continuation :: outer)
+    (finishShape : (run bodyFuel (run entryFuel (initial term)).state).state.stack =
+      .lendFinish token finalOwner finalName finalOrigin resultOrigin finalContinuation :: finalOuter) :
+    finalOwner = owner ∧ finalName = name ∧ finalOrigin = origin ∧
+      finalContinuation = continuation ∧ finalOuter = outer := by
+  have valid := initial_run_heap_valid term entryFuel
+  have inventory := initial_reader_inventory term entryFuel
+  have entryMember : (token,owner,name) ∈ readerFrames (run entryFuel (initial term)).state.stack := by
+    rw [entryShape]
+    exact List.mem_cons_self
+  have old := (valid.leased token owner (inventory.live _ entryMember)).1
+  have finalInventory := run_reader_inventory valid inventory bodyFuel
+  have finishMember : (token,finalOwner,finalName) ∈
+      readerFrames (run bodyFuel (run entryFuel (initial term)).state).state.stack := by
+    rw [finishShape]
+    exact List.mem_cons_self
+  have saved := run_snapshot bodyFuel valid inventory old (finalInventory.live _ finishMember)
+  rw [entryShape,finishShape] at saved
+  simpa only [readerSnapshot,Frame.reader?,Frame.savedCode?,eq_self,ite_true,Option.map_some,
+    Option.some.injEq,Prod.mk.injEq] using saved
+
 end Jihoo.NativeKernel.Environment.BindingMachine

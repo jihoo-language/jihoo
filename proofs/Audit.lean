@@ -9160,3 +9160,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.step_reader_older_lease
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.run_reader_older_leases
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_saved_reference_interval
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_reader_finish_snapshot
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.reachable_canonical_frame_variable_reference_handoff

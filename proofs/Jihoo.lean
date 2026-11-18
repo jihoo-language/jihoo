@@ -1130,3 +1130,4 @@ import Jihoo.NativeBindingMachineCanonicalCaptures
 import Jihoo.NativeBindingMachineReferenceSizes
 import Jihoo.NativeLoanHigherKindSubstitution
 import Jihoo.NativeBindingMachineReaderLeaseWorld
+import Jihoo.NativeBindingMachineReferenceHandoff

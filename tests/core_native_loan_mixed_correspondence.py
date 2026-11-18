@@ -37,6 +37,13 @@ CASES.update({
         f'(lam s (Ref {BUFFER}) (add (index s 0 (decide-lt 0 2)) '
         f'(index (borrow b) 0 (decide-lt 0 2)))) {CONTINUATION})) '
         f'{CONTINUATION})) (alloc 2 (int 0))))', True, True),
+    'returned-owner-alias-reborrow': (
+        '(def value I64 (app (lam xs (Buffer 1) (lend xs '
+        '(lam r (Ref (Buffer 1)) (index r 0 (decide-lt 0 1))) '
+        '(lam a I64 (lam y (Buffer 1) (lend y '
+        '(lam s (Ref (Buffer 1)) (index (borrow xs) 0 (decide-lt 0 1))) '
+        '(lam b I64 (lam z (Buffer 1) (free z b)))))))) '
+        '(alloc 1 (int 7))))', True, True),
     'fresh-reader-two-owned-resources': (
         f'(def value U64 (app (lam b {BUFFER} (lend b '
         f'(lam r (Ref {BUFFER}) (alloc 1 (index r 0 (decide-lt 0 2)))) '
