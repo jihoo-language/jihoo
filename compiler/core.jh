@@ -276,7 +276,10 @@ impl Core {
         self.families[family].constructors[constructor].ty
     }
 
-    pub fn push_definition(inout self, sink definition: Definition) { self.definitions.push(definition) }
+    pub fn push_definition(
+        inout self,
+        sink definition: Definition
+    ) { self.definitions.push(definition) }
     pub fn push_family(inout self, sink family: Family) { self.families.push(family) }
 
     pub fn push_constructor(inout self, family: i64, sink constructor: Constructor) {
@@ -339,7 +342,10 @@ impl Core {
                             id,
                             "branch evidence escapes its scope"
                         )) }
-                        if next > 4294967295 { return Err(self.error(id, "variable index exceeds u32")) }
+                        if next > 4294967295 { return Err(self.error(
+                            id,
+                            "variable index exceeds u32"
+                        )) }
                         Term.Var(next as u32)
                     }
                 }
@@ -3829,7 +3835,13 @@ fn incremental_check_commits_generated_nodes() {
     let ty = c.add(Term.I64, sp).unwrap()
     c.extend().unwrap()
     let value = c.add(Term.Integer(7), sp).unwrap()
-    c.push_definition(Definition { name: "value".to_string(), ty, value, exported: false, span: sp })
+    c.push_definition(Definition {
+        name: "value".to_string(),
+        ty,
+        value,
+        exported: false,
+        span: sp
+    })
     let input_nodes = c.node_count()
     c.extend().unwrap()
     assert(c.checked_nodes == c.node_count() && c.node_count() > input_nodes,
@@ -3856,8 +3868,11 @@ fn failed_incremental_check_restores_family_metadata() {
     c.push_definition(Definition { name: "bad".to_string(), ty, value, exported: false, span: sp })
     for _ in 0..2 {
         assert(c.extend().is_err(), "the appended definition has the wrong type")
-        assert(c.checked_families == 1 && c.signatures.len() == 1 && c.boxed.len() == 1 &&
-            c.visible_families == 1 && c.visible == 0, "retry sees the committed declaration prefix")
+        assert(
+            c.checked_families == 1 && c.signatures.len() == 1 && c.boxed.len() == 1 &&
+                c.visible_families == 1 && c.visible == 0,
+            "retry sees the committed declaration prefix"
+        )
     }
 }
 
@@ -3874,7 +3889,10 @@ fn changing_a_constructor_rechecks_its_family() {
     var detached = c.family(0)
     detached.constructors[0].ty = invalid
     c.extend().unwrap()
-    assert(c.family(0).constructors[0].ty == ty, "editing a copied family cannot mutate the cached prefix")
+    assert(
+        c.family(0).constructors[0].ty == ty,
+        "editing a copied family cannot mutate the cached prefix"
+    )
     c.push_constructor(0, Constructor { name: "Bad".to_string(), ty: invalid })
     assert(c.extend().is_err(), "a constructor added to a checked family is validated")
 }

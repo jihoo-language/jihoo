@@ -69,7 +69,12 @@ pub fn write_node(inout out: String, term: core.Term) {
         Take(_, _) => node(&out, 37, [], refs)
         Borrow(_) => node(&out, 38, [], refs)
         Deref(_) => node(&out, 39, [], refs)
-        View(x0, x1, _, x3, _) => node(&out, 40, [if x0 { 1 } else { 0 }, x1 as u64, x3.len() as u64], refs)
+        View(x0, x1, _, x3, _) => node(
+            &out,
+            40,
+            [if x0 { 1 } else { 0 }, x1 as u64, x3.len() as u64],
+            refs
+        )
         Loop(_, _, _, _) => node(&out, 41, [], refs)
         Absurd(_, _) => node(&out, 42, [], refs)
         Case(x0, _, x2, _) => node(&out, 43, [x0 as u64, x2.len() as u64], refs)
