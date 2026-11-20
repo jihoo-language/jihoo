@@ -10736,3 +10736,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.open_parameter_and_bound_index_have_distinct_slots
+#print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.policy_preserves_distinct_checking_schedules

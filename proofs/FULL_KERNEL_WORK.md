@@ -4253,3 +4253,14 @@ family application. The native indexed fixture and the Lean builder
 agree on the order and references of the three appended rows for an
 open outer parameter. The focused build passed 330 jobs and the five
 audited declarations use standard Lean axioms.
+
+### Runtime application argument policy
+
+The composed policy performs kind classification before deciding whether
+to check the first-order kind and the argument's representation. Each
+successful policy check supplies the corresponding source application
+premise when the normalization outputs have discharged global references.
+The fixtures cover ordinary arguments, accepted word-indexed families,
+invalid kinds, and invalid buffer results with their distinct budgets.
+The focused build passed 429 jobs and the three new declarations use
+standard Lean axioms.
