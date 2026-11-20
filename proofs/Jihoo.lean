@@ -1192,3 +1192,7 @@ import Jihoo.NativeCorePureStructuralEqual
 import Jihoo.NativeCoreSignedNormal
 import Jihoo.NativeCoreRefinementNormal
 import Jihoo.NativeLoanProofComparison
+import Jihoo.NativeLoanComparisonEvidence
+import Jihoo.NativeLoanPureGlobalObservation
+import Jihoo.NativeCoreReferenceNormal
+import Jihoo.NativeBindingMachineMutableClosedStoreLoad

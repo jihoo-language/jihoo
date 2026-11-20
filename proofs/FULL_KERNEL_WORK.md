@@ -2313,3 +2313,35 @@ true equality for distinct operand expressions.
 The aggregate check passed 1,011 Lake jobs, 9,592 declaration audits, and
 all generated fixture comparisons. Rebuilding the affected dependencies
 and checking the aggregate took 78 seconds.
+
+### Checked comparison evidence, transparent globals, and mutable roundtrip
+
+For checked USub, Pack, and erased Give roots, the typing derivations
+recover the proposition and typing of the evidence skipped by Core.identical.
+A successful live comparison identifies the same proposition on both sides
+when both retained operands are fully retained. The result supplies the
+typing premise for a future irrelevance rule without inserting an untyped
+equation into RawValue conversion.
+
+An admitted transparent global can be unfolded in any local context at an
+independently formed requested type using its original derivation and closed
+weakening. Bounded expansion followed by structural replay retains residual
+typing and supports arithmetic observation from the original source with
+global references. The checked example uses a transparent call under a
+binder at a type that requires Free conversion.
+
+Pure graph normalization now handles nested Borrow and Deref. Either order
+of cancellation returns the original inner reference. Neutral results
+preserve an existing row or append one when the operand changes. For a
+structurally normal payload, exact-byte admission also supplies the original
+ghost typing at the cancellation result.
+
+The actual mutable evaluator now has a checked execution theorem for a closed
+Alloc, Store, Load, and Free program with arbitrary admitted literal lengths,
+offsets, fill values, and replacements. Given a representable allocation
+size, checking supplies the numeric premise for each step. The 23 transitions
+write and read the same cell, release the original owner, and return the
+integer at the exact original result type.
+
+The aggregate check passed 1,015 Lake jobs, 9,610 declaration audits, and
+all generated fixture comparisons in 9.27 seconds with the warm cache.
