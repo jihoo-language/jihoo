@@ -279,10 +279,14 @@ def run(compiler, checker, output):
     exporter = output / 'core-native-snapshots'
     writer = output / 'core-native-schema'
     transformer = output / 'core-native-transforms'
+    inference_schedule = output / 'core-native-inference-schedule'
     for source, target in (('tests/core_native_snapshots.jh', exporter),
                            ('tests/core_native_schema.jh', writer),
-                           ('tests/core_native_transforms.jh', transformer)):
+                           ('tests/core_native_transforms.jh', transformer),
+                           ('tests/core_native_inference_schedule.jh', inference_schedule)):
         success(command([*compiler, 'build', '-O2', '-I', 'compiler', source, '-o', target]))
+    inference = success(command([inference_schedule]))
+    (output / 'inference-schedule-report.txt').write_bytes(inference)
     schema = success(command(['python3', 'tests/native_kernel_schema.py',
                               '--native-writer', writer]))
     (output / 'schema-report.txt').write_bytes(schema)
@@ -404,6 +408,7 @@ def run(compiler, checker, output):
         'commit': revision,
         'schema': schema.decode().strip(),
         'transforms': transforms.decode().strip(),
+        'inference_schedule': inference.decode().strip(),
         'transform_observations_sha256': hashlib.sha256(transform_bytes).hexdigest(),
         'cases': observations,
         'additional_checks': additional,

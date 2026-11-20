@@ -14,7 +14,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
 | Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It now commutes Strict out of Case and data Elim when the expanded motive is independent of the scrutinized value and the family indices are all parameters. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. It requires supported bound evidence and fitting unsigned sums. General execution across arbitrary closures and dependent runtime forms remains open. |
-| Production refinement | `NativeCoreGhostSpineInference.lean` proves the graph schedule for ghost application spines with local, global, scalar and universe heads. It infers a type convertible to the admitted declaration type after recursive family normalization when the compared types retain all positions. Extend inference to the remaining constructors and code checking, and prove the full implementation refinement. |
+| Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost application spines, local and global heads, universe and scalar heads, and primitive operators with fixed operand types. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with binders, the remaining constructors, code checking, and full implementation refinement. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -3266,3 +3266,20 @@ the older captured read. It keeps both leases in the terminal state.
 The aggregate check passed 1,115 Lake jobs, 10,467 distinct declaration
 audits, and all generated fixture comparisons under the project resource
 guard. The audit found only Lean's three standard axioms.
+
+### Primitive ghost inference
+
+Array and Buffer formation, Eq, Lt, Refl, UAdd, and signed arithmetic share
+an ordered operand checker. The graph model appends a single expected scalar
+type, infers and compares each operand at child depth, and appends the raw
+result type after the checks. The soundness proof derives Loan64 typing for
+each operand from the actual comparison trace and uses the original operand
+references for the dependent result of Refl. Retention of the compared terms
+remains a hypothesis of the general inference theorem.
+
+The version-6 admission example infers `Eq(7+1,7+1)` at its original sum
+reference in 13 ticks. The mismatch example stops at the first `Eq` operand
+in five ticks after appending the expected U64 and the inferred I64. The three
+new declarations join the project axiom audit. The native kernel correspondence
+suite checks both traces against `Core.infer` using the shared work limit and
+the actual graph rows.
