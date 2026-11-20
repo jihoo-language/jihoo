@@ -2218,3 +2218,30 @@ and coverage of all source proof terms remain open.
 The aggregate check passed 1,006 Lake jobs, 9,546 declaration audits, and
 all generated fixture comparisons. With the existing Lake cache, the
 resource-limited aggregate check took 13.48 seconds.
+
+### Normal forms, array calls, and dependent proof operands
+
+A successful recursive graph normalization in the supported fragment
+produces a represented normal form. Its depth and unfolded tree size are
+bounded by the original depth and charged visits. Rerunning from the result
+reference with the same starting counter and limits returns the same arena
+and reference, charging at most the original work. Each occurrence of a
+shared child still consumes its own visit. Exact-byte mixed admission
+supplies the original body representation for a stored definition.
+
+The typed array call and variable index paths now compose from a reachable
+final array element return. Seven actual transitions enter the saved closure,
+select its captured unsigned index, and return the integer with the original
+dependent type. The bounds follow from the captured value and the supported
+closed arithmetic evidence. The source typing and captured value context
+remain explicit premises.
+
+The bounded ghost proof observer can reduce a dependent application operand
+when the executable Loan64 conversion relates it to the original operand.
+It reconstructs the original instantiated codomain and retains prior
+successful observation paths. The checked example uses a computed argument
+and an annotation that requires Free conversion.
+
+The aggregate check passed 1,006 Lake jobs, 9,554 declaration audits, and
+all generated fixture comparisons. The cached, resource-limited run took
+11.33 seconds.

@@ -711,15 +711,24 @@ theorem runPure_refines (aligned : RepresentsDefinitions arena roots definitions
     .old (.old (.old (EnvironmentDelta.expand_forward env term)))
   exact ⟨output, atom, represented, delta.trans reduced, preserves typed, charged, budget⟩
 
-/-- The graph path also supplies conversion before a typing derivation is
+/-- A successful allocation-free walk ends at a represented atom. -/
+theorem runPure_expanded_atom (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (computed : runPure arena roots visible limit depth initial root = (.ok selected, counter)) :
+    ∃ output, Atomic output ∧ Represents arena selected output ∧
+      Environment.RawValue.Forward env (EnvironmentDelta.expand env term) output := by
+  obtain ⟨output, atom, represented, reduced, _, _, _⟩ :=
+    runPure_expansion aligned history source computed
+  exact ⟨output, atom, represented, reduced⟩
+
+/-- The graph path supplies conversion before a typing derivation is
 available, as in the native normalization of constructor annotations. -/
 theorem runPure_expanded_conversion (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env) (source : Represents arena root term)
     (computed : runPure arena roots visible limit depth initial root = (.ok selected, counter)) :
     ∃ output, Represents arena selected output ∧
       Environment.RawValue.Forward env (EnvironmentDelta.expand env term) output := by
-  obtain ⟨output, _, represented, reduced, _, _, _⟩ :=
-    runPure_expansion aligned history source computed
+  obtain ⟨output, _, represented, reduced⟩ := runPure_expanded_atom aligned history source computed
   exact ⟨output, represented, reduced⟩
 
 theorem runPure_conversion (aligned : RepresentsDefinitions arena roots definitions)

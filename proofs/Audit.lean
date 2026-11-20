@@ -9554,3 +9554,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_global_arithmetic_truth
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checker_rejects_observable_false_inequality
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_transport_application
+#print axioms Jihoo.NativeKernel.Environment.CoreEffectAnalysis.treeDepth_member
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.runPure_expanded_atom
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_normal_form
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_reuses_normal
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_rerun
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_admitted_definition_rerun
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_typed_array_call_index
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_dependent_argument

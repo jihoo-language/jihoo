@@ -19,6 +19,17 @@ inductive Step (env : Environment) : Context → Term → Term → Prop where
   | lambda : Step env (⟨domain, erased⟩ :: ctx) body result →
       Step env ctx (.lam erased domain body) (.lam erased domain result)
   | callee : Step env ctx function result → Step env ctx (.app function argument) (.app result argument)
+  | operand : Step env ctx argument result → RawLend.Conv env result argument →
+      Step env ctx (.app function argument) (.app function result)
+
+private theorem raw_operand_conversion (wf : UnifiedProgram.EnvWellFormed env)
+    (aligned : RawLend.Conv env result original) (codomain : Term) :
+    RawLend.Conv env (codomain.subst (single result)) (codomain.subst (single original)) := by
+  apply RawLend.Conv.subst_congr wf.closed _ codomain
+  intro index
+  cases index with
+  | zero => exact aligned
+  | succ index => exact .refl _
 
 private theorem Step.native_preserves (step : Step env ctx term result)
     (wf : UnifiedProgram.EnvWellFormed env) (typed : HasType env loans ctx mode term type) :
@@ -40,6 +51,10 @@ private theorem Step.native_preserves (step : Step env ctx term result)
   | callee _ ih =>
       obtain ⟨_, _, _, functionTyped, argumentTyped, _, converted⟩ := typed.appView
       exact (HasType.app (ih functionTyped) (argumentTyped.ghost []) (Or.inl rfl)).convert converted
+  | operand _ aligned ih =>
+      obtain ⟨_, _, _, functionTyped, argumentTyped, _, converted⟩ := typed.appView
+      exact (HasType.app (functionTyped.ghost []) (ih argumentTyped) (Or.inl rfl)).convert
+        ((raw_operand_conversion wf aligned _).trans converted)
 
 /-- The result retains the exact requested type. Application formation also
 types the new conversion target after substituting the original operand. -/
@@ -61,6 +76,9 @@ theorem Step.preserves (step : Step env ctx term result) (wf : UnifiedProgram.En
             (PureTyping.application_result_formed wf formed argument)
             (results.substitution (single _) wf.admissible)
       | callee inner => exact .app (ih inner) formed argument
+      | operand inner aligned =>
+          exact .convert (.app callee formed (inner.native_preserves wf argument))
+            (PureTyping.application_result_formed wf formed argument) (.old (raw_operand_conversion wf aligned _))
 
 private def select (env : Environment) (typingFuel : Nat) (visit : Context → Term → Option Term)
     (ctx : Context) : Term → Option Term
@@ -94,37 +112,73 @@ private theorem select_sound (sound : ∀ {ctx term result}, visit ctx term = so
     exact .free _ _
   · contradiction
 
-private def step? (env : Environment) (typingFuel : Nat) : Nat → Context → Term → Option Term
-  | 0, _, _ => none
-  | depth + 1, ctx, term => select env typingFuel (step? env typingFuel depth) ctx term
-
-private theorem step?_sound (stepped : step? env typingFuel depth ctx term = some result) :
-    Step env ctx term result := by
-  induction depth generalizing ctx term result with
-  | zero => contradiction
-  | succ depth ih => exact select_sound (fun found => ih found) stepped
-
 structure Limits where
   typingFuel : Nat
   conversionFuel : Nat
   budget : Nat
 
-/-- Prefer the original recognizer, and otherwise reduce one typed position.
-The square work allowance is tested before expanding a beta substitution. -/
-def observe? (env : Environment) (limits : Limits) (ctx : Context) : Nat → Term → Option Term
+private def selectOperand (env : Environment) (limits : Limits) (visit : Context → Term → Option Term)
+    (ctx : Context) : Term → Option Term
+  | .app function argument => do
+      let result ← visit ctx argument
+      if RawLend.equal env limits.budget limits.conversionFuel result argument then
+        some (.app function result)
+      else none
+  | _ => none
+
+private theorem selectOperand_sound
+    (sound : ∀ {ctx term result}, visit ctx term = some result → Step env ctx term result)
+    (selected : selectOperand env limits visit ctx term = some result) : Step env ctx term result := by
+  fun_cases selectOperand env limits visit ctx term <;> simp only [selectOperand] at selected
+  · obtain ⟨operand, found, selected⟩ := Option.bind_eq_some_iff.mp selected
+    split at selected
+    · rename_i aligned
+      cases selected
+      exact .operand (sound found) (RawLend.equal_sound aligned)
+    · contradiction
+  · contradiction
+
+private def step? (env : Environment) (limits : Limits) (operands : Bool) : Nat → Context → Term → Option Term
+  | 0, _, _ => none
+  | depth + 1, ctx, term =>
+      let visit := step? env limits operands depth
+      if operands then (selectOperand env limits visit ctx term).orElse
+        (fun _ => select env limits.typingFuel visit ctx term)
+      else select env limits.typingFuel visit ctx term
+
+private theorem step?_sound (stepped : step? env limits operands depth ctx term = some result) :
+    Step env ctx term result := by
+  induction depth generalizing ctx term result with
+  | zero => contradiction
+  | succ depth ih =>
+      simp only [step?] at stepped
+      split at stepped
+      · cases picked : selectOperand env limits (step? env limits operands depth) ctx term with
+        | none =>
+            exact select_sound (fun found => ih found)
+              (by simpa only [picked, Option.orElse_none] using stepped)
+        | some operand =>
+            simp only [picked, Option.orElse_some, Option.some.injEq] at stepped
+            subst result
+            exact selectOperand_sound (fun found => ih found) picked
+      · exact select_sound (fun found => ih found) stepped
+
+private def observePositions? (env : Environment) (limits : Limits) (ctx : Context) (operands : Bool) :
+    Nat → Term → Option Term
   | 0, _ => none
   | fuel + 1, term =>
       if 4 * (treeSize term + 1)^2 > limits.budget then none
       else if Semantics.PureArithmetic.recognizes env limits.conversionFuel limits.budget (fuel + 1) term then some term
-      else (step? env limits.typingFuel (fuel + 1) ctx term).bind (observe? env limits ctx fuel)
+      else (step? env limits operands (fuel + 1) ctx term).bind (observePositions? env limits ctx operands fuel)
 
-theorem observe?_sound (wf : UnifiedProgram.EnvWellFormed env) (typed : PureTyping.HasType env ctx term type)
-    (observed : observe? env limits ctx fuel term = some result) :
+private theorem observePositions?_sound (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : PureTyping.HasType env ctx term type)
+    (observed : observePositions? env limits ctx operands fuel term = some result) :
     PureTyping.HasType env ctx result type ∧ Recognized env result := by
   induction fuel generalizing term result with
   | zero => contradiction
   | succ fuel ih =>
-      simp only [observe?] at observed
+      simp only [observePositions?] at observed
       split at observed
       · contradiction
       split at observed
@@ -133,6 +187,24 @@ theorem observe?_sound (wf : UnifiedProgram.EnvWellFormed env) (typed : PureTypi
         exact ⟨typed, Semantics.PureArithmetic.recognizes_sound recognized⟩
       · obtain ⟨next, stepped, checked⟩ := Option.bind_eq_some_iff.mp observed
         exact ih ((step?_sound stepped).preserves wf typed) checked
+
+/-- Keep the head-only observer's successful result. Its fallback can reduce
+an application argument when the two operands agree by bounded Loan64 conversion. -/
+def observe? (env : Environment) (limits : Limits) (ctx : Context) (fuel : Nat) (term : Term) : Option Term :=
+  (observePositions? env limits ctx false fuel term).orElse
+    (fun _ => observePositions? env limits ctx true fuel term)
+
+theorem observe?_sound (wf : UnifiedProgram.EnvWellFormed env) (typed : PureTyping.HasType env ctx term type)
+    (observed : observe? env limits ctx fuel term = some result) :
+    PureTyping.HasType env ctx result type ∧ Recognized env result := by
+  unfold observe? at observed
+  cases original : observePositions? env limits ctx false fuel term with
+  | none =>
+      exact observePositions?_sound wf typed (by simpa only [original, Option.orElse_none] using observed)
+  | some residual =>
+      simp only [original, Option.orElse_some, Option.some.injEq] at observed
+      subst result
+      exact observePositions?_sound wf typed original
 
 theorem checked_arithmetic_truth (wf : UnifiedProgram.EnvWellFormed env)
     (checked : PureTyping.Checker.check? env limits.typingFuel limits.conversionFuel limits.budget [] term type = some sort)
@@ -180,5 +252,24 @@ theorem checked_transport_application :
       appliedProof requested = some .prop := by cbv
   have observed : observe? .empty limits [] 8 appliedProof = some proof := by cbv
   exact ⟨by cbv, by cbv, observed, checked_arithmetic_truth UnifiedProgram.EnvWellFormed.empty checked observed⟩
+
+private def dependentProof : Term := .lam true .u64 (.zeroLe (.var 0))
+private def computedOperand : Term := .app (.lam false .u64 (.var 0)) (.natural 3)
+private def dependentApplication : Term := .app dependentProof computedOperand
+private def dependentResidual : Term := .app dependentProof (.natural 3)
+private def dependentAnnotation : Term :=
+  .lt (.free (.alloc (.natural 1) (.integer 0)) (.natural 0)) (.natural 4)
+
+/-- Reducing the dependent operand before beta exposes a checked affine
+application. Head-only replay substitutes the reducible operand under ZeroLe,
+where the arithmetic recognizer cannot read it directly. -/
+theorem checked_dependent_argument :
+    observePositions? .empty limits [] false 8 dependentApplication = none ∧
+    observe? .empty limits [] 8 dependentApplication = some dependentResidual ∧
+      UniversalTruth .empty dependentAnnotation := by
+  have checked : PureTyping.Checker.check? .empty limits.typingFuel limits.conversionFuel limits.budget []
+      dependentApplication dependentAnnotation = some .prop := by cbv
+  have observed : observe? .empty limits [] 8 dependentApplication = some dependentResidual := by cbv
+  exact ⟨by cbv, observed, checked_arithmetic_truth UnifiedProgram.EnvWellFormed.empty checked observed⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation

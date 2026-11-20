@@ -1,4 +1,5 @@
 import Jihoo.NativeCoreGlobalNormal
+import Jihoo.NativeCoreEffectAnalysis
 
 /-! Pure Core.normal visits the children of a structural constructor in order
 and shares the work counter across them. If each child follows the atomic
@@ -8,9 +9,9 @@ namespace Jihoo.NativeKernel.NativeCorePureStructuralNormal
 
 open NativeArena NativeProgramWire
 open Environment.LoanTyping.MixedProgram (History)
-open NativeCoreGlobalNormal (runPure runPure_conversion runPure_expanded_conversion
-  runPure_step_bounds head discardRest discard_target alias_target)
-open NativeKernel.Conversion (ListRel)
+open NativeCoreGlobalNormal (Atomic atomicOp runPure runPure_conversion runPure_expanded_atom
+  runPure_step_bounds head discardRest discard_target alias_target checked_definition_at)
+open NativeKernel.Conversion (ListRel treeDepth treeSize)
 
 /-- A pure normalization branch that rebuilds its constructor directly from
 the normalized children. Specialized contractions have their own branches. -/
@@ -20,6 +21,12 @@ def structural : Op → Bool
       .ref | .back _ | .give _ | .absurd | .pack | .ltAdd | .ltCancel | .ltLe |
       .elements _ => true
   | _ => false
+
+/-- Normal forms of the structural fragment have only atomic leaves and
+parents whose children are already in that fragment's normal form. -/
+inductive Normal : Term → Prop where
+  | atom : Atomic term → Normal term
+  | node : structural op = true → (∀ child ∈ children, Normal child) → Normal (.node op children)
 
 inductive Error where
   | normal (reason : NativeCoreGlobalNormal.Error)
@@ -404,28 +411,45 @@ theorem runNested_cost (arena : Arena) (roots : List Roots) (visible limit depth
     (depth := depth) (initial := initial) (root := root)
   ⟨proof.growth, proof.budget, proof.success⟩
 
-private structure Refines (before : Arena) (computed : Outcome α) (valid : Arena → α → Prop) : Prop where
+private theorem atom_dimensions (atom : Atomic term) : treeSize term = 1 ∧ treeDepth term = 1 := by
+  cases term with
+  | var => simp [treeSize, treeDepth]
+  | node op args => cases args <;> simp_all [Atomic, treeSize, treeDepth]
+
+private theorem child_depths_le {terms : List Term} (bounded : ∀ child ∈ terms, treeDepth child ≤ depth)
+    (seed : initial ≤ depth) : (terms.map treeDepth).foldl max initial ≤ depth := by
+  induction terms generalizing initial with
+  | nil => exact seed
+  | cons term rest ih =>
+      simp only [List.map_cons, List.foldl_cons]
+      exact ih (fun child member => bounded child (List.mem_cons_of_mem _ member))
+        (Nat.max_le.mpr ⟨seed, bounded term List.mem_cons_self⟩)
+
+private structure Refines (before : Arena) (computed : Outcome α) (valid : Arena → Nat → α → Prop) : Prop where
   kept : Prefix before computed.arena
   backward : Backward before → Backward computed.arena
-  success : ∀ selected, computed.result = .ok selected → valid computed.arena selected
+  success : ∀ selected, computed.result = .ok selected → valid computed.arena computed.steps selected
 
-private abbrev TermResult (env : Environment) (source : Term) (arena : Arena) (selected : Nat) : Prop :=
-  ∃ result, Represents arena selected result ∧
+private abbrev TermResult (env : Environment) (source : Term) (depth initial : Nat)
+    (arena : Arena) (spent selected : Nat) : Prop :=
+  ∃ result, Normal result ∧ Represents arena selected result ∧
+    treeDepth result ≤ depth ∧ initial + treeSize result ≤ spent ∧
     Environment.RawValue.Forward env (EnvironmentDelta.expand env source) result
 
-private abbrev ChildrenResult (env : Environment) (inputs : List Term) (arity : Nat)
-    (arena : Arena) (selected : List Nat) : Prop :=
-  ∃ outputs, RepresentsList arena selected outputs ∧ selected.length = arity ∧
+private abbrev ChildrenResult (env : Environment) (inputs : List Term) (arity depth initial : Nat)
+    (arena : Arena) (spent : Nat) (selected : List Nat) : Prop :=
+  ∃ outputs, (∀ child ∈ outputs, Normal child ∧ treeDepth child ≤ depth) ∧
+    RepresentsList arena selected outputs ∧ selected.length = arity ∧ initial + (outputs.map treeSize).sum ≤ spent ∧
     ListRel (Environment.RawValue.Forward env) (inputs.map (EnvironmentDelta.expand env)) outputs
 
-private theorem Refines.prepend (rest : Refines arena computed (TermResult env tail))
+private theorem Refines.prepend (rest : Refines arena computed (TermResult env tail depth (initial + 1)))
     (first : Environment.RawValue.Forward env (EnvironmentDelta.expand env source)
       (EnvironmentDelta.expand env tail)) :
-    Refines arena computed (TermResult env source) := by
+    Refines arena computed (TermResult env source (depth + 1) initial) := by
   refine ⟨rest.kept, rest.backward, ?_⟩
   intro selected found
-  obtain ⟨result, represented, changed⟩ := rest.success selected found
-  exact ⟨result, represented, first.trans changed⟩
+  obtain ⟨result, normal, represented, height, work, changed⟩ := rest.success selected found
+  exact ⟨result, normal, represented, by omega, by omega, first.trans changed⟩
 
 private theorem failure_refines (kept : Prefix arena current) (backward : Backward arena → Backward current) :
     Refines arena (⟨current, .error reason, spent⟩ : Outcome α) valid :=
@@ -439,7 +463,7 @@ private theorem frameDefinitions (aligned : RepresentsDefinitions arena roots de
 
 private theorem leaf_refines (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env) (source : Represents arena root term) :
-    Refines arena (leaf arena roots visible limit depth steps root) (TermResult env term) := by
+    Refines arena (leaf arena roots visible limit depth steps root) (TermResult env term depth steps) := by
   rcases ran : runPure arena roots visible limit depth steps root with ⟨result, spent⟩
   cases result with
   | error reason =>
@@ -450,20 +474,30 @@ private theorem leaf_refines (aligned : RepresentsDefinitions arena roots defini
       refine ⟨Prefix.refl _, id, ?_⟩
       intro selected found
       cases found
-      exact runPure_expanded_conversion aligned history source ran
+      obtain ⟨term, atom, represented, changed⟩ := runPure_expanded_atom aligned history source ran
+      obtain ⟨size, height⟩ := atom_dimensions atom
+      have depthBound : 1 ≤ depth := by
+        cases depth with
+        | zero =>
+            simp only [runPure, NativeCoreGlobalNormal.run] at ran
+            split at ran <;> cases ran
+        | succ depth => omega
+      have charged := (runPure_step_bounds arena roots visible limit depth steps root).1
+      rw [ran] at charged
+      exact ⟨term, .atom atom, represented, by rwa [height], by rw [size]; exact charged, changed⟩
 
 private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena roots definitions)
     (source : RepresentsList arena refs inputs)
     (visitRefines : ∀ {current initial root term}, RepresentsDefinitions current roots definitions →
-      Represents current root term → Refines current (visit current initial root) (TermResult env term)) :
-    Refines arena (nestedChildren visit refs arena steps) (ChildrenResult env inputs refs.length) := by
+      Represents current root term → Refines current (visit current initial root) (TermResult env term depth initial)) :
+    Refines arena (nestedChildren visit refs arena steps) (ChildrenResult env inputs refs.length depth steps) := by
   induction refs generalizing arena inputs steps with
   | nil =>
       cases source
       refine ⟨Prefix.refl _, id, ?_⟩
       intro selected found
       cases found
-      exact ⟨[], .nil, rfl, .nil⟩
+      exact ⟨[], by simp, .nil, rfl, by simp [nestedChildren], .nil⟩
   | cons root rest ih =>
       cases source with
       | cons head tail =>
@@ -484,16 +518,24 @@ private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena ro
               | ok children =>
                   simp only [suffix, Except.map, Except.ok.injEq] at found
                   subst selected
-                  obtain ⟨out, represented, converted⟩ := first.success child choice
-                  obtain ⟨outputs, representedLater, lengths, conversions⟩ := later.success children suffix
-                  exact ⟨out :: outputs, .cons (represented.frame later.kept) representedLater,
-                    congrArg Nat.succ lengths, .cons converted conversions⟩
+                  obtain ⟨out, normal, represented, height, work, converted⟩ := first.success child choice
+                  obtain ⟨outputs, allNormal, representedLater, lengths, laterWork, conversions⟩ :=
+                    later.success children suffix
+                  refine ⟨out :: outputs, ?_, .cons (represented.frame later.kept) representedLater,
+                    congrArg Nat.succ lengths, ?_, .cons converted conversions⟩
+                  · intro term occurrence
+                    rcases List.mem_cons.mp occurrence with rfl | occurrence
+                    · exact ⟨normal, height⟩
+                    · exact allNormal term occurrence
+                  · simp only [List.map_cons, List.sum_cons]
+                    omega
 
 private theorem finishNested_refines (read : arena[root]? = some (.node op before))
     (arity : before.length = op.arity)
+    (supported : structural op = true)
     (ordinary : GlobalEnvironment.ordinary op = true)
-    (normalized : Refines arena children (ChildrenResult env inputs before.length)) :
-    Refines arena (finishNested root op before children) (TermResult env (.node op inputs)) := by
+    (normalized : Refines arena children (ChildrenResult env inputs before.length depth (initial + 1))) :
+    Refines arena (finishNested root op before children) (TermResult env (.node op inputs) (depth + 1) initial) := by
   cases childResult : children.result with
   | error reason =>
       simp only [finishNested, childResult]
@@ -505,23 +547,28 @@ private theorem finishNested_refines (read : arena[root]? = some (.node op befor
           exact failure_refines normalized.kept normalized.backward
       | ok row =>
           obtain ⟨extended, selected⟩ := row
-          obtain ⟨outputs, represented, length, changed⟩ := normalized.success refs childResult
+          obtain ⟨outputs, allNormal, represented, length, used, changed⟩ := normalized.success refs childResult
           obtain ⟨kept, result, backward, _⟩ :=
             finish_refines (normalized.kept.lookup read) represented (length.trans arity) appended
           simp only [finishNested, childResult, appended]
           refine ⟨normalized.kept.trans kept, fun h => backward (normalized.backward h), ?_⟩
           intro index found
           cases found
-          refine ⟨_, result, ?_⟩
-          rw [EnvironmentDelta.expand_ordinary ordinary, EnvironmentDelta.expandArgs_map]
-          exact .node op changed
+          refine ⟨_, .node supported (fun child member => (allNormal child member).1), result, ?_, ?_, ?_⟩
+          · have bounded := child_depths_le (fun child member => (allNormal child member).2)
+                (Nat.zero_le depth)
+            simp only [treeDepth]
+            omega
+          · simpa only [treeSize, ← Nat.add_assoc] using used
+          · rw [EnvironmentDelta.expand_ordinary ordinary, EnvironmentDelta.expandArgs_map]
+            exact .node op changed
 
 private theorem structural_ordinary (supported : structural op = true) : GlobalEnvironment.ordinary op = true := by
   cases op <;> simp_all [structural, GlobalEnvironment.ordinary]
 
 private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env) (source : Represents arena root term) :
-    Refines arena (runNested roots visible limit depth arena initial root) (TermResult env term) := by
+    Refines arena (runNested roots visible limit depth arena initial root) (TermResult env term depth initial) := by
   induction depth generalizing arena root term initial with
   | zero => exact leaf_refines aligned history source
   | succ depth ih =>
@@ -534,7 +581,7 @@ private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roo
       | @node _ op refs inputs read arity children =>
           by_cases supported : structural op = true
           · simp only [runNested, ite_eq_right exhausted, read, supported, ite_true]
-            exact finishNested_refines read arity (structural_ordinary supported)
+            exact finishNested_refines read arity supported (structural_ordinary supported)
               (nestedChildren_refines aligned children (fun a h => ih a h))
           · cases skip : discardRest (.node op refs) with
             | some rest =>
@@ -577,10 +624,100 @@ theorem runNested_refines (aligned : RepresentsDefinitions arena roots definitio
     (initial := initial) aligned history source
   refine ⟨proof.kept, proof.backward, ?_⟩
   intro selected found
-  obtain ⟨normalized, represented, changed⟩ := proof.success selected found
+  obtain ⟨normalized, _, represented, _, _, changed⟩ := proof.success selected found
   have expanded : Environment.RawValue.Forward env term (EnvironmentDelta.expand env term) :=
     .old (.old (.old (EnvironmentDelta.expand_forward env term)))
   exact ⟨normalized, represented, expanded.trans changed⟩
+
+/-- Every successful recursive run represents a normal form of the supported
+fragment, including when the source is a global alias or a discard. -/
+theorem runNested_normal_form (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (success : (runNested roots visible limit depth arena initial root).result = .ok selected) :
+    let computed := runNested roots visible limit depth arena initial root
+    ∃ normalized, Normal normalized ∧ Represents computed.arena selected normalized ∧
+      treeDepth normalized ≤ depth ∧ initial + treeSize normalized ≤ computed.steps := by
+  have proof := runNested_refines_aux (visible := visible) (limit := limit) (depth := depth)
+    (initial := initial) aligned history source
+  obtain ⟨normalized, normal, represented, height, work, _⟩ := proof.success selected success
+  exact ⟨normalized, normal, represented, height, work⟩
+
+private theorem depth_positive (term : Term) : 1 ≤ treeDepth term := by
+  cases term <;> simp only [treeDepth] <;> omega
+
+private theorem atom_reuses (atom : Atomic term) (represented : Represents arena root term)
+    (enough : initial + 1 ≤ limit) :
+    runNested roots visible limit (depth + 1) arena initial root = ⟨arena, .ok root, initial + 1⟩ := by
+  have available := Nat.not_lt.mpr enough
+  cases represented with
+  | var read => simp [runNested, leaf, runPure, head, discardRest, read, available, Except.mapError]
+  | @node _ op refs terms read _ children =>
+      cases children with
+      | cons => contradiction
+      | nil =>
+          cases op <;> simp [Atomic, atomicOp] at atom
+          all_goals simp [runNested, structural, leaf, runPure, head, atomicOp, discardRest, read, available,
+            Except.mapError]
+
+private theorem nestedChildren_reuses (children : RepresentsList arena refs terms)
+    (budget : initial + (terms.map treeSize).sum ≤ limit)
+    (reuse : ∀ {root term initial}, term ∈ terms → Represents arena root term → initial + treeSize term ≤ limit →
+      visit arena initial root = ⟨arena, .ok root, initial + treeSize term⟩) :
+    nestedChildren visit refs arena initial = ⟨arena, .ok refs, initial + (terms.map treeSize).sum⟩ := by
+  induction refs generalizing terms initial with
+  | nil =>
+      cases children
+      simp [nestedChildren]
+  | cons root rest ih =>
+      cases children with
+      | @cons _ term _ terms first remaining =>
+          simp only [List.map_cons, List.sum_cons] at budget
+          have resolved := reuse (initial := initial) List.mem_cons_self first (by omega)
+          have later := ih remaining (initial := initial + treeSize term) (by omega)
+            (fun member => reuse (List.mem_cons_of_mem _ member))
+          simp [nestedChildren, resolved, later, Except.map, Nat.add_assoc]
+
+/-- Rerunning on a normal form returns exactly the same arena and reference.
+The traversal charges one tick for each tree occurrence, including shared
+children, and succeeds with the stated depth and work allowances. -/
+theorem runNested_reuses_normal (normal : Normal term) (represented : Represents arena root term)
+    (height : treeDepth term ≤ depth) (budget : initial + treeSize term ≤ limit) :
+    runNested roots visible limit depth arena initial root = ⟨arena, .ok root, initial + treeSize term⟩ := by
+  induction depth generalizing term arena root initial with
+  | zero =>
+      have positive := depth_positive term
+      omega
+  | succ depth ih =>
+      cases normal with
+      | atom atomic =>
+          rw [(atom_dimensions atomic).1] at budget ⊢
+          exact atom_reuses atomic represented budget
+      | @node op terms supported normalChildren =>
+          cases represented with
+          | node read _ children =>
+              simp only [treeDepth] at height
+              simp only [treeSize, ← Nat.add_assoc] at budget
+              have available : ¬limit < initial + 1 := by omega
+              have visited := nestedChildren_reuses (visit := runNested roots visible limit depth) children budget
+                (fun {root child spent} member childRep room => by
+                  have bounded := Environment.CoreEffectAnalysis.treeDepth_member child terms member 0
+                  exact ih (normalChildren child member) childRep (by omega) room)
+              simp [runNested, available, read, supported, visited, finishNested, finish, treeSize, Nat.add_assoc]
+
+/-- A successful normalization can be rerun at its result reference from
+the original starting counter and depth and work limits. The result arena
+and reference are unchanged, and the rerun consumes no more work. -/
+theorem runNested_rerun (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (success : (runNested roots visible limit depth arena initial root).result = .ok selected) :
+    let computed := runNested roots visible limit depth arena initial root
+    let rerun := runNested roots visible limit depth computed.arena initial selected
+    rerun.arena = computed.arena ∧ rerun.result = .ok selected ∧ rerun.steps ≤ computed.steps := by
+  obtain ⟨_, normal, represented, height, work⟩ := runNested_normal_form aligned history source success
+  have within := (runNested_cost arena roots visible limit depth initial root).2.2 selected success
+  dsimp only
+  rw [runNested_reuses_normal normal represented height (Nat.le_trans work within)]
+  exact ⟨rfl, rfl, work⟩
 
 /-- Successful and faulted traversals retain the checked graph prefix from
 the admitted bytes and only append nodes with earlier child references. -/
@@ -599,6 +736,24 @@ theorem runNested_checkBytes_refines
   obtain ⟨kept, preserves, reduction⟩ := runNested_refines (visible := visible) (limit := limit)
     (depth := depth) (initial := initial) aligned history source
   exact ⟨definitions, _, env, history, kept, preserves backward, reduction⟩
+
+/-- A definition in an admitted exact-byte snapshot can be rerun at its
+normalized reference. Admission supplies the representation of the original
+body selected by the definition row. -/
+theorem runNested_admitted_definition_rerun {index : Nat}
+    (admitted : NativeLoanMixedAdmission.checkBytes fuel quantityFuel (NativeFamilyWire.encodeSnapshot snapshot) = true)
+    (row : snapshot.definitions[index]? = some definition)
+    (success : (runNested snapshot.definitions visible limit depth snapshot.arena initial
+      definition.valueRoot).result = .ok selected) :
+    let computed := runNested snapshot.definitions visible limit depth snapshot.arena initial definition.valueRoot
+    let rerun := runNested snapshot.definitions visible limit depth computed.arena initial selected
+    rerun.arena = computed.arena ∧ rerun.result = .ok selected ∧ rerun.steps ≤ computed.steps := by
+  obtain ⟨decoded, _, _, env, exactBytes, _, _, aligned, _, history, _⟩ :=
+    NativeLoanMixedAdmission.checkBytes_sound admitted
+  have same := NativeFamilyWire.encodeSnapshot_injective exactBytes
+  subst decoded
+  obtain ⟨_, _, _, represented, _⟩ := checked_definition_at aligned history row
+  exact runNested_rerun aligned history represented.2 success
 
 /-- The shared child is visited twice. Each visit appends its own row, then
 the parent is appended with those two fresh references. With one fewer tick,

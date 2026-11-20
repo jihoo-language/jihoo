@@ -91,4 +91,85 @@ theorem reachable_typed_array_call_entry (term : Term) (fuel : Nat)
   · simpa only [subst_lift_consValues] using
       bodyConverted.substitution (single argument) history.wellFormed.closed
 
+private theorem run_append (first second : Nat) (state : State) :
+    run (first+second) state =
+      let before := run first state
+      let after := run second before.state
+      ⟨after.state,before.events ++ after.events,before.steps+after.steps⟩ := by
+  induction first generalizing state with
+  | zero => simp only [Nat.zero_add,run,List.nil_append]
+  | succ first ih =>
+      simp only [Nat.succ_add,run]
+      cases stepped : step state with
+      | none =>
+          have stopped (fuel : Nat) : run fuel state = ⟨state,[],0⟩ := by
+            cases fuel <;> simp only [run,stepped]
+          simp only [stopped,List.nil_append,Nat.zero_add]
+      | some result =>
+          obtain ⟨next,event⟩ := result
+          simp only
+          rw [ih]
+          simp only [List.append_assoc,Nat.add_assoc,Nat.add_comm]
+
+/-- A retained array argument can immediately be indexed using a previously
+captured U64. The closure enters with the actual array and its original
+captures, then its checked evidence excludes a bounds fault. -/
+theorem reachable_typed_array_call_index (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (arrayTyped : LoanClosingTyped env arrayLoans false source arrayMeanings argumentType)
+    (functionTyped : LoanClosingTyped env loans false
+      ⟨.lam false (.array size) body,ctx,origins,captured⟩ meanings (.pi false argumentType result))
+    (context : ValueContext env ⟨.lam false (.array size) body,ctx,origins,captured⟩ meanings)
+    (returned : (run fuel (initial term)).state.control = .returned (.integer number))
+    (empty : (run fuel (initial term)).state.stack = [])
+    (pending : (run fuel (initial term)).state.pending =
+      (.arrayElements source [] reversed,
+        .argument (.closure false (.array size) body ctx origins captured) argumentOrigin :: stack) :: outer)
+    (shape : body = .index (.var 0) (.var (index+1)) evidence)
+    (supported :
+      let values := (number :: reversed).reverse
+      let argument := Term.elements values.length (values.map Term.integer)
+      Semantics.LoanArithmetic.Supported (evidence.subst (consValues argument meanings))) :
+    let state := (run fuel (initial term)).state
+    let values := (number :: reversed).reverse
+    let argument := Term.elements values.length (values.map Term.integer)
+    ∃ offset value, captured[index]? = some (some (.natural offset)) ∧
+      meanings index = .natural offset ∧ offset < values.length ∧ values[offset]? = some value ∧
+      run 7 state = ⟨⟨state.heap,.returned (.integer value),stack,outer⟩,
+        [.legacy (.activate false body argumentOrigin)],7⟩ ∧
+      LoanTyping.HasType env [] [] false (.integer value) (result.subst (single argument)) := by
+  let state := (run fuel (initial term)).state
+  let values := (number :: reversed).reverse
+  let argument := Term.elements values.length (values.map Term.integer)
+  let next := enter false (.array size) body ctx origins captured argumentOrigin (some (.array values))
+  obtain ⟨entered,typed,enteredContext⟩ := reachable_typed_array_call_entry term fuel history
+    arrayTyped functionTyped context returned empty pending
+  change run 2 state = ⟨⟨state.heap,.evaluate next,stack,outer⟩,
+    [.legacy (.activate false body argumentOrigin)],2⟩ at entered
+  have reached : (run (fuel+2) (initial term)).state = ⟨state.heap,.evaluate next,stack,outer⟩ := by
+    rw [run_append]
+    change (run 2 state).state = _
+    exact congrArg Result.state entered
+  have evaluated : (run (fuel+2) (initial term)).state.control = .evaluate next := by
+    rw [reached]
+  have arrayOperand : LoanTyping.HasType env loans next.context false (.var 0) (.array (size.rename Nat.succ)) := by
+    change LoanTyping.HasType env loans (⟨.array size,false⟩ :: ctx) false (.var 0) (.array (size.rename Nat.succ))
+    have retained : LoanTyping.HasType env loans (⟨.array size,false⟩ :: ctx) false (.var 0)
+        ((Term.array size).rename Nat.succ) :=
+      LoanTyping.HasType.var (b := ⟨(Term.array size).rename Nat.succ,false⟩) rfl (.inr rfl)
+    simpa only [Term.rename,renameArgs,Op.binders,liftRenaming] using retained
+  have indexed : next.term = .index (.var 0) (.var (index+1)) evidence := shape
+  obtain ⟨observedArray,offset,value,storedArray,storedIndex,observedMeaning,bound,read,executed,resultType⟩ :=
+    reachable_typed_variable_array_index term (fuel+2) history evaluated typed enteredContext indexed
+      arrayOperand supported
+  have same : values = observedArray := Value.array.inj (Option.some.inj (Option.some.inj storedArray))
+  subst observedArray
+  rw [reached] at executed
+  refine ⟨offset,value,storedIndex,observedMeaning,bound,read,?_,resultType⟩
+  change run (2+5) state = _
+  rw [run_append 2 5 state,entered]
+  dsimp only
+  rw [executed]
+  rfl
+
 end Jihoo.NativeKernel.Environment.BindingMachine.Mutable
