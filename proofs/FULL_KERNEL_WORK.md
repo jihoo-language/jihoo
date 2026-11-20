@@ -14,7 +14,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
 | Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It commutes Strict out of Case and data Elim for families whose indices are all parameters when the motive can use the enclosing context independently of the scrutinee. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. It requires supported bound evidence and fitting unsigned sums. General execution across arbitrary closures and dependent runtime forms remains open. |
-| Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, primitive operators with fixed operand types, Decide, Strict, ZeroLe, and USub. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
+| Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, primitive operators with fixed operand types, Decide, Strict, ZeroLe, USub, and conditional branches. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -3334,3 +3334,16 @@ such as `Buffer(n)` where `n` belongs to an older binder.
 The Lean regression checks that this open motive satisfies the preservation
 guard and that a separate motive that uses the scrutinee is rejected. The
 existing exact-byte Case and data Elim examples also pass.
+
+### Conditional inference and erased assumptions
+
+The shared IfLt and IfEq path checks both operands, appends the appropriate
+proposition, and infers the consequent under that erased binder. The
+normalizer and negative shift lower the consequent type into the enclosing
+scope. The soundness proof recovers its exact reweakening and checks the
+alternative there. The resulting Loan64 judgment retains both branch types
+and the original comparison operands.
+
+An admitted IfLt has a consequent that returns its erased assumption and an
+alternative that supplies a checked Decide. Lean and native `Core.infer`
+return the same inequality row and append the same graph in 39 ticks.

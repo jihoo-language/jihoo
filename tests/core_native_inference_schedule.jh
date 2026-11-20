@@ -156,6 +156,24 @@ fn subtract_bound_exhaustion() {
     assert(c.term(14) == core.Term.UAdd(zero, 13) && c.term(15) == core.Term.Lt(12, 14), "inferred subtraction bound")
 }
 
+fn conditional_inference() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let assumed = c.add(core.Term.Var(0), span).unwrap()
+    let alternate = c.add(core.Term.Decide(one, two), span).unwrap()
+    c.add(core.Term.Lt(one, two), span).unwrap()
+    let condition = c.add(core.Term.IfLt(one, two, assumed, alternate), span).unwrap()
+    spend(&c, 999961)
+    let inferred = c.infer(condition, [], true, 16).unwrap()
+    assert(inferred == 9 && c.node_count() == 14, "conditional returns the lowered assumption type")
+    for i in 6..9 { assert(c.term(i as u32) == core.Term.U64, "condition operand types") }
+    for i in 10..13 { assert(c.term(i as u32) == core.Term.U64, "alternative operand types") }
+    assert(c.term(inferred) == core.Term.Lt(one, two) && c.term(13) == core.Term.Lt(one, two), "branch types")
+    assert_spent(&c, "conditional inference used 39 ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -163,6 +181,7 @@ fn main() -> i32 {
     decision_inference()
     zero_bound_inference()
     subtract_bound_exhaustion()
-    println("Native Core.infer matched primitive, binder and arithmetic evidence graph traces and checking costs")
+    conditional_inference()
+    println("Native Core.infer matched primitive, binder, evidence and conditional graph traces and checking costs")
     0
 }
