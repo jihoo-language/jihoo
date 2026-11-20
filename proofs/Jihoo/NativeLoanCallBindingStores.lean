@@ -152,16 +152,41 @@ theorem LoanBudget.scopes (budget : LoanBudget depth loans (.scopes modes body))
       fun frame member => Nat.le_trans (entered frame member) (Nat.le_succ _)
     simpa only [List.length_cons,Nat.add_right_comm _ 1,Nat.add_assoc] using ih (budget.scope entered) enteredBody
 
+private theorem local_scope_inner (valid : LocalScopes (.scope mode body)) : LocalScopes body := by
+  cases mode
+  · exact valid.2
+  · exact valid.2
+  · exact valid
+  · exact valid
+
 private theorem local_scopes_body (valid : LocalScopes (.scopes modes body)) : LocalScopes body := by
   induction modes with
   | nil => exact valid
-  | cons mode tail ih =>
-    apply ih
-    cases mode
-    · exact valid.2
-    · exact valid.2
-    · exact valid
-    · exact valid
+  | cons mode tail ih => exact ih (local_scope_inner valid)
+
+/-- The source-order mode of a consumed binder determines the exact use
+count of its de Bruijn slot in the fully opened body. -/
+theorem scopes_bound_demand (valid : LocalScopes (.scopes modes body))
+    (selected : modes[position]? = some mode) (checked : mode = .linear ∨ mode = .erased) :
+    body.demand (modes.length-position-1) = some (if mode = .linear then 1 else 0) := by
+  induction modes generalizing position with
+  | nil => cases selected
+  | cons head tail ih =>
+    cases position with
+    | zero =>
+      have same : head = mode := Option.some.inj selected
+      subst head
+      have index : (mode::tail).length-0-1 = 0+tail.length := by simp
+      rw [index]
+      rcases checked with rfl | rfl
+      · exact Jihoo.Quantity.scopes_outer (modes := tail) (n := 1) valid.1
+      · exact Jihoo.Quantity.scopes_outer (modes := tail) (n := 0) valid.1
+    | succ position =>
+      have index : (head::tail).length-(position+1)-1 = tail.length-position-1 := by
+        simp only [List.length_cons]
+        omega
+      rw [index]
+      exact ih (local_scope_inner valid) selected
 
 private theorem runtime_budgets (budget : LoanBudget depth loans (sequence operands))
     (valid : LocalScopes (sequence operands)) :
@@ -205,5 +230,37 @@ theorem projectRaw_app_loan_budgets
   rw [← (openHead_lambdas opening).context_length] at bodyBudget
   exact ⟨head,supplied,entries,result,opened,runtime,body,spine,replayed,opening,operands,projected,
     bodyBudget,local_scopes_body parts.2.1,runtime_budgets parts.2.2.1 parts.2.2.2⟩
+
+/-- For an admitted application, the actual opened mode telescope records one
+use for each owned argument and none for erased arguments. The same counts
+bound every finite body prefix, and are exact for completed bodies. -/
+theorem projectRaw_app_checked_binder_usage
+    (checked : projectRaw (fuel+1) env loans ctx (.app function argument) = some control)
+    (valid : LocalScopes control) :
+    ∃ head supplied entries result opened body,
+      ResourceReplay.checked fuel env loans ctx false head supplied = some (entries,result) ∧
+      openHead fuel env loans ctx head supplied = some opened ∧
+      projectRaw fuel env loans opened.context opened.body = some body ∧
+      ∀ {position mode}, opened.modes[position]? = some mode → (mode = .linear ∨ mode = .erased) →
+        let index := opened.modes.length-position-1
+        let uses := if mode = .linear then 1 else 0
+        body.demand index = some uses ∧
+          (∀ events, Prefix body events → events.count index ≤ uses) ∧
+          (∀ events, Finishes body events → events.count index = uses) := by
+  obtain ⟨head,supplied,entries,result,opened,runtime,body,_,replayed,opening,_,projected,shape⟩ :=
+    projectRaw_app_origin checked
+  have scopeValid : LocalScopes (.scopes opened.modes body) := by
+    rw [shape] at valid
+    cases modes : opened.modes with
+    | nil =>
+      simp only [modes,List.isEmpty,ite_true] at valid
+      exact valid.1
+    | cons mode rest =>
+      simp only [modes,List.isEmpty,Bool.false_eq_true,ite_false] at valid
+      exact valid.2
+  refine ⟨head,supplied,entries,result,opened,body,replayed,opening,projected,?_⟩
+  intro position mode selected verified
+  have count := scopes_bound_demand scopeValid selected verified
+  exact ⟨count,fun _ started => started.count_le count,fun _ finished => finished.count_eq count⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity

@@ -3523,6 +3523,12 @@ loan has zero owner demand in the original body at the depth of the opened
 telescope. The focused build passed 274 jobs and the seven-declaration
 audit used only standard Lean axioms.
 
+At the exact slot of any consumed linear or erased binder, the body receipt
+records respectively one or zero uses. The checked application supplies these
+counts in the original source order through any mixture of binder modes.
+Every finite body prefix obeys the bound and every completed body has the
+exact count. The focused build and two-declaration audit passed.
+
 ### Dependent semantics of equality transport
 
 The equality relation combines agreement of the represented natural values
