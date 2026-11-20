@@ -3638,3 +3638,13 @@ These facts construct the concrete value in the dependent relation.
 Two checked packs of the same literal with supported proofs of that bound
 share one interpretation. The focused build passed 384 jobs and both
 new theorems use only standard Lean axioms.
+
+### Refinement semantics after typed operand computation
+
+The original checked Pack retains its type while its witness and evidence
+take typed steps under the same mixed declaration history. The computed word
+and arithmetic evidence then construct the dependent value. Raw conversion
+transports this realization back to the original Pack. An admitted fixture
+hides both operands behind beta applications and realizes the word `3` in
+the original refinement fiber. The focused check passed 384 jobs, and both
+theorems use only standard Lean axioms.
