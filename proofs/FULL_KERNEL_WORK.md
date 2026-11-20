@@ -3361,3 +3361,11 @@ derivation for fresh and captured Buffer references.
 The nested-reader example still reaches the signed overflow after its first
 read, with both leases present. The two new bound and value theorems join the
 axiom audit.
+
+### Aggregate check of the reader-width checkpoint
+
+At `8a084d9`, the rootless Nix proof shell completed all 1,116 Lake jobs,
+the generated fixture comparisons and the exact audit of 10,487 declarations.
+Of these, 526 require no axioms. The remaining declarations use only
+`propext`, `Quot.sound`, and `Classical.choice`. The proof guard measured
+4,763.2 MiB peak sampled RSS across the process tree.
