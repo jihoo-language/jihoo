@@ -1046,6 +1046,58 @@ fn proposition_case_telescope() {
     assert(budget-remaining_ticks(&sample) == 6, "the two hypotheses and result use six shift ticks")
 }
 
+fn scalar_code_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let first = c.add(core.Term.Integer(-2), span).unwrap()
+    let second = c.add(core.Term.Integer(3), span).unwrap()
+    let signed = c.add(core.Term.Arith(core.Arith.Add, first, second), span).unwrap()
+    let a = c.add(core.Term.Natural(2), span).unwrap()
+    let b = c.add(core.Term.Natural(3), span).unwrap()
+    let word = c.add(core.Term.UAdd(a, b), span).unwrap()
+    c.add(core.Term.Strict(signed, word), span).unwrap()
+    c
+}
+
+fn scalar_code_inference() {
+    var strict = scalar_code_fixture()
+    spend(&strict, 999981)
+    let result = strict.infer(6, [], false, 16).unwrap()
+    assert(result == 14 && strict.node_count() == 15 && strict.term(result) == core.Term.U64,
+        "code Strict checks the signed effect before the unsigned value")
+    assert_spent(&strict, "both code arithmetic branches spend nineteen ticks")
+
+    var erased = scalar_code_fixture()
+    let span = diag.Span.nowhere()
+    let operand = erased.add(core.Term.Var(0), span).unwrap()
+    let expression = erased.add(core.Term.Arith(core.Arith.Add, operand, 0), span).unwrap()
+    let ty = erased.add(core.Term.I64, span).unwrap()
+    spend(&erased, 999998)
+    assert(match erased.infer(expression, [core.Binding { ty, erased: true }], false, 16) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    }, "a code arithmetic operand cannot read an erased local")
+    assert(erased.node_count() == 11 && erased.term(10) == core.Term.I64,
+        "only the expected signed type exists after the first operand fails")
+    assert_spent(&erased, "the erased operand fails on the second tick")
+}
+
+fn scalar_code_declaration() {
+    var c = scalar_code_fixture()
+    let span = diag.Span.nowhere()
+    let ty = c.add(core.Term.U64, span).unwrap()
+    spend(&c, 999976)
+    let kind = c.infer(ty, [], true, core.DEPTH).unwrap()
+    let exposed = c.normal(kind, core.DEPTH).unwrap()
+    assert(c.term(exposed) == core.Term.Universe(0), "a scalar declaration selects code mode")
+    c.require(6, ty, [], false, core.DEPTH).unwrap()
+    assert_spent(&c, "scalar declaration checking uses one twenty-four-tick budget")
+
+    var program = scalar_code_fixture()
+    let ty = program.add(core.Term.U64, span).unwrap()
+    program.push_definition(core.Definition { name: "computed".to_string(), ty, value: 6, exported: false, span })
+    program.extend().unwrap()
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1076,6 +1128,8 @@ fn main() -> i32 {
     declaration_annotation_inference()
     ghost_definition_body_checking()
     code_local_inference()
+    scalar_code_inference()
+    scalar_code_declaration()
     code_word_definition()
     owner_return_inference()
     take_continuation_inference()

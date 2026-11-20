@@ -4130,3 +4130,14 @@ After `Core.check` registers the sample signature, the Lean fixture and
 native `Core.case_type` agree on all fourteen appended rows and six ticks
 for a constructor with two recursively typed fields. The focused build
 passed 330 jobs and the eight new declarations use standard Lean axioms.
+
+### Runtime scalar inference and declaration mode
+
+The runtime driver checks signed arithmetic, unsigned addition and Strict
+by visiting both original operands in order. The checker rejects an
+erased operand before visiting its sibling. The accepted Strict fixture
+matches the native graph with fifteen appended rows and nineteen ticks.
+A written U64 annotation forms in ghost mode and checks the same body in
+code mode. Lean and `Core.extend` agree on twenty-four ticks for the
+declaration, including five comparisons. The focused build passed 443
+jobs and the six new declarations use standard Lean axioms.

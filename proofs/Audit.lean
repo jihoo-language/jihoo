@@ -10678,3 +10678,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCorePropCaseType.run_progress
 #print axioms Jihoo.NativeKernel.NativeCorePropCaseType.run_refines
 #print axioms Jihoo.NativeKernel.NativeCorePropCaseType.two_recursive_fields_keep_shifted_indices
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarInference.run_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarInference.code_scalar_checks_both_children
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.bodies_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.bodies_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.admitted_recursive_scalar_body_uses_code
