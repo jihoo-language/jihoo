@@ -729,7 +729,7 @@ private theorem projectRefinement_refines (rules : Rules relation)
         obtain ⟨output, rep, step⟩ := pack_selection_computes (projection := projection) known represented parts
         exact ⟨.refl _, id, output, rep, rules.compute step⟩
 
-private theorem emptyPrefix (arena : Arena) : Prefix #[] arena := by
+theorem emptyPrefix (arena : Arena) : Prefix #[] arena := by
   refine ⟨Nat.zero_le _, ?_⟩
   simp
 
@@ -1312,6 +1312,13 @@ theorem runWithEarlyExtension_refinesFor (rules : Rules relation) (earlySound : 
   · intro _ _ _ _ _ _ _ _ _ _ impossible
     cases impossible
 
+theorem runWithExtensions_refinesFrom (rules : Rules relation)
+    (postSound : extension.SoundFrom base relation) (earlySound : early.SoundFrom base relation)
+    (onBase : Prefix base state.arena) (source : Represents state.arena root term)
+    (success : (runWithExtensions extension early limit depth state root).result = .ok selected) :
+    RefinesFor relation state term (runWithExtensions extension early limit depth state root) selected :=
+  (runCore_refines_from rules postSound earlySound onBase source success).1
+
 theorem runWithEarlyExtension_refinesFrom (rules : Rules relation) (earlySound : early.SoundFrom base relation)
     (onBase : Prefix base state.arena) (source : Represents state.arena root term)
     (success : (runWithEarlyExtension early limit depth state root).result = .ok selected) :
@@ -1322,7 +1329,7 @@ theorem runWithEarlyExtension_refinesFrom (rules : Rules relation) (earlySound :
       cases impossible
     · intro _ _ _ _ _ _ _ _ _ _ impossible
       cases impossible
-  exact (runCore_refines_from rules absent earlySound onBase source success).1
+  exact runWithExtensions_refinesFrom rules absent earlySound onBase source success
 
 /-- Both structural and computational branches build an actual typed
 forward derivation, including when beta or Transport occurs under a binder. -/

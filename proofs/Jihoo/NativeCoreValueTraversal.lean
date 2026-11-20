@@ -10,7 +10,7 @@ open NativeArena Environment
 open NativeCoreTransformExact (State)
 open NativeCoreValueContexts (Change signature)
 open NativeCorePureComputationNormal (Error Outcome Progress nodeResult nodeResult_exact nodeResult_progress
-  visitOperands visitOperands_progress visitOperands_relates)
+  visitOperands visitOperands_progress visitOperands_relatesFrom RefinesFor)
 open NativeKernel.Conversion (ListRel)
 
 inductive Frame : Op → Type where
@@ -57,24 +57,35 @@ structure Extension where
   accepts : Op → Bool
   walk : (State → Nat → Outcome Nat) → Nat → Nat → Nat → State → Op → List Nat → Outcome Nat
 
+def Extension.orElse (first second : Extension) : Extension where
+  accepts op := first.accepts op || second.accepts op
+  walk visit limit depth root state op refs :=
+    if first.accepts op then first.walk visit limit depth root state op refs
+    else second.walk visit limit depth root state op refs
+
 private def noExtension : Extension :=
   ⟨fun _ => false, fun _ _ _ root state _ _ => ⟨state, .error (.outsideFragment root)⟩⟩
 
-def runWith (extension : Extension) (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (limit : Nat) :
+def runWithFallback (extension : Extension) (fallback : Nat → State → Nat → Outcome Nat)
+    (env : Environment) (limit : Nat) :
     Nat → State → Nat → Outcome Nat
-  | 0, state, root => NativeCoreIterationReentry.run env families limit 0 state root
+  | 0, state, root => fallback 0 state root
   | depth + 1, state, root =>
       match state.arena[root]? with
       | some (.node op refs) =>
-          let visit := runWith extension env families limit depth
+          let visit := runWithFallback extension fallback env limit depth
           if extension.accepts op then charge limit (depth + 1) state root
             fun entered => extension.walk visit limit depth root entered op refs
           else
             match frame op with
             | some kind => charge limit (depth + 1) state root
                 fun entered => walk kind visit env depth root entered refs
-            | none => NativeCoreIterationReentry.run env families limit (depth + 1) state root
-      | _ => NativeCoreIterationReentry.run env families limit (depth + 1) state root
+            | none => fallback (depth + 1) state root
+      | _ => fallback (depth + 1) state root
+
+def runWith (extension : Extension) (env : Environment) (families : List NativeFamilyWire.FamilyRoots)
+    (limit : Nat) : Nat → State → Nat → Outcome Nat :=
+  runWithFallback extension (NativeCoreIterationReentry.run env families limit) env limit
 
 /-- Recurse through covered value contexts. The underlying family walker
 continues to handle dependent graph positions requiring raw conversion. -/
@@ -129,32 +140,58 @@ def Extension.Metered (extension : Extension) : Prop :=
     (∀ state root, Progress limit state (visit state root)) →
     Progress limit state (extension.walk visit limit depth root state op refs)
 
-theorem runWith_progress (metered : extension.Metered)
-    (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (limit depth : Nat)
-    (state : State) (root : Nat) : Progress limit state (runWith extension env families limit depth state root) := by
+theorem Extension.orElse_metered {first second : Extension} (firstMetered : first.Metered)
+    (secondMetered : second.Metered) : (first.orElse second).Metered := by
+  intro visit limit depth root state op refs accepted visitor
+  by_cases chosen : first.accepts op = true
+  · simpa only [orElse, ite_eq_left chosen] using
+      firstMetered (depth := depth) chosen visitor
+  · have other : second.accepts op = true := by simpa [orElse, chosen] using accepted
+    simpa only [orElse, ite_eq_right chosen] using secondMetered (depth := depth) other visitor
+
+theorem runWithFallback_progress (metered : extension.Metered)
+    (fallbackMetered : ∀ depth state root, Progress limit state (fallback depth state root))
+    (env : Environment) (depth : Nat)
+    (state : State) (root : Nat) : Progress limit state (runWithFallback extension fallback env limit depth state root) := by
   induction depth generalizing state root with
-  | zero => exact NativeCoreIterationReentry.run_progress _ _ _ _ _ _
+  | zero => exact fallbackMetered _ _ _
   | succ depth ih =>
-      simp only [runWith]
+      simp only [runWithFallback]
       split
       · split
         · rename_i accepted
           exact charge_progress (fun _ => metered accepted ih)
         · split
           · exact charge_progress (fun _ => walk_progress ih)
-          · exact NativeCoreIterationReentry.run_progress _ _ _ _ _ _
-      · exact NativeCoreIterationReentry.run_progress _ _ _ _ _ _
+          · exact fallbackMetered _ _ _
+      · exact fallbackMetered _ _ _
+
+theorem runWith_progress (metered : extension.Metered)
+    (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (limit depth : Nat)
+    (state : State) (root : Nat) : Progress limit state (runWith extension env families limit depth state root) :=
+  runWithFallback_progress metered (NativeCoreIterationReentry.run_progress env families limit) env depth state root
 
 theorem run_progress (env : Environment) (families : List NativeFamilyWire.FamilyRoots)
     (limit depth : Nat) (state : State) (root : Nat) : Progress limit state (run env families limit depth state root) :=
   runWith_progress (extension := noExtension) (by intro _ _ _ _ _ _ _ impossible; cases impossible)
     env families limit depth state root
 
-structure Refines (env : Environment) (state : State) (input : Term)
-    (output : Outcome Nat) (selected : Nat) : Prop where
-  kept : Prefix state.arena output.state.arena
-  backward : Backward state.arena → Backward output.state.arena
-  value : ∃ residual, Represents output.state.arena selected residual ∧ Change env input residual
+abbrev Refines (env : Environment) := RefinesFor (Change env)
+
+theorem emptyPrefix (arena : Arena) : Prefix #[] arena :=
+  NativeCorePureComputationNormal.emptyPrefix arena
+
+/-- The typed frame traversal can interpret either both source forms or the
+expanded term used for checking transparent definitions. -/
+structure FrameRules (env : Environment) (relation : Term → Term → Prop) : Prop where
+  fromChange : ∀ {a b}, Change env a b → relation a b
+  trans : ∀ {a b c}, relation a b → relation b c → relation a c
+  strict : ∀ {a a' b b'}, relation a a' → relation b b' → relation (.strict a b) (.strict a' b')
+  uniform : ∀ {op inputs xs ys}, signature op = some inputs → ListRel relation xs ys →
+    relation (.node op xs) (.node op ys)
+
+private theorem changeRules (env : Environment) : FrameRules env (Change env) :=
+  ⟨id, Change.trans, Change.strict, Change.uniform⟩
 
 private theorem strict_result
     (read : state.arena[root]? = some (.node .strict before))
@@ -192,9 +229,9 @@ private theorem arithmetic_result
       exact fun typed => checked typed
 
 private theorem pair_operands (represented : RepresentsList arena refs after)
-    (count : refs.length = 2) (moves : ListRel (Change env) before after) :
+    (count : refs.length = 2) (moves : ListRel relation before after) :
     ∃ x y a b a' b', refs = [x, y] ∧ before = [a, b] ∧ after = [a', b'] ∧
-      Represents arena x a' ∧ Represents arena y b' ∧ Change env a a' ∧ Change env b b' := by
+      Represents arena x a' ∧ Represents arena y b' ∧ relation a a' ∧ relation b b' := by
   cases represented with
   | nil => simp at count
   | cons left more =>
@@ -213,36 +250,47 @@ private theorem pair_operands (represented : RepresentsList arena refs after)
 
 /-- A native root rebuild or value contraction preserves the type of its
 original syntax after the ordinary recursive child visits. -/
-theorem walk_refines (kind : Frame op)
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+theorem walk_refinesFrom (rules : FrameRules env relation) (onBase : Prefix base state.arena)
+    (kind : Frame op)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (read : state.arena[root]? = some (.node op refs)) (represented : RepresentsList state.arena refs before)
     (arity : refs.length = op.arity)
     (success : (walk kind visit env depth root state refs).result = .ok selected) :
-    Refines env state (.node op before) (walk kind visit env depth root state refs) selected := by
+    RefinesFor relation state (.node op before) (walk kind visit env depth root state refs) selected := by
   unfold walk at success ⊢
   obtain ⟨found, visited, branch⟩ := Outcome.next_success success
   rw [branch] at success ⊢
   obtain ⟨kept, backward, length, after, represented, moves⟩ :=
-    visitOperands_relates (relation := Change env) represented
-      (fun input done => by
-        obtain ⟨kept, backward, value⟩ := visitor input done
+    visitOperands_relatesFrom (relation := relation) onBase represented
+      (fun prior input done => by
+        obtain ⟨kept, backward, value⟩ := visitor prior input done
         exact ⟨kept, backward, value⟩) visited
   have count := length.trans arity
   have current := kept.lookup read
   cases kind with
   | uniform sig =>
       obtain ⟨more, backed, held⟩ := nodeResult_exact current represented count success
-      exact ⟨kept.trans more, fun old => backed (backward old), _, held, Change.uniform sig moves⟩
+      exact ⟨kept.trans more, fun old => backed (backward old), _, held, rules.uniform sig moves⟩
   | strict =>
       obtain ⟨x, y, a, b, a', b', rfl, rfl, rfl, left, right, effect, value⟩ := pair_operands represented count moves
       obtain ⟨more, backed, residual, held, reduced⟩ := strict_result current left right success
-      exact ⟨kept.trans more, fun old => backed (backward old), residual, held, (Change.strict effect value).trans reduced⟩
+      exact ⟨kept.trans more, fun old => backed (backward old), residual, held, rules.trans (rules.strict effect value) (rules.fromChange reduced)⟩
   | arithmetic op =>
       obtain ⟨x, y, a, b, a', b', rfl, rfl, rfl, left, right, first, second⟩ := pair_operands represented count moves
       obtain ⟨more, backed, residual, held, reduced⟩ := arithmetic_result current left right success
-      have changed := Change.uniform (op := .arith op) rfl (.cons first (.cons second .nil))
-      exact ⟨kept.trans more, fun old => backed (backward old), residual, held, changed.trans reduced⟩
+      have changed := rules.uniform (op := .arith op) rfl (.cons first (.cons second .nil))
+      exact ⟨kept.trans more, fun old => backed (backward old), residual, held, rules.trans changed (rules.fromChange reduced)⟩
+
+theorem walk_refines (kind : Frame op)
+    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
+      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+    (read : state.arena[root]? = some (.node op refs)) (represented : RepresentsList state.arena refs before)
+    (arity : refs.length = op.arity)
+    (success : (walk kind visit env depth root state refs).result = .ok selected) :
+    Refines env state (.node op before) (walk kind visit env depth root state refs) selected :=
+  walk_refinesFrom (changeRules env) (emptyPrefix _) kind (fun _ source done => visitor source done)
+    read represented arity success
 
 def Extension.Sound (extension : Extension) (env : Environment) : Prop :=
   ∀ {visit limit depth root state op refs args selected},
@@ -253,55 +301,84 @@ def Extension.Sound (extension : Extension) (env : Environment) : Prop :=
     (extension.walk visit limit depth root state op refs).result = .ok selected →
     Refines env state (.node op args) (extension.walk visit limit depth root state op refs) selected
 
-theorem runWith_refines {families : List NativeFamilyWire.FamilyRoots}
-    (sound : extension.Sound env)
-    (history : LoanTyping.MixedProgram.History definitions declarations env)
-    (represented : Represents state.arena root input)
-    (success : (runWith extension env families limit depth state root).result = .ok selected) :
-    Refines env state input (runWith extension env families limit depth state root) selected := by
-  have base {state root input selected depth} (represented : Represents state.arena root input)
-      (success : (NativeCoreIterationReentry.run env families limit depth state root).result = .ok selected) :
-      Refines env state input (NativeCoreIterationReentry.run env families limit depth state root) selected := by
-    obtain ⟨kept, backward, residual, held, changed⟩ :=
-      NativeCoreIterationReentry.run_refines history represented success
-    exact ⟨kept, backward, residual, held, Change.iteration changed⟩
+def Extension.SoundFrom (extension : Extension) (base : Arena) (relation : Term → Term → Prop) : Prop :=
+  ∀ {visit limit depth root state op refs args selected},
+    extension.accepts op = true → Prefix base state.arena → state.arena[root]? = some (.node op refs) →
+    RepresentsList state.arena refs args → refs.length = op.arity →
+    (∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected) →
+    (extension.walk visit limit depth root state op refs).result = .ok selected →
+    RefinesFor relation state (.node op args) (extension.walk visit limit depth root state op refs) selected
+
+theorem Extension.orElse_soundFrom {first second : Extension} (firstSound : first.SoundFrom base relation)
+    (secondSound : second.SoundFrom base relation) : (first.orElse second).SoundFrom base relation := by
+  intro visit limit depth root state op refs args selected accepted onBase read represented width visitor success
+  by_cases chosen : first.accepts op = true
+  · simp only [orElse, ite_eq_left chosen] at success ⊢
+    exact firstSound chosen onBase read represented width visitor success
+  · have other : second.accepts op = true := by simpa [orElse, chosen] using accepted
+    simp only [orElse, ite_eq_right chosen] at success ⊢
+    exact secondSound other onBase read represented width visitor success
+
+theorem runWithFallback_refines (rules : FrameRules env relation)
+    (sound : extension.SoundFrom base relation)
+    (fallbackSound : ∀ {depth state root term selected}, Prefix base state.arena → Represents state.arena root term →
+      (fallback depth state root).result = .ok selected → RefinesFor relation state term (fallback depth state root) selected)
+    (onBase : Prefix base state.arena) (represented : Represents state.arena root input)
+    (success : (runWithFallback extension fallback env limit depth state root).result = .ok selected) :
+    RefinesFor relation state input (runWithFallback extension fallback env limit depth state root) selected := by
   induction depth generalizing state root input selected with
-  | zero => exact base represented success
+  | zero => exact fallbackSound onBase represented success
   | succ depth ih =>
       cases represented with
       | var read =>
-          simp only [runWith, read] at success ⊢
-          exact base (.var read) success
+          simp only [runWithFallback, read] at success ⊢
+          exact fallbackSound onBase (.var read) success
       | @node _ op refs args read arity children =>
           by_cases accepted : extension.accepts op = true
           ·
               rcases paid : NativeCoreUnsignedCancellation.tick state.arena limit (depth + 1) state.steps root with
                 ⟨status, clock⟩
               cases status with
-              | error reason => simp [runWith, read, accepted, charge, paid] at success
+              | error reason => simp [runWithFallback, read, accepted, charge, paid] at success
               | ok charged =>
                   cases charged
-                  simp only [runWith, read, ite_eq_left accepted, charge, paid] at success ⊢
+                  simp only [runWithFallback, read, ite_eq_left accepted, charge, paid] at success ⊢
                   obtain ⟨kept, backward, value⟩ :=
-                    sound (state := {state with steps := clock}) accepted read children arity
-                      (fun source done => ih source done) success
+                    sound (state := {state with steps := clock}) accepted onBase read children arity
+                      (fun prior source done => ih prior source done) success
                   exact ⟨kept, backward, value⟩
           · cases chosen : frame op with
             | none =>
-                simp only [runWith, read, ite_eq_right accepted, chosen] at success ⊢
-                exact base (.node read arity children) success
+                simp only [runWithFallback, read, ite_eq_right accepted, chosen] at success ⊢
+                exact fallbackSound onBase (.node read arity children) success
             | some kind =>
                 rcases paid : NativeCoreUnsignedCancellation.tick state.arena limit (depth + 1) state.steps root with
                   ⟨status, clock⟩
                 cases status with
-                | error reason => simp [runWith, read, accepted, chosen, charge, paid] at success
+                | error reason => simp [runWithFallback, read, accepted, chosen, charge, paid] at success
                 | ok charged =>
                     cases charged
-                    simp only [runWith, read, ite_eq_right accepted, chosen, charge, paid] at success ⊢
+                    simp only [runWithFallback, read, ite_eq_right accepted, chosen, charge, paid] at success ⊢
                     obtain ⟨kept, backward, value⟩ :=
-                      walk_refines (state := {state with steps := clock}) kind
-                        (fun source done => ih source done) read children arity success
+                      walk_refinesFrom (state := {state with steps := clock}) rules onBase kind
+                        (fun prior source done => ih prior source done) read children arity success
                     exact ⟨kept, backward, value⟩
+
+theorem runWith_refines {families : List NativeFamilyWire.FamilyRoots}
+    (sound : extension.Sound env)
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (represented : Represents state.arena root input)
+    (success : (runWith extension env families limit depth state root).result = .ok selected) :
+    Refines env state input (runWith extension env families limit depth state root) selected := by
+  have scopedSound : extension.SoundFrom #[] (Change env) := by
+    intro visit limit depth root state op refs terms selected accepted _ read held arity visitor success
+    exact sound accepted read held arity (fun rep done => visitor (emptyPrefix _) rep done) success
+  apply runWithFallback_refines (changeRules env) scopedSound _ (emptyPrefix _) represented success
+  intro depth state root input selected _ represented success
+  obtain ⟨kept, backward, residual, held, changed⟩ :=
+    NativeCoreIterationReentry.run_refines history represented success
+  exact ⟨kept, backward, residual, held, Change.iteration changed⟩
 
 theorem run_refines {families : List NativeFamilyWire.FamilyRoots}
     (history : LoanTyping.MixedProgram.History definitions declarations env)

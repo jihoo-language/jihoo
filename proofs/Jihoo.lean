@@ -1285,3 +1285,10 @@ import Jihoo.NativeCoreNestedAliases
 import Jihoo.NativeCoreConditionalApplication
 import Jihoo.NativeLoanUniverseFamilyReplay
 import Jihoo.NativeBindingMachineMutableComputedBorrow
+import Jihoo.NativeCoreExpandedTraversal
+import Jihoo.NativeBindingMachineMutableComputedStoreLend
+import Jihoo.NativeLoanUniverseErasedApplications
+import Jihoo.NativeCoreTypedEqual
+import Jihoo.NativeCoreExpandedFamilies
+import Jihoo.NativeLoanUniverseEqualityTransport
+import Jihoo.NativeBindingMachineMutableLoanedArithmetic

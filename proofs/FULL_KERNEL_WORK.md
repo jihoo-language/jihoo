@@ -11,10 +11,10 @@ Version 0.7.0 is gated on the complete verification obligations below.
 
 | Remaining obligation | Starting point |
 | --- | --- |
-| General consistency and typed normalization | `NativeLoanUniverseFamilyReplay.lean` connects checked recursive family replay to dependent proposition codes under written universe binders and at actual type-code arguments. General dependent telescopes and arbitrary checked ghost derivations still need the fundamental theorem. |
-| Whole-language preservation | `NativeCoreBinderTraversal.lean` covers typed Pi, Lam, beta, neutral application and Strict-function reentry. `NativeCoreConditionalApplication.lean` covers distribution through a neutral conditional function. Connect specialized Lend, general View shapes, further dependent positions and the remaining effect rules. |
-| Ownership, borrowing and continuations | `NativeBindingMachineMutableComputedStore.lean` connects a computed Store through a checked Buffer call to Load and Free. `NativeBindingMachineMutableComputedBorrow.lean` derives the actual short-lived reference, computed read, restored callback and Free. General execution across arbitrary closures, indices and dependent runtime forms remains open. |
-| Production refinement | `NativeCoreNestedAliases.lean` proves recursive transparent global dispatch through the shared computation driver at the actual earlier prefix, including beneath binders and after substitution. Connect it to the remaining typed value and family paths and prove whole-program implementation refinement for normalization, comparison, inference and mixed admission. |
+| General consistency and typed normalization | `NativeLoanUniverseEqualityTransport.lean` reads the motive, endpoints and payload from actual checked Transport typing. Reflected affine equality moves a dependent family carrier or supported universe proposition code to its target. General dependent telescopes and arbitrary checked ghost derivations still need the fundamental theorem. |
+| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. Connect specialized Lend, wider View shapes, Strict scrutinee rules and the remaining effect rules. |
+| Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmetic.lean` interprets an ordered reader tree containing fresh and captured live references. It derives checked bounds at every read and restores the original world, preserving all older lease observations. The theorem assumes successful signed evaluation and supported bound evidence. General execution across arbitrary closures and dependent runtime forms remains open. |
+| Production refinement | `NativeCoreTypedEqual.lean` composes recursive family normalization of both roots in one arena and clock with exact projected identity. The selected admitted definitions retain their respective types. Prove the remaining native graph branches and the full implementation refinement for normalization, comparison, inference and mixed admission. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -3119,5 +3119,94 @@ Free. The admitted regression writes 46, reads 46 at computed index 2,
 closes the loan and frees the same Buffer.
 
 The aggregate check passed 1,104 Lake jobs, 10,346 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Recursive delta in typed reentry, erased application, and nested loans
+
+The recursive value visitor now shares its exact tick and append schedule
+between raw-and-expanded typing and expanded typing. The latter is the
+typing judgment supplied by mixed admission. Its typed function positions
+visit the authentic earlier global graph rows, and its dependent arguments
+and binder annotations use the independent raw conversion visitor with the
+same recursive global lookup. Arena prefix witnesses carry the original
+definition table through each append, scope extension and beta reentry.
+An admitted fixture uses globals in a Strict prefix, an arithmetic lambda
+body, a binder type, and a separately visited argument alias. It returns
+`40 : I64` in 25 ticks. Budget and visibility errors keep exactly the
+rows committed before the rejecting visit.
+
+The comparison adapter runs left normalization, right normalization and
+identity at the same depth using one live arena and clock. Checked-byte
+admission recovers each selected definition's independent original type.
+A successful native identity test coincides with equality of the two
+projected represented outputs, with full syntax equality when both
+projections retain every position. Exact fixtures cover comparison and
+normalization failures with their committed arena prefixes. The paired
+admission theorem instantiates the recursive delta visitor for both
+passes. On the final live references, a successful structural order
+comparison reports order zero exactly when identity reports equality.
+
+The erased application theorem recovers the original checked premise
+argument and the instantiated result conversion under arbitrary written
+universe binders in the supported code grammar. The replay uses actual
+erased beta and recursive Elim evidence. An admitted fixture beneath
+Type31 and Type0 consumes an Elim proof of `2 < 3` to establish `3 < 4`.
+The quantified-false exclusion is derived for the same replay grammar.
+
+The runtime proof composes the actual computed Store, checked Buffer
+closure entry, borrowed read, close, and Free. The same computed U64
+index and erased evidence are carried through the argument and reference
+binders. It proves the exact bytes and buffer identity, nonescape of the
+inner loan, unchanged cells elsewhere, and every older lease's read
+observation. An admitted nested example reads 5 from the outer loan both
+before and after the inner allocation is written, borrowed and released.
+The complete run returns 56 and releases both allocations.
+
+The aggregate check passed 1,108 Lake jobs, 10,383 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Family reentry with recursive delta, equality Transport, and multi-loan readers
+
+The constructor fast paths share one prefix-anchored refinement with the
+ordinary and expanded typing visitors. Case and Elim visit their original
+motive, arms and scrutinee in order. The original dependent positions
+carry expanded conversion, and constructor selection with the authenticated
+signature witnesses the actual iota rule. The emitted application spine
+reenters the typed visitor. An induction hypothesis passed to another
+branch can enter the conversion visitor, which also supports recursive
+family computation and visible globals. Borrow and Deref share their
+ordinary cancellation, and View carries the same prefix through each
+constructor telescope visit and its generated borrowed hypotheses.
+The paired comparison theorem uses this joint family visitor for both roots.
+
+Three exact-byte admitted fixtures cover the shared paths. Case visits
+earlier globals in the motive, branch annotation, and owned scrutinee,
+then returns an allocation at its original Buffer type in 33 ticks.
+Recursive Elim uses an earlier global base proof and returns the original
+converted equality result. A recursive View uses a global arm and
+returns the expected equality in 81 ticks. Existing metadata and constructor
+shape guards remain part of the successful fragment.
+
+The Transport theorem reconstructs the native Eq typing premises and
+uses the reflected affine equality of the original endpoints to derive
+kernel conversion. It transports a checked vector-indexed family carrier
+from the written expression `1+1` to `2`. A separate admitted proof
+under Type31 and Type0 replays an erased beta in the equality argument
+before exposing the proof of `2 < 3`.
+
+A scoped runtime reader can now evaluate signed arithmetic across
+multiple actual reads from the fresh reference and from older live
+references it captures. Checked projection identifies the original
+operand receipts, and the reference size interpretation and erased
+evidence give each index bound. The replay and actual machine agree on
+the current cells, read order and scalar result. Closing the fresh loan
+restores the original typed owner and callback while preserving every
+older lease's indexed observation. An admitted nested fixture reads
+31 from the new loan and 8 from an older loan in the same reader, then
+reads the old value again after the inner close and returns 47.
+
+The aggregate check passed 1,111 Lake jobs, 10,423 distinct declaration
 audits, and all generated fixture comparisons under the project resource
 guard. The audit found only Lean's three standard axioms.

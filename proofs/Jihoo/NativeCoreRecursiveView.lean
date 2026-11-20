@@ -10,10 +10,10 @@ namespace Jihoo.NativeKernel.NativeCoreRecursiveView
 
 open NativeArena Environment
 open NativeCoreTransformExact (State)
-open NativeCorePureComputationNormal (Outcome Progress Refines PostExtension nodeResult nodeResult_refines
+open NativeCorePureComputationNormal (Outcome Progress Refines RefinesFor GhostNormalization PostExtension emptyPrefix nodeResult nodeResult_exact
   nodeResult_progress runWithExtension runWithExtension_progress runWithExtension_refines computeNormalization)
 open NativeCoreCaseEvaluation (represented_branches)
-open NativeCoreElimNormal (represented_ref iota_normalization)
+open NativeCoreElimNormal (represented_ref FamilyRules)
 open NativeCoreViewNormal (Shape checkedShape buildSpine buildSpine_refines buildSpine_progress)
 open Environment.FamilyIota (viewTerm)
 
@@ -50,12 +50,13 @@ private theorem unary_representation (source : Represents arena root term)
               · simp [unaryRef, found, same] at read
           | cons _ _ => simp [unaryRef, found] at read
 
-private theorem finishLoan_refines (wf : UnifiedProgram.EnvWellFormed env)
+private theorem finishLoan_refines (rules : FamilyRules env relation)
+    (compute : ∀ {a b}, ACU.Computes a b → relation a b)
     (read : state.arena[root]? = some (.node (loanOp dereference) before))
     (operands : RepresentsList state.arena after terms)
     (size : after.length = (loanOp dereference).arity)
     (success : (finishLoan dereference root state before after).result = .ok selected) :
-    Refines env state (.node (loanOp dereference) terms) (finishLoan dereference root state before after) selected := by
+    RefinesFor relation state (.node (loanOp dereference) terms) (finishLoan dereference root state before after) selected := by
   have unary : after.length = 1 := size.trans (by cases dereference <;> rfl)
   cases operands with
   | nil => cases unary
@@ -66,7 +67,8 @@ private theorem finishLoan_refines (wf : UnifiedProgram.EnvWellFormed env)
           cases reduced : state.arena[ref]?.bind (unaryRef (loanOp !dereference)) with
           | none =>
               simp only [finishLoan, reduced] at success ⊢
-              exact nodeResult_refines read (.cons operand .nil) size success
+              obtain ⟨kept, backward, held⟩ := nodeResult_exact read (.cons operand .nil) size success
+              exact ⟨kept, backward, _, held, rules.same _⟩
           | some result =>
               simp only [finishLoan, reduced, Except.ok.injEq] at success ⊢
               subst selected
@@ -75,7 +77,7 @@ private theorem finishLoan_refines (wf : UnifiedProgram.EnvWellFormed env)
                 cases dereference
                 · exact .borrowDeref inner
                 · exact .derefBorrow inner
-              exact ⟨.refl _, id, inner, original, computeNormalization wf cancellation⟩
+              exact ⟨.refl _, id, inner, original, compute cancellation⟩
 
 private theorem finishLoan_progress (dereference : Bool) (root : Nat) (state : State)
     (before after : List Nat) : Progress limit state (finishLoan dereference root state before after) := by
@@ -254,24 +256,24 @@ theorem extension_metered (env : Environment) (roots : List NativeFamilyWire.Fam
     exact NativeCoreRecursiveCase.extension_metered env
       (op := .caseOf family count) (depth := depth) (before := before) rfl metered
 
-private structure ViewRefines (env : Environment) (before after : Arena) (input : Term)
+private structure ViewRefines (relation : Term → Term → Prop) (before after : Arena) (input : Term)
     (selected : Option Nat) : Prop where
   kept : Prefix before after
   backward : Backward before → Backward after
   value : match selected with
     | none => True
     | some ref => ∃ output, Represents after ref output ∧
-        NativeCorePureComputationNormal.GhostNormalization env input output
+        relation input output
 
 private theorem declined (state : State)
     (found : (.ok none : Except NativeCorePureComputationNormal.Error (Option Nat)) = .ok selected) :
-    ViewRefines env state.arena state.arena source selected := by
+    ViewRefines relation state.arena state.arena source selected := by
   cases found
   exact ⟨.refl _, id, trivial⟩
 
-private theorem runKnown_refines (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+private theorem runKnown_refines (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (found : env.families[family]? = some entry) (boxed : entry.boxed = true)
     (signatureRead : entry.signatures[constructor]? = some signature)
     (branchRead : caseRefs[constructor]? = some branchRef) (count : caseRefs.length = entry.signatures.length)
@@ -279,7 +281,7 @@ private theorem runKnown_refines (history : ScopedProgram.History definitions de
     (fieldsRep : RepresentsList state.arena fieldRefs fields)
     (success : (runKnown env visit state recursion family motiveRef caseRefs owner branchRef
       typeRoot entry signature fieldRefs).result = .ok selected) :
-    ViewRefines env state.arena
+    ViewRefines relation state.arena
       (runKnown env visit state recursion family motiveRef caseRefs owner branchRef typeRoot entry signature fieldRefs).state.arena
       (viewTerm recursion family motive cases (.borrow (.node (.con family constructor fields.length) fields))) selected := by
   unfold runKnown at success ⊢
@@ -290,7 +292,7 @@ private theorem runKnown_refines (history : ScopedProgram.History definitions de
       obtain ⟨shape, scanned, procedure⟩ := Outcome.next_success success
       rw [procedure] at success ⊢
       have sourceRep : Represents state.arena typeRoot declaration := decode_sound decoded
-      obtain ⟨kept, backward⟩ := NativeCoreViewShape.run_frames visitor sourceRep scanned
+      obtain ⟨kept, backward⟩ := NativeCoreViewShape.run_framesFrom onBase visitor sourceRep scanned
       by_cases nativeSize : fieldRefs.length = entry.declaration.params + shape.length
       · simp only [ite_eq_left nativeSize] at success ⊢
         cases planned : checkedPlan env family entry signature with
@@ -312,7 +314,7 @@ private theorem runKnown_refines (history : ScopedProgram.History definitions de
               obtain ⟨spineKept, spineBackward, _, spineRep⟩ := buildSpine_refines
                 (motiveRep.frame kept) (caseRep.frame kept) (branchRep.frame kept) (fieldsRep.frame kept)
                 (plans := plans) foundSpine
-              obtain ⟨later, laterBackward, residual, residualRep, normalized⟩ := visitor spineRep foundResult
+              obtain ⟨later, laterBackward, residual, residualRep, normalized⟩ := visitor (onBase.trans (kept.trans spineKept)) spineRep foundResult
               have arms := NativeCoreIdentical.represented_length caseRep
               have values := NativeCoreIdentical.represented_length fieldsRep
               have native : FamilyIota.Root env
@@ -322,19 +324,19 @@ private theorem runKnown_refines (history : ScopedProgram.History definitions de
                   parameters planned
               exact ⟨kept.trans (spineKept.trans later),
                 fun old => laterBackward (spineBackward (backward old)), residual, residualRep,
-                (iota_normalization history native).trans normalized⟩
+                rules.trans (rules.contract native) normalized⟩
             · simp [aligned] at success
       · simp only [ite_eq_right nativeSize, Except.ok.injEq] at success ⊢
         subst selected
         exact ⟨kept, backward, trivial⟩
 
-private theorem tryOwner_refines (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+private theorem tryOwner_refines (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (motiveRep : Represents state.arena motiveRef motive) (caseRep : RepresentsList state.arena caseRefs cases)
     (ownerRep : Represents state.arena owner ownerTerm)
     (success : (tryOwner env roots visit state recursion family motiveRef caseRefs owner).result = .ok selected) :
-    ViewRefines env state.arena (tryOwner env roots visit state recursion family motiveRef caseRefs owner).state.arena
+    ViewRefines relation state.arena (tryOwner env roots visit state recursion family motiveRef caseRefs owner).state.arena
       (viewTerm recursion family motive cases (.borrow ownerTerm)) selected := by
   cases ownerRep with
   | var read =>
@@ -373,20 +375,20 @@ private theorem tryOwner_refines (history : ScopedProgram.History definitions de
                               arity.symm.trans (NativeCoreIdentical.represented_length represented)
                             subst width
                             simp only [signatureRead, typeRead] at success ⊢
-                            exact runKnown_refines history visitor found enabled.1 signatureRead branchRead enabled.2
+                            exact runKnown_refines rules onBase visitor found enabled.1 signatureRead branchRead enabled.2
                               motiveRep caseRep represented success
                   · rw [ite_eq_right enabled] at success ⊢
                     exact declined state success
         · simp only [tryOwner, read, ite_eq_right same] at success ⊢
           exact declined state success
 
-private theorem tryView_refines (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+private theorem tryView_refines (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (motiveRep : Represents state.arena motiveRef motive) (caseRep : RepresentsList state.arena caseRefs cases)
     (scrutineeRep : Represents state.arena scrutinee value)
     (success : (tryView env roots visit state recursion family motiveRef caseRefs scrutinee).result = .ok selected) :
-    ViewRefines env state.arena (tryView env roots visit state recursion family motiveRef caseRefs scrutinee).state.arena
+    ViewRefines relation state.arena (tryView env roots visit state recursion family motiveRef caseRefs scrutinee).state.arena
       (viewTerm recursion family motive cases value) selected := by
   cases read : state.arena[scrutinee]?.bind (unaryRef .borrow) with
   | none =>
@@ -395,15 +397,15 @@ private theorem tryView_refines (history : ScopedProgram.History definitions dec
   | some owner =>
       obtain ⟨ownerTerm, rfl, ownerRep⟩ := unary_representation scrutineeRep read
       simp only [tryView, read] at success ⊢
-      exact tryOwner_refines history visitor motiveRep caseRep ownerRep success
+      exact tryOwner_refines rules onBase visitor motiveRep caseRep ownerRep success
 
-private theorem finishView_refines (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+private theorem finishView_refines (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (read : state.arena[root]? = some (.node (.view recursion family count) before))
     (operands : RepresentsList state.arena after terms) (size : after.length = count + 2)
     (success : (finishView env roots visit root state recursion family count before after).result = .ok selected) :
-    Refines env state (.node (.view recursion family count) terms)
+    RefinesFor relation state (.node (.view recursion family count) terms)
       (finishView env roots visit root state recursion family count before after) selected := by
   cases operands with
   | nil => cases size
@@ -415,7 +417,7 @@ private theorem finishView_refines (history : ScopedProgram.History definitions 
       simp only [finishView, lookup, List.take_left] at success ⊢
       obtain ⟨chosen, found, done⟩ := Outcome.next_success success
       rw [done] at success ⊢
-      obtain ⟨kept, backward, valueResult⟩ := tryView_refines history visitor motiveRep caseRep valueRep found
+      obtain ⟨kept, backward, valueResult⟩ := tryView_refines rules onBase visitor motiveRep caseRep valueRep found
       cases chosen with
       | some selectedRef =>
           cases success
@@ -423,13 +425,14 @@ private theorem finishView_refines (history : ScopedProgram.History definitions 
           have count := NativeCoreIdentical.represented_length caseRep
           exact ⟨kept, backward, residual, represented, by simpa only [viewTerm, ← count] using normalized⟩
       | none =>
-          obtain ⟨preserved, checked, residual, represented, normalized⟩ :=
-            nodeResult_refines (env := env) (kept.lookup read) ((RepresentsList.cons motiveRep rest).frame kept)
+          obtain ⟨preserved, checked, represented⟩ :=
+            nodeResult_exact (kept.lookup read) ((RepresentsList.cons motiveRep rest).frame kept)
               size success
-          exact ⟨kept.trans preserved, fun old => checked (backward old), residual, represented, normalized⟩
+          exact ⟨kept.trans preserved, fun old => checked (backward old), _, represented, rules.same _⟩
 
-theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
-    (extension env roots).Sound env := by
+theorem extension_soundFrom (rules : FamilyRules env relation)
+    (compute : ∀ {a b}, ACU.Computes a b → relation a b) :
+    (extension env roots).SoundFrom base relation := by
   constructor
   · intro op accepted
     cases op <;> try contradiction
@@ -437,17 +440,25 @@ theorem extension_sound (history : ScopedProgram.History definitions declaration
       refine ⟨?_, rfl⟩
       intro equal
       cases equal
-  · intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  · intro visit limit depth root state op before after terms selected accepted onBase read represented size visitor success
     cases op <;> try contradiction
-    case borrow => exact finishLoan_refines history.wellFormed (dereference := false) read represented size success
-    case deref => exact finishLoan_refines history.wellFormed (dereference := true) read represented size success
-    case view recursion family count => exact finishView_refines history visitor read represented size success
+    case borrow => exact finishLoan_refines rules compute (dereference := false) read represented size success
+    case deref => exact finishLoan_refines rules compute (dereference := true) read represented size success
+    case view recursion family count => exact finishView_refines rules onBase visitor read represented size success
     case elim family count =>
-      exact (NativeCoreRecursiveCase.extension_sound history).2
-        (limit := limit) (depth := depth) rfl read represented size visitor success
+      exact (NativeCoreRecursiveCase.extension_soundFrom (base := base) rules).2
+        (limit := limit) (depth := depth) rfl onBase read represented size visitor success
     case caseOf family count =>
-      exact (NativeCoreRecursiveCase.extension_sound history).2
-        (limit := limit) (depth := depth) rfl read represented size visitor success
+      exact (NativeCoreRecursiveCase.extension_soundFrom (base := base) rules).2
+        (limit := limit) (depth := depth) rfl onBase read represented size visitor success
+
+theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
+    (extension env roots).Sound env := by
+  have proof : (extension env roots).SoundFrom #[] (GhostNormalization env) :=
+    extension_soundFrom (FamilyRules.ghost history) (computeNormalization history.wellFormed)
+  refine ⟨proof.1, ?_⟩
+  intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  exact proof.2 accepted (emptyPrefix _) read represented size (fun _ rep done => visitor rep done) success
 
 theorem run_progress (env : Environment) (roots : List NativeFamilyWire.FamilyRoots)
     (limit depth : Nat) (state : State) (root : Nat) : Progress limit state (run env roots limit depth state root) :=

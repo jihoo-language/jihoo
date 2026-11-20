@@ -7,7 +7,7 @@ namespace Jihoo.NativeKernel.NativeCoreViewShape
 
 open NativeArena Environment
 open NativeCoreTransformExact (State)
-open NativeCorePureComputationNormal (Outcome Progress runWithConditionals)
+open NativeCorePureComputationNormal (Outcome Progress RefinesFor emptyPrefix runWithConditionals)
 open NativeCoreViewNormal (Shape checkedShape ShapeAgrees checkedShape_agrees prepare reenter)
 open NativeCoreCaseNormal (Refines)
 open FamilyIota (viewTerm)
@@ -117,10 +117,10 @@ private theorem skip_represented (represented : Represents arena root term) (par
           obtain ⟨_, _, _, body⟩ := pi_children represented found
           simpa only [skipParameters, found] using ih body
 
-private theorem readFields_frames
-    (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
+private theorem readFields_frames (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
       (visit state ref).result = .ok selected →
-      NativeCorePureComputationNormal.Refines env state term (visit state ref) selected)
+      RefinesFor relation state term (visit state ref) selected)
     (source : Represents state.arena cursor term)
     (success : (readFields env family visit state cursor).result = .ok shape) :
     let after := (readFields env family visit state cursor).state.arena
@@ -143,11 +143,11 @@ private theorem readFields_frames
             | none => simp [lookup] at success
             | some row =>
                 simp only [lookup] at success ⊢
-                have first := visitor domainRep returned
+                have first := visitor onBase domainRep returned
                 cases scanned : (readFields env family visit (visit state domain).state rest).result with
                 | error reason => simp [scanned, Except.map] at success
                 | ok flags =>
-                    obtain ⟨later, backward⟩ := ih rest earlier (restRep.frame first.kept) scanned
+                    obtain ⟨later, backward⟩ := ih rest earlier (onBase.trans first.kept) (restRep.frame first.kept) scanned
                     exact ⟨first.kept.trans later, fun old => backward (first.backward old)⟩
           · rw [readFields, found] at success
             simp only [ite_eq_right earlier] at success
@@ -155,6 +155,17 @@ private theorem readFields_frames
 
 /-- A represented constructor telescope supplies each live visitor with its
 actual domain representation. No computed flag can invalidate old edges. -/
+theorem run_framesFrom (onBase : Prefix base state.arena)
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected →
+      RefinesFor relation state term (visit state ref) selected)
+    (source : Represents state.arena typeRoot type)
+    (success : (run env family visit state params typeRoot).result = .ok shape) :
+    let after := (run env family visit state params typeRoot).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) := by
+  obtain ⟨_, remaining⟩ := skip_represented source params
+  exact readFields_frames onBase visitor remaining success
+
 theorem run_frames
     (visitor : ∀ {state ref term selected}, Represents state.arena ref term →
       (visit state ref).result = .ok selected →
@@ -162,9 +173,8 @@ theorem run_frames
     (source : Represents state.arena typeRoot type)
     (success : (run env family visit state params typeRoot).result = .ok shape) :
     let after := (run env family visit state params typeRoot).state.arena
-    Prefix state.arena after ∧ (Backward state.arena → Backward after) := by
-  obtain ⟨_, remaining⟩ := skip_represented source params
-  exact readFields_frames visitor remaining success
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) :=
+  run_framesFrom (emptyPrefix _) (fun _ rep done => visitor rep done) source success
 
 /-- A raw Pi whose edge lies in a well-formed backward graph always passes
 the traversal's decreasing-cursor guard. -/

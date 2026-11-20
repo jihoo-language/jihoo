@@ -9,10 +9,10 @@ namespace Jihoo.NativeKernel.NativeCoreRecursiveElim
 
 open NativeArena Environment NativeProgramWire
 open NativeCoreTransformExact (State)
-open NativeCorePureComputationNormal (Outcome Progress PostExtension GhostNormalization
+open NativeCorePureComputationNormal (Outcome Progress PostExtension GhostNormalization emptyPrefix
   runWithExtension runWithExtension_refines runWithExtension_progress)
 open NativeCoreCaseEvaluation (represented_branches)
-open NativeCoreElimNormal (prepare reenter reenter_graph_refines reenter_progress)
+open NativeCoreElimNormal (prepare reenter reenter_graph_refinesFrom reenter_progress FamilyRules)
 open Environment.FamilyIota (elimTerm)
 
 private def finish (env : Environment) (visit : State → Nat → Outcome Nat) (root : Nat) (state : State) :
@@ -47,15 +47,15 @@ theorem extension_metered (env : Environment) : (extension env).Metered := by
             (reenter_progress (env := env) (state := state) (family := family) (motive := motive)
               (cases := arms.take count) (scrutinee := scrutinee) visitor)
 
-theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
-    (extension env).Sound env := by
+theorem extension_soundFrom (rules : FamilyRules env relation) :
+    (extension env).SoundFrom base relation := by
   constructor
   · intro op accepted
     cases op <;> try contradiction
     refine ⟨?_, rfl⟩
     intro equal
     cases equal
-  · intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  · intro visit limit depth root state op before after terms selected accepted onBase read represented size visitor success
     cases op <;> try contradiction
     case elim family count =>
       cases represented with
@@ -68,7 +68,14 @@ theorem extension_sound (history : ScopedProgram.History definitions declaration
           have lookup : (caseRefs ++ [scrutRef])[caseRefs.length]? = some scrutRef := by simp
           simp only [extension, finish, lookup, List.take_left] at success ⊢
           simpa only [elimTerm, ← count] using
-            reenter_graph_refines history visitor motiveRep caseRep valueRep success
+            reenter_graph_refinesFrom rules onBase visitor motiveRep caseRep valueRep success
+
+theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
+    (extension env).Sound env := by
+  have proof : (extension env).SoundFrom #[] (GhostNormalization env) := extension_soundFrom (FamilyRules.ghost history)
+  refine ⟨proof.1, ?_⟩
+  intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  exact proof.2 accepted (emptyPrefix _) read represented size (fun _ rep done => visitor rep done) success
 
 /-- The clock is shared by original operands, appended induction hypotheses,
 substitution and reentry. Rejecting visits keep the emitted prefix. -/

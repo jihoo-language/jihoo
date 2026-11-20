@@ -55,15 +55,16 @@ theorem extension_metered (roots : List Roots) (visible : Nat) : (extension root
     · exact follow_progress metered
     · exact Progress.atState _ _
 
-theorem follow_refines (history : LoanTyping.MixedProgram.History definitions declarations env)
+theorem follow_relates (history : LoanTyping.MixedProgram.History definitions declarations env)
     (aligned : RepresentsDefinitions base roots definitions) (onBase : Prefix base state.arena)
     (read : state.arena[root]? = some (.node (.global index) []))
+    (transfer : ∀ {input middle output}, EnvironmentDelta.expand env input = EnvironmentDelta.expand env middle →
+      relation middle output → relation input output)
     (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
       (visit state ref).result = .ok selected →
-      RefinesFor (ExpandedNormalization env) state term (visit state ref) selected)
+      RefinesFor relation state term (visit state ref) selected)
     (success : (follow roots visible visit state root index).result = .ok selected) :
-    RefinesFor (ExpandedNormalization env) state (.node (.global index) [])
-      (follow roots visible visit state root index) selected := by
+    RefinesFor relation state (.node (.global index) []) (follow roots visible visit state root index) selected := by
   by_cases enabled : index < visible
   · cases found : roots[index]? with
     | none => simp [follow, enabled, found] at success
@@ -72,19 +73,38 @@ theorem follow_refines (history : LoanTyping.MixedProgram.History definitions de
         obtain ⟨body, bodyRep, expanded⟩ := NativeCoreGlobalNormal.alias_target
           (frame_definitions aligned onBase) history (.node read rfl .nil) read rfl found
         obtain ⟨kept, backward, residual, held, typed⟩ := visitor onBase bodyRep success
-        refine ⟨kept, backward, residual, held, ?_⟩
-        simpa only [ExpandedNormalization, expanded] using typed
+        exact ⟨kept, backward, residual, held, transfer expanded typed⟩
   · simp [follow, enabled] at success
 
-theorem extension_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
-    (aligned : RepresentsDefinitions base roots definitions) :
-    (extension roots visible).SoundFrom base (ExpandedNormalization env) := by
+theorem follow_refines (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : RepresentsDefinitions base roots definitions) (onBase : Prefix base state.arena)
+    (read : state.arena[root]? = some (.node (.global index) []))
+    (visitor : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected →
+      RefinesFor (ExpandedNormalization env) state term (visit state ref) selected)
+    (success : (follow roots visible visit state root index).result = .ok selected) :
+    RefinesFor (ExpandedNormalization env) state (.node (.global index) [])
+      (follow roots visible visit state root index) selected :=
+  follow_relates (relation := ExpandedNormalization env) history aligned onBase read
+    (fun same proof => by simpa only [ExpandedNormalization, same] using proof) visitor success
+
+theorem extension_soundFor (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : RepresentsDefinitions base roots definitions)
+    (transfer : ∀ {input middle output}, EnvironmentDelta.expand env input = EnvironmentDelta.expand env middle →
+      relation middle output → relation input output) :
+    (extension roots visible).SoundFrom base relation := by
   intro visit limit depth root state op refs terms selected accepts onBase read represented size visitor success
   cases op <;> try contradiction
   case global index =>
     cases represented with
-    | nil => exact follow_refines history aligned onBase read visitor success
+    | nil => exact follow_relates history aligned onBase read transfer visitor success
     | cons => cases size
+
+theorem extension_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : RepresentsDefinitions base roots definitions) :
+    (extension roots visible).SoundFrom base (ExpandedNormalization env) :=
+  extension_soundFor (relation := ExpandedNormalization env) history aligned
+    (fun same proof => by simpa only [ExpandedNormalization, same] using proof)
 
 def run (roots : List Roots) (visible limit depth : Nat) (state : State) (root : Nat) : Outcome Nat :=
   runWithEarlyExtension (extension roots visible) limit depth state root

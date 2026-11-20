@@ -8,7 +8,8 @@ namespace Jihoo.NativeKernel.NativeCoreElimNormal
 
 open NativeArena Environment NativeCoreGraph
 open NativeCoreTransformExact (State)
-open NativeCorePureComputationNormal (Outcome Progress Refines GhostNormalization runWithConditionals)
+open NativeCorePureComputationNormal (Outcome Progress Refines RefinesFor GhostNormalization ExpandedNormalization
+  emptyPrefix runWithConditionals)
 open NativeCoreCaseNormal (appendApplications appendApplications_refines appendApplications_progress)
 open FamilyIota (elimTerm elimBody elimHypotheses)
 
@@ -508,15 +509,28 @@ theorem iota_normalization (history : ScopedProgram.History definitions declarat
   ⟨LoanTyping.FamilyEvaluation.Steps.ghost_transform history (.iota step),
     LoanTyping.FamilyEvaluation.Steps.ghost_transform history (.iota (FamilyIota.Extended.root_expansion step))⟩
 
+structure FamilyRules (env : Environment) (relation : Term → Term → Prop) : Prop where
+  same : ∀ term, relation term term
+  trans : ∀ {a b c}, relation a b → relation b c → relation a c
+  contract : ∀ {a b}, FamilyIota.Root env a b → relation a b
+
+theorem FamilyRules.ghost (history : ScopedProgram.History definitions declarations env) :
+    FamilyRules env (GhostNormalization env) :=
+  ⟨GhostNormalization.refl, GhostNormalization.trans, iota_normalization history⟩
+
+theorem FamilyRules.expanded (history : ScopedProgram.History definitions declarations env) :
+    FamilyRules env (ExpandedNormalization env) :=
+  ⟨fun _ => .refl _, fun first second => first.trans second, fun step => (iota_normalization history step).expanded⟩
+
 /-- Compose constructor selection with recursion on the emitted application
-spine and preserve its representation through transparent expansion. -/
-theorem reenter_graph_refines (history : ScopedProgram.History definitions declarations env)
-    (visitRefines : ∀ {state ref term selected}, Represents state.arena ref term →
-      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+spine while retaining the original arena prefix across reentry. -/
+theorem reenter_graph_refinesFrom (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitRefines : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor relation state term (visit state ref) selected)
     (motiveRep : Represents state.arena motiveRef motive)
     (caseRep : RepresentsList state.arena caseRefs cases) (valueRep : Represents state.arena scrutinee value)
     (success : (reenter visit (prepare env state family motiveRef caseRefs scrutinee)).result = .ok selected) :
-    Refines env state (elimTerm family motive cases value)
+    RefinesFor relation state (elimTerm family motive cases value)
       (reenter visit (prepare env state family motiveRef caseRefs scrutinee)) selected := by
   cases chosen : (prepare env state family motiveRef caseRefs scrutinee).result with
   | error reason => simp [reenter, chosen] at success
@@ -529,12 +543,23 @@ theorem reenter_graph_refines (history : ScopedProgram.History definitions decla
           subst selected
           change residual = _ at change
           subst residual
-          exact ⟨kept, backward, _, represented, GhostNormalization.refl _⟩
+          exact ⟨kept, backward, _, represented, rules.same _⟩
       | spine root =>
           simp only [reenter, chosen] at success ⊢
-          obtain ⟨later, preserves, term, output, reduced⟩ := visitRefines represented success
+          obtain ⟨later, preserves, term, output, reduced⟩ := visitRefines (onBase.trans kept) represented success
           exact ⟨kept.trans later, fun old => preserves (backward old), term, output,
-            (iota_normalization history change).trans reduced⟩
+            rules.trans (rules.contract change) reduced⟩
+
+theorem reenter_graph_refines (history : ScopedProgram.History definitions declarations env)
+    (visitRefines : ∀ {state ref term selected}, Represents state.arena ref term →
+      (visit state ref).result = .ok selected → Refines env state term (visit state ref) selected)
+    (motiveRep : Represents state.arena motiveRef motive)
+    (caseRep : RepresentsList state.arena caseRefs cases) (valueRep : Represents state.arena scrutinee value)
+    (success : (reenter visit (prepare env state family motiveRef caseRefs scrutinee)).result = .ok selected) :
+    Refines env state (elimTerm family motive cases value)
+      (reenter visit (prepare env state family motiveRef caseRefs scrutinee)) selected :=
+  reenter_graph_refinesFrom (FamilyRules.ghost history) (emptyPrefix _) (fun _ rep done => visitRefines rep done)
+    motiveRep caseRep valueRep success
 
 private theorem rebuild_uncharged (state : State) (family motive : Nat) (cases : List Nat) (scrutinee : Nat) :
     let staged := rebuild state family motive cases scrutinee

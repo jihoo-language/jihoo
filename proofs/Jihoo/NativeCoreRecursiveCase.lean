@@ -8,12 +8,12 @@ namespace Jihoo.NativeKernel.NativeCoreRecursiveCase
 
 open NativeArena Environment
 open NativeCoreTransformExact (State)
-open NativeCorePureComputationNormal (Outcome Progress Refines PostExtension nodeResult nodeResult_refines
+open NativeCorePureComputationNormal (Outcome Progress Refines RefinesFor PostExtension GhostNormalization emptyPrefix nodeResult nodeResult_exact
   nodeResult_progress runWithExtension runWithExtension_progress runWithExtension_refines)
 open NativeCoreCaseNormal (appendApplications appendApplications_refines appendApplications_progress
   represented_get represented_drop)
 open NativeCoreCaseEvaluation (represented_branches)
-open NativeCoreElimNormal (selectSignature selectSignature_sound represented_ref iota_normalization)
+open NativeCoreElimNormal (selectSignature selectSignature_sound represented_ref FamilyRules)
 open FamilyIota (caseTerm)
 
 def applyFields (visit : State → Nat → Outcome Nat) (state : State) (branch : Nat)
@@ -89,34 +89,34 @@ theorem extension_metered (env : Environment) : (extension env).Metered := by
     exact NativeCoreRecursiveElim.extension_metered env (op := .elim family count)
       (depth := depth) (before := before) rfl visitor
 
-private theorem applyFields_refines (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state root term selected}, Represents state.arena root term →
-      (visit state root).result = .ok selected → Refines env state term (visit state root) selected)
+private theorem applyFields_refines (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state root term selected}, Prefix base state.arena → Represents state.arena root term →
+      (visit state root).result = .ok selected → RefinesFor relation state term (visit state root) selected)
     (branchRep : Represents state.arena branchRef branch)
     (fieldsRep : RepresentsList state.arena fieldRefs values)
     (contraction : FamilyIota.Root env input (applications branch values))
     (success : (applyFields visit state branchRef fieldRefs).result = .ok selected) :
-    Refines env state input (applyFields visit state branchRef fieldRefs) selected := by
+    RefinesFor relation state input (applyFields visit state branchRef fieldRefs) selected := by
   cases emitted : (appendApplications state branchRef fieldRefs).result with
   | error reason => simp [applyFields, emitted] at success
   | ok spine =>
       simp only [applyFields, emitted] at success ⊢
       obtain ⟨kept, backward, _, represented⟩ := appendApplications_refines branchRep fieldsRep emitted
-      obtain ⟨later, laterBackward, output, outputRep, changes⟩ := visitor represented success
+      obtain ⟨later, laterBackward, output, outputRep, changes⟩ := visitor (onBase.trans kept) represented success
       exact ⟨kept.trans later, fun old => laterBackward (backward old), output, outputRep,
-        (iota_normalization history contraction).trans changes⟩
+        rules.trans (rules.contract contraction) changes⟩
 
 private theorem finishScrutinee_refines
-    (history : ScopedProgram.History definitions declarations env)
-    (visitor : ∀ {state root term selected}, Represents state.arena root term →
-      (visit state root).result = .ok selected → Refines env state term (visit state root) selected)
+    (rules : FamilyRules env relation) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state root term selected}, Prefix base state.arena → Represents state.arena root term →
+      (visit state root).result = .ok selected → RefinesFor relation state term (visit state root) selected)
     (caseRep : RepresentsList state.arena caseRefs cases)
     (valueRep : Represents state.arena scrutinee value)
     (neutral : (nodeResult state root (.caseOf family count) before after).result = .ok selected →
-      Refines env state (caseTerm family motive cases value)
+      RefinesFor relation state (caseTerm family motive cases value)
         (nodeResult state root (.caseOf family count) before after) selected)
     (success : (finishScrutinee env visit root family count state before after caseRefs scrutinee).result = .ok selected) :
-    Refines env state (caseTerm family motive cases value)
+    RefinesFor relation state (caseTerm family motive cases value)
       (finishScrutinee env visit root family count state before after caseRefs scrutinee) selected := by
   cases valueRep with
   | var read => simpa only [finishScrutinee, read] using neutral (by simpa only [finishScrutinee, read] using success)
@@ -144,7 +144,7 @@ private theorem finishScrutinee_refines
                 subst width
                 have contraction := FamilyIota.Root.caseOf (motive := motive) found data signatureRead branchFound
                   (branchWidth.symm.trans branches) (fieldsWidth.symm.trans fieldCount)
-                exact applyFields_refines history visitor branchRep (represented_drop fields _) contraction success
+                exact applyFields_refines rules onBase visitor branchRep (represented_drop fields _) contraction success
               · simp [data] at success
         · simpa only [finishScrutinee, read, ite_eq_right fast] using
             neutral (by simpa only [finishScrutinee, read, ite_eq_right fast] using success)
@@ -174,8 +174,8 @@ theorem finish_typed_constructor
   exact ⟨entry, branchRef, found, selectedRef, by
     simp [finishScrutinee, read, chosen, data, inRange]⟩
 
-theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
-    (extension env).Sound env := by
+theorem extension_soundFrom (rules : FamilyRules env relation) :
+    (extension env).SoundFrom base relation := by
   constructor
   · intro op accepted
     cases op <;> try contradiction
@@ -183,13 +183,17 @@ theorem extension_sound (history : ScopedProgram.History definitions declaration
       refine ⟨?_, rfl⟩
       intro equal
       cases equal
-  · intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  · intro visit limit depth root state op before after terms selected accepted onBase read represented size visitor success
     cases op <;> try contradiction
     case elim family count =>
-      exact (NativeCoreRecursiveElim.extension_sound history).2
-        (limit := limit) (depth := depth) rfl read represented size visitor success
+      exact (NativeCoreRecursiveElim.extension_soundFrom (base := base) rules).2
+        (limit := limit) (depth := depth) rfl onBase read represented size visitor success
     case caseOf family count =>
-      have neutral := nodeResult_refines (env := env) read represented size (reuse := true) (selected := selected)
+      have neutral (done : (nodeResult state root (.caseOf family count) before after).result = .ok selected) :
+          RefinesFor relation state (.node (.caseOf family count) terms)
+            (nodeResult state root (.caseOf family count) before after) selected := by
+        obtain ⟨kept, backward, held⟩ := nodeResult_exact read represented size done
+        exact ⟨kept, backward, _, held, rules.same _⟩
       cases represented with
       | nil => cases size
       | @cons motiveRef motive _ _ motiveRep rest =>
@@ -200,8 +204,15 @@ theorem extension_sound (history : ScopedProgram.History definitions declaration
           have lookup : (caseRefs ++ [scrutRef])[caseRefs.length]? = some scrutRef := by simp
           simp only [extension, finish, lookup, List.take_left] at success ⊢
           simpa only [caseTerm, ← count] using
-            finishScrutinee_refines history visitor caseRep valueRep
+            finishScrutinee_refines rules onBase visitor caseRep valueRep
               (by simpa only [caseTerm, ← count] using neutral) success
+
+theorem extension_sound (history : ScopedProgram.History definitions declarations env) :
+    (extension env).Sound env := by
+  have proof : (extension env).SoundFrom #[] (GhostNormalization env) := extension_soundFrom (FamilyRules.ghost history)
+  refine ⟨proof.1, ?_⟩
+  intro visit limit depth root state op before after terms selected accepted read represented size visitor success
+  exact proof.2 accepted (emptyPrefix _) read represented size (fun _ rep done => visitor rep done) success
 
 theorem run_progress (env : Environment) (limit depth : Nat) (state : State) (root : Nat) :
     Progress limit state (run env limit depth state root) :=
