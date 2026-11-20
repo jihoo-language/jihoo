@@ -1,4 +1,5 @@
 import Jihoo.NativeBindingMachineMutable
+import Jihoo.NativeLoanDeltaPreservation
 
 /-! Pack and Witness share the machine's U64 representation. A local
 interpretation records the checked original predicate and evidence without
@@ -90,6 +91,35 @@ theorem typed_literal_pack (state : State)
   refine ⟨predicate.subst meanings,number,evidence.subst meanings,?_,rfl,
     predicateTyped,numberTyped,evidenceTyped,closed.principalView⟩
   simp only [shape,Term.subst,substArgs,Op.binders,liftSub]
+
+/-- The actual pending refinement frame forwards the computed word, restoring
+the saved continuation. Typed replay of the original closed witness supplies
+the matching source refinement value and retains its dependent evidence. -/
+theorem typed_computed_pack_resume (state : State)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanClosingTyped env loans false code meanings type)
+    (shape : code.term = .pack predicate witness evidence)
+    (wordSteps : LoanTyping.DeltaEvaluation.Steps env (witness.subst meanings) (.natural number))
+    (returned : state.control = .returned (.natural number))
+    (stackShape : state.stack = [])
+    (pendingShape : state.pending = (.refinement,saved) :: pending) :
+    let source := Term.pack (predicate.subst meanings) (.natural number) (evidence.subst meanings)
+    step state = some (⟨state.heap,.returned (.natural number),saved,pending⟩,none) ∧
+    RefinementWord env source type (.natural number) ∧
+    RawLend.Forward env (code.term.subst meanings) source := by
+  let source := Term.pack (predicate.subst meanings) (.natural number) (evidence.subst meanings)
+  have original : code.term.subst meanings =
+      .pack (predicate.subst meanings) (witness.subst meanings) (evidence.subst meanings) := by
+    simp only [shape,Term.subst,substArgs,Op.binders,liftSub]
+  have steps : LoanTyping.DeltaEvaluation.Steps env (code.term.subst meanings) source := by
+    rw [original]
+    exact .node .pack (by intro impossible; cases impossible)
+      (.cons (.computation (.family .refl)) (.cons wordSteps (.cons (.computation (.family .refl)) .nil)))
+  obtain ⟨forward,computed⟩ := history.delta_computation_preservation steps (typed.closed history)
+  obtain ⟨predicateTyped,numberTyped,evidenceTyped⟩ := computed.pack_inputs
+  refine ⟨?_,⟨predicate.subst meanings,number,evidence.subst meanings,rfl,rfl,
+    predicateTyped,numberTyped,evidenceTyped,computed.principalView⟩,forward⟩
+  simp only [step,returned,stackShape,returnAction,pendingShape,resumeBuffer]
 
 /-- Witness projects the existing word of a retained refinement slot.
 Its original Loan64 argument fixes the refinement predicate, and the actual

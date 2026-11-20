@@ -3663,6 +3663,18 @@ hides both operands behind beta applications and realizes the word `3` in
 the original refinement fiber. The focused check passed 384 jobs, and both
 theorems use only standard Lean axioms.
 
+### Computed refinement values in calls and comparison
+
+The pending machine frame for a Pack restores the saved continuation with
+the returned word. Typed replay constructs the corresponding Pack at the
+original requested type and retains its dependent evidence.
+
+Two checked Packs whose witnesses compute to the same word give a realized
+dependent function one semantic argument. Its two source applications
+realize one result in the same fiber. At an ignored evidence field, raw
+conversion of the two retained operands transports both proofs to a common
+formed proposition. The focused builds and four-declaration audit passed.
+
 ### Aggregate check of call telescopes and literal arithmetic
 
 At `62b0f7b`, 1,120 Lake jobs and the generated fixture comparisons passed.

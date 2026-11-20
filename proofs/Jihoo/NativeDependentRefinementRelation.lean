@@ -219,6 +219,40 @@ theorem checked_pack_replay_realizes
   obtain ⟨meaning,realized,atWord⟩ := checked_literal_pack_realizes history.wellFormed residualTyped supported
   exact ⟨meaning,conversion_realizes _ _ history.wellFormed.closed forward.toConv.symm realized,atWord⟩
 
+/-- A realized dependent family receives one semantic input from two checked
+Packs whose computations produce the same word. The applications realize the
+same result in the same fiber even if the source evidence differs. -/
+theorem checked_pack_applications_share_meaning
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (returns : Ty env (Contextual.extend (empty env).meaning (refinement (literalUpperBound env bound)).code) sort)
+    {functionMeaning : Contextual.Tm (pi (refinement (literalUpperBound env bound)) returns).code}
+    (function : Realizes (empty env) (pi (refinement (literalUpperBound env bound)) returns) family functionMeaning)
+    (leftTyped : LoanTyping.HasType env loans [] mode
+      (.pack (writtenUpperBound bound) leftWord leftProof) leftType)
+    (rightTyped : LoanTyping.HasType env otherLoans [] otherMode
+      (.pack (writtenUpperBound bound) rightWord rightProof) rightType)
+    (leftWordSteps : LoanTyping.DeltaEvaluation.Steps env leftWord (.natural word))
+    (rightWordSteps : LoanTyping.DeltaEvaluation.Steps env rightWord (.natural word))
+    (leftProofSteps : LoanTyping.DeltaEvaluation.Steps env leftProof leftResidual)
+    (rightProofSteps : LoanTyping.DeltaEvaluation.Steps env rightProof rightResidual)
+    (leftSupported : Semantics.LoanArithmetic.Supported leftResidual)
+    (rightSupported : Semantics.LoanArithmetic.Supported rightResidual) :
+    ∃ argument : Contextual.Tm (refinement (literalUpperBound env bound)).code,
+      let fiber := returns.substitution (Contextual.pair Contextual.identity argument)
+      ∃ meaning : Contextual.Tm fiber.code,
+        Realizes (empty env) fiber (.app family (.pack (writtenUpperBound bound) leftWord leftProof)) meaning ∧
+        Realizes (empty env) fiber (.app family (.pack (writtenUpperBound bound) rightWord rightProof)) meaning := by
+  obtain ⟨left,leftRealized,leftValue⟩ := checked_pack_replay_realizes history leftTyped
+    leftWordSteps leftProofSteps leftSupported
+  obtain ⟨right,rightRealized,rightValue⟩ := checked_pack_replay_realizes history rightTyped
+    rightWordSteps rightProofSteps rightSupported
+  have same : left = right := by
+    funext point
+    exact congrArg ULift.up (Subtype.ext ((leftValue point).trans (rightValue point).symm))
+  subst right
+  exact ⟨left,_,application_realizes _ _ returns function leftRealized,
+    application_realizes _ _ returns function rightRealized⟩
+
 namespace Examples
 
 private def hiddenWord : Term := .app (.lam false .u64 (.var 0)) (.natural 3)

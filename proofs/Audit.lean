@@ -10554,3 +10554,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_absurd_infers_original_target
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.scopes_bound_demand
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_app_checked_binder_usage
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.IgnoredProposition.converted
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.converted_operands_common_proposition
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_pack_applications_share_meaning
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.typed_computed_pack_resume

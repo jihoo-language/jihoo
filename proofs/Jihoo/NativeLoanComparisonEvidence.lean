@@ -92,6 +92,31 @@ inductive IgnoredProposition : Op → Term → Term → Term → Prop where
 private theorem IgnoredProposition.arity (field : IgnoredProposition op a b proposition) : op.arity = 3 := by
   cases field <;> rfl
 
+/-- Corresponding retained operands may already be related by computation.
+Congruence transports the actual proposition of the erased evidence along
+both operand conversions. -/
+theorem IgnoredProposition.converted (first : IgnoredProposition op a b proposition)
+    (second : IgnoredProposition op a' b' other)
+    (left : RawLend.Conv env a a') (right : RawLend.Conv env b b') :
+    RawLend.Conv env proposition other := by
+  cases first <;> cases second
+  · exact .node .lt (.cons right (.cons (.node .uadd (.cons left (.cons (.refl _) .nil))) .nil))
+  · exact .node .app (.cons left (.cons right .nil))
+  · exact .node .app (.cons left (.cons right .nil))
+
+/-- The source derivations place both erasure-sensitive operands in one
+formed proposition, even when the retained fields are only convertible. -/
+theorem converted_operands_common_proposition
+    (first : IgnoredProposition op a b proposition) (second : IgnoredProposition op a' b' other)
+    (firstTyped : PureTyping.HasType env ctx (.node op [a,b,leftProof]) firstType)
+    (secondTyped : PureTyping.HasType env ctx (.node op [a',b',rightProof]) secondType)
+    (left : RawLend.Conv env a a') (right : RawLend.Conv env b b') :
+    HasEvidence env ctx proposition leftProof ∧ HasType env [] ctx true rightProof proposition := by
+  have propositions := first.converted second left right
+  have firstEvidence := expanded_checked_evidence firstTyped
+  have secondEvidence := expanded_checked_evidence secondTyped
+  cases first <;> cases second <;> exact ⟨firstEvidence,secondEvidence.2.convert propositions.symm⟩
+
 private theorem IgnoredProposition.project_node (field : IgnoredProposition op a b proposition) (proof : Term) :
     project (.node op [a, b, proof]) = .node (rank op, payload op) [project a, project b] := by
   cases field <;>
