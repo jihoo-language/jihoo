@@ -10,7 +10,7 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress)
 open NativeCoreCaseStrict (append append_progress append_refines)
 
-private def shiftRoot (limit depth : Nat) (state : State) (root amount : Nat) : Outcome Nat :=
+def shiftRoot (limit depth : Nat) (state : State) (root amount : Nat) : Outcome Nat :=
   let shifted := NativeCoreTransformExact.run limit depth state root (.shift amount) 0
   ⟨shifted.state,shifted.result.mapError .substitution⟩
 
@@ -21,12 +21,12 @@ private theorem shift_success (success : (shiftRoot limit depth state root amoun
     simp only [observed,Except.mapError,reduceCtorEq,Except.ok.injEq] at success ⊢
   exact success
 
-private theorem shift_progress : Progress limit state (shiftRoot limit depth state root amount) := by
+theorem shift_progress : Progress limit state (shiftRoot limit depth state root amount) := by
   have progress := NativeCoreTransformExact.run_progress limit depth state root (.shift amount) 0
   exact ⟨progress.kept,progress.monotone,progress.bounded,fun room root success =>
     progress.accepted room root (shift_success success)⟩
 
-private theorem shift_refines (source : Represents state.arena root written)
+theorem shift_refines (source : Represents state.arena root written)
     (success : (shiftRoot limit depth state root amount).result = .ok selected) :
     let after := (shiftRoot limit depth state root amount).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧

@@ -10731,3 +10731,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodePlain.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_skips_annotations_and_stops_at_first_failure
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.shift_progress
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.shift_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.open_parameter_and_bound_index_have_distinct_slots

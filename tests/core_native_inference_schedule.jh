@@ -1244,6 +1244,56 @@ fn dependent_lend_callbacks() {
     assert(budget-remaining_ticks(&outside) == 1, "a code borrow with no active readers uses only its entry tick")
 }
 
+fn parametric_data_motive_domain() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let current = c.add(core.Term.Var(0), span).unwrap()
+    let outer = c.add(core.Term.Var(1), span).unwrap()
+    var result_indices = Vec(u32).new()
+    result_indices.push(current)
+    result_indices.push(two)
+    let result = c.add(core.Term.Ind(0, result_indices), span).unwrap()
+    let telescope = c.add(core.Term.Pi(true, word, result), span).unwrap()
+    c.push_family(core.Family { name: "Flag".to_string(), data: true, params: 1, arity: 2,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "AtTwo".to_string(), ty: telescope })
+    var fields = Vec(u32).new()
+    fields.push(current)
+    let subject = c.add(core.Term.Con(0, 0, fields), span).unwrap()
+    var bound = Vec(u32).new()
+    bound.push(outer)
+    bound.push(current)
+    let domain = c.add(core.Term.Ind(0, bound), span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    let receiver = c.add(core.Term.Lam(false, domain, signed), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, receiver), span).unwrap()
+    let arm = c.add(core.Term.Integer(6), span).unwrap()
+    var branches = Vec(u32).new()
+    branches.push(arm)
+    let eliminate = c.add(core.Term.Elim(0, motive, branches, subject), span).unwrap()
+    c.check().unwrap()
+    let start = c.node_count()
+    var context = Vec(core.Binding).new()
+    context.push(core.Binding { ty: word, erased: false })
+    let done = c.infer(eliminate, context.as_slice(), true, 32).unwrap()
+    var checks = 0
+    for row in start+2..c.node_count() {
+        let row = row as u32
+        var refs = Vec(u32).new()
+        refs.push(row-2)
+        refs.push(row-1)
+        if c.term(row-2) == core.Term.Var(1) && c.term(row-1) == core.Term.Var(0) &&
+            c.term(row) == core.Term.Ind(0, refs) {
+            checks += 1
+            assert(row == 24, "the motive compares the two freshly allocated index references")
+        }
+    }
+    assert(checks == 1, "the motive domain binds only the new index")
+    assert(start == 16 && done == 33 && c.node_count() == 34, "the data inference graph retains the original motive")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1270,6 +1320,7 @@ fn main() -> i32 {
     proposition_motive_telescope()
     proposition_case_telescope()
     proposition_elimination_inference()
+    parametric_data_motive_domain()
     dependent_constructor_inference()
     boxed_drop_inference()
     declaration_annotation_inference()

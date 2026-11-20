@@ -1336,6 +1336,7 @@ import Jihoo.NativeCoreGhostLoopInference
 import Jihoo.NativeCoreGhostLoopExamples
 import Jihoo.NativeCorePropMotiveType
 import Jihoo.NativeCoreShiftedApplications
+import Jihoo.NativeCoreDataMotiveDomain
 import Jihoo.NativeCorePropCaseType
 import Jihoo.NativeCorePropSignatureConversion
 import Jihoo.NativeCorePropSignatureAuthentication

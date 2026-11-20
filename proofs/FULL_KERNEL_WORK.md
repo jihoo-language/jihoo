@@ -4244,3 +4244,12 @@ A successful scan proves that the retained term has first-order shape
 using checked family layouts. A normalized term free of global references
 also satisfies the runtime plain-type policy. The focused build passed
 329 jobs and the six audited declarations use standard Lean axioms.
+
+### Parameter scope in data elimination motives
+
+The checked motive domain shifts each original parameter beneath the
+nonparameter index binders, then allocates those index variables and the
+family application. The native indexed fixture and the Lean builder
+agree on the order and references of the three appended rows for an
+open outer parameter. The focused build passed 330 jobs and the five
+audited declarations use standard Lean axioms.
