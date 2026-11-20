@@ -455,6 +455,44 @@ fn buffer_operation_inference() {
     assert_spent(&released, "free inference with the store uses 44 ticks")
 }
 
+fn indexing_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let length = c.add(core.Term.Natural(2), span).unwrap()
+    let index = c.add(core.Term.Natural(1), span).unwrap()
+    var elements = Vec(u32).new()
+    elements.push(c.add(core.Term.Integer(3), span).unwrap())
+    elements.push(c.add(core.Term.Integer(-4), span).unwrap())
+    let array = c.add(core.Term.Elements(elements), span).unwrap()
+    let bound = c.add(core.Term.Decide(index, length), span).unwrap()
+    c.add(core.Term.Index(array, index, bound), span).unwrap()
+    let buffer = c.add(core.Term.Buffer(length), span).unwrap()
+    let reference = c.add(core.Term.Ref(buffer), span).unwrap()
+    let borrowed = c.add(core.Term.Var(0), span).unwrap()
+    let read = c.add(core.Term.Index(borrowed, index, bound), span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    c.add(core.Term.Lam(false, reference, read), span).unwrap()
+    c.add(core.Term.Pi(false, reference, signed), span).unwrap()
+    c
+}
+
+fn array_and_borrowed_index_inference() {
+    var array = indexing_fixture()
+    spend(&array, 999964)
+    let array_result = array.infer(6, [], true, 32).unwrap()
+    assert(array_result == 26 && array.term(21) == core.Term.Lt(1, 17) && array.term(array_result) == core.Term.I64,
+        "array indexing uses the inferred array length before returning a signed word")
+    assert_spent(&array, "array indexing uses 36 ticks")
+
+    var borrowed = indexing_fixture()
+    let context = [core.Binding { ty: 8, erased: false }]
+    spend(&borrowed, 999966)
+    let borrowed_result = borrowed.infer(10, context, true, 32).unwrap()
+    assert(borrowed_result == 21 && borrowed.term(16) == core.Term.Lt(1, 0) && borrowed.term(borrowed_result) == core.Term.I64,
+        "borrowed indexing uses the original buffer length before returning a signed word")
+    assert_spent(&borrowed, "borrowed indexing uses 34 ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -474,6 +512,7 @@ fn main() -> i32 {
     wide_ghost_sum()
     array_and_allocation_inference()
     buffer_operation_inference()
+    array_and_borrowed_index_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

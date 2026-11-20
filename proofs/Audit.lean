@@ -10570,3 +10570,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.pi_application_common_proposition
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_comparison_aligns_hidden_pack_proofs
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.opened_telescope
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_array_and_borrowed_index_infer_signed_result

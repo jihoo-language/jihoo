@@ -3745,3 +3745,14 @@ actual slot ordering and local checked-scope conditions. Installation and
 retirement still need to be derived across arbitrary machine call sequences.
 The focused build passed 421 jobs and the five new declarations use only
 standard Lean axioms.
+
+### Metered array and borrowed-buffer indexing
+
+Ghost Index inference now follows the native split after normalizing the
+subject's type. The array branch uses the emitted array length. The borrow
+branch normalizes the inner type separately, exposing the original buffer
+length. Both branches check the U64 index and its evidence in that original
+bound and return I64. The admitted examples agree with the rebuilt compiler
+at 36 ticks for the array and 34 for the borrow, including the exact bound
+and result roots. The focused build passed 427 jobs and the new theorem
+uses only standard Lean axioms.

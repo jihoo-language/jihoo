@@ -195,6 +195,26 @@ private def inferStore (infer : Infer) (normal : Visit) (limit depth : Nat) (sta
           (append afterProof .buffer [checked.1]).next fun after result =>
             ⟨after,.ok ⟨result,checked.2 ++ (indexPairs ++ (valuePairs ++ proofPairs))⟩⟩
 
+private def readIndexType (normal : Visit) (state : State) (subject typeRoot : Nat) : Outcome (Nat × Bool) :=
+  (normal state typeRoot).next fun exposed root =>
+    match exposed.arena[root]? with
+    | some (.node .array [length]) => ⟨exposed,.ok (length,false)⟩
+    | some (.node .ref [inner]) =>
+      (normal exposed inner).next fun after expanded =>
+        match after.arena[expanded]? with
+        | some (.node .buffer [length]) => ⟨after,.ok (length,true)⟩
+        | _ => discard after subject
+    | _ => discard exposed subject
+
+private def inferIndex (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (subject index proof : Nat) : Outcome Inferred :=
+  (infer state subject).next fun afterSubject subjectType =>
+    (readIndexType normal afterSubject subject subjectType.typeRoot).next fun exposed bound =>
+      (checkFixed infer normal limit depth exposed .u64 [index]).next fun afterIndex indexPairs =>
+        (checkIndexEvidence infer normal limit depth afterIndex index bound.1 proof).next fun afterProof proofPairs =>
+          (append afterProof .i64 []).next fun after result =>
+            ⟨after,.ok ⟨result,subjectType.compared ++ (indexPairs ++ proofPairs)⟩⟩
+
 private def finishDecide (normal : Visit) (state : State) (root first second : Nat) : Outcome Nat :=
   (normal state first).next fun afterFirst left =>
     (normal afterFirst second).next fun afterSecond right =>
@@ -416,6 +436,9 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .store [buffer, index, value, proof]) =>
             inferStore (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               buffer index value proof
+        | some (.node .index [subject, index, proof]) =>
+            inferIndex (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              subject index proof
         | some (.node .eq [a, b]) | some (.node .lt [a, b]) =>
             inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .prop []
@@ -602,6 +625,33 @@ private theorem inferStore_progress
   apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) indexRoom) indexRoom
   intro _ _ valueRoom
   apply next_progress (checkIndexEvidence_progress infers normalizes valueRoom) valueRoom
+  intro _ _ _
+  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem readIndexType_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (readIndexType normal state subject typeRoot) := by
+  apply (normalizes _ _).next
+  intro root
+  split
+  · exact Progress.atState _ _
+  · apply (normalizes _ _).next
+    intro expanded
+    split <;> exact Progress.atState _ _
+  · exact Progress.atState _ _
+
+private theorem inferIndex_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferIndex infer normal limit depth state subject index proof) := by
+  apply next_progress (infers _ _ room) room
+  intro _ _ subjectRoom
+  apply next_progress (readIndexType_progress normalizes) subjectRoom
+  intro _ _ boundRoom
+  apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) boundRoom) boundRoom
+  intro _ _ indexRoom
+  apply next_progress (checkIndexEvidence_progress infers normalizes indexRoom) indexRoom
   intro _ _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
 
@@ -978,6 +1028,7 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
         | exact inferAlloc_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferFree_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStore_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferIndex_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
         | exact inferZeroLe_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1679,6 +1730,109 @@ private theorem inferStore_refines
   simp only [expand,expandArgs] at typedIndex typedValue
   simp only [Term.store,expand,expandArgs]
   exact .store typedBuffer (typedIndex i List.mem_cons_self) (typedValue v List.mem_cons_self) typedProof
+
+private theorem readIndexType_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (source : Represents state.arena typeRoot type)
+    (success : (readIndexType normal state subject typeRoot).result = .ok bound) :
+    let after := (readIndexType normal state subject typeRoot).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ count, Represents after bound.1 count ∧ LoanTyping.Conversion.Conv env (expand env type)
+        (if bound.2 then .ref (.buffer (expand env count)) else .array (expand env count)) := by
+  unfold readIndexType at success ⊢
+  obtain ⟨root,normalized,next⟩ := Outcome.next_success success
+  rw [next] at success ⊢
+  obtain ⟨kept,backward,residual,held,changed⟩ := normalSound onBase source normalized
+  split at success
+  · rename_i length read
+    simp only [Except.ok.injEq] at success
+    subst bound
+    obtain ⟨count,shape,countRep⟩ := unary_read held read
+    exact ⟨kept,backward,count,countRep,
+      by simpa only [shape,Term.array,expand,expandArgs,Bool.false_eq_true,ite_false] using changed.converted⟩
+  · rename_i inner read
+    obtain ⟨expanded,innerOk,innerNext⟩ := Outcome.next_success success
+    rw [innerNext] at success ⊢
+    obtain ⟨written,shape,innerRep⟩ := unary_read held read
+    obtain ⟨innerKept,innerBack,innerResidual,innerHeld,innerChanged⟩ := normalSound (onBase.trans kept) innerRep innerOk
+    split at success
+    · rename_i length readBuffer
+      simp only [Except.ok.injEq] at success
+      subst bound
+      obtain ⟨count,innerShape,countRep⟩ := unary_read innerHeld readBuffer
+      have outerConv : LoanTyping.Conversion.Conv env (expand env type) (.ref (expand env written)) := by
+        simpa only [shape,Term.ref,expand,expandArgs] using changed.converted
+      have innerConv : LoanTyping.Conversion.Conv env (expand env written) (.buffer (expand env count)) := by
+        simpa only [innerShape,Term.buffer,expand,expandArgs] using innerChanged.converted
+      exact ⟨kept.trans innerKept,innerBack ∘ backward,count,countRep,
+        outerConv.trans (.node .ref (.cons innerConv .nil))⟩
+    · simp [discard] at success
+  · simp [discard] at success
+
+private theorem inferIndex_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (subjectRep : Represents state.arena subject x) (indexRep : Represents state.arena index i)
+    (proofRep : Represents state.arena proof p)
+    (success : (inferIndex infer normal limit depth state subject index proof).result = .ok answer)
+    (ambient : Prefix (inferIndex infer normal limit depth state subject index proof).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.index x i p) (inferIndex infer normal limit depth state subject index proof) answer := by
+  unfold inferIndex at success ambient ⊢
+  obtain ⟨subjectType,subjectOk,subjectNext⟩ := Outcome.next_success success
+  rw [subjectNext] at success ambient ⊢
+  obtain ⟨bound,boundOk,boundNext⟩ := Outcome.next_success success
+  rw [boundNext] at success ambient ⊢
+  obtain ⟨indexPairs,indexOk,indexNext⟩ := Outcome.next_success success
+  rw [indexNext] at success ambient ⊢
+  obtain ⟨proofPairs,proofOk,proofNext⟩ := Outcome.next_success success
+  rw [proofNext] at success ambient ⊢
+  obtain ⟨result,outputOk,outputNext⟩ := Outcome.next_success success
+  rw [outputNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checkedSubject := infer state subject
+  let exposed := readIndexType normal checkedSubject.state subject subjectType.typeRoot
+  let checkedIndex := checkFixed infer normal limit depth exposed.state .u64 [index]
+  let checkedProof := checkIndexEvidence infer normal limit depth checkedIndex.state index bound.1 proof
+  have subjectProgress := childProgress state subject room
+  have subjectRoom := subjectProgress.accepted room subjectType subjectOk
+  have exposure := readIndexType_progress (state := checkedSubject.state) (subject := subject)
+    (typeRoot := subjectType.typeRoot) normalProgress
+  have boundRoom := exposure.accepted subjectRoom bound boundOk
+  have indexProgress := checkFixed_progress (state := exposed.state) (operand := .u64) (args := [index])
+    (depth := depth) childProgress (fun state root _ => normalProgress state root) boundRoom
+  have indexRoom := indexProgress.accepted boundRoom indexPairs indexOk
+  have proofProgress := checkIndexEvidence_progress (state := checkedIndex.state) (index := index) (length := bound.1)
+    (proof := proof) (depth := depth) childProgress normalProgress indexRoom
+  have proofFinal := (append_progress (limit := limit) checkedProof.state .i64 []).kept.trans ambient
+  have indexFinal := proofProgress.kept.trans proofFinal
+  obtain ⟨subjectKept,subjectBack,_,subjectTypeRep,typedSubject⟩ := childSound onBase room subjectRep subjectOk
+    (exposure.kept.trans (indexProgress.kept.trans indexFinal)) (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨exposedKept,exposedBack,_,lengthRep,decoded⟩ := readIndexType_refines normalSound
+    (onBase.trans subjectKept) subjectTypeRep boundOk
+  have throughType := subjectKept.trans exposedKept
+  obtain ⟨indexKept,indexBack,typedIndex⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    (onBase.trans throughType) boundRoom (.cons (indexRep.frame throughType) .nil) rfl indexOk indexFinal
+    (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_left _ member)))
+  have throughIndex := throughType.trans indexKept
+  obtain ⟨proofKept,proofBack,typedProof⟩ := checkIndexEvidence_refines normalSound normalProgress childSound childProgress
+    (onBase.trans throughIndex) indexRoom (indexRep.frame throughIndex) (lengthRep.frame indexKept)
+    (proofRep.frame throughIndex) proofOk proofFinal (fun pair member => retained pair (List.mem_append_right _
+      (List.mem_append_right _ member)))
+  obtain ⟨outputKept,outputBack,resultRep⟩ := append_refines .nil rfl outputOk
+  refine ⟨throughIndex.trans (proofKept.trans outputKept),outputBack ∘ proofBack ∘ indexBack ∘ exposedBack ∘ subjectBack,
+    _,resultRep,?_⟩
+  simp only [expand,expandArgs] at typedIndex
+  simp only [Term.index,expand,expandArgs]
+  cases reference : bound.2
+  · simp only [reference,Bool.false_eq_true,ite_false] at decoded
+    exact .index (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) typedProof
+  · simp only [reference,ite_true] at decoded
+    exact .borrowedIndex (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) typedProof
 
 private theorem finishDecide_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -2915,6 +3069,21 @@ theorem runWithData_sound {normal : NormalAt}
                   (normalSound depth) (normalProgress depth) sameContext
                   (fun _ _ budget => runWithData_progress normalProgress budget)
                   onBase within bufferRep tailRep success ambient retained
+          case index =>
+            have length : refs.length = 3 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons subjectRep rest =>
+              cases rest with
+              | cons indexRep rest =>
+                cases rest with
+                | cons proofRep tail =>
+                  cases tail
+                  dsimp only at success ambient ⊢
+                  exact inferIndex_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                    (normalSound depth) (normalProgress depth) sameContext
+                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    onBase within subjectRep indexRep proofRep success ambient retained
           case store =>
             have length : refs.length = 4 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> simp at length
@@ -3572,6 +3741,26 @@ theorem admitted_buffer_operations_infer_original_lengths :
     (let released := run bufferOperationsSnapshot.definitions 0 44 32 [] ⟨bufferOperationsSnapshot.arena,0⟩ 7
      released.state.steps = 44 ∧ released.result.map Inferred.typeRoot = .ok 25 ∧
        released.state.arena[25]? = some (.node .u64 [])) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def indexSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨11,6⟩,⟨13,12⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.natural 1) [],.node (.integer 3) [],.node (.integer (-4)) [],
+    .node (.elements 2) [2,3],.node .decide [1,0],.node .index [4,1,5],.node .buffer [0],.node .ref [7],
+    .var 0,.node .index [9,1,5],.node .i64 [],.node (.lam false) [8,10],.node (.pi false) [8,11]]
+
+/-- Indexing a newly constructed array uses its emitted length. Indexing a
+borrow normalizes the inner buffer type separately before forming the proof. -/
+theorem admitted_array_and_borrowed_index_infer_signed_result :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot indexSnapshot) = true ∧
+    (let array := run indexSnapshot.definitions 0 36 32 [] ⟨indexSnapshot.arena,0⟩ 6
+     array.state.steps = 36 ∧ array.result.map Inferred.typeRoot = .ok 26 ∧
+       array.state.arena[21]? = some (.node .lt [1,17]) ∧ array.state.arena[26]? = some (.node .i64 [])) ∧
+    (let borrowed := run indexSnapshot.definitions 0 34 32 [⟨8,false⟩] ⟨indexSnapshot.arena,0⟩ 10
+     borrowed.state.steps = 34 ∧ borrowed.result.map Inferred.typeRoot = .ok 21 ∧
+       borrowed.state.arena[16]? = some (.node .lt [1,0]) ∧ borrowed.state.arena[21]? = some (.node .i64 [])) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 
