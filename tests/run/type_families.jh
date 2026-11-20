@@ -1,0 +1,136 @@
+import type_family_modules.shapes
+
+struct Mark(T: type) {}
+struct Slot(T: type, N: i64, Flag: bool) {}
+enum Wrap(T: type) { One(T) }
+struct Record { value: i64 }
+
+type Inspect {
+    Slot(Wrap(let T), let N, false) => [T; N]
+    Slot(_, -3, true) => u8
+    (let T, let T) => i64
+    (_, _) => bool
+    [let T; 2] => (T, T)
+    [let T] => T
+    *let T => T
+    ref let T => T
+    inout let T => T
+    () => str
+}
+
+type FromModule {
+    shapes.Mark(let T) => T
+    Mark(_) => i64
+}
+
+type AsRecord {
+    i64 => Record
+    _ => UnusedResult
+}
+
+type AsEnum { i64 => Wrap(i64) }
+type First { _ => i64; i64 => bool }
+type Even { Wrap(let T) => Odd(T); () => i64 }
+type Odd { Wrap(let T) => Even(T); () => bool }
+
+struct ColdInput {}
+struct Cold { value: Build(u32) }
+struct WarmInput {}
+struct Warm { value: Build(u32) }
+type Build {
+    ColdInput => Cold
+    WarmInput => Warm
+    u32 => u8
+}
+
+type RecursiveAlias = Recursive
+struct Recursive { next: *RecursiveAlias }
+
+type AliasedSlot = Slot(Wrap(i64), 3, false)
+type Array = Inspect(AliasedSlot)
+
+type Two = (i64, i64)
+type Four = (Two, Two)
+type Eight = (Four, Four)
+type Sixteen = (Eight, Eight)
+type ThirtyTwo = (Sixteen, Sixteen)
+type SixtyFour = (ThirtyTwo, ThirtyTwo)
+type Wide = ((SixtyFour, SixtyFour), (SixtyFour, SixtyFour))
+
+trait Numbered { fn number(self) -> i64 }
+impl Numbered for AsRecord(i64) { fn number(self) -> i64 { self.value } }
+impl AsRecord(i64) { fn plus_one(self) -> i64 { self.value + 1 } }
+
+struct Tagged(A: type, B: type) { value: i64 }
+
+impl(T: type) Tagged(First(T), T) {
+    fn sample(self) -> i64 { self.value }
+}
+
+fn same(comptime T: type, sink value: T) -> T { value }
+
+fn deferred(comptime T: type, sink before: shapes.Resolve(T), witness: T) -> shapes.Resolve(T) {
+    before
+}
+
+fn contextual(comptime T: type) -> (First(T), Option(T)) { (12, None) }
+
+fn main() {
+    let a: Array = [1, 2, 3]
+    println(a[2])
+    //> 3
+    println(same(Inspect(Slot(Wrap(i64), -3, true)), 4 as u8))
+    //> 4
+    println(same(Inspect((i64, int)), 5))
+    //> 5
+    println(same(Inspect((i64, bool)), true))
+    //> true
+    println(same(Inspect([i64; 2]), (6, 7)).1)
+    //> 7
+    println(same(Inspect([i64]), 8))
+    //> 8
+    println(same(Inspect(*i64), 9))
+    //> 9
+    println(same(Inspect(ref i64), 10))
+    //> 10
+    println(same(Inspect(inout i64), 11))
+    //> 11
+    println(same(Inspect(()), "unit"))
+    //> unit
+
+    let first: First(i64) = 12
+    let local: FromModule(Mark(bool)) = 13
+    let foreign: FromModule(shapes.Mark(bool)) = true
+    let fallback: shapes.Resolve(Mark(bool)) = shapes.fallback()
+    println(first + local + shapes.value(fallback))
+    //> 36
+    println(foreign)
+    //> true
+    println(deferred(14, shapes.Mark(i64) {}))
+    //> 14
+
+    let record = AsRecord(i64) { value: 15 }
+    let Wrap.One(item) = AsEnum(i64).One(16)
+    println(record.value + item)
+    //> 31
+    let contextual: (i64, Option(bool)) = contextual()
+    println(contextual.0)
+    //> 12
+    println(same(Even(Wrap(Wrap(()))), 17))
+    //> 17
+    let recursive: RecursiveAlias = Recursive { next: null }
+    println(recursive.next == null)
+    //> true
+
+    let cold = Build(ColdInput) { value: 1 }
+    let warm = Warm { value: 2 }
+    let reduced: Build(WarmInput) = warm
+    println(cold.value + reduced.value)
+    //> 3
+    println(record.number() + record.plus_one())
+    //> 31
+    println(Tagged(i64, bool) { value: 18 }.sample())
+    //> 18
+    println(type_name(Mark(Wide)).len)
+    //> 1794
+}

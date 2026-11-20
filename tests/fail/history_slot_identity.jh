@@ -1,0 +1,12 @@
+// error: Observed(Draft, Made(Compose))
+// error: Observed(Backup, Made(Compose))
+import std.history as h
+
+struct Draft {}
+struct Backup {}
+struct Compose {}
+struct Packet(Index: type) {}
+
+type H = (h.Put(Draft, Compose, ()), h.Put(Backup, Compose, ()))
+fn check(sink x: Packet(h.Observe(H, Draft))) {}
+fn main() { check(Packet(h.Observe(H, Backup)) {}) }

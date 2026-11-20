@@ -1,0 +1,8 @@
+// error: expected `bool`, found `i64`
+struct Key(T: type) {}
+type Output { i64 => bool }
+fn set(comptime T: type, inout value: Output(T), key: Key(T)) {}
+fn main() {
+    var value = 0
+    set(&value, Key(i64) {})
+}

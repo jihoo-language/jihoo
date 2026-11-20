@@ -1,0 +1,28 @@
+// A controller ends both sequences with the same lamp state. An observer can
+// sample the lamp in order but has no clock to count intervening updates.
+//   jihoo run examples/observation_budget.jh
+
+import std.history as h
+import std.fmt
+
+struct Lamp {}
+struct Red {}
+struct Blue {}
+struct End {}
+
+type SetRed = h.Put(Lamp, Red, ())
+type SetBlue = h.Put(Lamp, Blue, ())
+type Stop = h.Put(Lamp, End, ())
+type Left = (SetRed, SetBlue, SetRed, SetBlue, Stop)
+type Right = (SetBlue, SetRed, SetBlue, SetRed, Stop)
+
+type SampleBuffer {
+    h.Apart(let N) => [u8; N]
+}
+
+type Minimum = SampleBuffer(h.Separation(Left, Right, Lamp))
+
+fn main() {
+    // The traces admit the same pairs. Red, Red, Blue occurs only in Left.
+    fmt.println("minimum ordered observations: {}", size_of(Minimum))
+}

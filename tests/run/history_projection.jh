@@ -1,0 +1,59 @@
+import std.history as h
+import history_modules.left
+
+struct Inbox {}
+struct Draft {}
+struct Log {}
+struct Compose {}
+struct Record {}
+struct Restore {}
+
+type Start = h.Put(Draft, Compose, h.Read(Inbox))
+type Take = h.Put(Draft, Compose, h.Take(Inbox))
+type LogOnly = h.Put(Log, Record, ())
+type RestoreInbox = h.Put(Inbox, Restore, ())
+type ReadRestored = (Take, (RestoreInbox, Start))
+type TakeAndWrite = h.Put(Inbox, Restore, h.Take(Inbox))
+type ReadAndWrite = h.Put(Inbox, Restore, h.Read(Inbox))
+type RepeatRead = h.Put(Draft, Compose, ((h.Read(Inbox), ()), h.Read(Inbox)))
+type FlatRead = h.Put(Draft, Compose, (h.Read(Inbox), h.Read(Inbox)))
+type AliasLabel = left.Label
+type Blind = h.Put(Draft, Compose, ())
+
+// A locally declared Observe is an ordinary type constructor.
+struct Observe(History: type, Slot: type) { local: i64 }
+struct Packet(Index: type) { value: i64 }
+
+fn marker(comptime T: type) -> Packet(T) { Packet(T) { value: 0 } }
+fn same(comptime T: type, sink a: Packet(T), sink b: Packet(T)) {}
+
+fn accept(comptime H: type, sink p: Packet(h.Observe(H, Draft))) -> i64 {
+    p.value
+}
+
+fn main() {
+    same(h.Observe(Start, Draft), marker(h.Observe(Start, Draft)), marker(h.Observe(Take, Draft)))
+    same(h.Observe(Start, Inbox), marker(h.Observe((), Inbox)), marker(h.Observe(Start, Inbox)))
+    same(h.Observe((Start, LogOnly), Draft), marker(h.Observe((Start, LogOnly), Draft)),
+        marker(h.Observe((LogOnly, Start), Draft)))
+    same(h.Observe((Start, LogOnly), Log), marker(h.Observe((Start, LogOnly), Log)),
+        marker(h.Observe((LogOnly, Start), Log)))
+    same(h.Observe(ReadRestored, Draft), marker(h.Observe(ReadRestored, Draft)),
+        marker(h.Observe((RestoreInbox, Start), Draft)))
+    same(h.Observe(TakeAndWrite, Inbox), marker(h.Observe(TakeAndWrite, Inbox)),
+        marker(h.Observe(ReadAndWrite, Inbox)))
+    same(h.Observe(RepeatRead, Draft), marker(h.Observe(RepeatRead, Draft)),
+        marker(h.Observe(FlatRead, Draft)))
+    same(h.Observe(Blind, Draft), marker(h.Observe(Blind, Draft)),
+        marker(h.Observe((Take, Blind), Draft)))
+    same(h.Observe(h.Put(Draft, left.Label, ()), Draft),
+        marker(h.Observe(h.Put(Draft, left.Label, ()), Draft)),
+        marker(h.Observe(h.Put(Draft, AliasLabel, ()), Draft)))
+
+    let retained = Packet(h.Observe(Start, Draft)) { value: 42 }
+    println(accept(Take, retained))
+    //> 42
+    let same_name = Observe((), Draft) { local: 7 }
+    println(same_name.local)
+    //> 7
+}

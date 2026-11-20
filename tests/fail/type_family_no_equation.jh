@@ -1,0 +1,3 @@
+// error: no equation of type family `OnlyInt` matches `bool`
+type OnlyInt { i64 => bool }
+fn wrong(x: OnlyInt(bool)) {}

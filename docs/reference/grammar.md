@@ -48,7 +48,7 @@ sep        a `,`, a `;`, or a newline before the next element
 ```text
 module   = { "#![" name "]" } { item | ";" }
 item     = { attr } [ "pub" ] ( import | fn | struct | enum | impl | trait
-                              | const | static | alias )
+                              | const | static | alias | family )
 attr     = "#[" name [ "(" name { "," name } ")" ] "]"
 
 import   = "import" name { "." name } [ "as" name ]
@@ -66,6 +66,12 @@ trait    = "trait" name [ params ] [ ":" type { "+" type } ] "{" { item | ";" } 
 const    = "const" name [ ":" type ] "=" expr
 static   = "static" name [ ":" type ] "=" expr
 alias    = "type" name [ params ] [ "=" type ]
+family   = "type" name "{" equation { sep equation } [ sep ] "}"
+equation = type_pat "=>" type
+type_pat = "_" | "let" name | path [ "(" [ type_pat { "," type_pat } [ "," ] ] ")" ]
+         | "(" [ type_pat { "," type_pat } [ "," ] ] ")"
+         | "[" type_pat [ ";" type_pat ] "]" | ( "*" | "ref" | "inout" ) type_pat
+         | [ "-" ] integer | "true" | "false" | "type"
 ```
 
 - `#![...]` attributes come first in the file. `#![freestanding]` and
@@ -105,6 +111,9 @@ alias    = "type" name [ params ] [ "=" type ]
   Parameterized aliases, such as `type Mem(n: u64) = buffer(n)`, are supported
   only in `#![dependent_core]` modules, with erased `u64` parameters and a
   required body. See [dependent type aliases](../language/dependent-aliases.md).
+- A family is a module item. `Name(T)` applies its equations to one concrete
+  type. A tuple supplies several inputs as one type. A single parenthesized
+  pattern groups its contents. [Closed type families](../language/type-families.md)
 
 ## Types
 

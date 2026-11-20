@@ -1,0 +1,13 @@
+// error: recursive type family `Reduce` requires a proper structural subterm of its previous input
+struct Left {}
+struct Right {}
+type Cached = Reduce(Right)
+type Reduce {
+    Left => Cached
+    Right => i64
+}
+
+fn main() {
+    let warmed: Cached = 1
+    let rejected: Reduce(Left) = warmed
+}

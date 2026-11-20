@@ -1,0 +1,5 @@
+// error: recursive type family `Grow` requires a proper structural subterm of its previous input
+struct Wrap(T: type) {}
+type Grow { let T => Step(Wrap(T)) }
+type Step { let T => Grow(T) }
+fn wrong(x: Grow(i64)) {}

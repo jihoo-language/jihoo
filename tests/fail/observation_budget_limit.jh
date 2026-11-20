@@ -1,0 +1,24 @@
+// error: history separation exceeds 1048576 observation-state pairs
+import std.history as h
+
+struct Lamp {}
+struct Red {}
+struct Blue {}
+struct End {}
+
+type SetRed = h.Put(Lamp, Red, ())
+type SetBlue = h.Put(Lamp, Blue, ())
+type Stop = h.Put(Lamp, End, ())
+type Pair = (SetRed, SetBlue)
+type Eight = (Pair, Pair, Pair, Pair)
+type SixtyFour = (Eight, Eight, Eight, Eight, Eight, Eight, Eight, Eight)
+type FiveHundredTwelve = (
+    SixtyFour, SixtyFour, SixtyFour, SixtyFour, SixtyFour, SixtyFour, SixtyFour, SixtyFour
+)
+type Cycle = (FiveHundredTwelve, FiveHundredTwelve)
+
+// Each history fits the sequence limit, but their compressed streams have
+// 1,026 and 1,027 states and end in the same state.
+type Left = (Cycle, Stop)
+type Right = (SetBlue, Cycle, Stop)
+fn compare(value: h.Separation(Left, Right, Lamp)) {}

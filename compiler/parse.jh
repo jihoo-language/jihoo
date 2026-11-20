@@ -417,9 +417,13 @@ impl Parser {
             Type => {
                 self.bump()
                 let name = self.ident()?
-                let params = self.generic_params()?
-                let ty = if self.eat(Tok.Assign) { Some(self.ty()?) } else { None }
-                ItemKind.TypeAlias(name, params, ty)
+                if self.at(Tok.LBrace) {
+                    ItemKind.TypeFamily(ast.TypeFamilyDecl { name, rules: self.type_rules()? })
+                } else {
+                    let params = self.generic_params()?
+                    let ty = if self.eat(Tok.Assign) { Some(self.ty()?) } else { None }
+                    ItemKind.TypeAlias(name, params, ty)
+                }
             }
             _ => return Err(self.found(
                 "expected an item (`fn`, `struct`, `enum`, `impl`, ...), found "
@@ -581,6 +585,95 @@ impl Parser {
     }
 
     // ---- types ----
+
+    fn type_rules(inout self) -> Result(Vec(ast.TypeRule), Diag) {
+        self.list_open(Tok.LBrace)?
+        var rules = Vec(ast.TypeRule).new()
+        if self.at(Tok.RBrace) { return Err(self.error("a type family needs an equation")) }
+        while !self.at(Tok.RBrace) {
+            let pattern = self.type_pattern()?
+            self.expect(Tok.FatArrow)?
+            rules.push(ast.TypeRule { pattern, result: self.ty()? })
+            if !self.sep(Tok.RBrace)? { break }
+        }
+        self.expect(Tok.RBrace)?
+        Ok(rules)
+    }
+
+    fn type_pattern_list(inout self) -> Result(Vec(ast.TypePattern), Diag) {
+        self.list_open(Tok.LParen)?
+        var ps = Vec(ast.TypePattern).new()
+        while !self.at(Tok.RParen) {
+            ps.push(self.type_pattern()?)
+            if !self.comma() { break }
+        }
+        self.expect(Tok.RParen)?
+        Ok(ps)
+    }
+
+    fn type_pattern(inout self) -> Result(ast.TypePattern, Diag) {
+        self.enter()?
+        let start = self.span()
+        var parts = Vec(ast.TypePattern).new()
+        let head = match self.tok() {
+            Let => {
+                self.bump()
+                ast.TypePatternHead.Bind(self.ident()?)
+            }
+            Ident if self.text() == "_" => {
+                self.bump()
+                ast.TypePatternHead.Bind("_".to_string())
+            }
+            Ident | Type => {
+                var path = one(self.text())
+                if self.at(Tok.Type) { path = one("type") }
+                self.bump()
+                while self.eat(Tok.Dot) { path.push(self.ident()?) }
+                if self.at(Tok.LParen) && !self.nl() { parts = self.type_pattern_list()? }
+                ast.TypePatternHead.Path(path)
+            }
+            LParen => {
+                parts = self.type_pattern_list()?
+                if parts.len() == 1 {
+                    self.depth -= 1
+                    return Ok(parts.pop().unwrap())
+                }
+                ast.TypePatternHead.Tuple
+            }
+            LBracket => {
+                self.bump()
+                parts.push(self.type_pattern()?)
+                let array = self.eat(Tok.Semi)
+                if array { parts.push(self.type_pattern()?) }
+                self.expect(Tok.RBracket)?
+                if array { ast.TypePatternHead.Array } else { ast.TypePatternHead.Slice }
+            }
+            Star | Ref | Inout => {
+                let t = self.tok()
+                self.bump()
+                parts.push(self.type_pattern()?)
+                if t == Tok.Star { ast.TypePatternHead.Ptr } else {
+                    ast.TypePatternHead.Ref(t == Tok.Inout)
+                }
+            }
+            True | False => {
+                let b = self.at(Tok.True)
+                self.bump()
+                ast.TypePatternHead.Bool(b)
+            }
+            Int | Minus => {
+                let negative = self.eat(Tok.Minus)
+                if !self.at(Tok.Int) { return Err(self.error("expected an integer")) }
+                let magnitude = self.toks[self.i].int as i128
+                self.bump()
+                let n = if negative { -magnitude } else { magnitude }
+                ast.TypePatternHead.Int(n)
+            }
+            _ => return Err(self.found("expected a type pattern, found "))
+        }
+        self.depth -= 1
+        Ok(ast.TypePattern { head, parts, span: start.to(self.prev_span()) })
+    }
 
     pub fn ty(inout self) -> Result(Ty, Diag) {
         self.enter()?

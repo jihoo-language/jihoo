@@ -1,0 +1,375 @@
+// Closed type families reduce to ordinary interned types. Their patterns
+// inspect type constructors and compile-time arguments, never value fields.
+
+import ast
+import diag
+import sema
+import types
+
+type CVal = sema.CVal
+type Span = diag.Span
+type Diag = diag.Diag
+
+const MAX_DEPTH = 128
+const MAX_STEPS: u32 = 4096
+const MAX_TYPE_NODES = 4096
+
+pub struct Declaration {
+    pub module: u32
+    pub decl: *ast.TypeFamilyDecl
+}
+
+#[derive(Eq)]
+enum Slot {
+    Type
+    Int
+    Bool
+    Length
+    Value
+}
+
+impl sema.Sema {
+    pub fn check_family_patterns(self) -> Result((), Diag) {
+        for f in self.families {
+            for rule in sema.at(f.decl).rules {
+                var bindings = Map(String, Slot).new()
+                self.check_family_pattern(rule.pattern, f.module, Slot.Type, &bindings)?
+            }
+        }
+        Ok(())
+    }
+
+    fn check_family_pattern(
+        self,
+        p: ast.TypePattern,
+        module: u32,
+        slot: Slot,
+        inout bindings: Map(String, Slot)
+    ) -> Result((), Diag) {
+        match p.head {
+            Bind(name) => {
+                if name == "_" || slot == Slot.Value { return Ok(()) }
+                let kind = if slot == Slot.Length { Slot.Int } else { slot }
+                match bindings.get(name) {
+                    Some(old) => {
+                        if old != kind {
+                            return Err(Diag.new(p.span, ("type pattern binding `" + name.as_str() +
+                                "` occurs in positions with different kinds").as_str()))
+                        }
+                    }
+                    None => { bindings.insert(name.clone(), kind) }
+                }
+                return Ok(())
+            }
+            Int(n) => {
+                if slot == Slot.Type { return Err(Diag.new(p.span, "expected a type pattern")) }
+                if slot == Slot.Bool { return Err(Diag.new(p.span, "expected a bool pattern")) }
+                if slot == Slot.Length && n < 0 {
+                    return Err(Diag.new(p.span, "an array length pattern cannot be negative"))
+                }
+                return Ok(())
+            }
+            Bool(_) => {
+                if slot == Slot.Type { return Err(Diag.new(p.span, "expected a type pattern")) }
+                if slot == Slot.Int || slot == Slot.Length {
+                    return Err(Diag.new(p.span, "expected an integer pattern"))
+                }
+                return Ok(())
+            }
+            _ => {}
+        }
+        if slot != Slot.Type { return Err(Diag.new(p.span, "expected a compile-time value pattern")) }
+        match p.head {
+            Path(path) => {
+                let name = sema.join_path(path)
+                match self.lookup_path(module, path) {
+                    Some((sema.Sym.Adt(id), _)) => {
+                        let decl = self.adts[id as i64]
+                        let params = decl.params()
+                        if p.parts.len() != params.len() {
+                            var msg = "the type pattern `" + name.as_str() + "` takes "
+                            params.len().show(&msg)
+                            msg.push_str(" argument(s)")
+                            return Err(Diag.new(p.span, msg.as_str()))
+                        }
+                        for i, part in p.parts {
+                            let slot = self.family_slot(params[i], decl.module)
+                            self.check_family_pattern(part, module, slot, &bindings)?
+                        }
+                        return Ok(())
+                    }
+                    None => {
+                        if path.len() == 1 && sema.Sema.builtin_ty(path[0].as_str()).is_some() {
+                            if p.parts.len() > 0 {
+                                return Err(Diag.new(
+                                    p.span,
+                                    "a builtin type pattern takes no arguments"
+                                ))
+                            }
+                            return Ok(())
+                        }
+                    }
+                    _ => {}
+                }
+                return Err(Diag.new(p.span, ("`" + name.as_str() +
+                    "` is not a visible struct, enum, or builtin type in this pattern").as_str()))
+            }
+            Array => {
+                self.check_family_pattern(p.parts[0], module, Slot.Type, &bindings)?
+                return self.check_family_pattern(p.parts[1], module, Slot.Length, &bindings)
+            }
+            _ => {}
+        }
+        for part in p.parts { self.check_family_pattern(part, module, Slot.Type, &bindings)? }
+        Ok(())
+    }
+
+    fn family_slot(self, prm: ast.Param, module: u32) -> Slot {
+        if self.param_is_type(prm, module) { return Slot.Type }
+        let Some(ty) = prm.ty else { return Slot.Int }
+        var ty = ty.clone()
+        var module = module
+        for _ in 0..MAX_DEPTH {
+            let Path(path, None) = ty.kind else { return Slot.Value }
+            match self.lookup_path(module, path) {
+                Some((sema.Sym.Alias(id), _)) => {
+                    let alias = self.aliases[id as i64]
+                    module = alias.module
+                    ty = sema.at(alias.ty).clone()
+                }
+                None if path.len() == 1 => {
+                    let Some(t) = sema.Sema.builtin_ty(path[0].as_str()) else { return Slot.Value }
+                    if t == types.BOOL { return Slot.Bool }
+                    if self.types.is_int(t) { return Slot.Int }
+                    return Slot.Value
+                }
+                _ => return Slot.Value
+            }
+        }
+        Slot.Value
+    }
+
+    pub fn reduce_family(inout self, id: u32, input: u32, span: Span) -> Result(u32, Diag) {
+        let f = self.families[id as i64]
+        let d = sema.at(f.decl)
+        let outer = self.family_stack.len() == 0
+        if outer { self.family_steps = 0 }
+        self.family_step(span)?
+        if self.family_stack.len() >= MAX_DEPTH {
+            return Err(Diag.new(span, "type family reduction is nested too deeply"))
+        }
+        var i = self.family_stack.len()
+        while i > self.family_floor {
+            i -= 1
+            let (active, prior) = self.family_stack[i]
+            if active != id { continue }
+            if !self.family_subterm(input, prior, span)? {
+                return Err(Diag.new(span, ("recursive type family `" + d.name.as_str() +
+                    "` requires a proper structural subterm of its previous input").as_str()))
+            }
+            break
+        }
+        self.family_stack.push((id, input))
+        let result = self.reduce_family_rules(d, f.module, input, span, outer)
+        self.family_stack.pop()
+        result
+    }
+
+    fn reduce_family_rules(
+        inout self,
+        decl: ast.TypeFamilyDecl,
+        module: u32,
+        input: u32,
+        span: Span,
+        outer: bool
+    ) -> Result(u32, Diag) {
+        for rule in decl.rules {
+            var env = sema.Env.new(module)
+            if !self.match_family_pattern(rule.pattern, CVal.Type(input), &env)? { continue }
+            return match self.resolve_ty(rule.result, env) {
+                Ok(t) => {
+                    self.check_family_type_size(t, span)?
+                    Ok(t)
+                }
+                Err(e) if outer => Err(e.note(Some(span), ("while reducing type family `" +
+                    decl.name.as_str() + "`").as_str()))
+                Err(e) => Err(e)
+            }
+        }
+        let name = self.types.show_bounded(input)
+        Err(Diag.new(span, ("no equation of type family `" + decl.name.as_str() +
+            "` matches `" + name.as_str() + "`").as_str()))
+    }
+
+    // Type interning shares repeated children. Bound the expanded shapes
+    // before callers walk those children for layout and ownership.
+    pub fn check_family_type_size(self, t: u32, span: Span) -> Result((), Diag) {
+        self.check_family_shape([t], span, false, 0)?
+        self.check_family_shape([t], span, true, 0)
+    }
+
+    // Count the nominal constructor and its arguments together before
+    // rendering its expanded name. Each argument also has an inline shape
+    // that can be consulted separately by ownership checks.
+    pub fn check_family_arguments(self, args: Vec(CVal), span: Span) -> Result((), Diag) {
+        var roots = Vec(u32).new()
+        for arg in args {
+            match arg {
+                Type(t) => roots.push(t)
+                _ => {}
+            }
+        }
+        self.check_family_shape(roots.as_slice(), span, false, 1)?
+        for t in roots { self.check_family_shape([t], span, true, 0)? }
+        Ok(())
+    }
+
+    fn check_family_shape(
+        self,
+        roots: [u32],
+        span: Span,
+        inline: bool,
+        initial: i64
+    ) -> Result((), Diag) {
+        var pending = Vec(u32).new()
+        for root in roots { pending.push(root) }
+        for i in initial..MAX_TYPE_NODES {
+            let Some(t) = pending.pop() else { return Ok(()) }
+            if inline {
+                self.family_inline_children(t, &pending)
+            } else {
+                self.family_children(t, &pending)
+            }
+            if i + 1 + pending.len() > MAX_TYPE_NODES { break }
+        }
+        if pending.len() == 0 { return Ok(()) }
+        Err(Diag.new(span, "type family reduction exceeded its expanded type size limit"))
+    }
+
+    fn family_inline_children(self, t: u32, inout out: Vec(u32)) {
+        match self.types.kind(t) {
+            Adt(i) => match self.types.adts[i as i64].body {
+                Struct(fs) => {
+                    for f in fs { out.push(f.ty) }
+                }
+                Enum(vs) => {
+                    for v in vs {
+                        for f in v.fields { out.push(f) }
+                    }
+                }
+                Pending => {}
+            }
+            Tuple(ts) => {
+                for child in ts { out.push(child) }
+            }
+            Array(child, _) | Lambda(_, child, _) => out.push(child)
+            _ => {}
+        }
+    }
+
+    pub fn family_step(inout self, span: Span) -> Result((), Diag) {
+        self.family_steps += 1
+        if self.family_steps > MAX_STEPS {
+            return Err(Diag.new(span, "type family reduction exceeded its structural step limit"))
+        }
+        Ok(())
+    }
+
+    fn match_family_pattern(
+        inout self,
+        p: ast.TypePattern,
+        v: CVal,
+        inout env: sema.Env
+    ) -> Result(bool, Diag) {
+        self.family_step(p.span)?
+        match p.head {
+            Bind(name) => {
+                if name == "_" { return Ok(true) }
+                match env.get(name.as_str()) {
+                    Some(old) => return Ok(old == v)
+                    None => env.push(name.as_str(), v.clone())
+                }
+                return Ok(true)
+            }
+            Int(n) => return Ok(v == CVal.Int(n))
+            Bool(b) => return Ok(v == CVal.Bool(b))
+            _ => {}
+        }
+        let Type(t) = v else { return Ok(false) }
+        var parts = Vec(CVal).new()
+        match p.head {
+            Path(path) => {
+                match self.lookup_path(env.module, path) {
+                    Some((sema.Sym.Adt(decl), _)) => {
+                        let Some(idx) = self.types.adt_index(t) else { return Ok(false) }
+                        if self.types.adts[idx as i64].decl != decl { return Ok(false) }
+                        parts = self.adt_args(t)
+                    }
+                    _ => return Ok(sema.Sema.builtin_ty(path[0].as_str()) == Some(t))
+                }
+            }
+            _ => match (p.head.clone(), self.types.kind(t).clone()) {
+                (Tuple, Tuple(ts)) => {
+                    for ty in ts { parts.push(CVal.Type(ty)) }
+                }
+                (Ptr, Ptr(ty)) | (Slice, Slice(ty)) | (Ref(false), Ref(ty)) |
+                    (Ref(true), RefMut(ty)) => parts.push(CVal.Type(ty))
+                (Array, Array(ty, n)) => {
+                    parts.push(CVal.Type(ty))
+                    parts.push(CVal.Int(n as i128))
+                }
+                _ => return Ok(false)
+            }
+        }
+        if p.parts.len() != parts.len() { return Ok(false) }
+        for i, part in p.parts {
+            if !self.match_family_pattern(part, parts[i], &env)? { return Ok(false) }
+        }
+        Ok(true)
+    }
+
+    // An active call may recur only on a proper subtype of its input's
+    // syntax tree. ADT fields do not contribute to this relation.
+    fn family_subterm(inout self, input: u32, prior: u32, span: Span) -> Result(bool, Diag) {
+        if input == prior { return Ok(false) }
+        var pending = Vec(u32).new()
+        var seen = Map(u32, bool).new()
+        self.family_children(prior, &pending)
+        loop {
+            let Some(t) = pending.pop() else { break }
+            self.family_step(span)?
+            if t == input { return Ok(true) }
+            if seen.contains(t) { continue }
+            seen.insert(t, true)
+            self.family_children(t, &pending)
+        }
+        Ok(false)
+    }
+
+    fn family_children(self, t: u32, inout out: Vec(u32)) {
+        match self.types.kind(t) {
+            Adt(_) => match self.adt_args_of.get(t) {
+                Some(args) => {
+                    for a in args {
+                        match a {
+                            Type(child) => out.push(child)
+                            _ => {}
+                        }
+                    }
+                }
+                None => {}
+            }
+            Tuple(ts) => {
+                for child in ts { out.push(child) }
+            }
+            Ptr(child) | Ref(child) | RefMut(child) | Slice(child) | Array(child, _) => out.push(
+                child
+            )
+            Closure(sig) | FnPtr(sig) | DynFn(sig) => {
+                for child in sig.params { out.push(child) }
+                out.push(sig.ret)
+            }
+            _ => {}
+        }
+    }
+}

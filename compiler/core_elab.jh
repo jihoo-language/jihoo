@@ -3651,6 +3651,10 @@ impl Elaborator {
             Trait(t) => return self.inductive(item, t)
             Enum(e) => return self.data_type(item, e)
             Struct(s) => return self.structure(item, s)
+            TypeFamily(_) => return Err(error(
+                item.span,
+                "closed type families require an ordinary module"
+            ))
             TypeAlias(name, params, rhs) => {
                 let before = self.ctx.len()
                 let result = self.type_alias(item, name, params, rhs)

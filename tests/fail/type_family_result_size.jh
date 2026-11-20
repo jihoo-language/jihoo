@@ -1,0 +1,12 @@
+// error: type family reduction exceeded its expanded type size limit
+struct Next(P: type) {}
+struct Pair(A: type, B: type) {}
+type Double { let T => Pair(T, T) }
+type Expand {
+    u8 => u8
+    Next(let P) => Double(Expand(P))
+}
+type Four = Next(Next(Next(Next(u8))))
+type Eight = Next(Next(Next(Next(Four))))
+type Twelve = Next(Next(Next(Next(Eight))))
+fn too_large(x: Expand(Twelve)) {}

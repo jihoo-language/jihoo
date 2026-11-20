@@ -1,0 +1,16 @@
+// error: expected `Packet(Observed(Inbox, Initial(Inbox)))`, found `Packet(Observed(Inbox, spent))`
+import std.history as h
+
+struct Inbox {}
+struct Draft {}
+struct Compose {}
+struct Packet(Index: type) {}
+
+type Retain = h.Put(Draft, Compose, h.Read(Inbox))
+type Archive = h.Put(Draft, Compose, h.Take(Inbox))
+fn keep(sink packet: Packet(h.Observe(Retain, Inbox))) {}
+
+fn main() {
+    let archived = Packet(h.Observe(Archive, Inbox)) {}
+    keep(archived)
+}

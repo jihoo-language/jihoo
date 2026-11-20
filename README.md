@@ -152,6 +152,19 @@ freestanding (no libc, static) programs for x86_64 and aarch64 Linux, and
 [UEFI applications](docs/language/profiles.md#uefi) (PE32+ images) for
 both machines.
 
+Experimental observer-indexed history types ask how two resource schedules
+can be told apart. `history.Observe(H, S)` computes the final observation
+at a slot. `history.Separation(H, K, S)` computes the fewest ordered samples
+that can distinguish the schedules, yielding results such as `Apart(3)`.
+The checker validates reads and transfers throughout both histories.
+[Observer-indexed history types](docs/language/observed-histories.md)
+
+Ordinary modules can compute a type by matching another type against the
+equations of a closed type family. For example, `Dual(Client)` derives the
+server side of a protocol, including the payload and order of its replies.
+The result uses the layout and move rules of the type it reduces to.
+[Closed type families](docs/language/type-families.md)
+
 [Bounded proof automation](docs/language/proof-automation.md) constructs checked
 natural equality/order proofs from local evidence and explicit lemma hints.
 It has fixed search limits and erases to the same runtime code as explicit proofs.

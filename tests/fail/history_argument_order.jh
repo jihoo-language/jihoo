@@ -1,0 +1,17 @@
+// error: Observed(Draft, Made(Compose, Initial(Left), Initial(Right)))
+// error: Observed(Draft, Made(Compose, Initial(Right), Initial(Left)))
+import std.history as h
+
+struct Left {}
+struct Right {}
+struct Draft {}
+struct Compose {}
+
+type InOrder = h.Put(Draft, Compose, (h.Read(Left), h.Read(Right)))
+type Reversed = h.Put(Draft, Compose, (h.Read(Right), h.Read(Left)))
+type A = h.Observe(InOrder, Draft)
+type B = h.Observe(Reversed, Draft)
+struct Packet(Index: type) {}
+
+fn check(sink x: Packet(A)) {}
+fn main() { check(Packet(B) {}) }

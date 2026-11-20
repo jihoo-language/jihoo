@@ -1,0 +1,28 @@
+// Both routes produce the same draft. Only the archive route spends Inbox.
+// The publisher takes the owned packet produced by either route.
+
+import std.history as h
+
+struct Inbox {}
+struct Draft {}
+struct Compose {}
+
+type Retain = h.Put(Draft, Compose, h.Read(Inbox))
+type Archive = h.Put(Draft, Compose, h.Take(Inbox))
+
+struct Packet(Revision: type) {
+    payload: Box(String)
+}
+
+fn publish(sink packet: Packet(h.Observe(Retain, Draft))) {
+    let Packet { payload } = move packet
+    println(payload.deref().as_str())
+}
+
+fn archive(sink text: String) -> Packet(h.Observe(Archive, Draft)) {
+    Packet(h.Observe(Archive, Draft)) { payload: Box.new(text) }
+}
+
+fn main() {
+    publish(archive(String.from("Minutes approved")))
+}

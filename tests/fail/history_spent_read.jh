@@ -1,0 +1,15 @@
+// error: history update 2: slot `Inbox` is spent
+import std.history as h
+
+struct Inbox {}
+struct Draft {}
+struct Log {}
+struct Compose {}
+
+type Move = h.Put(Draft, Compose, h.Take(Inbox))
+type Hidden = h.Put(Log, Compose, h.Read(Inbox))
+type Overwrite = h.Put(Log, Compose, ())
+type Bad = (Move, (Hidden, Overwrite))
+
+fn inspect(x: h.Observe(Bad, Draft)) {}
+fn main() {}

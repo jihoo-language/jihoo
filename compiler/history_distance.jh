@@ -1,0 +1,62 @@
+import diag
+
+const MAX_CELLS: i64 = 1048576
+
+// The streams include their initial and final states and have already had
+// consecutive equal states collapsed. A different final state is visible for
+// free. Otherwise, compare the shortest separating subsequence in both directions.
+pub fn minimum(left: [u32], right: [u32], span: diag.Span) -> Result(i64, diag.Diag) {
+    if left.len == 0 || right.len == 0 {
+        return Err(diag.Diag.new(
+            span,
+            "history separation requires an initial state in each observation"
+        ))
+    }
+    if left[left.len - 1] != right[right.len - 1] { return Ok(0) }
+    if equal(left, right) { return Ok(-1) }
+    if left.len > MAX_CELLS / right.len {
+        return Err(diag.Diag.new(
+            span,
+            "history separation exceeds 1048576 observation-state pairs"
+        ))
+    }
+
+    let impossible = max(left.len, right.len) + 1
+    let forward = shortest_uncommon(left, right, impossible)
+    if forward == 1 { return Ok(1) }
+    Ok(min(forward, shortest_uncommon(right, left, impossible)))
+}
+
+fn equal(left: [u32], right: [u32]) -> bool {
+    if left.len != right.len { return false }
+    for i in 0..left.len {
+        if left[i] != right[i] { return false }
+    }
+    true
+}
+
+fn shortest_uncommon(source: [u32], target: [u32], impossible: i64) -> i64 {
+    // row[j] is the shortest subsequence of the current source suffix missing
+    // from target[j..]. Each step can skip source[i] or include it.
+    var row = Vec(i64).filled(target.len + 1, impossible)
+    var i = source.len
+    while i > 0 {
+        i -= 1
+        let symbol = source[i]
+        var previous_suffix = row[target.len]
+        row[target.len] = 1
+        var include = 1
+        var j = target.len
+        while j > 0 {
+            j -= 1
+            // The earliest match leaves the largest target suffix to defeat.
+            // Scanning backwards keeps the cost of including the symbol at
+            // that match, even after the row entry for its suffix is replaced.
+            if target[j] == symbol { include = 1 + previous_suffix }
+            let skip = row[j]
+            row[j] = min(skip, include)
+            previous_suffix = skip
+        }
+    }
+    row[0]
+}

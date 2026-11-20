@@ -1,0 +1,5 @@
+// error: cyclic type alias
+type Identity { let T => T }
+type A = Identity(B)
+type B = A
+fn wrong(x: A) {}

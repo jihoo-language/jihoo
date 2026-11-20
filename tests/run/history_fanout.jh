@@ -1,0 +1,22 @@
+import std.history as h
+
+struct Draft {}
+struct Compose {}
+
+type Step = h.Put(Draft, Compose, (h.Read(Draft), h.Read(Draft)))
+type Twice = (Step, Step)
+type Four = (Twice, Twice)
+type Eight = (Four, Four)
+type Sixteen = (Eight, Eight)
+type ThirtyTwo = (Sixteen, Sixteen)
+type SixtyFour = (ThirtyTwo, ThirtyTwo)
+
+// A tree expansion would mention over 2^64 nodes. The compiler shares each
+// provenance and describes only a bounded portion of it.
+fn main() {
+    let name = type_name(h.Observe(SixtyFour, Draft))
+    println(name.starts_with("Observed(Draft, Made(Compose, "))
+    //> true
+    println(name.contains("..."))
+    //> true
+}

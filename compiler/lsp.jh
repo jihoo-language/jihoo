@@ -782,6 +782,7 @@ fn item_name(it: ast.Item) -> Option(str) {
         Const(c) => Some(c.name.as_str())
         Static(c) => Some(c.name.as_str())
         TypeAlias(n, _, _) => Some(n.as_str())
+        TypeFamily(f) => Some(f.name.as_str())
         _ => None
     }
 }

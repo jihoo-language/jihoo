@@ -87,6 +87,13 @@ produces the same source, and formatted programs retain their behavior.
 
 ### 2. Application-driven library work
 
+The native type system now supports closed type families and an experimental
+equality for resource histories. A protocol library can derive its peer type.
+A data pipeline can specify which input versions an output depends on and
+accept different schedules that agree for that output.
+[Protocol duality](../language/type-families.md) and
+[observer-indexed histories](../language/observed-histories.md)
+
 - Add an optional external regression command for a configurable Banana
   checkout. Check its modules and run its parser, selection and PTY tests
   against the compiler under development. Keep the compiler's ordinary test

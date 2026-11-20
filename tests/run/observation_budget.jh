@@ -1,0 +1,42 @@
+import std.history as h
+
+struct Lamp {}
+struct Log {}
+struct Red {}
+struct Blue {}
+struct Green {}
+struct End {}
+
+type SetRed = h.Put(Lamp, Red, ())
+type SetBlue = h.Put(Lamp, Blue, ())
+type SetGreen = h.Put(Lamp, Green, ())
+type Stop = h.Put(Lamp, End, ())
+type Left = (SetRed, SetBlue, SetRed, SetBlue, Stop)
+type Right = (SetBlue, SetRed, SetBlue, SetRed, Stop)
+type WithStutters = (SetRed, h.Put(Log, Green, ()), SetRed, SetBlue, SetRed, SetBlue, Stop)
+type Moved = (h.Put(Log, Red, h.Take(Lamp)), Stop)
+
+type SampleBuffer {
+    h.Apart(let N) => [u8; N]
+    h.Indistinguishable => ()
+}
+
+type Three = SampleBuffer(h.Separation(Left, Right, Lamp))
+
+fn exact_size(value: Three) -> [u8; 3] { value }
+fn exact_three(value: h.Separation(Right, Left, Lamp)) -> h.Apart(3) { value }
+fn final_state(value: h.Separation(Left, SetRed, Lamp)) -> h.Apart(0) { value }
+fn no_clock(value: h.Separation(Left, WithStutters, Lamp)) -> h.Indistinguishable { value }
+fn absent_state(value: h.Separation(Stop, Moved, Lamp)) -> h.Apart(1) { value }
+
+// Red, Blue, Green is the shortest witness from the first history. Blue,
+// Red is already a witness from the second, so both orders must return 2.
+type Earlier = (SetRed, SetBlue, SetGreen, Stop)
+type Later = (SetBlue, SetRed, SetGreen, SetBlue, Stop)
+fn shorter_reverse(value: h.Separation(Earlier, Later, Lamp)) -> h.Apart(2) { value }
+fn shorter_forward(value: h.Separation(Later, Earlier, Lamp)) -> h.Apart(2) { value }
+
+fn main() {
+    println(size_of(Three))
+    //> 3
+}

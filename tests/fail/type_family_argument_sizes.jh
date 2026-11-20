@@ -1,0 +1,17 @@
+// error: type family reduction exceeded its expanded type size limit
+struct Pair(A: type, B: type) {}
+type Duplicate { let T => Pair(T, T) }
+
+type Two = (u8, u8)
+type Four = (Two, Two)
+type Eight = (Four, Four)
+type Sixteen = (Eight, Eight)
+type ThirtyTwo = (Sixteen, Sixteen)
+type SixtyFour = (ThirtyTwo, ThirtyTwo)
+type Block = ((SixtyFour, SixtyFour), (SixtyFour, SixtyFour))
+type Wide = ((Block, Block), (Block, Block))
+type Argument = (Wide, Wide)
+
+// Each argument expands to 4,095 nodes. The constructor and its two
+// arguments together exceed the limit before the name is rendered.
+fn oversized(x: Duplicate(Argument)) {}

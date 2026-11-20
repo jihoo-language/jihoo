@@ -1,0 +1,367 @@
+// An observation interprets a sequence of nominal updates in a symbolic world.
+// Provenances are shared across observations in the current type environment.
+
+import diag
+import history_distance
+import sema
+import types
+
+type Span = diag.Span
+type Diag = diag.Diag
+type CVal = sema.CVal
+
+const MAX_STEPS = 4096
+const SPENT: u32 = 0
+
+pub struct Markers {
+    pub put: u32
+    pub read: u32
+    pub take: u32
+    pub observe: u32
+    pub observed: u32
+    pub separation: u32
+    pub apart: u32
+    pub indistinguishable: u32
+}
+
+pub struct Projection {
+    pub decl: u32
+    slot: u32
+    value: u32
+}
+
+impl Projection {
+    pub fn key(self) -> String {
+        var key = String.from("history|")
+        self.slot.show(&key)
+        key.push(',')
+        self.value.show(&key)
+        key
+    }
+}
+
+enum Provenance {
+    Initial(u32)
+    Made(u32, Vec(u32))
+}
+
+pub struct History {
+    pub markers: Option(Markers)
+    keys: Map(String, u32)
+    nodes: Vec(Provenance)
+}
+
+impl History {
+    pub fn new() -> History {
+        History { markers: None, keys: Map(String, u32).new(), nodes: Vec(Provenance).new() }
+    }
+
+    pub fn is_observe(self, decl: u32) -> bool {
+        match self.markers {
+            Some(m) => decl == m.observe
+            None => false
+        }
+    }
+
+    pub fn is_separation(self, decl: u32) -> bool {
+        match self.markers {
+            Some(m) => decl == m.separation
+            None => false
+        }
+    }
+
+    pub fn is_computed(self, decl: u32) -> bool {
+        self.is_observe(decl) || self.is_separation(decl)
+    }
+
+    pub fn is_encoding(self, decl: u32) -> bool {
+        match self.markers {
+            Some(m) => decl == m.put || decl == m.read || decl == m.take
+            None => false
+        }
+    }
+
+    pub fn project(
+        inout self,
+        t: types.Types,
+        instance_args: Map(u32, Vec(CVal)),
+        args: Vec(CVal),
+        span: Span
+    ) -> Result(Projection, Diag) {
+        let markers = self.markers.unwrap()
+        if args.len() != 2 {
+            return Err(Diag.new(span, "`history.Observe` takes a history and a nominal slot type"))
+        }
+        let (CVal.Type(trace), CVal.Type(slot)) = (args[0].clone(), args[1].clone()) else {
+            return Err(Diag.new(span, "`history.Observe` takes a history and a nominal slot type"))
+        }
+        require_nominal(t, slot, "the observer", span)?
+        let seen = self.evaluate(t, instance_args, trace, slot, span)?
+        Ok(Projection { decl: markers.observed, slot, value: seen.last().unwrap() })
+    }
+
+    pub fn separate(
+        inout self,
+        t: types.Types,
+        instance_args: Map(u32, Vec(CVal)),
+        args: Vec(CVal),
+        span: Span
+    ) -> Result((u32, Vec(CVal)), Diag) {
+        if args.len() != 3 {
+            return Err(Diag.new(
+                span,
+                "`history.Separation` takes two histories and a nominal slot type"
+            ))
+        }
+        let (CVal.Type(left), CVal.Type(right), CVal.Type(slot)) = (
+            args[0].clone(), args[1].clone(), args[2].clone()
+        ) else {
+            return Err(Diag.new(
+                span,
+                "`history.Separation` takes two histories and a nominal slot type"
+            ))
+        }
+        require_nominal(t, slot, "the observer", span)?
+        let a = self.evaluate(t, instance_args, left, slot, span)?
+        let b = self.evaluate(t, instance_args, right, slot, span)?
+        let length = history_distance.minimum(a.as_slice(), b.as_slice(), span)?
+        let markers = self.markers.unwrap()
+        var result_args = Vec(CVal).new()
+        var result = markers.indistinguishable
+        if length >= 0 {
+            result = markers.apart
+            result_args.push(CVal.Int(length as i128))
+        }
+        Ok((result, result_args))
+    }
+
+    fn evaluate(
+        inout self,
+        t: types.Types,
+        instance_args: Map(u32, Vec(CVal)),
+        trace: u32,
+        slot: u32,
+        span: Span
+    ) -> Result(Vec(u32), Diag) {
+        let markers = self.markers.unwrap()
+        var world = Map(u32, u32).new()
+        var seen = Vec(u32).new()
+        let initial = self.get(world, slot)
+        world.insert(slot, initial)
+        seen.push(initial)
+        var steps = 0
+        var sequence = Sequence.new(trace)
+        var update = 0
+        loop {
+            let Some(ty) = sequence.next(t, &steps, span)? else { break }
+            update += 1
+            if declaration(t, ty) != Some(markers.put) {
+                return Err(update_error(span, update, "expected `history.Put` in the history"))
+            }
+            let Some(put_args) = instance_args.get(ty) else {
+                return Err(update_error(span, update, "expected a target, label, and operands"))
+            }
+            if put_args.len() != 3 {
+                return Err(update_error(span, update, "expected a target, label, and operands"))
+            }
+            let (CVal.Type(target), CVal.Type(label), CVal.Type(operand_type)) = (
+                put_args[0].clone(), put_args[1].clone(), put_args[2].clone()
+            ) else {
+                return Err(update_error(span, update, "expected a target, label, and operands"))
+            }
+            require_nominal(t, target, "a `history.Put` target", span)?
+            require_nominal(t, label, "a `history.Put` label", span)?
+
+            var operands = Sequence.new(operand_type)
+            var inputs = Vec(u32).new()
+            var accesses = Map(u32, bool).new()
+            var takes = Vec(u32).new()
+            loop {
+                let Some(operand) = operands.next(t, &steps, span)? else { break }
+                let decl = declaration(t, operand)
+                let taking = decl == Some(markers.take)
+                if !taking && decl != Some(markers.read) {
+                    return Err(update_error(span, update,
+                        "expected `history.Read` or `history.Take` as an operand"))
+                }
+                let Some(operand_args) = instance_args.get(operand) else {
+                    return Err(update_error(span, update, "expected a slot type in the operand"))
+                }
+                if operand_args.len() != 1 {
+                    return Err(update_error(span, update, "expected a slot type in the operand"))
+                }
+                let CVal.Type(source) = operand_args[0].clone() else {
+                    return Err(update_error(span, update, "expected a slot type in the operand"))
+                }
+                require_nominal(t, source, "a `history.Read` or `history.Take` operand", span)?
+                match accesses.get(source) {
+                    Some(took) if took || taking => {
+                        return Err(slot_error(t, span, update, source,
+                            "appears more than once in an update that takes it"))
+                    }
+                    _ => {}
+                }
+                accesses.insert(source, taking)
+                let sampled = self.get(world, source)
+                if sampled == SPENT {
+                    return Err(slot_error(t, span, update, source,
+                        "is spent. Write it before reading or taking it again"))
+                }
+                inputs.push(sampled)
+                if taking { takes.push(source) }
+            }
+            // Sample every operand from the pre-update world. A target may
+            // also be taken in this step because the write comes last.
+            for source in takes { world.insert(source, SPENT) }
+            world.insert(target, self.made(label, inputs))
+            let value = world.get(slot).unwrap()
+            if value != seen[seen.len() - 1] { seen.push(value) }
+        }
+        Ok(seen)
+    }
+
+    fn get(inout self, world: Map(u32, u32), slot: u32) -> u32 {
+        match world.get(slot) {
+            Some(v) => return v
+            None => {}
+        }
+        var key = String.from("i")
+        slot.show(&key)
+        self.intern(key, Provenance.Initial(slot))
+    }
+
+    fn made(inout self, label: u32, sink inputs: Vec(u32)) -> u32 {
+        var key = String.from("m")
+        label.show(&key)
+        for input in inputs {
+            key.push(',')
+            input.show(&key)
+        }
+        self.intern(key, Provenance.Made(label, inputs))
+    }
+
+    fn intern(inout self, sink key: String, sink p: Provenance) -> u32 {
+        match self.keys.get(key) {
+            Some(id) => return id
+            None => {}
+        }
+        self.nodes.push(p)
+        let id = self.nodes.len() as u32
+        self.keys.insert(key, id)
+        id
+    }
+
+    pub fn show(self, p: Projection, t: types.Types) -> String {
+        var out = String.from("Observed(")
+        show_slot(&out, t, p.slot)
+        out.push_str(", ")
+        if p.value == SPENT {
+            out.push_str("spent")
+        } else {
+            var budget = 12
+            self.show_value(&out, t, p.value, &budget)
+        }
+        out.push(')')
+        out
+    }
+
+    fn show_value(self, inout out: String, t: types.Types, id: u32, inout budget: i64) {
+        budget -= 1
+        match self.nodes[id as i64 - 1] {
+            Initial(slot) => {
+                out.push_str("Initial(")
+                show_slot(&out, t, slot)
+            }
+            Made(label, inputs) => {
+                out.push_str("Made(")
+                show_slot(&out, t, label)
+                for input in inputs {
+                    out.push_str(", ")
+                    if budget == 0 {
+                        out.push_str("...")
+                        break
+                    }
+                    self.show_value(&out, t, input, &budget)
+                }
+            }
+        }
+        out.push(')')
+    }
+}
+
+struct Sequence {
+    pending: Vec(u32)
+}
+
+impl Sequence {
+    fn new(ty: u32) -> Sequence {
+        var pending = Vec(u32).new()
+        pending.push(ty)
+        Sequence { pending }
+    }
+
+    fn next(inout self, t: types.Types, inout steps: i64, span: Span) -> Result(Option(u32), Diag) {
+        loop {
+            let Some(ty) = self.pending.pop() else { return Ok(None) }
+            steps += 1
+            if steps > MAX_STEPS { return Err(limit_error(span)) }
+            match t.kind(ty) {
+                Tuple(children) => {
+                    var i = children.len()
+                    if steps + self.pending.len() + i > MAX_STEPS { return Err(limit_error(span)) }
+                    // Push in reverse order so the next leaf is the leftmost.
+                    while i > 0 {
+                        i -= 1
+                        self.pending.push(children[i])
+                    }
+                }
+                _ => return Ok(Some(ty))
+            }
+        }
+    }
+}
+
+fn limit_error(span: Span) -> Diag {
+    Diag.new(span, "history observation exceeded its 4096-step sequence limit")
+}
+
+fn declaration(t: types.Types, ty: u32) -> Option(u32) {
+    let Some(a) = t.adt_index(ty) else { return None }
+    Some(t.adts[a as i64].decl)
+}
+
+fn require_nominal(t: types.Types, ty: u32, role: str, span: Span) -> Result((), Diag) {
+    if t.adt_index(ty).is_none() {
+        return Err(Diag.new(span, (role + " must be a nominal type (a struct or enum)").as_str()))
+    }
+    Ok(())
+}
+
+fn show_slot(inout out: String, t: types.Types, ty: u32) {
+    let idx = t.adt_index(ty).unwrap()
+    let name = t.adts[idx as i64].name.as_str()
+    if name.len <= 64 {
+        out.push_str(name)
+        return
+    }
+    var end = 64
+    while (name[end] & 0xc0) == 0x80 { end -= 1 }
+    out.push_str(name[0..end])
+    out.push_str("...")
+}
+
+fn update_error(span: Span, update: i64, reason: str) -> Diag {
+    var msg = String.from("history update ")
+    update.show(&msg)
+    msg.push_str(": ")
+    msg.push_str(reason)
+    Diag.new(span, msg.as_str())
+}
+
+fn slot_error(t: types.Types, span: Span, update: i64, slot: u32, reason: str) -> Diag {
+    var msg = String.from("slot `")
+    show_slot(&msg, t, slot)
+    msg.push_str("` ")
+    msg.push_str(reason)
+    update_error(span, update, msg.as_str())
+}

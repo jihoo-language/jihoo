@@ -1,0 +1,15 @@
+// Type-level histories of symbolic resource updates.
+pub struct Put(Target: type, Label: type, Args: type) {}
+pub struct Read(Slot: type) {}
+pub struct Take(Slot: type) {}
+
+// The compiler reduces this application to an ordinary observation index.
+pub struct Observe(History: type, Slot: type) {}
+
+// The minimum length of a record that distinguishes the two histories.
+pub struct Separation(Left: type, Right: type, Slot: type) {}
+pub struct Apart(Length: i64) {}
+pub struct Indistinguishable {}
+
+// The compiler creates an instance for each distinct projection.
+struct Observed {}

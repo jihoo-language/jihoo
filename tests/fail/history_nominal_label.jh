@@ -1,0 +1,14 @@
+// error: Observed(Draft, Made(history_nominal_modules.left.Label))
+// error: Observed(Draft, Made(history_nominal_modules.right.Label))
+import std.history as h
+import history_nominal_modules.left
+import history_nominal_modules.right
+
+struct Draft {}
+
+type A = h.Observe(h.Put(Draft, left.Label, ()), Draft)
+type B = h.Observe(h.Put(Draft, right.Label, ()), Draft)
+struct Packet(Index: type) {}
+
+fn check(sink x: Packet(A)) {}
+fn main() { check(Packet(B) {}) }

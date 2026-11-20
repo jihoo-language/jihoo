@@ -38,6 +38,8 @@ pub struct Ast {
     pub modules: Vec(ModuleAst)
     pub root: u32
     pub prelude: Option(u32)
+    // The loaded standard-library history module, if any.
+    pub history: Option(u32)
     // std.derive, loaded when some item has `#[derive(...)]`.
     pub derive: Option(u32)
     // The function the program starts in: `main`, or for `jihoo test` the
@@ -235,11 +237,13 @@ fn load_all(
         names = l.add_tests(root_idx, root, &sources, overlay)?
         entry = String.from(TEST_ENTRY)
     }
+    let history = l.history_module()
     match l {
         Loader { modules, .. } => Ok(Ast {
             modules: modules,
             root: root_idx,
             prelude: prelude,
+            history: history,
             derive: derive,
             entry: entry,
             tests: names
@@ -414,11 +418,6 @@ impl Loader {
     }
 
     fn find(self, path: Vec(String), from: str) -> Option(String) {
-        var dirs = Vec(String).new()
-        dirs.push(os.parent(from).to_string())
-        for d in self.search {
-            dirs.push(d.clone())
-        }
         var rel = String.new()
         for i, p in path {
             if i > 0 {
@@ -426,19 +425,37 @@ impl Loader {
             }
             rel.push_str(p.as_str())
         }
-        for d in dirs {
-            let base = os.join(d.as_str(), rel.as_str())
-            // `a.x86_64.freestanding.jh`, `a.freestanding.jh`, `a.x86_64.jh`, `a.jh`
-            let both = base.as_str() + "." + self.target.as_str() + "." +
-                self.profile.as_str() + ".jh"
-            let profile = base.as_str() + "." + self.profile.as_str() + ".jh"
-            let target = base.as_str() + "." + self.target.as_str() + ".jh"
-            let plain = base.as_str() + ".jh"
-            for p in [both, profile, target, plain] {
-                if os.exists(p.as_str()) {
-                    return Some(p.clone())
-                }
-            }
+        match self.find_in(os.parent(from), rel.as_str()) {
+            Some(p) => return Some(p)
+            None => {}
+        }
+        for d in self.search {
+            let Some(p) = self.find_in(d.as_str(), rel.as_str()) else { continue }
+            return Some(p)
+        }
+        None
+    }
+
+    fn find_in(self, dir: str, rel: str) -> Option(String) {
+        let base = os.join(dir, rel)
+        // `a.x86_64.freestanding.jh`, `a.freestanding.jh`, `a.x86_64.jh`, `a.jh`
+        let both = base.as_str() + "." + self.target.as_str() + "." +
+            self.profile.as_str() + ".jh"
+        let profile = base.as_str() + "." + self.profile.as_str() + ".jh"
+        let target = base.as_str() + "." + self.target.as_str() + ".jh"
+        let plain = base.as_str() + ".jh"
+        for p in [both, profile, target, plain] {
+            if os.exists(p.as_str()) { return Some(p.clone()) }
+        }
+        None
+    }
+
+    fn history_module(self) -> Option(u32) {
+        for d in self.search {
+            let Some(p) = self.find_in(d.as_str(), "std/history") else { continue }
+            let key = file_key(p.as_str())
+            let Some(module) = self.by_path.get(key) else { return None }
+            return Some(module)
         }
         None
     }

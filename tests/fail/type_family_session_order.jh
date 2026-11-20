@@ -1,0 +1,10 @@
+// error: which does not fit the parameter's type
+import type_family_modules.protocol
+
+fn main() {
+    let from = protocol.endpoint(protocol.Send(protocol.End))
+    let peer = protocol.endpoint(protocol.Dual(protocol.Send(protocol.End)))
+    let done = protocol.send(peer, from)
+    let next = protocol.endpoint(protocol.Dual(protocol.Send(protocol.End)))
+    protocol.send(next, done)
+}

@@ -1,0 +1,13 @@
+pub struct Mark(T: type) {}
+
+struct Private {
+    value: i64
+}
+
+pub type Resolve {
+    Mark(let T) => T
+    _ => Private
+}
+
+pub fn fallback() -> Private { Private { value: 11 } }
+pub fn value(p: Private) -> i64 { p.value }

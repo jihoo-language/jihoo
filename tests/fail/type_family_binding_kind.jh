@@ -1,0 +1,3 @@
+// error: type pattern binding `N` occurs in positions with different kinds
+struct Mark(T: type, N: i64) {}
+type Unused { Mark(let N, let N) => bool }

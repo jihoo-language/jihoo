@@ -52,6 +52,11 @@ input type can be inferred even while `U` is unknown. The compiler checks
 the body and uses its result to infer `U`. This allows
 [iterator pipelines](iterators.md) such as `.map(fn(x) { x.to_string() })`.
 
+When a signature needs the type computed from a generic argument, it can
+apply a family such as `Dual(P)`. A parameter of type `Endpoint(P)` can
+supply `P` so that another parameter can require `Endpoint(Dual(P))`.
+[Closed type families](type-families.md)
+
 ## Traits
 
 A trait is a set of functions a type can provide, with optional default

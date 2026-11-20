@@ -301,7 +301,36 @@ impl Dump {
                 self.opt_ty(t)
                 self.s(")")
             }
+            TypeFamily(f) => {
+                self.s("(type-family ")
+                self.s(f.name.as_str())
+                for r in f.rules {
+                    self.s(" (rule ")
+                    self.type_pattern(r.pattern)
+                    self.s(" ")
+                    self.ty(r.result)
+                    self.s(")")
+                }
+                self.s(")")
+            }
         }
+        self.s(")")
+    }
+
+    fn type_pattern(inout self, p: ast.TypePattern) {
+        self.open("type-pattern", p.span)
+        match p.head {
+            Bind(n) => { self.s(" bind "); self.s(n.as_str()) }
+            Path(path) => { self.s(" path ["); self.words(path); self.s("]") }
+            Tuple => self.s(" tuple")
+            Array => self.s(" array")
+            Slice => self.s(" slice")
+            Ptr => self.s(" ptr")
+            Ref(m) => self.s(if m { " inout" } else { " ref" })
+            Int(n) => { self.s(" int "); n.show(&self.out) }
+            Bool(b) => self.s(if b { " true" } else { " false" })
+        }
+        for part in p.parts { self.s(" "); self.type_pattern(part) }
         self.s(")")
     }
 

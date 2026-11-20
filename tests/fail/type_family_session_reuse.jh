@@ -1,0 +1,10 @@
+// error: `from` is used here after it was moved away
+import type_family_modules.protocol
+
+fn main() {
+    let from = protocol.endpoint(protocol.Send(protocol.End))
+    let peer = protocol.endpoint(protocol.Dual(protocol.Send(protocol.End)))
+    protocol.send(peer, from)
+    let next = protocol.endpoint(protocol.Dual(protocol.Send(protocol.End)))
+    protocol.send(next, from)
+}

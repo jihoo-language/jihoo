@@ -1,0 +1,19 @@
+// error: history update 2: slot `Inbox` is spent. Write it before reading or taking it again
+import std.history as h
+
+struct Lamp {}
+struct Inbox {}
+struct Log {}
+struct Red {}
+struct Blue {}
+
+type Valid = h.Put(Lamp, Red, ())
+type Invalid = (
+    h.Put(Log, Red, h.Take(Inbox)),
+    h.Put(Log, Blue, h.Read(Inbox)),
+    h.Put(Lamp, Blue, ())
+)
+
+// A different final lamp state would cost zero, but the read invalidates
+// the whole history before the compiler compares the lamp states.
+fn invalid(value: h.Separation(Valid, Invalid, Lamp)) {}

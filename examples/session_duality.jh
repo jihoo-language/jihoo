@@ -1,0 +1,86 @@
+// An in-process request and reply with two owned endpoints. A pending
+// delivery holds the receiving endpoint until its message is received.
+//   jihoo run examples/session_duality.jh
+
+import std.fmt
+
+struct End {}
+struct Send(T: type, K: type) {}
+struct Recv(T: type, K: type) {}
+struct Choose(L: type, R: type) {}
+struct Offer(L: type, R: type) {}
+
+type Dual {
+    End => End
+    Send(let T, let K) => Recv(T, Dual(K))
+    Recv(let T, let K) => Send(T, Dual(K))
+    Choose(let L, let R) => Offer(Dual(L), Dual(R))
+    Offer(let L, let R) => Choose(Dual(L), Dual(R))
+}
+
+struct Endpoint(P: type) {
+    token: Box(u8)
+}
+
+struct Delivery(T: type, K: type) {
+    endpoint: Endpoint(Recv(T, K))
+    message: T
+}
+
+enum Offered(L: type, R: type) {
+    Left(Endpoint(L))
+    Right(Endpoint(R))
+}
+
+fn connect(comptime P: type) -> (Endpoint(P), Endpoint(Dual(P))) {
+    (Endpoint(P) { token: Box.new(0 as u8) }, Endpoint(Dual(P)) { token: Box.new(1 as u8) })
+}
+
+fn send(
+    comptime T: type,
+    comptime K: type,
+    sink peer: Endpoint(Recv(T, Dual(K))),
+    sink sender: Endpoint(Send(T, K)),
+    sink message: T
+) -> (Endpoint(K), Delivery(T, Dual(K))) {
+    let Endpoint { token } = move sender
+    (Endpoint(K) { token }, Delivery(T, Dual(K)) { endpoint: peer, message })
+}
+
+fn receive(comptime T: type, comptime K: type, sink pending: Delivery(T, K)) -> (Endpoint(K), T) {
+    let Delivery { endpoint, message } = move pending
+    let Endpoint { token } = move endpoint
+    (Endpoint(K) { token }, message)
+}
+
+fn choose_left(
+    comptime L: type,
+    comptime R: type,
+    sink peer: Endpoint(Offer(Dual(L), Dual(R))),
+    sink chooser: Endpoint(Choose(L, R))
+) -> (Endpoint(L), Offered(Dual(L), Dual(R))) {
+    let Endpoint { token: chooser_token } = move chooser
+    let Endpoint { token: peer_token } = move peer
+    (Endpoint(L) { token: chooser_token }, Offered(Dual(L), Dual(R)).Left(
+        Endpoint(Dual(L)) { token: peer_token }
+    ))
+}
+
+fn close(sink endpoint: Endpoint(End)) {}
+
+type Client = Send(String, Choose(Recv(i64, End), End))
+
+fn main() {
+    let (client, server) = connect(Client)
+    let (client, pending) = send(server, client, String.from("ping"))
+    let (server, request) = receive(pending)
+    fmt.println("server received {}", request)
+
+    let (client, choice) = choose_left(server, client)
+    let Left(server) = move choice else { panic("expected the reply branch") }
+    let (server, pending) = send(client, server, 42)
+    let (client, reply) = receive(pending)
+    fmt.println("client received {}", reply)
+    close(client)
+    close(server)
+}

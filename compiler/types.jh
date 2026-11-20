@@ -840,11 +840,22 @@ impl Types {
 
     pub fn show(self, t: u32) -> String {
         var s = String.new()
-        self.show_into(&s, t)
+        self.show_into(&s, t, 9223372036854775807)
         s
     }
 
-    fn show_into(self, inout s: String, t: u32) {
+    pub fn show_bounded(self, t: u32) -> String {
+        let limit = 1024
+        var s = String.new()
+        self.show_into(&s, t, limit)
+        if s.len() <= limit { return s }
+        var end = limit - 3
+        while (s.as_bytes()[end] & 0xc0) == 0x80 { end -= 1 }
+        s.as_str()[..end] + "..."
+    }
+
+    fn show_into(self, inout s: String, t: u32, limit: i64) {
+        if s.len() > limit { return }
         match self.kind(t) {
             Bool => s.push_str("bool")
             Int(i) => {
@@ -858,89 +869,96 @@ impl Types {
             Never => s.push_str("never")
             Tuple(ts) => {
                 s.push('(')
-                self.show_list(&s, ts)
+                self.show_list(&s, ts, limit)
                 s.push(')')
             }
             Ptr(p) => {
                 s.push('*')
-                self.show_into(&s, p)
+                self.show_into(&s, p, limit)
             }
             Array(e, n) => {
                 s.push('[')
-                self.show_into(&s, e)
+                self.show_into(&s, e, limit)
                 s.push_str("; ")
                 n.show(&s)
                 s.push(']')
             }
             Slice(e) => {
                 s.push('[')
-                self.show_into(&s, e)
+                self.show_into(&s, e, limit)
                 s.push(']')
             }
             Str => s.push_str("str")
-            Adt(i) => s.push_str(self.adts[i as i64].name.as_str())
+            Adt(i) => append_type_text(&s, self.adts[i as i64].name.as_str(), limit)
             Ref(p) => {
                 s.push_str("ref ")
-                self.show_into(&s, p)
+                self.show_into(&s, p, limit)
             }
             RefMut(p) => {
                 s.push_str("inout ")
-                self.show_into(&s, p)
+                self.show_into(&s, p, limit)
             }
             Closure(sig) => {
                 s.push_str("fn(")
-                self.show_list(&s, sig.params)
+                self.show_list(&s, sig.params, limit)
                 s.push(')')
-                self.show_ret(&s, sig.ret)
+                self.show_ret(&s, sig.ret, limit)
             }
             FnPtr(sig) => {
                 s.push_str("fnptr(")
-                self.show_list(&s, sig.params)
+                self.show_list(&s, sig.params, limit)
                 if sig.variadic {
                     if sig.params.len() > 0 { s.push_str(", ") }
                     s.push_str("...")
                 }
                 s.push(')')
-                self.show_ret(&s, sig.ret)
+                self.show_ret(&s, sig.ret, limit)
             }
             Type => s.push_str("type")
             Dyn(tr) => {
                 s.push_str("dyn ")
                 match self.trait_names.get(tr) {
-                    Some(n) => s.push_str(n.as_str())
+                    Some(n) => append_type_text(&s, n.as_str(), limit)
                     None => s.push('?')
                 }
             }
             DynFn(sig) => {
                 s.push_str("dyn fn(")
-                self.show_list(&s, sig.params)
+                self.show_list(&s, sig.params, limit)
                 s.push(')')
-                self.show_ret(&s, sig.ret)
+                self.show_ret(&s, sig.ret, limit)
             }
             Lambda(_, _, sig) => {
                 s.push_str("move fn(")
-                self.show_list(&s, sig.params)
+                self.show_list(&s, sig.params, limit)
                 s.push(')')
-                self.show_ret(&s, sig.ret)
+                self.show_ret(&s, sig.ret, limit)
             }
         }
     }
 
-    fn show_list(self, inout s: String, ts: Vec(u32)) {
+    fn show_list(self, inout s: String, ts: Vec(u32), limit: i64) {
         for i, t in ts {
+            if s.len() > limit { break }
             if i > 0 {
                 s.push_str(", ")
             }
-            self.show_into(&s, t)
+            self.show_into(&s, t, limit)
         }
     }
 
-    fn show_ret(self, inout s: String, r: u32) {
+    fn show_ret(self, inout s: String, r: u32, limit: i64) {
         if r != UNIT {
             s.push_str(" -> ")
-            self.show_into(&s, r)
+            self.show_into(&s, r, limit)
         }
     }
+}
+
+fn append_type_text(inout out: String, text: str, limit: i64) {
+    let take = min(text.len, max(0, limit - out.len()))
+    out.push_str(text[..take])
+    if take < text.len { out.push('.') }
 }
 
 fn field_types(fs: Vec(FieldDef)) -> Vec(u32) {

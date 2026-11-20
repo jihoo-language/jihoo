@@ -6802,6 +6802,10 @@ impl sema.Sema {
             }
             var op = copy_of(0)
             if p.mode == ast.Mode.Inout {
+                let vt = self.types.pointee(lt).unwrap()
+                if v.ty != vt {
+                    return Err(err(sp, self.expected_found(vt, v.ty).as_str()))
+                }
                 let pl = match v.vk.clone() {
                     Place(pl) => pl
                     Op(_) => return Err(err(sp, "expected a place"))
@@ -6903,7 +6907,6 @@ impl sema.Sema {
         env: Env,
         inout binds: Vec(Option(CVal))
     ) -> Result(bool, Diag) {
-        let k = self.types.kind(t).clone()
         match pat.kind {
             Path(p, None) => {
                 if p.len() == 1 {
@@ -6920,8 +6923,14 @@ impl sema.Sema {
                     }
                 }
             }
+            Path(p, Some(_)) => {
+                // A computed type cannot infer any of its inputs. The
+                // instantiated signature checks the result after inference.
+                if self.computed_type_path(env.module, p) { return Ok(true) }
+            }
             _ => {}
         }
+        let k = self.types.kind(t).clone()
         match pat.kind {
             Ptr(inner) => match k {
                 Ptr(x) => return self.match_ty_env(inner.deref(), x, params, env, &binds)

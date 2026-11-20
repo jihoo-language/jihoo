@@ -219,6 +219,7 @@ patterns see through it.
 | `std.utf8` | strict UTF-8 decoding, validation, scalar iteration and Unicode whitespace |
 | `std.thread` | `join(a, b)`, `each(lo, hi, f)`, `map(xs, f)`, `each_mut(&v, f)`, their `_uneven` forms, `cpu_count()`: work on several threads that borrows from the caller ([threads](../language/threads.md)) |
 | `std.arena` | `Arena(T)` and `Id(T)`, `Pool(T)` and `Handle(T)`, `Soa(T)`: data that refers to data by index ([data by index](../language/data-oriented.md)) |
+| `std.history` | `Put`, `Read` and `Take` describe resource updates. `Observe` computes a slot's final state type and `Separation` computes its minimum distinguishing record length. [Observer-indexed history types](../language/observed-histories.md) |
 | `std.sync` | `Atomic(T)` (`new`, `load`, `store`, `add`, `sub`, `swap`, `compare_swap`, `into_inner`), `Mutex(T)` (`new`, `lock(f)`, `into_inner`), `Channel(T)` (`new`, `bounded(n)`, `send`, `recv`, `try_recv`, `close`, `iter`, `len`, `is_closed`) and `Once(T)` (`new`, `get`, `get_or_init(f)`, `into_inner`), shared by threads ([threads](../language/threads.md#sharing-changes-atomic-and-mutex)) |
 | `std.os_thread` | `start`, `wait` (unsafe) and `cpu_count`: the threads `std.thread` uses, POSIX threads or `clone` |
 | `std.derive` | the bodies of `#[derive(...)]`d methods, loaded by the compiler when an item derives a trait ([derive](../language/reflection.md#derive)) |

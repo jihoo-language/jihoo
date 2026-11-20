@@ -1,0 +1,8 @@
+// error: expected `type_family_modules.protocol.Endpoint(type_family_modules.protocol.Recv(type_family_modules.protocol.End))`
+import type_family_modules.protocol
+
+fn main() {
+    let from = protocol.endpoint(protocol.Send(protocol.End))
+    let peer = protocol.endpoint(protocol.Recv(protocol.Send(protocol.End)))
+    protocol.send(peer, from)
+}

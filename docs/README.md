@@ -25,6 +25,8 @@ same on GitHub.
 
 - [Structs, enums and patterns](language/data.md)
 - [Generics and traits](language/generics.md)
+- [Closed type families](language/type-families.md)
+- [Observer-indexed history types](language/observed-histories.md)
 - [Compile-time evaluation](language/comptime.md)
 - [Contracts](language/contracts.md)
 - [Dependent types](language/dependent-types.md)

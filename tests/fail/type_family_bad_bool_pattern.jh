@@ -1,0 +1,4 @@
+// error: expected a bool pattern
+type Flag = bool
+struct Mark(Ready: Flag) {}
+type Unused { Mark(1) => bool }

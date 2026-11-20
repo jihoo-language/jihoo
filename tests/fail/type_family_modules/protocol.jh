@@ -1,0 +1,22 @@
+pub struct End {}
+pub struct Send(K: type) {}
+pub struct Recv(K: type) {}
+
+pub type Dual {
+    End => End
+    Send(let K) => Recv(Dual(K))
+    Recv(let K) => Send(Dual(K))
+}
+
+pub struct Endpoint(P: type) { token: Box(u8) }
+
+pub fn endpoint(comptime P: type) -> Endpoint(P) { Endpoint(P) { token: Box.new(0 as u8) } }
+
+pub fn send(
+    comptime K: type,
+    sink peer: Endpoint(Recv(Dual(K))),
+    sink from: Endpoint(Send(K))
+) -> Endpoint(K) {
+    let Endpoint { token } = move from
+    Endpoint(K) { token }
+}

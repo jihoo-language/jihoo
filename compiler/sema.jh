@@ -13,11 +13,13 @@ import core_elab
 import interp
 import ast
 import diag
+import history
 import lex
 import load
 import mir
 import target
 import types
+import type_family
 
 type Diag = diag.Diag
 type Span = diag.Span
@@ -99,6 +101,7 @@ pub enum Sym {
     Module(u32)
     Alias(u32)
     Static(u32)
+    Family(u32)
 }
 
 impl Eq for Sym {
@@ -118,6 +121,7 @@ fn sym_parts(s: Sym) -> (i64, u32) {
         Module(i) => (4, i)
         Alias(i) => (5, i)
         Static(i) => (6, i)
+        Family(i) => (7, i)
     }
 }
 
@@ -243,6 +247,9 @@ pub struct StaticInfo {
 pub struct AliasInfo {
     pub module: u32
     pub ty: *ast.Ty
+    pub resolving_at: Option(u32)
+    pub resolved: Option(u32)
+    pub resolved_here: Option((u32, u32))
 }
 
 pub struct EnvName {
@@ -375,6 +382,7 @@ pub struct ComptimeClosure {
 pub struct Sema {
     pub ast: *load.Ast
     pub types: Types
+    pub history: history.History
     pub mods: Vec(ModScope)
     pub adts: Vec(AdtDecl)
     pub fns: Vec(FnDeclInfo)
@@ -382,9 +390,15 @@ pub struct Sema {
     pub traits: Vec(TraitInfo)
     pub consts: Vec(ConstInfo)
     pub aliases: Vec(AliasInfo)
+    alias_scope: u32
+    pub families: Vec(type_family.Declaration)
+    pub family_stack: Vec((u32, u32))
+    pub family_floor: i64
+    pub family_steps: u32
     pub statics: Vec(StaticInfo)
     // Impls whose type is not a declared struct or enum (`impl str`).
     pub other_impls: Vec(u32)
+    computed_impls: Vec(u32)
     adt_insts: Map(String, u32)
     fn_insts: Map(String, u32)
     // The `export fn` defining each C symbol.
@@ -456,6 +470,7 @@ impl Sema {
         Sema {
             ast: &a
             types: Types.new()
+            history: history.History.new()
             mods: Vec(ModScope).new()
             adts: Vec(AdtDecl).new()
             fns: Vec(FnDeclInfo).new()
@@ -463,8 +478,14 @@ impl Sema {
             traits: Vec(TraitInfo).new()
             consts: Vec(ConstInfo).new()
             aliases: Vec(AliasInfo).new()
+            alias_scope: 0
+            families: Vec(type_family.Declaration).new()
+            family_stack: Vec((u32, u32)).new()
+            family_floor: 0
+            family_steps: 0
             statics: Vec(StaticInfo).new()
             other_impls: Vec(u32).new()
+            computed_impls: Vec(u32).new()
             adt_insts: Map(String, u32).new()
             fn_insts: Map(String, u32).new()
             exports: Map(String, u32).new()
@@ -563,6 +584,7 @@ impl Sema {
             }
             None => {}
         }
+        self.find_history()
         // Impls: attach to their type and trait.
         for i in 0..self.impls.len() {
             let module = self.impls[i].module
@@ -575,10 +597,14 @@ impl Sema {
                 }
                 None => {}
             }
-            let head = self.impl_head(module, decl.self_ty, decl.params)
             if decl.trait_.is_none() {
-                match head {
+                let computed = match decl.self_ty.kind {
+                    Path(p, Some(_)) => self.computed_type_path(module, p)
+                    _ => false
+                }
+                match self.impl_head(module, decl.self_ty, decl.params) {
                     Some(adt) => self.adts[adt as i64].impls.push(i as u32)
+                    None if computed => self.computed_impls.push(i as u32)
                     None => self.other_impls.push(i as u32)
                 }
             }
@@ -598,6 +624,7 @@ impl Sema {
             self.traits[t].impls = first
         }
         self.find_lang()
+        self.check_family_patterns()?
         Ok(())
     }
 
@@ -712,6 +739,21 @@ impl Sema {
         }
     }
 
+    fn find_history(inout self) {
+        let Some(m) = at(self.ast).history else { return }
+        let Some(put) = self.lang_adt(m, "Put") else { return }
+        let Some(read) = self.lang_adt(m, "Read") else { return }
+        let Some(take) = self.lang_adt(m, "Take") else { return }
+        let Some(observe) = self.lang_adt(m, "Observe") else { return }
+        let Some(observed) = self.lang_adt(m, "Observed") else { return }
+        let Some(separation) = self.lang_adt(m, "Separation") else { return }
+        let Some(apart) = self.lang_adt(m, "Apart") else { return }
+        let Some(indistinguishable) = self.lang_adt(m, "Indistinguishable") else { return }
+        self.history.markers = Some(history.Markers {
+            put, read, take, observe, observed, separation, apart, indistinguishable
+        })
+    }
+
     // The struct or enum an impl is for, when its type names one.
     fn impl_head(self, module: u32, t: ast.Ty, params: Vec(ast.Param)) -> Option(u32) {
         match t.kind {
@@ -720,13 +762,21 @@ impl Sema {
                     return None
                 }
                 match self.lookup_path(module, p) {
-                    Some((Adt(a), _)) => return Some(a)
+                    Some((Adt(a), _)) if !self.history.is_computed(a) => return Some(a)
                     _ => {}
                 }
             }
             _ => {}
         }
         None
+    }
+
+    pub fn computed_type_path(self, module: u32, p: Vec(String)) -> bool {
+        match self.lookup_path(module, p) {
+            Some((Family(_), _)) => true
+            Some((Adt(a), _)) => self.history.is_computed(a)
+            _ => false
+        }
     }
 
     fn define(
@@ -824,11 +874,18 @@ impl Sema {
                 match t {
                     Some(t) => {
                         let id = self.aliases.len() as u32
-                        self.aliases.push(AliasInfo { module: module, ty: &t })
+                        self.aliases.push(AliasInfo {
+                            module, ty: &t, resolving_at: None, resolved: None, resolved_here: None
+                        })
                         self.define(module, name.as_str(), Sym.Alias(id), item.public, item.span)?
                     }
                     None => return Err(ty_err(item.span, "a type alias needs `= type`"))
                 }
+            }
+            TypeFamily(f) => {
+                let id = self.families.len() as u32
+                self.families.push(type_family.Declaration { module, decl: &f })
+                self.define(module, f.name.as_str(), Sym.Family(id), item.public, item.span)?
             }
             Trait(t) => {
                 let id = self.traits.len() as u32
@@ -1348,12 +1405,58 @@ impl Sema {
                 }
                 self.adt_instance(a, cargs, span)
             }
-            Alias(i) => {
-                let e = Env.new(self.aliases[i as i64].module)
-                let t = at(self.aliases[i as i64].ty)
-                self.resolve_ty(t, e)
+            Alias(i) => self.resolve_alias(i, span)
+            Family(i) => {
+                let Some(a) = args else { return Err(ty_err(
+                    span,
+                    "a type family takes one type argument"
+                )) }
+                if a.len() != 1 { return Err(ty_err(span, "a type family takes one type argument")) }
+                let input = self.expr_ty(a[0], env)?
+                self.reduce_family(i, input, span)
             }
             _ => Err(ty_err(span, ("`" + join_path(p).as_str() + "` is not a type").as_str()))
+        }
+    }
+
+    pub fn resolve_alias(inout self, id: u32, span: Span) -> Result(u32, Diag) {
+        let i = id as i64
+        let previous = self.aliases[i].resolving_at
+        if previous == Some(self.alias_scope) { return Err(ty_err(span, "cyclic type alias")) }
+        let reducing = self.family_stack.len() > 0
+        if reducing {
+            // Retry aliases during reduction so an earlier successful use
+            // cannot hide a recursive call from the descent check.
+            self.family_step(span)?
+        } else {
+            match self.aliases[i].resolved {
+                Some(t) => return Ok(t)
+                None => {}
+            }
+            match self.aliases[i].resolved_here {
+                Some((scope, t)) if scope == self.alias_scope => return Ok(t)
+                _ => {}
+            }
+        }
+        let env = Env.new(self.aliases[i].module)
+        let rhs = at(self.aliases[i].ty)
+        self.aliases[i].resolving_at = Some(self.alias_scope)
+        let result = self.resolve_ty(rhs, env)
+        self.aliases[i].resolving_at = previous
+        // Inside a nominal definition an alias may resolve to a type whose
+        // fields are still being initialized. Cache completed expansions.
+        match move result {
+            Ok(t) => {
+                if !reducing {
+                    if self.alias_scope == 0 {
+                        self.aliases[i].resolved = Some(t)
+                    } else {
+                        self.aliases[i].resolved_here = Some((self.alias_scope, t))
+                    }
+                }
+                Ok(t)
+            }
+            Err(e) => Err(e)
         }
     }
 
@@ -1450,7 +1553,7 @@ impl Sema {
             Call(callee, args) => {
                 let Some(p) = expr_path(callee.deref()) else { return Ok(None) }
                 match self.lookup_path(env.module, p) {
-                    Some((Adt(_), _)) => {
+                    Some((Adt(_), _)) | Some((Family(_), _)) => {
                         if env.get(p[0].as_str()).is_some() {
                             return Ok(None)
                         }
@@ -1475,6 +1578,7 @@ impl Sema {
             ArrayRepeat(el, n) => {
                 let Some(t) = self.try_expr_ty(el.deref(), env)? else { return Ok(None) }
                 let n = self.const_int(n.deref(), env)?
+                if n < 0 { return Err(ty_err(e.span, "an array's length cannot be negative")) }
                 self.types.intern(TyKind.Array(t, n as u64))
             }
             Array(items) => {
@@ -1527,7 +1631,7 @@ impl Sema {
             }
         }
         match self.lookup_path(env.module, p) {
-            Some((Adt(_), _)) | Some((Alias(_), _)) => true
+            Some((Adt(_), _)) | Some((Alias(_), _)) | Some((Family(_), _)) => true
             _ => false
         }
     }
@@ -1538,36 +1642,162 @@ impl Sema {
             Some(t) => return Ok(t)
             None => {}
         }
+        if self.family_stack.len() > 0 {
+            self.check_family_arguments(args, span)?
+        }
+        if self.history.is_observe(decl) {
+            let projection = self.history.project(self.types, self.adt_args_of, args, span)?
+            let canonical = projection.key()
+            let t = match self.adt_insts.get(canonical) {
+                Some(t) => t
+                None => {
+                    let name = self.history.show(projection, self.types)
+                    self.adt_instance_body(
+                        projection.decl,
+                        Vec(CVal).new(),
+                        canonical,
+                        Some(name),
+                        span
+                    )?
+                }
+            }
+            self.adt_insts.insert(key, t)
+            return Ok(t)
+        }
+        if self.history.is_separation(decl) {
+            let (result, result_args) = self.history.separate(
+                self.types,
+                self.adt_args_of,
+                args,
+                span
+            )?
+            let t = self.adt_instance(result, result_args, span)?
+            self.adt_insts.insert(key, t)
+            return Ok(t)
+        }
+        self.adt_instance_body(decl, args, key, None, span)
+    }
+
+    fn adt_instance_body(
+        inout self,
+        decl: u32,
+        args: Vec(CVal),
+        sink key: String,
+        sink observed_name: Option(String),
+        span: Span
+    ) -> Result(u32, Diag) {
         let module = self.adts[decl as i64].module
-        let params = self.adts[decl as i64].params()
-        let kind = self.adts[decl as i64].kind
         var name = self.adts[decl as i64].name.clone()
         let is_std = self.module_name(module).starts_with("std.")
-        if module != at(self.ast).root && at(self.ast).prelude != Some(module) && !is_std {
-            name = self.module_name(module) + "." + name.as_str()
+        match move observed_name {
+            Some(observed) => name = observed
+            None => {
+                if module != at(self.ast).root && at(self.ast).prelude != Some(module) && !is_std {
+                    name = self.module_name(module) + "." + name.as_str()
+                }
+            }
         }
         if args.len() > 0 {
             var n = name.clone()
             n.push('(')
+            let encoding = self.history.is_encoding(decl)
             for i, a in args {
                 if i > 0 {
                     n.push_str(", ")
                 }
-                n.push_str(self.show_cval(a).as_str())
+                match a {
+                    Type(t) if encoding => n.push_str(self.types.show_bounded(t).as_str())
+                    _ => n.push_str(self.show_cval(a).as_str())
+                }
             }
             n.push(')')
             name = n
         }
         let t = self.types.new_adt(name, decl)
-        self.adt_insts.insert(key, t)
+        self.adt_insts.insert(key.clone(), t)
         self.adt_args_of.insert(t, args.clone())
+        // Fields belong to the nominal declaration. A family used in a
+        // field begins a new descent check even on first instantiation.
+        let previous_floor = self.family_floor
+        self.family_floor = self.family_stack.len()
+        let result = self.finish_adt_instance(t, decl, args, span)
+        self.family_floor = previous_floor
+        match result {
+            Ok(()) => Ok(t)
+            Err(e) => {
+                self.adt_insts.remove(key)
+                self.adt_args_of.remove(t)
+                let idx = self.types.adt_index(t).unwrap() as i64
+                self.types.adts[idx].body = types.AdtBody.Pending
+                Err(e)
+            }
+        }
+    }
+
+    fn finish_adt_instance(
+        inout self,
+        t: u32,
+        decl: u32,
+        args: Vec(CVal),
+        span: Span
+    ) -> Result((), Diag) {
+        let module = self.adts[decl as i64].module
+        let params = self.adts[decl as i64].params()
+        let kind = self.adts[decl as i64].kind
         var env = Env { module: module, names: Vec(EnvName).new(), self_ty: Some(t) }
         for i, p in params {
             if i < args.len() {
                 env.push(p.name.as_str(), args[i].clone())
             }
         }
-        let body = match kind {
+        // An alias may refer back to this nominal type through one of its
+        // fields. The type is already interned, so retry the alias here.
+        let previous = self.alias_scope
+        self.alias_scope = t
+        let result = self.adt_body(kind, env, module)
+        self.alias_scope = previous
+        let body = result?
+        let idx = self.types.adt_index(t).unwrap() as i64
+        self.types.adts[idx].body = body
+        // A value's own type contains itself only through a pointer.
+        if self.contains_inline(t, t) {
+            return Err(ty_err(span, ("`" + self.types.show(t).as_str() +
+                "` contains itself; put the inner one in a `Box`").as_str()))
+        }
+        if self.family_stack.len() > 0 { self.check_family_type_size(t, span)? }
+        var marked = self.adts[decl as i64].is_view
+        for d in self.adts[decl as i64].derives {
+            if d == "view" {
+                marked = true
+            }
+        }
+        var view_arg = false
+        for a in args {
+            match a {
+                Type(x) => {
+                    if self.types.is_view(x) {
+                        view_arg = true
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.types.adts[idx].view = marked || view_arg
+        self.types.adts[idx].interior = self.adts[decl as i64].is_interior
+        match self.lang.drop {
+            Some(dr) => {
+                if self.find_impl(dr, t)?.is_some() {
+                    self.types.adts[idx].has_drop = true
+                }
+            }
+            None => {}
+        }
+        self.types.reset_drop_cache()
+        Ok(())
+    }
+
+    fn adt_body(inout self, kind: AdtKind, env: Env, module: u32) -> Result(types.AdtBody, Diag) {
+        Ok(match kind {
             Struct(s) => {
                 var fs = Vec(types.FieldDef).new()
                 for f in at(s).fields {
@@ -1591,43 +1821,7 @@ impl Sema {
                 }
                 types.AdtBody.Enum(vs)
             }
-        }
-        let idx = self.types.adt_index(t).unwrap() as i64
-        self.types.adts[idx].body = body
-        var marked = self.adts[decl as i64].is_view
-        for d in self.adts[decl as i64].derives {
-            if d == "view" {
-                marked = true
-            }
-        }
-        var view_arg = false
-        for a in args {
-            match a {
-                Type(x) => {
-                    if self.types.is_view(x) {
-                        view_arg = true
-                    }
-                }
-                _ => {}
-            }
-        }
-        self.types.adts[idx].view = marked || view_arg
-        self.types.adts[idx].interior = self.adts[decl as i64].is_interior
-        // A value's own type contains itself only through a pointer.
-        if self.contains_inline(t, t) {
-            return Err(ty_err(span, ("`" + self.types.show(t).as_str() +
-                "` contains itself; put the inner one in a `Box`").as_str()))
-        }
-        match self.lang.drop {
-            Some(dr) => {
-                if self.find_impl(dr, t)?.is_some() {
-                    self.types.adts[idx].has_drop = true
-                }
-            }
-            None => {}
-        }
-        self.types.reset_drop_cache()
-        Ok(t)
+        })
     }
 
     fn contains_inline(self, t: u32, target: u32) -> bool {
@@ -1749,23 +1943,14 @@ impl Sema {
     // Why `t` has no function `name` although an impl of its type has one:
     // a bound of that impl that `t`'s arguments do not meet.
     pub fn unmet_bound(inout self, t: u32, name: str) -> Result(Option(String), Diag) {
-        let decl = match self.types.adt_index(t) {
-            Some(a) => self.types.adts[a as i64].decl
-            None => return Ok(None)
-        }
-        for imp in self.adts[decl as i64].impls.clone() {
+        if self.types.adt_index(t).is_none() { return Ok(None) }
+        for imp in self.impl_candidates(t) {
             if self.impls[imp as i64].fns.get(name).is_none() {
                 continue
             }
             let module = self.impls[imp as i64].module
             let d = at(self.impls[imp as i64].decl)
-            var binds = Vec(Option(CVal)).new()
-            for _ in 0..d.params.len() {
-                binds.push(None)
-            }
-            if !self.match_ty(d.self_ty, t, d.params, module, &binds)? {
-                continue
-            }
+            let Some(binds) = self.bind_impl_head(imp, t)? else { continue }
             for i, p in d.params {
                 match binds[i] {
                     Some(Type(x)) => {
@@ -1789,13 +1974,7 @@ impl Sema {
     pub fn match_impl(inout self, imp: u32, t: u32) -> Result(Option(Vec(CVal)), Diag) {
         let module = self.impls[imp as i64].module
         let decl = at(self.impls[imp as i64].decl)
-        var binds = Vec(Option(CVal)).new()
-        for _ in 0..decl.params.len() {
-            binds.push(None)
-        }
-        if !self.match_ty(decl.self_ty, t, decl.params, module, &binds)? {
-            return Ok(None)
-        }
+        let Some(binds) = self.bind_impl_head(imp, t)? else { return Ok(None) }
         var args = Vec(CVal).new()
         for i, b in binds {
             match b {
@@ -1822,15 +2001,35 @@ impl Sema {
         Ok(Some(args))
     }
 
+    fn bind_impl_head(inout self, imp: u32, t: u32) -> Result(Option(Vec(Option(CVal))), Diag) {
+        let module = self.impls[imp as i64].module
+        let d = at(self.impls[imp as i64].decl)
+        var binds = Vec(Option(CVal)).new()
+        for _ in 0..d.params.len() { binds.push(None) }
+        var computed = false
+        if !self.match_ty(d.self_ty, t, d.params, module, &binds, &computed)? { return Ok(None) }
+        if computed {
+            // Other parts of the head can determine the arguments, but
+            // matching the result of a computation never determines them.
+            var env = Env.new(module)
+            for i, p in d.params {
+                let Some(v) = binds[i] else { return Ok(None) }
+                env.push(p.name.as_str(), v.clone())
+            }
+            if self.resolve_ty(d.self_ty, env).ok() != Some(t) { return Ok(None) }
+        }
+        Ok(Some(binds))
+    }
+
     fn match_ty(
         inout self,
         pat: ast.Ty,
         t: u32,
         params: Vec(ast.Param),
         module: u32,
-        inout binds: Vec(Option(CVal))
+        inout binds: Vec(Option(CVal)),
+        inout computed: bool
     ) -> Result(bool, Diag) {
-        let k = self.types.kind(t).clone()
         match pat.kind {
             Path(p, None) => {
                 if p.len() == 1 {
@@ -1840,33 +2039,47 @@ impl Sema {
                     }
                 }
             }
+            Path(p, Some(_)) => {
+                if self.computed_type_path(module, p) {
+                    computed = true
+                    return Ok(true)
+                }
+            }
             _ => {}
         }
+        let k = self.types.kind(t).clone()
         match pat.kind {
             Ptr(inner) => match k {
-                Ptr(x) => return self.match_ty(inner.deref(), x, params, module, &binds)
+                Ptr(x) => return self.match_ty(inner.deref(), x, params, module, &binds, &computed)
                 _ => {}
             }
             Ref(inner, m) => match k {
                 Ref(x) => {
                     if !m {
-                        return self.match_ty(inner.deref(), x, params, module, &binds)
+                        return self.match_ty(inner.deref(), x, params, module, &binds, &computed)
                     }
                 }
                 RefMut(x) => {
                     if m {
-                        return self.match_ty(inner.deref(), x, params, module, &binds)
+                        return self.match_ty(inner.deref(), x, params, module, &binds, &computed)
                     }
                 }
                 _ => {}
             }
             Slice(inner) => match k {
-                Slice(x) => return self.match_ty(inner.deref(), x, params, module, &binds)
+                Slice(x) => return self.match_ty(
+                    inner.deref(),
+                    x,
+                    params,
+                    module,
+                    &binds,
+                    &computed
+                )
                 _ => {}
             }
             Array(inner, n) => match k {
                 Array(x, len) => {
-                    if !self.match_ty(inner.deref(), x, params, module, &binds)? {
+                    if !self.match_ty(inner.deref(), x, params, module, &binds, &computed)? {
                         return Ok(false)
                     }
                     return self.match_val(n.deref(), CVal.Int(len as i128), params, module, &binds)
@@ -1879,7 +2092,7 @@ impl Sema {
                         return Ok(false)
                     }
                     for i, p in ps {
-                        if !self.match_ty(p, xs[i], params, module, &binds)? {
+                        if !self.match_ty(p, xs[i], params, module, &binds, &computed)? {
                             return Ok(false)
                         }
                     }
@@ -1915,7 +2128,7 @@ impl Sema {
                         match concrete[j] {
                             Type(ct) => {
                                 let Some(at) = expr_as_ty(a) else { return Ok(false) }
-                                if !self.match_ty(at, ct, params, module, &binds)? {
+                                if !self.match_ty(at, ct, params, module, &binds, &computed)? {
                                     return Ok(false)
                                 }
                             }
@@ -2069,14 +2282,20 @@ impl Sema {
     // A method by name: inherent impls first, then traits the type
     // implements. Returns the function declaration and its impl arguments
     // (for a trait's default body: `Self`).
-    pub fn find_method(inout self, t: u32, name: str) -> Result(Option(ImplHit), Diag) {
-        let candidates = match self.types.adt_index(t) {
+    fn impl_candidates(self, t: u32) -> Vec(u32) {
+        var candidates = match self.types.adt_index(t) {
             Some(a) => {
                 let decl = self.types.adts[a as i64].decl
                 self.adts[decl as i64].impls.clone()
             }
             None => self.other_impls.clone()
         }
+        candidates.extend(self.computed_impls.clone())
+        candidates
+    }
+
+    pub fn find_method(inout self, t: u32, name: str) -> Result(Option(ImplHit), Diag) {
+        let candidates = self.impl_candidates(t)
         for imp in candidates {
             let fid = match self.impls[imp as i64].fns.get(name) {
                 Some(x) => x

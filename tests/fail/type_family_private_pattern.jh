@@ -1,0 +1,3 @@
+// error: `shape.Hidden` is not a visible struct, enum, or builtin type in this pattern
+import type_family_modules.shape
+type Unused { shape.Hidden => bool }

@@ -1,0 +1,4 @@
+// error: cannot infer the compile-time argument `T` of `f`; pass it explicitly
+type Erase { _ => i64 }
+fn f(comptime T: type, n: Erase(T)) {}
+fn main() { f(42) }
