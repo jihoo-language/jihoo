@@ -1196,3 +1196,6 @@ import Jihoo.NativeLoanComparisonEvidence
 import Jihoo.NativeLoanPureGlobalObservation
 import Jihoo.NativeCoreReferenceNormal
 import Jihoo.NativeBindingMachineMutableClosedStoreLoad
+import Jihoo.NativeCoreUnsignedCancellation
+import Jihoo.NativeCoreNaturalSum
+import Jihoo.NativeCoreUnsignedCollect

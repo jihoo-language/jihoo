@@ -2345,3 +2345,28 @@ integer at the exact original result type.
 
 The aggregate check passed 1,015 Lake jobs, 9,610 declaration audits, and
 all generated fixture comparisons in 9.27 seconds with the warm cache.
+
+### Unsigned collection, cancellation, and wide constants
+
+Live unsigned collection follows the addition children in evaluation order.
+It records Strict prefixes and charges each occurrence of shared nodes.
+An independent syntax trace accounts for both output vectors, every literal
+update and the exact counter difference. The production budget implies that
+the actual U128 accumulator contains the mathematical total.
+
+Cancellation copies the pool, scans with live identity and charges every
+entry shifted after a match. Completed calls agree with ordered first-match
+removal on represented comparison shapes. Success accounts for one
+occurrence per request and preserves the mathematical remainder for any
+valuation on those shapes.
+
+The wide-constant emitter now appends to the arena in native order, shares
+equal halves and preserves the old prefix even when an append fails. The
+represented result preserves the collected value, has the U64 ghost type,
+and its unfolded depth is at most 21 for a collection from zero within the
+production step budget. Full unsigned normalization still needs the
+canonical sorting and rebuilding loop and the cancellation rules' interaction
+with typing and retained traps.
+
+The aggregate check passed 1,018 Lake jobs, 9,626 declaration audits, and
+all generated fixture comparisons in 13.16 seconds with the warm cache.
