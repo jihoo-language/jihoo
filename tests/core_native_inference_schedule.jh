@@ -1046,6 +1046,43 @@ fn proposition_case_telescope() {
     assert(budget-remaining_ticks(&sample) == 6, "the two hypotheses and result use six shift ticks")
 }
 
+fn open_sum_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let positive = c.add(core.Term.Natural(7), span).unwrap()
+    let index = c.add(core.Term.Var(1), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    c.add(core.Term.UAdd(index, positive), span).unwrap()
+    c.add(core.Term.UAdd(positive, index), span).unwrap()
+    c.add(core.Term.UAdd(zero, index), span).unwrap()
+    c.add(core.Term.UAdd(index, zero), span).unwrap()
+    c
+}
+
+fn open_word_sums() {
+    for input in 3..5 {
+        var sample = open_sum_fixture()
+        spend(&sample, 999995)
+        let selected = sample.normal(input as u32, 16).unwrap()
+        assert(selected == 8 && sample.node_count() == 9 && sample.term(7) == core.Term.Natural(7) &&
+            sample.term(selected) == core.Term.UAdd(1, 7), "rebuild the canonical constant after the existing variable")
+        assert_spent(&sample, "variable and literal use five visits")
+    }
+    for input in 5..7 {
+        var sample = open_sum_fixture()
+        spend(&sample, 999995)
+        assert(sample.normal(input as u32, 16).unwrap() == 1 && sample.node_count() == 7,
+            "zero selects the original variable row")
+        assert_spent(&sample, "a zero literal uses the same five visits")
+    }
+    var short = open_sum_fixture()
+    spend(&short, 999996)
+    assert(match short.normal(4, 16) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "four ticks cannot finish the two collection visits")
+    assert(short.node_count() == 7, "interrupted collection appends nothing")
+}
+
 fn data_case_parameter_fixture() -> core.Core {
     var c = core.Core.new()
     let sp = diag.Span.nowhere()
@@ -1427,6 +1464,7 @@ fn main() -> i32 {
     transitive_proof_inference()
     absurd_inference()
     wide_ghost_sum()
+    open_word_sums()
     array_and_allocation_inference()
     buffer_operation_inference()
     array_and_borrowed_index_inference()

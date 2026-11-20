@@ -10775,3 +10775,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseTelescope.read_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseTelescope.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseTelescope.one_parameter_one_field_matches_native_case
+#print axioms Jihoo.NativeKernel.NativeCoreMeteredVisit.charge_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.sum_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.extension_metered
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.extension_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.open_sum_matches_native_graph

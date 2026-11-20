@@ -1296,7 +1296,9 @@ import Jihoo.NativeCoreBinderTraversal
 import Jihoo.NativeLoanIndexedPropositionMixedFields
 import Jihoo.NativeBindingMachineMutableComputedStore
 import Jihoo.NativeCoreNestedAliases
+import Jihoo.NativeCoreMeteredVisit
 import Jihoo.NativeCoreGhostLiteralAddition
+import Jihoo.NativeCoreGhostVariableAddition
 import Jihoo.NativeCoreConditionalApplication
 import Jihoo.NativeLoanUniverseFamilyReplay
 import Jihoo.NativeBindingMachineMutableComputedBorrow

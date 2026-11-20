@@ -1,3 +1,4 @@
+import Jihoo.NativeCoreMeteredVisit
 import Jihoo.NativeCoreNestedAliases
 import Jihoo.NativeCoreUnsignedSum
 import Jihoo.NativeLoanComputationPreservation
@@ -9,6 +10,7 @@ post-operand extension, so surrounding dependent type formation can use it
 throughout the recursive ghost traversal. -/
 namespace Jihoo.NativeKernel.NativeCoreGhostLiteralAddition
 
+open NativeCoreMeteredVisit (charge charge_progress)
 open NativeArena NativeProgramWire Environment
 open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Error Outcome Progress PostExtension ExpandedNormalization RefinesFor)
@@ -112,37 +114,17 @@ private theorem expand_numeric (represented : Represents term value) : expand en
   | add left right ihLeft ihRight =>
     simp only [Term.uadd,expand,expandArgs,ihLeft,ihRight]
 
-private def collectVisit (limit depth : Nat) (state : State) (root : Nat) : Outcome Unit :=
-  let visited := tick state.arena limit depth state.steps root
-  ⟨{state with steps := visited.2}, visited.1.mapError .tick⟩
-
-private theorem collectVisit_progress (limit depth : Nat) (state : State) (root : Nat) :
-    Progress limit state (collectVisit limit depth state root) := by
-  unfold collectVisit tick
-  by_cases over : limit < state.steps+1
-  · simp only [over,ite_true,Except.mapError]
-    exact ⟨.refl _,Nat.le_succ _,fun room => Nat.succ_le_succ room,by intro _ _ failed; cases failed⟩
-  have within := Nat.le_of_not_gt over
-  by_cases deep : depth = 0
-  · simp only [over,deep,ite_false,ite_true,Except.mapError]
-    exact ⟨.refl _,Nat.le_succ _,fun _ => Nat.le_trans within (Nat.le_succ _),by intro _ _ failed; cases failed⟩
-  by_cases missing : state.arena.size ≤ root
-  · simp only [over,deep,missing,ite_false,ite_true,Except.mapError]
-    exact ⟨.refl _,Nat.le_succ _,fun _ => Nat.le_trans within (Nat.le_succ _),by intro _ _ failed; cases failed⟩
-  simp only [over,deep,missing,ite_false,Except.mapError]
-  exact ⟨.refl _,Nat.le_succ _,fun _ => Nat.le_trans within (Nat.le_succ _),fun _ _ _ => within⟩
-
 private def emit (state : State) (value : Nat) : Outcome Nat :=
   let built := NativeCoreNaturalSum.run value state.arena
   ⟨{state with arena := built.arena}, built.result.mapError .add⟩
 
 def literalSum (limit depth : Nat) (state : State) (left right value : Nat) : Outcome Nat :=
-  (collectVisit limit depth state left).next fun afterLeft _ =>
-    (collectVisit limit depth afterLeft right).next fun afterRight _ => emit afterRight value
+  (charge limit depth state left).next fun afterLeft _ =>
+    (charge limit depth afterLeft right).next fun afterRight _ => emit afterRight value
 
 private theorem literalSum_progress (limit depth : Nat) (state : State) (left right value : Nat) :
     Progress limit state (literalSum limit depth state left right value) :=
-  (collectVisit_progress _ _ _ _).next (fun _ => (collectVisit_progress _ _ _ _).next (fun _ =>
+  (charge_progress _ _ _ _).next (fun _ => (charge_progress _ _ _ _).next (fun _ =>
     Progress.uncharged (NativeCoreNaturalSum.run_prefix _ _) rfl))
 
 private theorem literalSum_refines (success : (literalSum limit depth state left right value).result = .ok root) :
@@ -314,7 +296,7 @@ theorem literalSum_matches_native (env : Environment) (state : State) (limit dep
   have leftVisible := (Array.getElem?_eq_some_iff.mp first).1
   have rightVisible := (Array.getElem?_eq_some_iff.mp second).1
   have modeled : literalSum limit depth state left right (m+n) = emit {state with steps := state.steps+2} (m+n) := by
-    simp only [literalSum,collectVisit,tick,firstRoom,secondRoom,nested,
+    simp only [literalSum,charge,tick,firstRoom,secondRoom,nested,
       Nat.not_le.mpr leftVisible,Nat.not_le.mpr rightVisible,ite_false,Except.mapError,Outcome.next]
   dsimp only
   rw [modeled,native_sum_literals_exact env state limit depth first second leftFits rightFits room nested]

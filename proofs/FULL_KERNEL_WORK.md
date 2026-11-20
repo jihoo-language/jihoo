@@ -4327,3 +4327,13 @@ constructor value. The indexed fixture matches all ten appended rows
 and eight ticks in Lean and native Core. A seven-tick budget retains the
 index application before rejecting. The focused build passed 333 jobs
 and the eighteen audited declarations use standard Lean axioms.
+
+### Open variable and literal addition
+
+The ghost normalizer retains the original variable reference and places
+a nonzero literal after it in the canonical sum. A zero literal selects
+the original variable in either order. Expansion and the specified
+arithmetic rules justify both changes. The native and Lean fixtures
+match the appended rows and all five visits, including failure before
+any append with a four-tick budget. The focused build passed 406 jobs
+and the seven audited declarations use standard Lean axioms.
