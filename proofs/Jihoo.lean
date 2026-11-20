@@ -978,6 +978,7 @@ import Jihoo.NativeDependentInequalityRelation
 import Jihoo.NativeDependentBranchRelation
 import Jihoo.NativeDependentEqualityBranch
 import Jihoo.NativeDependentErasedGiveRelation
+import Jihoo.NativeDependentErasedTakeResult
 import Jihoo.NativeDependentWideSubtraction
 import Jihoo.NativeScopeCheck
 import Jihoo.NativeLoanScopeInputExamples

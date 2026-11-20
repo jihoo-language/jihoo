@@ -3934,3 +3934,12 @@ The native and Lean checks agree at ten ticks for an equality annotation
 selecting ghost mode and two for a word annotation selecting code mode.
 The focused build passed 434 jobs and the four new audited declarations
 use only standard Lean axioms.
+
+### Applying an erased owner-return continuation
+
+Given an original checked `Take` and a related owner, evidence and
+continuation, applying the actual two-binder continuation realizes the
+original caller's type. The first application substitutes the owner into
+the evidence fiber. The second uses evidence at that instantiated fiber.
+The typing conclusion uses the genuine checked `Take`/`Give` preservation
+rule. The focused build and the new theorem's axiom audit passed.

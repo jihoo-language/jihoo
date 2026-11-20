@@ -10626,3 +10626,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.checked_declaration_mode
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.admitted_annotations_select_body_mode
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_erased_take_realizes_result
