@@ -10659,3 +10659,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeInference.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeInference.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeExamples.take_checks_original_binders_and_result
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.body_policy_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldExamples.signed_and_owned_fold_schedule

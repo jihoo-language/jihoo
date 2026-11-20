@@ -926,6 +926,50 @@ fn take_continuation_inference() {
     }, "Take's callback cannot erase a relevant result")
 }
 
+fn folding_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let count = c.add(core.Term.Natural(3), span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let index = c.add(core.Term.Var(0), span).unwrap()
+    let bound = c.add(core.Term.Lt(index, count), span).unwrap()
+    let seed = c.add(core.Term.Integer(7), span).unwrap()
+    let done = c.add(core.Term.Lam(false, signed, index), span).unwrap()
+    let with_proof = c.add(core.Term.Lam(true, bound, done), span).unwrap()
+    let body = c.add(core.Term.Lam(false, word, with_proof), span).unwrap()
+    c.add(core.Term.Fold(count, seed, body), span).unwrap()
+    let owned = c.add(core.Term.Alloc(count, seed), span).unwrap()
+    let buffer = c.add(core.Term.Buffer(count), span).unwrap()
+    let done = c.add(core.Term.Lam(false, buffer, index), span).unwrap()
+    let with_proof = c.add(core.Term.Lam(true, bound, done), span).unwrap()
+    let body = c.add(core.Term.Lam(false, word, with_proof), span).unwrap()
+    c.add(core.Term.Fold(count, owned, body), span).unwrap()
+    c.add(core.Term.Fold(count, count, body), span).unwrap()
+    c
+}
+
+fn fold_accumulator_inference() {
+    var signed = folding_fixture()
+    spend(&signed, 999942)
+    let result = signed.infer(9, [], true, 32).unwrap()
+    assert(result == 19 && signed.node_count() == 34 && signed.term(result) == core.Term.I64,
+        "signed Fold retains the first normalized accumulator root")
+    assert_spent(&signed, "signed Fold checks its callback in fifty-eight ticks")
+
+    var owned = folding_fixture()
+    spend(&owned, 999919)
+    let result = owned.infer(15, [], true, 32).unwrap()
+    assert(result == 23 && owned.node_count() == 40 && owned.term(result) == core.Term.Buffer(0),
+        "owned Fold retains the buffer's original count")
+    assert_spent(&owned, "owned Fold checks its callback in eighty-one ticks")
+
+    var word = folding_fixture()
+    assert(match word.infer(16, [], true, 32) {
+        Err(e) => e.msg == "core: a loop accumulator is an i64 or an owned value", _ => false
+    }, "an unsigned accumulator fails before callback formation")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -958,6 +1002,7 @@ fn main() -> i32 {
     owner_return_inference()
     take_continuation_inference()
     iteration_callback_types()
+    fold_accumulator_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

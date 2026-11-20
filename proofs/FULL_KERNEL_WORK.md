@@ -4069,3 +4069,17 @@ the graph length. Both reject a callback whose result type retains the local
 word and a callback that changes erasure. The focused build passed 440 jobs
 and the three new declarations use only standard Lean axioms. The branch is
 available separately from the recursive dispatch.
+
+### Signed and owned Fold inference
+
+The metered Fold branch checks the count, normalizes the accumulator twice
+as native ownership inspection does, checks the original dependent callback,
+and retains the first normalized accumulator type. The native body gate
+checks for a full three-binder lambda or the bounded effect profile of the
+original expression. Successful runs derive the signed or owned source rule.
+
+Native and Lean agree on 58 ticks for the signed accumulator and 81 for
+the owned buffer accumulator. Both reject an unsigned accumulator before
+forming the callback type. The focused build passed 440 jobs and the four
+new audited declarations use only standard Lean axioms. This branch is
+verified independently of recursive dispatch.
