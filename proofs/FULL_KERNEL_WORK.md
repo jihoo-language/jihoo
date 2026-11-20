@@ -3717,3 +3717,12 @@ standard Lean axioms in the others. The native kernel suite passed 89
 fixtures and 31 additional checks. Mixed checking passed 69 source fixtures
 and 55 exact-byte checks, including the pure admission of the native
 snapshot. Peak sampled process-tree RSS was 4,761.0 MiB.
+
+### Aggregate check of refinement closure entry and buffer effects
+
+At `8368935`, 1,120 Lake jobs and the generated fixture comparisons passed.
+The exact audit covered 10,557 declarations, with 526 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,764.8 MiB.
