@@ -10684,3 +10684,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.bodies_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.bodies_sound
 #print axioms Jihoo.NativeKernel.NativeCoreCodeScalarDeclarations.admitted_recursive_scalar_body_uses_code
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.product_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.product_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.representation_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.representation_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.checkAgainst_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.checkAgainst_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopMotive.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopMotive.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopExamples.loop_checks_data_and_successor_proof

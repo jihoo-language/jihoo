@@ -26,7 +26,7 @@ private def beginsWithLambdas (arena : Arena) : Nat → Nat → Bool
     | some (.node (.lam _) [_,rest]) => beginsWithLambdas arena count rest
     | _ => false
 
-private def checkBodyPolicy (memoryFree : Arena → Nat → Nat → Bool) (arena : Arena) (depth body : Nat) : Bool :=
+def checkBodyPolicy (memoryFree : Arena → Nat → Nat → Bool) (arena : Arena) (depth body : Nat) : Bool :=
   beginsWithLambdas arena 3 body || memoryFree arena depth body
 
 private theorem beginsWithLambdas_refines (represented : Represents arena root term) (count : Nat) :
@@ -71,7 +71,7 @@ private def acceptAccumulator (isBoxed : Nat → Bool) (normal : Visit) (state :
         ⟨after,.ok chosen⟩
       else reject after subject
 
-private def checkAgainst (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+def checkAgainst (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (expected argument : Nat) : Outcome (List (Nat × Nat)) :=
   (infer state argument).next fun inferred answer =>
     (requireTypes normal limit depth inferred answer.typeRoot expected argument).next fun checked pair =>
@@ -96,7 +96,7 @@ private theorem acceptAccumulator_progress (normalizes : ∀ state root, Progres
   unfold acceptAccumulator
   exact (normalizes _ _).next (fun _ => (normalizes _ _).next (fun _ => by split <;> exact Progress.atState _ _))
 
-private theorem checkAgainst_progress
+theorem checkAgainst_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
     Progress limit state (checkAgainst infer normal limit depth state expected argument) := by
@@ -175,7 +175,7 @@ private theorem acceptAccumulator_refines (metadata : BoxedFamilies env isBoxed)
     · exact .inr (ownedHead_refines metadata inspectedRep owned related.converted)
   · simp [reject] at success
 
-private theorem checkAgainst_refines
+theorem checkAgainst_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (inferSound : InferSound env base ctx limit infer)

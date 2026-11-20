@@ -18,19 +18,20 @@ private def reject (state : State) (root : Nat) : Outcome α := ⟨state,.error 
 
 private def resultSort (erased : Bool) : SortTag := if erased then .prop else .type 0
 
-private def fixedHead (isBoxed : Nat → Bool) (node : Option Node) : Bool :=
+private def fixedHead (isBoxed : Nat → Bool) (allowBack : Bool) (node : Option Node) : Bool :=
   match node with
   | some (.node .u64 []) | some (.node .i64 []) | some (.node .refine [_])
-  | some (.node .buffer [_]) | some (.node (.back _) [_,_]) => true
+  | some (.node .buffer [_]) => true
+  | some (.node (.back _) [_,_]) => allowBack
   | some (.node (.ind family _) _) => isBoxed family
   | _ => false
 
-private def checkRepresentation (normal : Visit) (isBoxed : Nat → Bool) (state : State)
-    (motive : Nat) : Outcome Unit :=
+def checkRepresentation (normal : Visit) (isBoxed : Nat → Bool) (state : State)
+    (motive : Nat) (allowBack : Bool := true) : Outcome Unit :=
   (normal state motive).next fun exposed root =>
     match exposed.arena[root]? with
     | some (.node (.lam _) [_,body]) =>
-      if fixedHead isBoxed exposed.arena[body]? then ⟨exposed,.ok ()⟩ else reject exposed motive
+      if fixedHead isBoxed allowBack exposed.arena[body]? then ⟨exposed,.ok ()⟩ else reject exposed motive
     | _ => reject exposed motive
 
 private def checkResult (normal : Visit) (isBoxed : Nat → Bool) (state : State)
@@ -40,7 +41,7 @@ private def checkResult (normal : Visit) (isBoxed : Nat → Bool) (state : State
       if erased then ⟨after,.ok ()⟩ else checkRepresentation normal isBoxed after motive
     else reject after motive
 
-private def exposeProduct (normal : Visit) (state : State) (type motive : Nat) : Outcome (Nat × Nat) :=
+def exposeProduct (normal : Visit) (state : State) (type motive : Nat) : Outcome (Nat × Nat) :=
   (normal state type).next fun exposed selected =>
     match exposed.arena[selected]? with
     | some (.node (.pi false) [domain,level]) => ⟨exposed,.ok (domain,level)⟩
@@ -56,8 +57,8 @@ def run (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool) (limit depth :
         (checkResult normal isBoxed compared erased product.2 motive).next fun after _ =>
           ⟨after,.ok (answer.compared ++ [pair])⟩
 
-private theorem representation_progress (normalProgress : ∀ state root, Progress limit state (normal state root)) :
-    Progress limit state (checkRepresentation normal isBoxed state motive) := by
+theorem representation_progress (normalProgress : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (checkRepresentation normal isBoxed state motive allowBack) := by
   unfold checkRepresentation
   exact (normalProgress _ _).next (fun _ => by
     split
@@ -74,7 +75,7 @@ private theorem result_progress (normalProgress : ∀ state root, Progress limit
       · exact representation_progress normalProgress
     · exact Progress.atState _ _)
 
-private theorem product_progress (normalProgress : ∀ state root, Progress limit state (normal state root)) :
+theorem product_progress (normalProgress : ∀ state root, Progress limit state (normal state root)) :
     Progress limit state (exposeProduct normal state type motive) := by
   unfold exposeProduct
   exact (normalProgress _ _).next (fun _ => by split <;> exact Progress.atState _ _)
@@ -92,7 +93,7 @@ theorem run_progress
   intro pair _ _
   exact (result_progress normalProgress).next (fun _ => Progress.atState _ _)
 
-private theorem product_refines
+theorem product_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
     (represented : Represents state.arena type written)
     (success : (exposeProduct normal state type motive).result = .ok product) :
@@ -121,11 +122,11 @@ private theorem product_refines
           exact ⟨_,_,domainRep,levelRep,by simpa only [Term.pi,expand,expandArgs] using converted.converted⟩
   · simp [reject] at success
 
-private theorem representation_refines
+theorem representation_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
     (represented : Represents state.arena motive written)
-    (success : (checkRepresentation normal isBoxed state motive).result = .ok ()) :
-    let after := (checkRepresentation normal isBoxed state motive).state.arena
+    (success : (checkRepresentation normal isBoxed state motive allowBack).result = .ok ()) :
+    let after := (checkRepresentation normal isBoxed state motive allowBack).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) := by
   unfold checkRepresentation at success ⊢
   obtain ⟨selected,normalized,next⟩ := Outcome.next_success success

@@ -1098,6 +1098,54 @@ fn scalar_code_declaration() {
     program.extend().unwrap()
 }
 
+fn loop_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let limit = c.add(core.Term.Natural(3), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    let index = c.add(core.Term.Var(0), span).unwrap()
+    let bound = c.add(core.Term.Lt(index, limit), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, signed), span).unwrap()
+    let init = c.add(core.Term.Integer(7), span).unwrap()
+    let body_result = c.add(core.Term.Lam(false, signed, index), span).unwrap()
+    let with_bound = c.add(core.Term.Lam(true, bound, body_result), span).unwrap()
+    let body = c.add(core.Term.Lam(false, word, with_bound), span).unwrap()
+    c.add(core.Term.Loop(limit, motive, init, body), span).unwrap()
+
+    let first_index = c.add(core.Term.Var(1), span).unwrap()
+    let step_index = c.add(core.Term.Var(2), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let next = c.add(core.Term.UAdd(step_index, one), span).unwrap()
+    let reflexive = c.add(core.Term.Refl(next), span).unwrap()
+    let proof_domain = c.add(core.Term.Eq(first_index, first_index), span).unwrap()
+    let with_accumulator = c.add(core.Term.Lam(true, proof_domain, reflexive), span).unwrap()
+    let with_bound = c.add(core.Term.Lam(true, bound, with_accumulator), span).unwrap()
+    let body = c.add(core.Term.Lam(false, word, with_bound), span).unwrap()
+    let result = c.add(core.Term.Eq(index, index), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, result), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let init = c.add(core.Term.Refl(zero), span).unwrap()
+    c.add(core.Term.Loop(limit, motive, init, body), span).unwrap()
+    c
+}
+
+fn loop_motive_inference() {
+    var data = loop_fixture()
+    spend(&data, 999901)
+    let root = data.infer(10, [], true, 32).unwrap()
+    assert(root == 58 && data.node_count() == 59 && data.term(root) == core.Term.App(5, 0),
+        "a data loop retains the original motive at its count")
+    assert_spent(&data, "the data loop checks all its operands in ninety-nine ticks")
+
+    var proof = loop_fixture()
+    spend(&proof, 999804)
+    let root = proof.infer(24, [], true, 32).unwrap()
+    assert(root == 83 && proof.node_count() == 84 && proof.term(root) == core.Term.App(21, 0),
+        "proposition Loop checks the erased accumulator and successor fiber")
+    assert_spent(&proof, "the proposition loop checks every dependent operand in one hundred ninety-six ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1130,6 +1178,7 @@ fn main() -> i32 {
     code_local_inference()
     scalar_code_inference()
     scalar_code_declaration()
+    loop_motive_inference()
     code_word_definition()
     owner_return_inference()
     take_continuation_inference()

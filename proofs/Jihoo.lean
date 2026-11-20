@@ -1327,6 +1327,9 @@ import Jihoo.NativeCoreGhostTakeExamples
 import Jihoo.NativeCoreIterationTelescope
 import Jihoo.NativeCoreGhostFoldInference
 import Jihoo.NativeCoreGhostFoldExamples
+import Jihoo.NativeCoreGhostLoopMotive
+import Jihoo.NativeCoreGhostLoopInference
+import Jihoo.NativeCoreGhostLoopExamples
 import Jihoo.NativeCorePropMotiveType
 import Jihoo.NativeCoreShiftedApplications
 import Jihoo.NativeCorePropCaseType

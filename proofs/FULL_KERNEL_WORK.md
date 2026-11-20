@@ -4141,3 +4141,14 @@ A written U64 annotation forms in ghost mode and checks the same body in
 code mode. Lean and `Core.extend` agree on twenty-four ticks for the
 declaration, including five comparisons. The focused build passed 443
 jobs and the six new declarations use standard Lean axioms.
+
+### Dependent Loop inference
+
+The native graph exposes the motive's relevant word domain and uses its
+result sort to select the accumulator erasure. It checks the written
+count, initial value and body against their dependent types in order.
+The output graph retains the original motive applied to the count.
+Lean and the native kernel agree on 99 ticks for a data accumulator and
+196 for a proposition accumulator whose callback proves the successor
+fiber. The focused build passed 441 jobs and the eleven new audited
+declarations use standard Lean axioms. The branch has a standalone driver.
