@@ -4083,3 +4083,12 @@ the owned buffer accumulator. Both reject an unsigned accumulator before
 forming the callback type. The focused build passed 440 jobs and the four
 new audited declarations use only standard Lean axioms. This branch is
 verified independently of recursive dispatch.
+
+### Proposition elimination motive telescope
+
+The native motive builder produces one shared U64 row and the Prop
+codomain, then appends one relevant product per family index. A successful
+build represents the specified proposition motive type for any arity.
+The native and Lean two-index fixtures agree on all four appended rows
+without a checking tick. The focused build passed 329 jobs and the three
+new audited declarations use only standard Lean axioms.

@@ -1325,5 +1325,6 @@ import Jihoo.NativeCoreGhostTakeExamples
 import Jihoo.NativeCoreIterationTelescope
 import Jihoo.NativeCoreGhostFoldInference
 import Jihoo.NativeCoreGhostFoldExamples
+import Jihoo.NativeCorePropMotiveType
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

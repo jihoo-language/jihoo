@@ -970,6 +970,22 @@ fn fold_accumulator_inference() {
     }, "an unsigned accumulator fails before callback formation")
 }
 
+fn proposition_motive_telescope() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    c.add(core.Term.Natural(0), span).unwrap()
+    c.push_family(core.Family { name: "TwoIndices".to_string(), data: false, params: 0, arity: 2,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.check().unwrap()
+    spend(&c, 999995)
+    let result = c.motive_type(0, span).unwrap()
+    assert(result == 4 && c.node_count() == 5 && c.term(1) == core.Term.U64 && c.term(2) == core.Term.Prop &&
+        c.term(3) == core.Term.Pi(false, 1, 2) && c.term(4) == core.Term.Pi(false, 1, 3),
+        "the proposition motive shares its U64 domain across both indices")
+    spend(&c, 5)
+    assert_spent(&c, "building the proposition motive spends no checking ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -993,6 +1009,7 @@ fn main() -> i32 {
     load_callback_inference()
     reference_inference()
     family_index_inference()
+    proposition_motive_telescope()
     dependent_constructor_inference()
     boxed_drop_inference()
     declaration_annotation_inference()

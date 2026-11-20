@@ -10663,3 +10663,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFoldExamples.signed_and_owned_fold_schedule
+#print axioms Jihoo.NativeKernel.NativeCorePropMotiveType.run_progress
+#print axioms Jihoo.NativeKernel.NativeCorePropMotiveType.run_refines
+#print axioms Jihoo.NativeKernel.NativeCorePropMotiveType.two_indices_share_word
