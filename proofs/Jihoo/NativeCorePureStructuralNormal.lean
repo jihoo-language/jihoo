@@ -183,4 +183,210 @@ theorem equality_reference_example :
       run arena [] 0 4 3 0 3 = (.ok (arena.push (.node .eq [0, 0]), 4), 4) := by
   exact ⟨rfl, rfl⟩
 
+structure Outcome (α : Type) where
+  arena : Arena
+  result : Except Error α
+  steps : Nat
+  deriving Repr
+
+private def leaf (arena : Arena) (roots : List Roots) (visible limit depth steps root : Nat) : Outcome Nat :=
+  let (result, spent) := runPure arena roots visible limit depth steps root
+  ⟨arena, result.mapError .normal, spent⟩
+
+private def nestedChildren (visit : Arena → Nat → Nat → Outcome Nat) :
+    List Nat → Arena → Nat → Outcome (List Nat)
+  | [], arena, steps => ⟨arena, .ok [], steps⟩
+  | root :: rest, arena, steps =>
+      let first := visit arena steps root
+      match first.result with
+      | .error reason => ⟨first.arena, .error reason, first.steps⟩
+      | .ok child =>
+          let later := nestedChildren visit rest first.arena first.steps
+          ⟨later.arena, later.result.map (child :: ·), later.steps⟩
+
+private def finishNested (root : Nat) (op : Op) (before : List Nat)
+    (children : Outcome (List Nat)) : Outcome Nat :=
+  match children.result with
+  | .error reason => ⟨children.arena, .error reason, children.steps⟩
+  | .ok after =>
+      match finish children.arena root op before after with
+      | .error reason => ⟨children.arena, .error reason, children.steps⟩
+      | .ok (arena, selected) => ⟨arena, .ok selected, children.steps⟩
+
+/-- Visit structural children with the current arena and a shared step
+counter. Appends made by earlier children survive an error in a later child.
+Atomic roots and the allocation-free Free, Drop, and global paths use the
+existing leaf traversal. -/
+def runNested (roots : List Roots) (visible limit : Nat) : Nat → Arena → Nat → Nat → Outcome Nat
+  | 0, arena, steps, root => leaf arena roots visible limit 0 steps root
+  | depth + 1, arena, steps, root =>
+      let next := steps + 1
+      if limit < next then ⟨arena, .error (.normal (.stepLimit root)), next⟩ else
+      match arena[root]? with
+      | some (.node op refs) =>
+          if structural op then
+            finishNested root op refs (nestedChildren (runNested roots visible limit depth) refs arena next)
+          else leaf arena roots visible limit (depth + 1) steps root
+      | _ => leaf arena roots visible limit (depth + 1) steps root
+
+private structure Refines (before : Arena) (computed : Outcome α) (valid : Arena → α → Prop) : Prop where
+  kept : Prefix before computed.arena
+  backward : Backward before → Backward computed.arena
+  success : ∀ selected, computed.result = .ok selected → valid computed.arena selected
+
+private abbrev TermResult (env : Environment) (source : Term) (arena : Arena) (selected : Nat) : Prop :=
+  ∃ result, Represents arena selected result ∧ Environment.RawValue.Forward env source result
+
+private abbrev ChildrenResult (env : Environment) (inputs : List Term) (arity : Nat)
+    (arena : Arena) (selected : List Nat) : Prop :=
+  ∃ outputs, RepresentsList arena selected outputs ∧ selected.length = arity ∧
+    ListRel (Environment.RawValue.Forward env) inputs outputs
+
+private theorem failure_refines (kept : Prefix arena current) (backward : Backward arena → Backward current) :
+    Refines arena (⟨current, .error reason, spent⟩ : Outcome α) valid :=
+  ⟨kept, backward, by simp⟩
+
+private theorem frameDefinitions (aligned : RepresentsDefinitions arena roots definitions)
+    (kept : Prefix arena current) : RepresentsDefinitions current roots definitions := by
+  induction aligned with
+  | nil => exact .nil
+  | cons first _ ih => exact .cons ⟨first.1.frame kept, first.2.frame kept⟩ ih
+
+private theorem leaf_refines (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term) :
+    Refines arena (leaf arena roots visible limit depth steps root) (TermResult env term) := by
+  rcases ran : runPure arena roots visible limit depth steps root with ⟨result, spent⟩
+  cases result with
+  | error reason =>
+      simp only [leaf, ran, Except.mapError]
+      exact failure_refines (Prefix.refl _) id
+  | ok result =>
+      simp only [leaf, ran, Except.mapError]
+      refine ⟨Prefix.refl _, id, ?_⟩
+      intro selected found
+      cases found
+      exact runPure_conversion aligned history source ran
+
+private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena roots definitions)
+    (source : RepresentsList arena refs inputs)
+    (visitRefines : ∀ {current initial root term}, RepresentsDefinitions current roots definitions →
+      Represents current root term → Refines current (visit current initial root) (TermResult env term)) :
+    Refines arena (nestedChildren visit refs arena steps) (ChildrenResult env inputs refs.length) := by
+  induction refs generalizing arena inputs steps with
+  | nil =>
+      cases source
+      refine ⟨Prefix.refl _, id, ?_⟩
+      intro selected found
+      cases found
+      exact ⟨[], .nil, rfl, .nil⟩
+  | cons root rest ih =>
+      cases source with
+      | cons head tail =>
+          have first := visitRefines (initial := steps) aligned head
+          cases choice : (visit arena steps root).result with
+          | error reason =>
+              simp only [nestedChildren, choice]
+              exact failure_refines first.kept first.backward
+          | ok child =>
+              have later := ih (steps := (visit arena steps root).steps)
+                (frameDefinitions aligned first.kept) (tail.frame first.kept)
+              simp only [nestedChildren, choice]
+              refine ⟨first.kept.trans later.kept, fun h => later.backward (first.backward h), ?_⟩
+              intro selected found
+              cases suffix : (nestedChildren visit rest (visit arena steps root).arena
+                  (visit arena steps root).steps).result with
+              | error reason => simp [suffix, Except.map] at found
+              | ok children =>
+                  simp only [suffix, Except.map, Except.ok.injEq] at found
+                  subst selected
+                  obtain ⟨out, represented, converted⟩ := first.success child choice
+                  obtain ⟨outputs, representedLater, lengths, conversions⟩ := later.success children suffix
+                  exact ⟨out :: outputs, .cons (represented.frame later.kept) representedLater,
+                    congrArg Nat.succ lengths, .cons converted conversions⟩
+
+private theorem finishNested_refines (read : arena[root]? = some (.node op before))
+    (arity : before.length = op.arity)
+    (normalized : Refines arena children (ChildrenResult env inputs before.length)) :
+    Refines arena (finishNested root op before children) (TermResult env (.node op inputs)) := by
+  cases childResult : children.result with
+  | error reason =>
+      simp only [finishNested, childResult]
+      exact failure_refines normalized.kept normalized.backward
+  | ok refs =>
+      cases appended : finish children.arena root op before refs with
+      | error reason =>
+          simp only [finishNested, childResult, appended]
+          exact failure_refines normalized.kept normalized.backward
+      | ok row =>
+          obtain ⟨extended, selected⟩ := row
+          obtain ⟨outputs, represented, length, changed⟩ := normalized.success refs childResult
+          obtain ⟨kept, result, backward, _⟩ :=
+            finish_refines (normalized.kept.lookup read) represented (length.trans arity) appended
+          simp only [finishNested, childResult, appended]
+          refine ⟨normalized.kept.trans kept, fun h => backward (normalized.backward h), ?_⟩
+          intro index found
+          cases found
+          exact ⟨_, result, .node op changed⟩
+
+private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term) :
+    Refines arena (runNested roots visible limit depth arena initial root) (TermResult env term) := by
+  induction depth generalizing arena root term initial with
+  | zero => exact leaf_refines aligned history source
+  | succ depth ih =>
+      by_cases exhausted : limit < initial + 1
+      · simp only [runNested, exhausted, ite_true]
+        exact failure_refines (Prefix.refl _) id
+      cases source with
+      | var read =>
+          simpa only [runNested, ite_eq_right exhausted, read] using leaf_refines aligned history (.var read)
+      | @node _ op refs inputs read arity children =>
+          by_cases supported : structural op = true
+          · simp only [runNested, ite_eq_right exhausted, read, supported, ite_true]
+            exact finishNested_refines read arity (nestedChildren_refines aligned children (fun a h => ih a h))
+          · simpa only [runNested, ite_eq_right exhausted, read, ite_eq_right supported] using
+              leaf_refines aligned history (.node read arity children)
+
+/-- Arbitrarily nested supported structural nodes preserve arena prefixes and
+backward references, even on error. A successful reference represents a pure
+reduct under the same checked global declaration history. -/
+theorem runNested_refines (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term) :
+    let output := runNested roots visible limit depth arena initial root
+    Prefix arena output.arena ∧ (Backward arena → Backward output.arena) ∧
+      ∀ selected, output.result = .ok selected →
+        ∃ normalized, Represents output.arena selected normalized ∧ Environment.RawValue.Forward env term normalized := by
+  have proof := runNested_refines_aux (visible := visible) (limit := limit) (depth := depth)
+    (initial := initial) aligned history source
+  exact ⟨proof.kept, proof.backward, proof.success⟩
+
+/-- Successful and faulted traversals retain the checked graph prefix from
+the admitted bytes and only append nodes with earlier child references. -/
+theorem runNested_checkBytes_refines
+    (admitted : NativeLoanMixedAdmission.checkBytes fuel quantityFuel (NativeFamilyWire.encodeSnapshot snapshot) = true)
+    (source : Represents snapshot.arena root term) :
+    let output := runNested snapshot.definitions visible limit depth snapshot.arena initial root
+    ∃ definitions families env,
+      History definitions families env ∧ Prefix snapshot.arena output.arena ∧ Backward output.arena ∧
+        ∀ selected, output.result = .ok selected →
+          ∃ normalized, Represents output.arena selected normalized ∧ Environment.RawValue.Forward env term normalized := by
+  obtain ⟨decoded, definitions, _, env, exactBytes, _, backward, aligned, _, history, _⟩ :=
+    NativeLoanMixedAdmission.checkBytes_sound admitted
+  have same := NativeFamilyWire.encodeSnapshot_injective exactBytes
+  subst decoded
+  obtain ⟨kept, preserves, reduction⟩ := runNested_refines (visible := visible) (limit := limit)
+    (depth := depth) (initial := initial) aligned history source
+  exact ⟨definitions, _, env, history, kept, preserves backward, reduction⟩
+
+/-- The shared child is visited twice. Each visit appends its own row, then
+the parent is appended with those two fresh references. With one fewer tick,
+the second visit fails and leaves the first appended row in the arena. -/
+theorem nested_shared_child_example :
+    let arena : Arena := #[.node (.natural 7) [], .node .free [0, 0], .node .eq [1, 0], .node .eq [2, 2]]
+    let first := arena.push (.node .eq [0, 0])
+    runNested [] 0 9 4 arena 0 3 =
+      ⟨(first.push (.node .eq [0, 0])).push (.node .eq [4, 5]), .ok 6, 9⟩ ∧
+    runNested [] 0 8 4 arena 0 3 = ⟨first, .error (.normal (.stepLimit 0)), 9⟩ := by
+  exact ⟨rfl, rfl⟩
+
 end Jihoo.NativeKernel.NativeCorePureStructuralNormal

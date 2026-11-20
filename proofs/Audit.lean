@@ -9534,3 +9534,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.run_refines
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.run_checkBytes_refines
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.equality_reference_example
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.checked_definition_at
+#print axioms Jihoo.NativeKernel.NativeCoreZeroLoopNormal.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreZeroLoopNormal.run_admitted_definition_refines
+#print axioms Jihoo.NativeKernel.NativeCoreZeroLoopNormal.zero_count_alias_example
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_refines
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_checkBytes_refines
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.nested_shared_child_example

@@ -641,6 +641,19 @@ theorem runPure_conversion (aligned : RepresentsDefinitions arena roots definiti
     .old (.old (.old (EnvironmentDelta.expand_forward env term)))
   exact ⟨output, represented, delta.trans reduced⟩
 
+/-- A raw definition root in the arena carries the type of its actual
+admitted expanded declaration. -/
+theorem checked_definition_at {index : Nat} (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions declarations env) (row : roots[index]? = some definition) :
+    ∃ entry raw, env.globals[index]? = some entry ∧ RepresentsDefinition arena definition raw ∧
+      Environment.LoanTyping.HasType env [] [] true (EnvironmentDelta.expand env raw.value) entry.type := by
+  obtain ⟨raw, atRaw, represented⟩ := represented_at aligned row
+  obtain ⟨entry, found, expanded, _⟩ := raw_expansion_at history atRaw
+  obtain ⟨_, _, body⟩ := history.global_typing found
+  have typed := body.ghost []
+  rw [← EnvironmentDelta.expansion_eq_expand expanded] at typed
+  exact ⟨entry, raw, found, represented, typed⟩
+
 /-- With exact-byte admission, the original result type comes from the
 checked declaration corresponding to the requested row. -/
 theorem runPure_admitted_definition_refines {index : Nat}
@@ -658,11 +671,7 @@ theorem runPure_admitted_definition_refines {index : Nat}
     NativeLoanMixedAdmission.checkBytes_sound admitted
   have same := NativeFamilyWire.encodeSnapshot_injective exactBytes
   subst decoded
-  obtain ⟨raw, atRaw, represented⟩ := represented_at aligned row
-  obtain ⟨entry, found, expanded, _⟩ := raw_expansion_at history atRaw
-  obtain ⟨_, _, body⟩ := history.global_typing found
-  have typed := body.ghost []
-  rw [← EnvironmentDelta.expansion_eq_expand expanded] at typed
+  obtain ⟨entry, raw, found, represented, typed⟩ := checked_definition_at aligned history row
   obtain ⟨output, atom, selectedRep, reduced, preserved, _, _⟩ :=
     runPure_refines aligned history represented.2 typed computed
   exact ⟨definitions, _, env, entry, raw, output, history, found, represented,

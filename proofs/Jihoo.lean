@@ -1184,3 +1184,4 @@ import Jihoo.NativeLoanPureTypeUniqueness
 import Jihoo.NativeLoanPureUniverse
 import Jihoo.NativeBindingMachineMutableArrayFrames
 import Jihoo.NativeCorePureStructuralNormal
+import Jihoo.NativeCoreZeroLoopNormal

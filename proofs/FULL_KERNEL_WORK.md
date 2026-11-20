@@ -2161,6 +2161,19 @@ Structural normalization now composes the path across all children of a
 supported parent. It shares the checking budget, reuses unchanged parents,
 and appends at most one node while preserving backward references. The same
 conversion theorem applies to exact admitted snapshot bytes.
+The recursive version handles arbitrary nesting of supported structural
+parents over atomic, Free, Drop, and alias leaves. It threads each child's
+extended arena through the next child. A later failing child preserves earlier
+appends and backward references. The shared-child example checks two distinct
+appends and the exact arena retained when the second traversal exhausts fuel.
+
+The zero-count Fold and dependent Loop graph paths visit the count and
+initializer in native order and return the normalized initializer at the
+exact original type. The count may follow transparent aliases to zero,
+and the initializer may follow the allocation-free pure path. Exact
+mixed admission provides the original declaration typing. The native
+preservation command accepts both the existing empty-iteration fixture and
+a variant whose count is a transparent global.
 
 The binding machine now derives variable-array indexing from reachable slots
 and supported closed arithmetic evidence. Its array frames retain the
@@ -2168,7 +2181,7 @@ original source expression and the progress through its element list. At an
 integer child return, the checked source supplies the next child's type or the
 original array result type, using the concrete accumulated values.
 
-The aggregate check passed 1,003 Lake jobs, 9,526 declaration audits, and all
+The aggregate check passed 1,004 Lake jobs, 9,533 declaration audits, and all
 generated fixture comparisons. The axiom audit accepts only the standard
 Lean axioms `propext`, `Quot.sound`, and `Classical.choice`.
 
