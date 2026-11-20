@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreTypedEqual
 import Jihoo.NativeCoreGhostSort
+import Jihoo.NativeCoreGhostLiteralAddition
 import Jihoo.NativeLoanTypeUniqueness
 
 /-! Ghost Core.infer on local and global heads, dependent application spines,
@@ -414,7 +415,7 @@ def runWith (normal : NormalAt) (roots : List Roots) (visible limit : Nat) : Nat
   runWithData normal roots visible limit (fun _ => false)
 
 def run (roots : List Roots) (visible limit : Nat) : Nat → List GraphBinding → Infer :=
-  runWith (NativeCoreNestedAliases.run roots visible limit) roots visible limit
+  runWith (NativeCoreGhostLiteralAddition.run roots visible limit) roots visible limit
 
 private theorem next_progress {before : Outcome α} {later : State → α → Outcome β}
     (prior : Progress limit state before) (room : state.steps ≤ limit)
@@ -840,7 +841,7 @@ theorem runWith_progress {normal : NormalAt} {roots : List Roots} {bindings : Li
 theorem run_progress {roots : List Roots} {bindings : List GraphBinding}
     (room : state.steps ≤ limit) :
     Progress limit state (run roots visible limit depth bindings state root) :=
-  runWith_progress (NativeCoreNestedAliases.run_progress roots visible limit) room
+  runWith_progress (NativeCoreGhostLiteralAddition.run_progress roots visible limit) room
 
 /-- Each graph row records the written domain in pre-binder scope. -/
 def BindingRep (env : Environment) (arena : Arena) (row : GraphBinding) (binding : Binding) : Prop :=
@@ -2518,18 +2519,18 @@ theorem runWith_sound {normal : NormalAt}
     InferSound env base ctx limit (runWith normal roots visible limit depth bindings) :=
   runWithData_sound (fun _ found => by cases found) history aligned context normalProgress normalSound
 
-private theorem nested_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
+private theorem literal_normal_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
     (aligned : RepresentsDefinitions base roots definitions) :
-    VisitsFrom base (ExpandedNormalization env) (NativeCoreNestedAliases.run roots visible limit depth) := by
+    VisitsFrom base (ExpandedNormalization env) (NativeCoreGhostLiteralAddition.run roots visible limit depth) := by
   intro state ref term selected onBase source success
-  obtain ⟨kept, backward, result⟩ := NativeCoreNestedAliases.run_refines history aligned onBase source success
+  obtain ⟨kept, backward, result⟩ := NativeCoreGhostLiteralAddition.run_refines history aligned onBase source success
   exact ⟨kept, backward, result⟩
 
 theorem run_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
     (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx) :
     InferSound env base ctx limit (run roots visible limit depth bindings) :=
-  runWith_sound history aligned context (NativeCoreNestedAliases.run_progress roots visible limit)
-    (fun _ => nested_sound history aligned)
+  runWith_sound history aligned context (NativeCoreGhostLiteralAddition.run_progress roots visible limit)
+    (fun _ => literal_normal_sound history aligned)
 
 def CheckedInferences (snapshot : NativeFamilyWire.Snapshot) (env : Environment)
     (normalize : Nat → Nat → NormalAt) : Prop :=
@@ -2587,10 +2588,10 @@ theorem admitted_program_infers
       (familyTerms : List NativeFamilyWire.FamilyTerms) (env : Environment),
       NativeFamilyWire.encodeSnapshot snapshot = bytes ∧
       LoanTyping.MixedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env ∧
-      CheckedInferences snapshot env (NativeCoreNestedAliases.run snapshot.definitions) :=
-  admitted_program_infers_with (fun _ snapshot => NativeCoreNestedAliases.run snapshot.definitions)
-    (fun _ snapshot => NativeCoreNestedAliases.run_progress snapshot.definitions)
-    (fun history aligned _ _ _ => nested_sound history aligned) admitted
+      CheckedInferences snapshot env (NativeCoreGhostLiteralAddition.run snapshot.definitions) :=
+  admitted_program_infers_with (fun _ snapshot => NativeCoreGhostLiteralAddition.run snapshot.definitions)
+    (fun _ snapshot => NativeCoreGhostLiteralAddition.run_progress snapshot.definitions)
+    (fun history aligned _ _ _ => literal_normal_sound history aligned) admitted
 
 /-- The same inference schedule uses recursive family normalization for
 both Pi exposure and the argument-type comparison. -/
@@ -2941,16 +2942,17 @@ private def transitiveSnapshot : NativeFamilyWire.Snapshot where
     .node .decide [0, 1], .node .decide [1, 3], .node .ltLe [0, 1, 2, 4, 5], .node .lt [0, 2]]
 
 /-- The first proof is visited only after both comparison bounds have been
-built. At a larger budget the restricted normalizer reaches the upper
-bound's addition, which it does not yet handle. -/
+built. The recursive normalizer folds the literal upper bound's successor
+while checking the second proof and retains the original result endpoints. -/
 theorem admitted_transitive_proof_keeps_ordered_bounds :
     NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot transitiveSnapshot) = true ∧
     run transitiveSnapshot.definitions 0 13 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6 =
       ⟨⟨transitiveSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 [], .node .u64 [],
         .node (.natural 1) [], .node .uadd [2, 12], .node .lt [0, 1], .node .lt [1, 13]], 14⟩,
         .error (.tick (.stepLimit 4))⟩ ∧
-    (run transitiveSnapshot.definitions 0 96 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6).result =
-      .error (.outsideFragment 13) := by
+    (let finished := run transitiveSnapshot.definitions 0 96 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6
+     finished.state.steps = 57 ∧ finished.state.arena.size = 27 ∧
+       finished.result.map Inferred.typeRoot = .ok 26 ∧ finished.state.arena[26]? = some (.node .lt [0, 2])) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 

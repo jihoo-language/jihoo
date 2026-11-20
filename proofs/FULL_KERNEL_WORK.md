@@ -3463,10 +3463,16 @@ used only standard Lean axioms.
 before visiting either proof. The metered inference proof uses the original
 five operands and constructs the Loan64 transitivity judgment once the
 normalizer accepts both evidence types. Lean and the rebuilt compiler agree
-on the prefix at tick 14. The compiler completes both proof checks and
-commits the final inequality. The restricted Lean normalizer reaches the
-upper bound's addition and reports its coverage boundary on that fixture.
-The focused build passed 329 jobs and the 35 audited declarations use only
+on the prefix at tick 14. The first checkpoint checked the complete native
+call and the Lean prefix before the upper bound's addition.
+
+The recursive ghost traversal now normalizes sums of two literal operands
+whose result fits a U64. This path agrees with the established Core.sum
+model on both collection visits, the graph append or graph error and the
+shared counter. The exact-byte inference theorem uses the new traversal.
+On the closed `LtLe` fixture, Lean and the rebuilt compiler both spend 57
+ticks and place the final inequality at row 26 of a 27-row arena. The
+focused build passed 427 jobs and its nine-declaration audit used only
 standard Lean axioms.
 
 ### Relevant closure entry with returned non-owner values

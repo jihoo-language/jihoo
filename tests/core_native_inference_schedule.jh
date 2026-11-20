@@ -343,9 +343,11 @@ fn transitive_proof_inference() {
         "the lower and upper propositions were built in order")
 
     var closed = transitive_proof_fixture()
+    spend(&closed, 999943)
     let inferred = closed.infer(6, [], true, 24).unwrap()
-    assert((inferred as i64) + 1 == closed.node_count() && closed.term(inferred) == core.Term.Lt(0, 2),
+    assert(inferred == 26 && closed.node_count() == 27 && closed.term(inferred) == core.Term.Lt(0, 2),
         "transitivity commits the original endpoints after both proofs")
+    assert_spent(&closed, "successful transitivity inference uses exactly 57 ticks")
 }
 
 fn main() -> i32 {

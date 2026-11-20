@@ -10543,3 +10543,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.LoanBudget.scopes
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_app_loan_budgets
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_transitive_proof_keeps_ordered_bounds
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.extension_metered
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.extension_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.native_sum_literals_exact
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.literalSum_matches_native
