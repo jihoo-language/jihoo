@@ -10725,3 +10725,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.reader_search_rebases_and_stops
 #print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_arena
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodePlain.scan_skips_annotations_and_stops_at_first_failure

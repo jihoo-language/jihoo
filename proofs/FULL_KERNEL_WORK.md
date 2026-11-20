@@ -4235,3 +4235,12 @@ ghost typing to form the reference at the original owner type. The
 native fixture accepts a borrow inside the named reader and rejects it
 outside the reader before extending the arena. The focused build passed
 359 jobs and the six audited additions use standard Lean axioms.
+
+### Runtime type-argument representation scan
+
+The native scan visits each relevant node with the shared checking meter.
+It skips lambda annotations and stops at the first forbidden child.
+A successful scan proves that the retained term has first-order shape
+using checked family layouts. A normalized term free of global references
+also satisfies the runtime plain-type policy. The focused build passed
+329 jobs and the six audited declarations use standard Lean axioms.

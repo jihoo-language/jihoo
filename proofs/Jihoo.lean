@@ -1320,6 +1320,7 @@ import Jihoo.NativeCoreGhostDefinitionChecking
 import Jihoo.NativeCoreCodeScalarInference
 import Jihoo.NativeCoreCodeScalarDeclarations
 import Jihoo.NativeCoreCodeKind
+import Jihoo.NativeCoreCodePlain
 import Jihoo.NativeCoreCodeLeaseLookup
 import Jihoo.NativeCoreCodeBorrow
 import Jihoo.NativeCoreGhostBackMotive
