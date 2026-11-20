@@ -3974,3 +3974,14 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,794.2 MiB.
+
+### Boxed Drop inference
+
+Recursive ghost inference checks that the visible family is boxed before
+visiting the owner. It exposes the owner's inferred inductive type, checks
+the exact family identity, and retains the checked tail's original type.
+
+The native and Lean fixtures produce the same signed tail type in five
+ticks and reject the flat family in one tick with no graph append. The
+focused build passed 433 jobs. The new fixture and the updated recursive
+soundness theorem use only standard Lean axioms.

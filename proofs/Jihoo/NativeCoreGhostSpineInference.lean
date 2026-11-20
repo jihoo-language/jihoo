@@ -172,6 +172,23 @@ private def checkIndexEvidence (infer : Infer) (normal : Visit) (limit depth : N
   (append state .lt [index,length]).next fun formed expected =>
     requireOperands infer normal limit depth expected formed [proof]
 
+private def ownerFamily (infer : Infer) (normal : Visit) (state : State) (owner family : Nat) :
+    Outcome (List (Nat × Nat)) :=
+  (infer state owner).next fun checked type =>
+    (normal checked type.typeRoot).next fun after root =>
+      match after.arena[root]? with
+      | some (.node (.ind actual _) _) =>
+          if actual = family then ⟨after,.ok type.compared⟩ else discard after owner
+      | _ => discard after owner
+
+private def inferDrop (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool)
+    (shapeTable : Nat → Option (Nat × Bool)) (state : State) (root family owner rest : Nat) : Outcome Inferred :=
+  if (shapeTable family).isSome && isBoxed family then
+    (ownerFamily infer normal state owner family).next fun retained pairs =>
+      (infer retained rest).next fun after inferred =>
+        ⟨after,.ok ⟨inferred.typeRoot,pairs ++ inferred.compared⟩⟩
+  else discard state root
+
 private def inferStore (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (buffer index value proof : Nat) : Outcome Inferred :=
   (bufferLength infer normal state buffer).next fun afterBuffer checked =>
@@ -523,6 +540,9 @@ def runVisits (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
               root count elements
         | some (.node .alloc [n, fill]) =>
             inferAlloc (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered n fill
+        | some (.node (.drop family) [owner, tail]) =>
+            inferDrop (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (normal depth) isBoxed shapeTable entered root family owner tail
         | some (.node .free [buffer, tail]) =>
             inferFree (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) entered buffer tail
         | some (.node .store [buffer, index, value, proof]) =>
@@ -686,6 +706,30 @@ private theorem bufferLength_progress
   apply (normalizes _ _).next
   intro root
   split <;> exact Progress.atState _ _
+
+private theorem ownerFamily_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) : Progress limit state (ownerFamily infer normal state owner family) := by
+  unfold ownerFamily
+  apply (infers _ _ room).next
+  intro inferred
+  apply (normalizes _ _).next
+  intro selected
+  split
+  · split <;> exact Progress.atState _ _
+  · exact Progress.atState _ _
+
+private theorem inferDrop_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
+    Progress limit state (inferDrop infer normal isBoxed shapeTable state root family owner rest) := by
+  unfold inferDrop
+  split
+  · apply next_progress (ownerFamily_progress infers normalizes room) room
+    intro _ _ remaining
+    exact (infers _ _ remaining).next (fun _ => Progress.atState _ _)
+  · exact Progress.atState _ _
 
 private theorem inferFree_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -1208,6 +1252,7 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
             (normalProgress indexCheckDepth) within
         | exact inferElements_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferAlloc_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferDrop_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferFree_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStore_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferLoad_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1791,6 +1836,82 @@ private theorem bufferLength_refines
     obtain ⟨count,shape,countRep⟩ := unary_read held read
     refine ⟨inferred.kept.trans kept,backward ∘ inferredBack,count,countRep,?_⟩
     simpa only [shape,Term.buffer,expand,expandArgs] using typed.convert converted.converted
+  · simp [discard] at success
+
+private theorem ownerFamily_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena owner written)
+    (success : (ownerFamily infer normal state owner family).result = .ok compared)
+    (ambient : Prefix (ownerFamily infer normal state owner family).state.arena final)
+    (retained : ∀ pair ∈ compared, PairRetained final pair) :
+    let after := (ownerFamily infer normal state owner family).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ arity indices, LoanTyping.HasType env [] ctx true (expand env written) (.node (.ind family arity) indices) := by
+  unfold ownerFamily at success ambient ⊢
+  obtain ⟨inferred,inferredOk,inferredNext⟩ := Outcome.next_success success
+  rw [inferredNext] at success ambient ⊢
+  obtain ⟨selected,normalized,normNext⟩ := Outcome.next_success success
+  rw [normNext] at success ambient ⊢
+  split at success
+  · rename_i actual arity refs read
+    split at success
+    · rename_i same
+      subst actual
+      simp only [Except.ok.injEq] at success
+      subst compared
+      simp only [read,ite_true] at ambient ⊢
+      have progress := normalProgress (infer state owner).state inferred.typeRoot
+      obtain ⟨checked,checkBack,_,typeRep,typed⟩ := childSound onBase room source inferredOk
+        (progress.kept.trans ambient) retained
+      obtain ⟨kept,backward,residual,held,changed⟩ := normalSound (onBase.trans checked) typeRep normalized
+      have shape : ∃ values, residual = .node (.ind family arity) values := by
+        cases held with
+        | var selected => rw [read] at selected; cases selected
+        | node selected => rw [read] at selected; cases selected; exact ⟨_,rfl⟩
+      obtain ⟨values,shape⟩ := shape
+      rw [shape] at changed
+      exact ⟨checked.trans kept,backward ∘ checkBack,arity,expandArgs env values,
+        typed.convert (by simpa only [expand] using changed.converted)⟩
+    · simp [discard] at success
+  · simp [discard] at success
+
+private theorem inferDrop_refines
+    (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena owner x) (continued : Represents state.arena rest r)
+    (success : (inferDrop infer normal isBoxed shapeTable state root family owner rest).result = .ok answer)
+    (ambient : Prefix (inferDrop infer normal isBoxed shapeTable state root family owner rest).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.node (.drop family) [x,r])
+      (inferDrop infer normal isBoxed shapeTable state root family owner rest) answer := by
+  unfold inferDrop at success ambient ⊢
+  split at success
+  · rename_i allowed
+    simp only [ite_eq_left allowed] at ambient ⊢
+    obtain ⟨entry,found,boxed⟩ := metadata family (Bool.and_eq_true_iff.mp allowed).2
+    obtain ⟨first,firstOk,firstNext⟩ := Outcome.next_success success
+    rw [firstNext] at success ambient ⊢
+    obtain ⟨tail,tailOk,tailNext⟩ := Outcome.next_success success
+    rw [tailNext] at success ambient ⊢
+    simp only [Except.ok.injEq] at success
+    subst answer
+    let checked := ownerFamily infer normal state owner family
+    have ownerRoom := (ownerFamily_progress (owner := owner) (family := family) childProgress normalProgress room).accepted
+      room first firstOk
+    have tailProgress := childProgress checked.state rest ownerRoom
+    obtain ⟨ownerKept,ownerBack,_,_,typedOwner⟩ := ownerFamily_refines normalSound normalProgress childSound
+      onBase room source firstOk (tailProgress.kept.trans ambient) (fun pair member => retained pair (List.mem_append_left _ member))
+    obtain ⟨tailKept,tailBack,_,resultRep,typedTail⟩ := childSound (onBase.trans ownerKept) ownerRoom
+      (continued.frame ownerKept) tailOk ambient (fun pair member => retained pair (List.mem_append_right _ member))
+    refine ⟨ownerKept.trans tailKept,tailBack ∘ ownerBack,_,resultRep,?_⟩
+    simpa only [expand,expandArgs] using LoanTyping.HasType.drop found boxed typedOwner typedTail
   · simp [discard] at success
 
 private theorem inferFree_refines
@@ -3363,7 +3484,8 @@ theorem runVisits_sound {normal : NormalAt}
       | @node _ op refs terms read arity children =>
           simp only [read] at success ambient ⊢
           cases op <;> simp only [Op.arity] at arity
-          all_goals first | (simp [discard] at success; done) | skip
+          case elim | fold | lend | back | give | take | view | loop | caseOf =>
+            simp only [discard, reduceCtorEq] at success
           all_goals try
             have empty := List.length_eq_zero_iff.mp arity
             subst refs
@@ -3564,6 +3686,19 @@ theorem runVisits_sound {normal : NormalAt}
                   (normalSound depth) (normalProgress depth) sameContext
                   (fun _ _ budget => runVisits_progress normalProgress budget)
                   onBase within countRep fillRep success ambient retained
+          case drop family =>
+            have length : refs.length = 2 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons ownerRep rest =>
+              cases rest with
+              | cons tailRep tail =>
+                cases tail
+                dsimp only at success ambient ⊢
+                exact inferDrop_refines (state := {state with steps := state.steps + 1})
+                  boxedMetadata (normalSound depth) (normalProgress depth) sameContext
+                  (fun _ _ budget => runVisits_progress normalProgress budget)
+                  onBase within ownerRep tailRep success ambient retained
           case free =>
             have length : refs.length = 2 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
@@ -4454,6 +4589,27 @@ theorem admitted_family_indices_use_fixed_depth :
       wrong.state.steps = 1 ∧ wrong.state.arena = snapshot.arena ∧ wrong.result = .error (.outsideFragment 2) := by
   intro data
   cases data <;> cbv
+
+private def dropSnapshot (recursive : Bool) : NativeFamilyWire.Snapshot :=
+  let reference := familyReferenceSnapshot recursive
+  { reference with arena := reference.arena ++ #[.node (.integer (-3)) [],.node (.drop 0) [4,10]] }
+
+private def dropVisit (recursive : Bool) (limit : Nat) : Outcome Inferred :=
+  let env := (referenceEnvironment recursive).getD empty
+  let snapshot := dropSnapshot recursive
+  let normal := NativeCoreExpandedFamilies.raw env snapshot.families [] 0 limit
+  runWithConstructors normal [] 0 limit (NativeCoreGhostSort.isDataAt env) (isBoxedAt env)
+    (visibleFamilyShape env 0) (NativeCoreGhostConstructorInference.constructorAt snapshot.families 0)
+    32 [⟨1,false⟩] ⟨snapshot.arena,0⟩ 11
+
+/-- Drop consults the boxed layout before the owner is visited. A typed
+boxed family releases its owner and preserves the tail's I64 type. -/
+theorem admitted_boxed_drop_checks_owner_and_tail :
+    (let released := dropVisit true 5
+     released.state.steps = 5 ∧ released.result.map Inferred.typeRoot = .ok 12 ∧
+       released.state.arena[12]? = some (.node .i64 [])) ∧
+    dropVisit false 1 =
+      ⟨⟨(dropSnapshot false).arena,1⟩,.error (.outsideFragment 11)⟩ := by cbv
 
 end Examples
 

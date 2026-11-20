@@ -10633,3 +10633,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.lifecycle_owner_live_iff
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.capture_demand_survives
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.transfers_owner_demand_from_start
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_boxed_drop_checks_owner_and_tail

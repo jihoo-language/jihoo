@@ -740,6 +740,28 @@ fn ghost_definition_body_checking() {
     program.extend().unwrap()
 }
 
+fn boxed_drop_inference() {
+    let span = diag.Span.nowhere()
+    let context = [core.Binding { ty: 1, erased: false }]
+    var boxed = family_reference_fixture(true)
+    let tail = boxed.add(core.Term.Integer(-3), span).unwrap()
+    let drop = boxed.add(core.Term.Drop(0, 4, tail), span).unwrap()
+    spend(&boxed, 999994)
+    let result = boxed.infer(drop, context, true, 32).unwrap()
+    assert(result == 12 && boxed.term(result) == core.Term.I64, "Drop retains the original signed tail type")
+    assert_spent(&boxed, "Drop checks the boxed owner and tail in five ticks")
+
+    var flat = family_reference_fixture(false)
+    let tail = flat.add(core.Term.Integer(-3), span).unwrap()
+    let invalid = flat.add(core.Term.Drop(0, 4, tail), span).unwrap()
+    spend(&flat, 999996)
+    assert(match flat.infer(invalid, context, true, 32) {
+        Err(e) => e.msg == "core: drop frees heap data", _ => false
+    }, "Drop rejects a flat family before inferring the owner")
+    assert(flat.node_count() == 12, "the flat-family rejection appends no graph row")
+    assert_spent(&flat, "the flat-family rejection uses one tick")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -764,6 +786,7 @@ fn main() -> i32 {
     reference_inference()
     family_index_inference()
     dependent_constructor_inference()
+    boxed_drop_inference()
     declaration_annotation_inference()
     ghost_definition_body_checking()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
