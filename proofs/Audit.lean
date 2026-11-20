@@ -10519,3 +10519,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_closure_origin
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_lambda_retains_capture
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_higher_order_closure_retains_telescope
+#print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.commute_pure_preserves
+#print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.run_pure_refines
+#print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.Examples.dependent_motive_keeps_written_annotation

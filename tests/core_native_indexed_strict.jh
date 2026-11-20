@@ -7,7 +7,7 @@ fn ids(xs: [u32]) -> Vec(u32) {
     out
 }
 
-fn main() -> i32 {
+fn indexed_scrutinee_preservation() -> i32 {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let u = c.add(core.Term.U64, span).unwrap()
@@ -50,4 +50,56 @@ fn main() -> i32 {
     assert(c.term(normal_case) == core.Term.Strict(overflow, allocated), "indexed Case retains the signed overflow")
     assert(c.term(normal_elim) == core.Term.Strict(overflow, allocated), "indexed Elim retains the signed overflow")
     0
+}
+
+fn dependent_scrutinee_preservation() -> i32 {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let recent = c.add(core.Term.Var(0), span).unwrap()
+    let older = c.add(core.Term.Var(1), span).unwrap()
+    let box = c.add(core.Term.Ind(0, ids([])), span).unwrap()
+    let buffer = c.add(core.Term.Buffer(recent), span).unwrap()
+    let field = c.add(core.Term.Pi(false, buffer, box), span).unwrap()
+    let signature = c.add(core.Term.Pi(false, word, field), span).unwrap()
+    let take_length = c.add(core.Term.Lam(false, buffer, older), span).unwrap()
+    let length_arm = c.add(core.Term.Lam(false, word, take_length), span).unwrap()
+    let to_word = c.add(core.Term.Lam(false, box, word), span).unwrap()
+    let read_length = c.add(core.Term.Elim(0, to_word, ids([length_arm]), recent), span).unwrap()
+    let result_type = c.add(core.Term.Buffer(read_length), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, box, result_type), span).unwrap()
+    let take_buffer = c.add(core.Term.Lam(false, buffer, recent), span).unwrap()
+    let arm = c.add(core.Term.Lam(false, word, take_buffer), span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let seven = c.add(core.Term.Integer(7), span).unwrap()
+    let allocated = c.add(core.Term.Alloc(two, seven), span).unwrap()
+    let boxed = c.add(core.Term.Con(0, 0, ids([two, allocated])), span).unwrap()
+    let maximum = c.add(core.Term.Integer(9223372036854775807), span).unwrap()
+    let one = c.add(core.Term.Integer(1), span).unwrap()
+    let overflow = c.add(core.Term.Arith(core.Arith.Add, maximum, one), span).unwrap()
+    let subject = c.add(core.Term.Strict(overflow, boxed), span).unwrap()
+    let case = c.add(core.Term.Case(0, motive, ids([arm]), subject), span).unwrap()
+    let elim = c.add(core.Term.Elim(0, motive, ids([arm]), subject), span).unwrap()
+    let written = c.add(core.Term.App(motive, subject), span).unwrap()
+    c.push_family(core.Family { name: "SizedBox".to_string(), data: true, params: 0, arity: 0,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "SizedBox".to_string(), ty: signature })
+    c.push_definition(core.Definition { name: "dependent_case".to_string(), ty: written, value: case,
+        exported: false, span })
+    c.push_definition(core.Definition { name: "dependent_elim".to_string(), ty: written, value: elim,
+        exported: false, span })
+    match c.preserves() {
+        Ok(_) => {}
+        Err(e) => { eprintln(e.msg); return 1 }
+    }
+    let normal_case = c.normal(case, core.DEPTH).unwrap()
+    let normal_elim = c.normal(elim, core.DEPTH).unwrap()
+    assert(c.term(normal_case) == core.Term.Strict(overflow, allocated), "dependent Case retains the signed overflow")
+    assert(c.term(normal_elim) == core.Term.Strict(overflow, allocated), "dependent Elim retains the signed overflow")
+    0
+}
+
+fn main() -> i32 {
+    if indexed_scrutinee_preservation() != 0 { return 1 }
+    dependent_scrutinee_preservation()
 }

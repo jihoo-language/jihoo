@@ -12,7 +12,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | Remaining obligation | Starting point |
 | --- | --- |
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
-| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It commutes Strict out of Case and data Elim when the motive can use the enclosing context and the family's indices independently of the scrutinee. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
+| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. The Strict arena rewrite preserves raw typing for scrutinee-independent motives and pure typing at a formed annotation for arbitrary dependent motives. Compose the pure result through the remaining traversal, specialized Lend, wider View shapes and effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. Closed arithmetic evidence at the original index and the physical allocation length prove the computed unsigned sum fits. General execution across arbitrary closures and dependent runtime forms remains open. |
 | Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, primitive operators with fixed operand types, Decide, Strict, ZeroLe, USub, conditional branches, refinements and equality transport. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
 
@@ -3512,3 +3512,17 @@ receipt gives zero demand for each captured owner.
 The admitted higher-order example returns a closure with both source
 binders intact. The focused Lake build and the audit of the three new
 theorems passed.
+
+### Pure preservation for scrutinee-dependent Strict motives
+
+The Case and data Elim arena rewrite shares one graph proof for both
+typing interpretations. Pure typing keeps the original independently
+formed result annotation even when the motive uses the scrutinee. The
+shaped Strict conversion relates the two motive applications, and the
+original checked arms and effect derivation are reused.
+
+The dependent fixture computes a buffer's result length from a field in
+the scrutinized value. Lean derives the original written type after
+moving Strict. The native regression checks both eliminators and the
+retained overflow prefix. The focused build passed 326 jobs and the
+three new audited theorems use only standard Lean axioms.

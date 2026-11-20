@@ -181,6 +181,30 @@ theorem constantMotive_sound (represented : Represents arena root motive)
     rw [← size] at shape
     exact shape.stable
 
+private theorem data_elim_replacement
+    (typed : LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms scrutinee) type)
+    (metadata : ∀ {entry}, env.families[family]? = some entry → entry.declaration.data = true) :
+    ∃ (entry : CheckedFamily) (indices : List Term), env.families[family]? = some entry ∧
+      indices.length = entry.declaration.arity ∧
+      LoanTyping.HasType env [] ctx true scrutinee (.node (.ind family entry.declaration.arity) indices) ∧
+      (∀ {replacement}, LoanTyping.HasType env [] ctx true replacement (.node (.ind family entry.declaration.arity) indices) →
+        LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms replacement)
+          (.app (applications motive (indices.drop entry.declaration.params)) replacement)) ∧
+      LoanTyping.Conversion.Conv env (.app (applications motive (indices.drop entry.declaration.params)) scrutinee) type := by
+  obtain ⟨entry, motive', arms', scrutinee', indices, _, layout, found, kind⟩ :=
+    LoanTyping.FamilyIota.elim_inputs typed
+  obtain ⟨rfl, tails⟩ := List.cons.inj layout
+  obtain ⟨rfl, single⟩ := List.append_inj' tails (by simp)
+  obtain rfl := (List.cons.inj single).1
+  rcases kind with ⟨data, _⟩ | ⟨data, proof, types, size, motiveTyped, scrutineeTyped, generated, branches, result⟩
+  · rw [metadata found] at data
+    cases data
+  refine ⟨entry, indices, found, size, scrutineeTyped, fun replacementTyped => ?_, result⟩
+  exact LoanTyping.HasType.dataElim (analysis := false) (ghost := true) found data
+    (by intro impossible; cases impossible) size motiveTyped (by simpa only [Bool.true_or] using replacementTyped)
+    (by simpa only [Bool.not_false, Bool.and_true] using generated)
+    (by simpa only [Bool.true_or] using branches) (Or.inl rfl)
+
 private theorem data_elim_scrutinee_context
     (typed : LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms scrutinee) type)
     (metadata : ∀ {entry}, env.families[family]? = some entry → entry.declaration.data = true)
@@ -190,22 +214,10 @@ private theorem data_elim_scrutinee_context
     ∃ scrutineeType, LoanTyping.HasType env [] ctx true scrutinee scrutineeType ∧
       ∀ {replacement}, LoanTyping.HasType env [] ctx true replacement scrutineeType →
         LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms replacement) type := by
-  obtain ⟨entry, motive', arms', scrutinee', indices, _, layout, found, kind⟩ :=
-    LoanTyping.FamilyIota.elim_inputs typed
-  obtain ⟨rfl, tails⟩ := List.cons.inj layout
-  obtain ⟨rfl, single⟩ := List.append_inj' tails (by simp)
-  obtain rfl := (List.cons.inj single).1
-  rcases kind with ⟨data, _⟩ | ⟨data, proof, types, size, motiveTyped, scrutineeTyped, generated, branches, result⟩
-  · rw [metadata found] at data
-    cases data
-  refine ⟨_, scrutineeTyped, fun replacementTyped => ?_⟩
-  have replaced := LoanTyping.HasType.dataElim (analysis := false) (ghost := true) found data
-    (by intro impossible; cases impossible) size motiveTyped (by simpa only [Bool.true_or] using replacementTyped)
-    (by simpa only [Bool.not_false, Bool.and_true] using generated)
-    (by simpa only [Bool.true_or] using branches) (Or.inl rfl)
+  obtain ⟨entry, indices, found, size, scrutineeTyped, replace, result⟩ := data_elim_replacement typed metadata
   have indexCount : (indices.drop entry.declaration.params).length = entry.declaration.arity - entry.declaration.params := by
     rw [List.length_drop, size]
-  exact replaced.convert ((stable found indexCount _ _).trans result)
+  exact ⟨_, scrutineeTyped, fun replacementTyped => (replace replacementTyped).convert ((stable found indexCount _ _).trans result)⟩
 
 private theorem expanded_familyTerm (env : Environment) :
     expand env (familyTerm analysis family motive arms subject) =
@@ -244,6 +256,28 @@ theorem commute_preserves (stable : Stable env family motive)
   obtain ⟨_, valueTyped, converted⟩ := strictTyped.principalView
   exact .strict prefixTyped (change (rebuild (valueTyped.convert converted)))
 
+/-- Pure ghost typing keeps the exact formed annotation for a motive that
+depends on its scrutinee. The retained effect changes the written motive
+application by the shaped Strict equation in RawValue conversion. -/
+theorem commute_pure_preserves {sort : SortTag}
+    (dataFamily : ∀ {entry}, env.families[family]? = some entry → entry.declaration.data = true)
+    (change : ∀ {type}, LoanTyping.HasType env [] ctx true (familyTerm analysis family motive arms value) type →
+      LoanTyping.HasType env [] ctx true result type)
+    (typed : LoanTyping.HasType env [] ctx true (familyTerm analysis family motive arms (.strict effect value)) requested)
+    (formed : LoanTyping.HasType env [] ctx true requested sort.term) :
+    LoanTyping.PureTyping.HasType env ctx (.strict effect result) requested := by
+  cases analysis
+  · obtain ⟨entry, indices, _, _, strictTyped, replace, resultType⟩ := data_elim_replacement typed dataFamily
+    obtain ⟨_, prefixTyped⟩ := NativeCoreValueContexts.strict_effect_typing strictTyped
+    obtain ⟨_, valueTyped, aligned⟩ := strictTyped.principalView
+    have reduced := replace (valueTyped.convert aligned)
+    let applied := applications motive (indices.drop entry.declaration.params)
+    have shifted : RawValue.Conv env (.app applied value) (.app applied (.strict effect value)) :=
+      .node .app (.cons (.refl _) (.cons (.symm (.strict effect value)) .nil))
+    exact LoanTyping.PureTyping.convert_native (.strict prefixTyped (change reduced)) formed (shifted.trans (.old resultType))
+  · obtain ⟨_, _, prefixTyped, inner, converted⟩ := LoanTyping.FamilyIota.strict_case_inputs typed
+    exact LoanTyping.PureTyping.convert_native (.strict prefixTyped (change inner)) formed converted
+
 def run (visit : State → Nat → Outcome Nat) (state : State) (analysis : Bool) (family : Nat)
     (motive : Nat) (arms : List Nat) (effect value : Nat) : Outcome Nat :=
   (append state (familyOp analysis family arms.length) (motive :: (arms ++ [value]))).next
@@ -261,14 +295,16 @@ theorem represented_snoc (children : RepresentsList arena refs terms) (last : Re
   | nil => exact .cons last .nil
   | cons head _ _ rest => exact .cons head rest
 
-theorem run_refines (stable : Stable env family motive) (onBase : Prefix base state.arena)
+private theorem run_strict_result (onBase : Prefix base state.arena)
     (visitor : ∀ {state root term selected}, Prefix base state.arena → Represents state.arena root term →
       (visit state root).result = .ok selected → RefinesFor (ExpandedChange env) state term (visit state root) selected)
     (motiveRep : Represents state.arena motiveRef motive) (armsRep : RepresentsList state.arena armRefs arms)
     (effectRep : Represents state.arena effectRef effect) (valueRep : Represents state.arena valueRef value)
     (success : (run visit state analysis family motiveRef armRefs effectRef valueRef).result = .ok selected) :
-    RefinesFor (ExpandedChange env) state (familyTerm analysis family motive arms (.strict effect value))
-      (run visit state analysis family motiveRef armRefs effectRef valueRef) selected := by
+    let after := (run visit state analysis family motiveRef armRefs effectRef valueRef).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ output, Represents after selected (.strict effect output) ∧
+        ExpandedChange env (familyTerm analysis family motive arms value) output := by
   unfold run at success ⊢
   obtain ⟨inner, added, next⟩ := Outcome.next_success success
   obtain ⟨kept, backward, held⟩ := append_refines
@@ -287,8 +323,47 @@ theorem run_refines (stable : Stable env family motive) (onBase : Prefix base st
   have throughVisit := kept.trans following
   obtain ⟨last, lastBack, result⟩ :=
     append_refines (.cons (effectRep.frame throughVisit) (.cons outputRep .nil)) rfl success
-  exact ⟨throughVisit.trans last, lastBack ∘ followingBack ∘ backward, .strict effect output, result,
-    commute_preserves stable changed⟩
+  exact ⟨throughVisit.trans last, lastBack ∘ followingBack ∘ backward, output, result, changed⟩
+
+theorem run_refines (stable : Stable env family motive) (onBase : Prefix base state.arena)
+    (visitor : ∀ {state root term selected}, Prefix base state.arena → Represents state.arena root term →
+      (visit state root).result = .ok selected → RefinesFor (ExpandedChange env) state term (visit state root) selected)
+    (motiveRep : Represents state.arena motiveRef motive) (armsRep : RepresentsList state.arena armRefs arms)
+    (effectRep : Represents state.arena effectRef effect) (valueRep : Represents state.arena valueRef value)
+    (success : (run visit state analysis family motiveRef armRefs effectRef valueRef).result = .ok selected) :
+    RefinesFor (ExpandedChange env) state (familyTerm analysis family motive arms (.strict effect value))
+      (run visit state analysis family motiveRef armRefs effectRef valueRef) selected := by
+  obtain ⟨kept, backward, output, represented, changed⟩ :=
+    run_strict_result onBase visitor motiveRep armsRep effectRep valueRep success
+  exact ⟨kept, backward, .strict effect output, represented, commute_preserves stable changed⟩
+
+/-- The same arena execution preserves independently formed annotations in
+pure typing for arbitrary scrutinee-dependent Case and data Elim motives. -/
+theorem run_pure_refines {sort : SortTag}
+    (dataFamily : ∀ {entry}, env.families[family]? = some entry → entry.declaration.data = true)
+    (onBase : Prefix base state.arena)
+    (visitor : ∀ {state root term selected}, Prefix base state.arena → Represents state.arena root term →
+      (visit state root).result = .ok selected → RefinesFor (ExpandedChange env) state term (visit state root) selected)
+    (motiveRep : Represents state.arena motiveRef motive) (armsRep : RepresentsList state.arena armRefs arms)
+    (effectRep : Represents state.arena effectRef effect) (valueRep : Represents state.arena valueRef value)
+    (typed : LoanTyping.HasType env [] ctx true
+      (expand env (familyTerm analysis family motive arms (.strict effect value))) requested)
+    (formed : LoanTyping.HasType env [] ctx true requested sort.term)
+    (success : (run visit state analysis family motiveRef armRefs effectRef valueRef).result = .ok selected) :
+    let after := (run visit state analysis family motiveRef armRefs effectRef valueRef).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ output, Represents after selected output ∧ LoanTyping.PureTyping.HasType env ctx (expand env output) requested := by
+  obtain ⟨kept, backward, output, represented, changed⟩ :=
+    run_strict_result onBase visitor motiveRep armsRep effectRep valueRep success
+  have innerChange {type : Term} : LoanTyping.HasType env [] ctx true
+      (familyTerm analysis family (expand env motive) (arms.map (expand env)) (expand env value)) type →
+        LoanTyping.HasType env [] ctx true (expand env output) type := by
+    intro original
+    exact changed (by simpa only [expanded_familyTerm] using original)
+  have expanded := commute_pure_preserves dataFamily innerChange
+    (by simpa only [expanded_familyTerm, Term.strict, expand, expandArgs] using typed) formed
+  exact ⟨kept, backward, .strict effect output, represented,
+    by simpa only [Term.strict, expand, expandArgs] using expanded⟩
 
 structure Plan where
   analysis : Bool
@@ -480,6 +555,40 @@ theorem open_motive_keeps_outer_index :
   have accepted : constantMotive env 8 arena 0 6 = true := by cbv
   have represented : Represents arena 6 (.lam false box (.buffer (.var 1))) := decode_sound (fuel := 4) rfl
   exact ⟨accepted, by cbv, constantMotive_sound represented accepted⟩
+
+private def sizedFamily : FamilyDeclaration :=
+  ⟨true, 0, 0, [.pi false .u64 (.pi false (.buffer (.var 0)) box)], 0⟩
+private def sizedEntry : CheckedFamily := ⟨sizedFamily,
+  [⟨[⟨false, .u64, none⟩, ⟨false, .buffer (.var 0), none⟩], []⟩], true⟩
+private def sizedEnv : Environment := ⟨#[], #[sizedEntry]⟩
+private def storedLength (subject : Term) : Term :=
+  familyTerm false 0 (.lam false box .u64)
+    [.lam false .u64 (.lam false (.buffer (.var 0)) (.var 1))] subject
+private def dependentMotive : Term := .lam false box (.buffer (storedLength (.var 0)))
+private def returnBuffer : Term := .lam false .u64 (.lam false (.buffer (.var 0)) (.var 0))
+private def boxedValue : Term := .node (.con 0 0 2) [.natural 2, .alloc (.natural 2) (.integer 7)]
+private def overflowingPrefix : Term := .arith .add (.integer 9223372036854775807) (.integer 1)
+private def strictSubject : Term := .strict overflowingPrefix boxedValue
+private def writtenType : Term := .app dependentMotive strictSubject
+
+set_option maxRecDepth 4096 in
+/-- The result length is a field of the scrutinized value. The pure
+conversion keeps the exact annotation that mentions the original Strict
+scrutinee after moving the effect outside the eliminator. -/
+theorem dependent_motive_keeps_written_annotation :
+    LoanTyping.PureTyping.HasType sizedEnv []
+      (.strict overflowingPrefix (familyTerm false 0 dependentMotive [returnBuffer] boxedValue)) writtenType := by
+  have typed : LoanTyping.HasType sizedEnv [] [] true
+      (familyTerm false 0 dependentMotive [returnBuffer] strictSubject) writtenType :=
+    LoanTyping.Checker.check_sound (fuel := 64) (by cbv)
+  have formed : LoanTyping.HasType sizedEnv [] [] true writtenType (.univ 0) :=
+    LoanTyping.Checker.infer_sound (fuel := 64) (by cbv)
+  apply commute_pure_preserves (sort := .type 0) _ (fun original => original) typed formed
+  intro entry found
+  have known : sizedEnv.families[0]? = some sizedEntry := rfl
+  have same := Option.some.inj (known.symm.trans found)
+  subst entry
+  rfl
 
 end Examples
 
