@@ -3841,3 +3841,16 @@ the canonical equality premise used by Transport. The false branch uses
 the original valuation. The result uses the literal rule after related
 operands fit a physical word. The focused build passed 390 jobs and the
 four new declarations use only standard Lean axioms.
+
+### Metered inductive family formation
+
+Ghost family formation reads the declared index arity and sort from the
+checked table. A successful query checks every index as U64. The index
+checker uses native depth 128 and the original cumulative work counter,
+even when the enclosing type visit starts with depth one. The recursive
+driver now distinguishes its visit allowance from that depth parameter.
+
+The Lean and native fixtures agree on the exact graph and five ticks for
+both Prop and Type0 results. The native test also rejects an unchecked
+family and checks arity before any graph append. The focused build passed
+428 jobs and the four new declarations use standard Lean axioms.

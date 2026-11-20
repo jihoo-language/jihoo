@@ -603,6 +603,43 @@ fn reference_inference() {
     assert(flat.node_count() == 10, "the rejected borrow appends no type")
 }
 
+fn family_index_fixture(data: bool, checked: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let index = c.add(core.Term.Natural(0), span).unwrap()
+    var indexes = Vec(u32).new()
+    indexes.push(index)
+    let result = c.add(core.Term.Ind(0, indexes), span).unwrap()
+    c.add(core.Term.Ind(0, Vec(u32).new()), span).unwrap()
+    c.push_family(core.Family { name: "AtZero".to_string(), data, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Intro".to_string(), ty: result })
+    if checked { c.check().unwrap() }
+    c
+}
+
+fn family_index_inference() {
+    for data in [false, true] {
+        var checked = family_index_fixture(data, true)
+        spend(&checked, 999990)
+        let formed = checked.infer(1, [], true, 1).unwrap()
+        assert(formed == 7 && checked.term(7) == (if data { core.Term.Universe(0) } else { core.Term.Prop }),
+            "the checked family selects its sort after checking the original index at fixed depth")
+        assert_spent(&checked, "family formation uses five ticks beyond the declaration checks")
+    }
+
+    var invisible = family_index_fixture(false, false)
+    assert(match invisible.infer(1, [], true, 1) {
+        Err(e) => e.msg == "core: inductive family used before its declaration is checked", _ => false
+    }, "family inference uses the visible checked declarations")
+
+    var wrong = family_index_fixture(false, true)
+    assert(match wrong.infer(2, [], true, 1) {
+        Err(e) => e.msg == "core: wrong number of family indices", _ => false
+    }, "arity is checked before forming the U64 requirement")
+    assert(wrong.node_count() == 5, "an incorrect family arity appends no rows")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -625,6 +662,7 @@ fn main() -> i32 {
     array_and_borrowed_index_inference()
     load_callback_inference()
     reference_inference()
+    family_index_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

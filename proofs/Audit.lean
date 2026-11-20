@@ -10598,3 +10598,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.erased_given_evidence_agrees
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_erased_give_applications_agree
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ifEq_realizes
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.visibleFamilyShape_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runVisits_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyShapes_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_family_indices_use_fixed_depth
