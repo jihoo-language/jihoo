@@ -1,5 +1,6 @@
 import Jihoo.NativeBindingMachineMutableComputedBorrow
 import Jihoo.NativeBindingMachineReferenceSizes
+import Jihoo.NativeLoanArithmeticProofConsistency
 
 /-! A scalar reader can read its newly opened reference and retained
 references at computed indices. Signed arithmetic preserves read order. -/
@@ -83,10 +84,10 @@ def ticks : LoanedArithmetic → Nat
   | .read _ index _ => 3+((index.rename Nat.succ).ticks+1)
   | .arithmetic _ left right => 1+(left.ticks+(1+(right.ticks+1)))
 
-def DecideEvidence (meanings : Nat → Term) : LoanedArithmetic → Prop
+def ArithmeticEvidence (meanings : Nat → Term) : LoanedArithmetic → Prop
   | .literal _ => True
-  | .read _ _ evidence => ∃ left right, evidence.subst meanings = .decide left right
-  | .arithmetic _ left right => DecideEvidence meanings left ∧ DecideEvidence meanings right
+  | .read _ _ evidence => Semantics.LoanArithmetic.Supported (evidence.subst meanings)
+  | .arithmetic _ left right => ArithmeticEvidence meanings left ∧ ArithmeticEvidence meanings right
 
 structure Observation where
   number : Int
@@ -155,6 +156,36 @@ private theorem captured_index_size
     exact ⟨size,indexTyped,bound,(closed.ref_injective history.wellFormed.admissible).buffer_injective
       history.wellFormed.admissible⟩
 
+/-- The original read judgment and selected lease determine the word type,
+the exact bound type, and the physical interpretation of its upper endpoint. -/
+theorem reference_index_typing
+    {heap : SizedBufferHeap.IndexedState}
+    (reference : ReaderReference) (word : UnsignedOperand)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanTyping.HasType env loans original.context false
+      (.index (reference.specialized owner) word.term evidence) type)
+    (context : ValueContext env original meanings) (aligned : CodeAligned original)
+    (sizes : OwnerSizes env heap.metadata original meanings)
+    (references : ReferenceSizes env heap.metadata original meanings)
+    (stored : original.values[owner]? = some (some (.owner borrowedObject)))
+    (borrowed : heap.metadata.heap.lease fresh = some borrowedObject)
+    (selected : reference.token original fresh = some token)
+    (leased : heap.metadata.heap.lease token = some object) :
+    ∃ size, LoanTyping.HasType env loans original.context false word.term .u64 ∧
+      LoanTyping.HasType env loans original.context true evidence (.lt word.term size) ∧
+      LoanTyping.Conversion.Conv env (.natural (heap.metadata.length object)) (size.subst meanings) := by
+  cases reference with
+  | bound =>
+      cases selected
+      have same : borrowedObject = object := Option.some.inj (borrowed.symm.trans leased)
+      subst object
+      obtain ⟨size,ownerTyped,indexTyped,bound⟩ := typed.named_index_owner history.wellFormed
+      have exactSize : OwnerSize env heap.metadata borrowedObject (.buffer (size.subst meanings)) := by
+        simpa only [Term.subst,substArgs,Op.binders,liftSub] using sizes.typed_variable history ownerTyped stored
+      exact ⟨size,indexTyped,bound,exactSize.buffer_length history⟩
+  | captured slot =>
+      exact captured_index_size history typed context aligned references (selected_capture selected) leased
+
 private theorem checked_reference_index
     (reference : ReaderReference) (word : UnsignedOperand)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
@@ -169,7 +200,7 @@ private theorem checked_reference_index
     (leased : heap.metadata.heap.lease token = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw resourceFuel env loans original.context
       (.index (reference.specialized owner) word.term evidence) = some receipt)
-    (decision : ∃ left right, evidence.subst meanings = .decide left right)
+    (supported : Semantics.LoanArithmetic.Supported (evidence.subst meanings))
     (offsetValue : word.value meanings = some offset)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
@@ -183,33 +214,21 @@ private theorem checked_reference_index
     cases reference with
     | bound => cases selected; rfl
     | captured slot => exact selected_capture (original := original) (slot := slot) selected
-  have indexShape : ∃ size, LoanTyping.HasType env loans original.context false word.term .u64 ∧
-      LoanTyping.HasType env loans original.context true evidence (.lt word.term size) ∧
-      LoanTyping.Conversion.Conv env (.natural (heap.metadata.length object)) (size.subst meanings) := by
-    cases reference with
-    | bound =>
-        cases selected
-        have same : borrowedObject = object := Option.some.inj (borrowed.symm.trans leased)
-        subst object
-        obtain ⟨size,ownerTyped,indexTyped,bound⟩ := typed.named_index_owner history.wellFormed
-        have exactSize : OwnerSize env heap.metadata borrowedObject (.buffer (size.subst meanings)) := by
-          simpa only [Term.subst,substArgs,Op.binders,liftSub] using sizes.typed_variable history ownerTyped stored
-        exact ⟨size,indexTyped,bound,exactSize.buffer_length history⟩
-    | captured slot =>
-        exact captured_index_size history typed context aligned references (selected_capture selected) leased
-  obtain ⟨size,indexTyped,evidenceTyped,physical⟩ := indexShape
+  obtain ⟨size,indexTyped,evidenceTyped,physical⟩ := reference_index_typing reference word history typed
+    context aligned sizes references stored borrowed selected leased
   obtain ⟨depth,_,indexReceipt,_,indexProjected,_⟩ := LoanTyping.ResourceQuantity.projectRaw_index_operands checked
   have indexClosed : LoanClosingTyped env loans false (original.child word.term) meanings .u64 :=
     ⟨context.closing,.u64,indexTyped,by
       simpa only [Term.subst,substArgs] using (show LoanTyping.Conversion.Conv env .u64 .u64 from .refl _)⟩
   obtain ⟨_,converted,_,runIndex⟩ := word.checked_run_under_binder history indexClosed context aligned
     indexProjected offsetValue domain readerBody origin (some (.reference fresh))
-  obtain ⟨left,right,proof⟩ := decision
-  have evidenceClosed : LoanTyping.HasType env [] [] true (.decide left right)
+  have evidenceClosed : LoanTyping.HasType env [] [] true (evidence.subst meanings)
       (.lt (word.term.subst meanings) (size.subst meanings)) := by
-    simpa only [proof,Term.subst,substArgs,Op.binders,liftSub] using
+    simpa only [Term.lt,Term.subst,substArgs,Op.binders,liftSub] using
       evidenceTyped.ghostSubstitution history.wellFormed context.closing
-  have within := evidenceClosed.decide_converted_bound history.wellFormed.admissible converted physical
+  have within : offset < heap.metadata.length object :=
+    Semantics.LoanArithmetic.supported_affine_bound history.wellFormed (.literal offset)
+      evidenceClosed supported converted physical.symm (fun _ => 0)
   have read : heap.read token offset = some (heap.cell object offset) := by
     unfold SizedBufferHeap.IndexedState.read
     rw [leased]
@@ -229,7 +248,7 @@ theorem checked_run (tree : LoanedArithmetic)
     (stored : original.values[owner]? = some (some (.owner object)))
     (leased : heap.metadata.heap.lease fresh = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw depth env loans original.context (tree.specialized owner) = some receipt)
-    (evidence : tree.DecideEvidence meanings)
+    (evidence : tree.ArithmeticEvidence meanings)
     (observed : tree.replay original heap fresh meanings = some observation)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
@@ -297,7 +316,7 @@ theorem reachable_loaned_arithmetic_restore (program : Term) (fuel : Nat) (tree 
     (slots : LoanSlots code loans (run fuel (initial program)).state.activeStack)
     (coverage : LoanCoverage code loans (run fuel (initial program)).state.activeStack)
     (entered : Loans.Entered code.context.length loans)
-    (evidence : tree.DecideEvidence meanings)
+    (evidence : tree.ArithmeticEvidence meanings)
     (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some receipt)
     (budget : LoanTyping.ResourceQuantity.LoanBudget code.context.length loans receipt)
     (world : OwnerDemandWorld (run fuel (initial program)).state.heap.metadata code receipt)

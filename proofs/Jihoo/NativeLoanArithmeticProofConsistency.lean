@@ -167,6 +167,17 @@ theorem no_supported_less_zero (wf : UnifiedProgram.EnvWellFormed env)
     (typed : LoanTyping.HasType env loans ctx mode term (.lt left (.natural 0)))
     (supported : Supported term) : False := (supported_truth wf typed supported).less_zero_impossible wf
 
+/-- Interpret a checked arithmetic bound after converting its index to an
+affine expression and its upper endpoint to the physical length. -/
+theorem supported_affine_bound (wf : UnifiedProgram.EnvWellFormed env) (index : Expr)
+    (typed : LoanTyping.HasType env loans ctx mode term (.lt left right))
+    (supported : Supported term) (leftValue : RawLend.Conv env left index.toTerm)
+    (rightValue : RawLend.Conv env right (.natural length)) (assignment : Nat → Nat) :
+    index.eval assignment < length := by
+  have truth := (supported_truth wf typed supported).convert
+    (.node .lt (.cons leftValue (.cons rightValue .nil)))
+  exact truth.affine_less wf index (.literal length) assignment
+
 /-- Evaluate through the independently proved typed contextual path from the
 real mixed history. Only the actual residual needs arithmetic syntax. Raw
 normalization success alone does not supply this typing-preserving path. -/

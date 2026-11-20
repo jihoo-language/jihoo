@@ -10495,3 +10495,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.OpenDependentTransport.checked_global_open_transport_truth
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.OpenDependentTransport.open_inequality_truth
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.OpenDependentTransport.checked_open_beta_transport_bytes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.supported_affine_bound
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.reference_index_typing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.UnsignedOperand.checked_value_of_arithmetic_bound
