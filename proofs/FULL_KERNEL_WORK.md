@@ -4111,3 +4111,12 @@ Both recursively checked fixtures reproduce the successful native graphs,
 budgets and rejection states from the standalone checks. The focused
 build passed 440 jobs and the updated soundness theorem and both fixtures
 use only standard Lean axioms.
+
+### Aggregate check of recursive Take and Fold
+
+At `d73277e`, 1,152 Lake jobs and the generated fixture comparisons passed.
+The audit covered 10,662 declarations, with 527 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,846.1 MiB.
