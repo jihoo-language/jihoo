@@ -4337,3 +4337,13 @@ arithmetic rules justify both changes. The native and Lean fixtures
 match the appended rows and all five visits, including failure before
 any append with a four-tick budget. The focused build passed 406 jobs
 and the seven audited declarations use standard Lean axioms.
+
+### Correspondence to checked data-case signatures
+
+The same mixed declaration history authenticates the native constructor
+root and the semantic case type. Opening both telescopes with the same
+parameters preserves conversion at every retained field and result
+index. The theorem now converts the emitted graph type to the expected
+nonrecursive branch type from the checked family table. The focused
+build passed 336 jobs and the six audited additions use standard Lean
+axioms.

@@ -45,6 +45,23 @@ private theorem family_root_lookup {index : Nat} {row : FamilyRoots}
       exact ⟨_,rfl,first⟩
     | succ index => exact ih selected
 
+/-- The written family row and the checked table use the same declaration
+width and kind. -/
+theorem checked_family_layout {family : Nat} {row : FamilyRoots}
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : RepresentsFamilies arena familyRows familyTerms)
+    (selected : familyRows[family]? = some row) :
+    ∃ entry, env.families[family]? = some entry ∧ entry.declaration.data = row.data ∧
+      entry.declaration.params = row.params ∧ entry.declaration.arity = row.arity := by
+  obtain ⟨source,foundSource,represented⟩ := family_root_lookup rows selected
+  have declared : (familyTerms.map NativeLoanMixedAdmission.declaration)[family]? =
+      some (NativeLoanMixedAdmission.declaration source) := by
+    simp only [List.getElem?_map,foundSource,Option.map_some]
+  obtain ⟨entry,found,original⟩ := declared_family_lookup history declared
+  exact ⟨entry,found,by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.1,
+    by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.2.1,
+    by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.2.2.1⟩
+
 private theorem constructor_root_lookup {index root : Nat}
     (rows : RepresentsList arena refs terms) (selected : refs[index]? = some root) :
     ∃ term, terms[index]? = some term ∧ Represents arena root term := by

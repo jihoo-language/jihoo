@@ -10782,3 +10782,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostVariableAddition.open_sum_matches_native_graph
+#print axioms Jihoo.NativeKernel.NativeCoreConstructorTelescopeAlignment.checked_family_layout
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.parameters_preserve_conversion
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.expanded_parameters
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.checked_opened_telescope
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.nonrecursive_case_matches
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.run_matches_checked_case

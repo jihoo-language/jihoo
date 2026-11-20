@@ -1345,6 +1345,7 @@ import Jihoo.NativeCoreDataMotiveInference
 import Jihoo.NativeCorePropCaseType
 import Jihoo.NativeCoreDataCaseResult
 import Jihoo.NativeCoreDataCaseTelescope
+import Jihoo.NativeCoreDataCaseAlignment
 import Jihoo.NativeCorePropSignatureConversion
 import Jihoo.NativeCorePropSignatureAuthentication
 import Jihoo.NativeCoreGhostPropCases
