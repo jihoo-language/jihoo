@@ -3469,6 +3469,18 @@ receipt through a leading telescope for both relevant and erased entry.
 The focused build passed 407 jobs. Both entry theorems use only standard
 Lean axioms.
 
+### Aggregate check of inequality inference and closure entry
+
+At `18e09eb`, the proof shell completed 1,117 Lake jobs, the generated
+fixture comparisons and the exact audit of 10,523 declarations. The audit
+found 526 axiom-free declarations and only standard axioms elsewhere.
+
+The rebuilt Jihoo 0.6.0 passed 89 kernel fixtures and 31 additional checks,
+with the offset inference assertions in the native schedule. Mixed checking
+passed 69 source fixtures and 55 exact-byte checks, including pure mixed
+admission of the native snapshot. The proof guard reported a peak sampled
+tree RSS of 4,762.9 MiB for the combined run.
+
 ### Proof irrelevance in dependent type comparison
 
 Two closed Type1 annotations apply the same bound type family to
