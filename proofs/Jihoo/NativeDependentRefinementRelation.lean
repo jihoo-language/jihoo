@@ -1,5 +1,8 @@
 import Jihoo.NativeDependentRelationalContexts
 import Jihoo.NativeDependentNumericCoherence
+import Jihoo.NativeLoanArithmeticProofConsistency
+import Jihoo.NativeLoanComparisonEvidence
+import Jihoo.NativeLoanIndexedPropositionModel
 
 set_option maxUniverseOffset 40
 
@@ -128,5 +131,70 @@ theorem dependent_pack_fibers_agree (predicate : Predicate env Γ)
     (first second : Carrier (predicate.code ⟨point,word⟩)) :
     family ⟨point,packed predicate point word first⟩ = family ⟨point,packed predicate point word second⟩ :=
   congrArg (fun value => family ⟨point,value⟩) (packed_proofs_agree predicate point first second)
+
+def literalUpperBound (env : Environment) (bound : Nat) : Predicate env (empty env).meaning :=
+  proposition env _ fun point => point.2.down < bound
+
+private def writtenUpperBound (bound : Nat) : Term :=
+  .lam false .u64 (.lt (.var 0) (.natural bound))
+
+/-- A checked Pack guarded by a literal upper bound reconstructs the
+concrete semantic inhabitant from its source judgment and arithmetic
+evidence. Its word interpretation is the original U64 literal. -/
+theorem checked_literal_pack_realizes (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : LoanTyping.HasType env loans [] mode
+      (.pack (writtenUpperBound bound) (.natural word) evidence) requested)
+    (supported : Semantics.LoanArithmetic.Supported evidence) :
+    ∃ meaning : Contextual.Tm (refinement (literalUpperBound env bound)).code,
+      Realizes (empty env) (refinement (literalUpperBound env bound))
+        (.pack (writtenUpperBound bound) (.natural word) evidence) meaning ∧
+      ∀ point, (meaning point).down.val = word := by
+  have unpacked : LoanTyping.HasType env loans [] mode
+      (.pack (writtenUpperBound bound) (.natural word) evidence) (.refine (writtenUpperBound bound)) :=
+    typed.convert typed.principalView.symm
+  have wordTyped := LoanTyping.compute_ghost_preservation wf
+    (.witnessPack (writtenUpperBound bound) (.natural word) evidence) (LoanTyping.HasType.witness unpacked)
+  have wordWidth : word < 2^64 := IndexedProposition.natural_bound wordTyped
+  have formed : LoanTyping.ComparisonEvidence.HasEvidence env []
+      (.app (writtenUpperBound bound) (.natural word)) evidence :=
+    LoanTyping.ComparisonEvidence.checked_evidence typed
+  have beta : RawLend.Conv env (.app (writtenUpperBound bound) (.natural word)) (.lt (.natural word) (.natural bound)) := by
+    have source : RawLend.Conv env (.app (writtenUpperBound bound) (.natural word))
+        ((Term.lt (.var 0) (.natural bound)).subst (single (.natural word))) :=
+      .old (.legacy (.beta false .u64 _ _))
+    simpa only [Term.lt,Term.natural,Term.subst,substArgs,Op.binders,liftSub,single] using source
+  have ordered : word < bound :=
+    Semantics.LoanArithmetic.supported_affine_bound wf (.literal word) (formed.2.convert beta)
+      supported (.refl _) (.refl _) (fun _ => 0)
+  let context := empty env
+  let predicate := literalUpperBound env bound
+  let numeral : Contextual.Tm (natural env context.meaning).code := Contextual.numeral word
+  let proofValue : Contextual.Tm (Contextual.typeSubst predicate.code (Contextual.pair Contextual.identity numeral)) :=
+    fun _ => ⟨⟨ordered⟩⟩
+  have realizedEvidence : Realizes context
+      (predicate.substitution (Contextual.pair Contextual.identity numeral)) evidence proofValue := by
+    intro _ _ _
+    exact True.intro
+  exact ⟨_, pack_realizes context predicate (numeral_realizes context word wordWidth)
+    realizedEvidence (writtenUpperBound bound), fun _ => rfl⟩
+
+theorem checked_literal_packs_have_same_meaning (wf : UnifiedProgram.EnvWellFormed env)
+    (leftTyped : LoanTyping.HasType env loans [] mode
+      (.pack (writtenUpperBound bound) (.natural word) leftEvidence) leftType)
+    (rightTyped : LoanTyping.HasType env loans [] mode
+      (.pack (writtenUpperBound bound) (.natural word) rightEvidence) rightType)
+    (leftSupported : Semantics.LoanArithmetic.Supported leftEvidence)
+    (rightSupported : Semantics.LoanArithmetic.Supported rightEvidence) :
+    ∃ meaning : Contextual.Tm (refinement (literalUpperBound env bound)).code,
+      Realizes (empty env) (refinement (literalUpperBound env bound))
+        (.pack (writtenUpperBound bound) (.natural word) leftEvidence) meaning ∧
+      Realizes (empty env) (refinement (literalUpperBound env bound))
+        (.pack (writtenUpperBound bound) (.natural word) rightEvidence) meaning := by
+  obtain ⟨first,leftRealized,firstWord⟩ := checked_literal_pack_realizes wf leftTyped leftSupported
+  obtain ⟨second,rightRealized,secondWord⟩ := checked_literal_pack_realizes wf rightTyped rightSupported
+  have same : first = second := by
+    funext point
+    exact congrArg ULift.up (Subtype.ext ((firstWord point).trans (secondWord point).symm))
+  exact ⟨first,leftRealized,same.symm ▸ rightRealized⟩
 
 end Jihoo.NativeKernel.Environment.Semantics.DependentRelation

@@ -3536,3 +3536,13 @@ of those trees yields pure conversion between the original inputs.
 The exact graph fixture compares two equality propositions in four ticks.
 The focused build passed 290 jobs and its three audited theorems use only
 standard Lean axioms.
+
+### Reconstructing checked literal refinement values
+
+For a checked Pack guarded by a literal upper bound, the original word
+projection supplies its U64 width. Typed proof extraction and arithmetic
+interpretation derive the predicate's truth from the source evidence.
+These facts construct the concrete value in the dependent relation.
+Two checked packs of the same literal with supported proofs of that bound
+share one interpretation. The focused build passed 384 jobs and both
+new theorems use only standard Lean axioms.

@@ -10525,3 +10525,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.projected_identity_converts
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.successful_identity_converts
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.nested_strict_identity_example
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_literal_pack_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_literal_packs_have_same_meaning
