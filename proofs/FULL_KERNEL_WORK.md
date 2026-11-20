@@ -3648,3 +3648,12 @@ transports this realization back to the original Pack. An admitted fixture
 hides both operands behind beta applications and realizes the word `3` in
 the original refinement fiber. The focused check passed 384 jobs, and both
 theorems use only standard Lean axioms.
+
+### Aggregate check of call telescopes and literal arithmetic
+
+At `62b0f7b`, 1,120 Lake jobs and the generated fixture comparisons passed.
+The exact audit covered 10,543 declarations, with 526 axiom-free and only
+standard Lean axioms in the others. The native kernel suite passed 89
+fixtures and 31 additional checks. Mixed checking passed 69 source fixtures
+and 55 exact-byte checks, including the pure admission of the native
+snapshot. Peak sampled process-tree RSS was 4,761.0 MiB.
