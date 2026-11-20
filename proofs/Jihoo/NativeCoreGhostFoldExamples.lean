@@ -32,4 +32,13 @@ theorem signed_and_owned_fold_schedule :
        owned.state.arena.size = 40 ∧ owned.state.arena[23]? = some (.node .buffer [0])) ∧
     (fold 128 0 14).result = .error (.outsideFragment 0) := by cbv
 
+private def recursive (limit root : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  NativeCoreGhostSpineInference.runWith normal [] 0 limit 32 [] ⟨input,0⟩ root
+
+/-- Dispatch from the written root, including its native entry tick, keeps
+all of the standalone checking schedule and rejection state. -/
+theorem recursive_dispatch_checks_schedule :
+    recursive 58 9 = fold 58 5 8 ∧ recursive 81 15 = fold 81 10 14 ∧ recursive 128 16 = fold 128 0 14 := by cbv
+
 end Jihoo.NativeKernel.NativeCoreGhostFoldExamples

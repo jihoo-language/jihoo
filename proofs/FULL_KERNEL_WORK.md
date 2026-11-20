@@ -4101,3 +4101,13 @@ term. The Fold branch receives its owner classification and body effect
 check through this interface. Its soundness theorem still derives typed
 ownership from checked boxed metadata. The focused build passed 456 jobs
 and the two new audited declarations use standard Lean axioms.
+
+### Recursive dispatch for Take and Fold
+
+The live ghost driver calls the checked `Take` and `Fold` branches from
+their original roots. Fold obtains the layout for its effect scan through
+the same checked visible family shape and boxed metadata as inference.
+Both recursively checked fixtures reproduce the successful native graphs,
+budgets and rejection states from the standalone checks. The focused
+build passed 440 jobs and the updated soundness theorem and both fixtures
+use only standard Lean axioms.

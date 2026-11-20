@@ -36,4 +36,13 @@ theorem take_checks_original_binders_and_result :
     escaped (take 256 20).result = true ∧
     (take 256 23).result = .error (.outsideFragment 23) := by cbv
 
+private def recursive (limit root : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  NativeCoreGhostSpineInference.runWith normal [] 0 limit 32 [] ⟨input,0⟩ root
+
+/-- Dispatch from the written root, including its native entry tick, keeps
+all of the standalone checking schedule and rejection state. -/
+theorem recursive_dispatch_checks_schedule :
+    recursive 95 16 = take 95 15 ∧ recursive 256 21 = take 256 20 ∧ recursive 256 24 = take 256 23 := by cbv
+
 end Jihoo.NativeKernel.NativeCoreGhostTakeExamples
