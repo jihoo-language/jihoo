@@ -10588,3 +10588,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.transfers_owner_demand
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ifLt_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.native_literal_subtraction_realizes
+#print axioms Jihoo.NativeKernel.NativeCoreGhostReferenceTypes.isBoxedAt_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostReferenceTypes.requireOwned_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostReferenceTypes.referenceTarget_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyKinds_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_buffer_reference_graph
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_family_reference_metadata

@@ -536,6 +536,73 @@ fn load_callback_inference() {
     assert_spent(&completed, "load inference uses 67 ticks")
 }
 
+fn reference_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let length = c.add(core.Term.Natural(2), span).unwrap()
+    let fill = c.add(core.Term.Integer(-7), span).unwrap()
+    let written = c.add(core.Term.Buffer(length), span).unwrap()
+    c.add(core.Term.Ref(written), span).unwrap()
+    let owner = c.add(core.Term.Alloc(length, fill), span).unwrap()
+    let borrowed = c.add(core.Term.Borrow(owner), span).unwrap()
+    c.add(core.Term.Deref(borrowed), span).unwrap()
+    c.add(core.Term.Universe(0), span).unwrap()
+    c
+}
+
+fn family_reference_fixture(recursive: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    c.add(core.Term.Natural(0), span).unwrap()
+    let family = c.add(core.Term.Ind(0, Vec(u32).new()), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let successor = c.add(core.Term.Pi(false, if recursive { family } else { word }, family), span).unwrap()
+    let local = c.add(core.Term.Var(0), span).unwrap()
+    let borrowed = c.add(core.Term.Borrow(local), span).unwrap()
+    c.add(core.Term.Deref(borrowed), span).unwrap()
+    c.push_family(core.Family { name: "Chain".to_string(), data: true, params: 0, arity: 0,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "End".to_string(), ty: family })
+    c.push_constructor(0, core.Constructor { name: "More".to_string(), ty: successor })
+    c.check().unwrap()
+    c
+}
+
+fn reference_inference() {
+    var form = reference_fixture()
+    spend(&form, 999991)
+    assert(form.infer(3, [], true, 32).unwrap() == 11, "Ref checks its sort and owned head")
+    assert_spent(&form, "Ref inference uses 9 ticks")
+
+    var loan = reference_fixture()
+    spend(&loan, 999988)
+    assert(loan.infer(5, [], true, 32).unwrap() == 13 && loan.term(13) == core.Term.Ref(12),
+        "Borrow retains the original inferred owner type")
+    assert_spent(&loan, "Borrow inference uses 12 ticks")
+
+    var read = reference_fixture()
+    spend(&read, 999984)
+    assert(read.infer(6, [], true, 32).unwrap() == 12 && read.term(12) == core.Term.Buffer(0),
+        "Deref reuses the target of the inferred reference")
+    assert_spent(&read, "Deref inference uses 16 ticks")
+
+    var boxed = family_reference_fixture(true)
+    let context = [core.Binding { ty: 1, erased: false }]
+    assert(boxed.is_boxed(0), "checking records the recursive data family as boxed")
+    spend(&boxed, 999992)
+    assert(boxed.infer(6, context, true, 32).unwrap() == 1 && boxed.term(10) == core.Term.Ref(1),
+        "Deref of a boxed family borrow retains the checked family type")
+    assert_spent(&boxed, "boxed family dereference uses 7 ticks after checking the family")
+
+    var flat = family_reference_fixture(false)
+    assert(!flat.is_boxed(0), "checking records a nonrecursive scalar family as flat")
+    spend(&flat, 999993)
+    assert(match flat.infer(5, context, true, 32) {
+        Err(e) => e.msg == "core: a borrow is of a buffer or heap data", _ => false
+    }, "the owned-head gate rejects a flat family")
+    assert(flat.node_count() == 10, "the rejected borrow appends no type")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -557,6 +624,7 @@ fn main() -> i32 {
     buffer_operation_inference()
     array_and_borrowed_index_inference()
     load_callback_inference()
+    reference_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreTypedEqual
 import Jihoo.NativeCoreGhostSort
+import Jihoo.NativeCoreGhostReferenceTypes
 import Jihoo.NativeCoreGhostLiteralAddition
 import Jihoo.NativeLoanTypeUniqueness
 
@@ -17,6 +18,7 @@ open NativeCoreCompare (FullyRetained)
 open NativeCoreBinderTraversal (VisitsFrom)
 open EnvironmentDelta (expand expandArgs)
 open NativeCoreGhostSort (DataFamilies)
+open NativeCoreGhostReferenceTypes
 
 structure GraphBinding where
   typeRoot : Nat
@@ -194,6 +196,31 @@ private def inferStore (infer : Infer) (normal : Visit) (limit depth : Nat) (sta
         (checkIndexEvidence infer normal limit depth afterValue index checked.1 proof).next fun afterProof proofPairs =>
           (append afterProof .buffer [checked.1]).next fun after result =>
             ⟨after,.ok ⟨result,checked.2 ++ (indexPairs ++ (valuePairs ++ proofPairs))⟩⟩
+
+private def checkOwnedType (normal : Visit) (isBoxed : Nat → Bool) (state : State)
+    (original inferred : Nat) : Outcome Unit :=
+  (NativeCoreGhostSort.sort normal state inferred).next fun afterSort sort =>
+    if sort = .type 0 then requireOwned normal isBoxed afterSort original original
+    else discard afterSort original
+
+private def inferReference (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool) (state : State)
+    (original : Nat) : Outcome Inferred :=
+  (infer state original).next fun afterType inferred =>
+    (checkOwnedType normal isBoxed afterType original inferred.typeRoot).next fun afterOwner _ =>
+      (append afterOwner (.universe 0) []).next fun after root =>
+        ⟨after,.ok ⟨root,inferred.compared⟩⟩
+
+private def inferBorrow (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool) (state : State)
+    (original : Nat) : Outcome Inferred :=
+  (infer state original).next fun afterType inferred =>
+    (requireOwned normal isBoxed afterType inferred.typeRoot original).next fun afterOwner _ =>
+      (append afterOwner .ref [inferred.typeRoot]).next fun after root =>
+        ⟨after,.ok ⟨root,inferred.compared⟩⟩
+
+private def inferDeref (infer : Infer) (normal : Visit) (state : State) (original : Nat) : Outcome Inferred :=
+  (infer state original).next fun afterType inferred =>
+    (referenceTarget normal afterType inferred.typeRoot original).next fun after root =>
+      ⟨after,.ok ⟨root,inferred.compared⟩⟩
 
 private def readIndexType (normal : Visit) (state : State) (subject typeRoot : Nat) : Outcome (Nat × Bool) :=
   (normal state typeRoot).next fun exposed root =>
@@ -436,7 +463,8 @@ def inferApp (infer : Infer) (normal : Visit) (limit childDepth : Nat) (state : 
 /-- The list reverses the compiler's physical list of bindings so that
 de Bruijn index zero looks up the newest binding. Visibility is shared
 by inference and all type normalization visits. -/
-def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (isData : Nat → Bool) :
+def runWithFamilyKinds (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
+    (isData isBoxed : Nat → Bool) :
     Nat → List GraphBinding → Infer
   | 0, _, state, root => tick limit 0 state root (fun entered => discard entered root)
   | depth + 1, ctx, state, root =>
@@ -461,88 +489,101 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node (.integer value) []) =>
             if -(2^63 : Int) ≤ value ∧ value < (2^63 : Int) then emit entered .i64 else discard entered root
         | some (.node .array [n]) | some (.node .buffer [n]) =>
-            inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferFixed (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               .u64 [n] (.universe 0) []
         | some (.node (.elements count) elements) =>
-            inferElements (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferElements (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               root count elements
         | some (.node .alloc [n, fill]) =>
-            inferAlloc (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered n fill
+            inferAlloc (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered n fill
         | some (.node .free [buffer, tail]) =>
-            inferFree (runWithData normal roots visible limit isData depth ctx) (normal depth) entered buffer tail
+            inferFree (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) entered buffer tail
         | some (.node .store [buffer, index, value, proof]) =>
-            inferStore (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferStore (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               buffer index value proof
         | some (.node .load [buffer, index, proof, continuation]) =>
-            inferLoad (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferLoad (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               buffer index proof continuation
+        | some (.node .ref [owner]) =>
+            inferReference (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (normal depth) isBoxed entered owner
+        | some (.node .borrow [owner]) =>
+            inferBorrow (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (normal depth) isBoxed entered owner
+        | some (.node .deref [reference]) =>
+            inferDeref (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (normal depth) entered reference
         | some (.node .index [subject, index, proof]) =>
-            inferIndex (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferIndex (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               subject index proof
         | some (.node .eq [a, b]) | some (.node .lt [a, b]) =>
-            inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferFixed (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .prop []
         | some (.node .refl [a]) =>
-            inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferFixed (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               .u64 [a] .eq [a, a]
         | some (.node .uadd [a, b]) =>
-            inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferFixed (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .u64 []
         | some (.node (.arith _) [a, b]) =>
-            inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferFixed (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               .i64 [a, b] .i64 []
         | some (.node .decide [a, b]) =>
-            inferDecide (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferDecide (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               root a b
         | some (.node .strict [a, b]) =>
-            inferStrict (runWithData normal roots visible limit isData depth ctx) entered a b
+            inferStrict (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) entered a b
         | some (.node .zeroLe [a]) =>
-            inferZeroLe (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered a
+            inferZeroLe (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered a
         | some (.node .usub [a, b, proof]) =>
-            inferSubtract (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferSubtract (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               a b proof
         | some (.node .ltAdd [a, b, delta, proof]) =>
-            inferOffsetProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               true a b delta proof
         | some (.node .ltCancel [a, b, delta, proof]) =>
-            inferOffsetProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               false a b delta proof
         | some (.node .ltLe [a, b, c, lower, upper]) =>
-            inferTransitiveProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferTransitiveProof (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               a b c lower upper
         | some (.node .ifEq [a, b, yes, no]) =>
-            inferConditional (runWithData normal roots visible limit isData depth ctx)
-              (fun assumption => runWithData normal roots visible limit isData depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (fun assumption => runWithFamilyKinds normal roots visible limit isData isBoxed depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered true a b yes no
         | some (.node .ifLt [a, b, yes, no]) =>
-            inferConditional (runWithData normal roots visible limit isData depth ctx)
-              (fun assumption => runWithData normal roots visible limit isData depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (fun assumption => runWithFamilyKinds normal roots visible limit isData isBoxed depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered false a b yes no
         | some (.node .refine [predicate]) =>
-            inferRefine (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered predicate
+            inferRefine (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered predicate
         | some (.node .pack [predicate, word, evidence]) =>
-            inferPack (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferPack (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               predicate word evidence
         | some (.node .transport [predicate, equality, payload]) =>
-            inferTransport (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+            inferTransport (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered
               predicate equality payload
         | some (.node .absurd [target, proof]) =>
-            inferAbsurd (runWithData normal roots visible limit isData depth ctx) (normal depth) entered target proof
+            inferAbsurd (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) entered target proof
         | some (.node .witness [subject]) =>
-            inferRefinementProjection (runWithData normal roots visible limit isData depth ctx) (normal depth) entered false subject
+            inferRefinementProjection (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) entered false subject
         | some (.node .proof [subject]) =>
-            inferRefinementProjection (runWithData normal roots visible limit isData depth ctx) (normal depth) entered true subject
+            inferRefinementProjection (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) entered true subject
         | some (.node (.pi erased) [a, b]) =>
-            inferBinding (runWithData normal roots visible limit isData depth ctx)
-              (runWithData normal roots visible limit isData depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (runWithFamilyKinds normal roots visible limit isData isBoxed depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered true erased a b
         | some (.node (.lam erased) [a, b]) =>
-            inferBinding (runWithData normal roots visible limit isData depth ctx)
-              (runWithData normal roots visible limit isData depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx)
+              (runWithFamilyKinds normal roots visible limit isData isBoxed depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered false erased a b
         | some (.node .app [f, a]) =>
-            inferApp (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered f a
+            inferApp (runWithFamilyKinds normal roots visible limit isData isBoxed depth ctx) (normal depth) limit depth entered f a
         | _ => discard entered root
+
+def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (isData : Nat → Bool) :
+    Nat → List GraphBinding → Infer :=
+  runWithFamilyKinds normal roots visible limit isData (fun _ => false)
 
 def runWith (normal : NormalAt) (roots : List Roots) (visible limit : Nat) : Nat → List GraphBinding → Infer :=
   runWithData normal roots visible limit (fun _ => false)
@@ -667,6 +708,41 @@ private theorem inferStore_progress
   apply next_progress (checkIndexEvidence_progress infers normalizes valueRoom) valueRoom
   intro _ _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem checkOwnedType_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (checkOwnedType normal isBoxed state original inferred) := by
+  unfold checkOwnedType
+  apply (NativeCoreGhostSort.sort_progress normalizes).next
+  intro sort
+  split
+  · exact requireOwned_progress normalizes
+  · exact Progress.atState _ _
+
+private theorem inferReference_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferReference infer normal isBoxed state original) := by
+  apply (infers _ _ room).next
+  intro inferred
+  exact (checkOwnedType_progress normalizes).next (fun _ => (append_progress _ _ _).next (fun _ => Progress.atState _ _))
+
+private theorem inferBorrow_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferBorrow infer normal isBoxed state original) := by
+  apply (infers _ _ room).next
+  intro inferred
+  exact (requireOwned_progress normalizes).next (fun _ => (append_progress _ _ _).next (fun _ => Progress.atState _ _))
+
+private theorem inferDeref_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferDeref infer normal state original) :=
+  (infers _ _ room).next (fun _ => (referenceTarget_progress normalizes).next (fun _ => Progress.atState _ _))
 
 private theorem readIndexType_progress
     (normalizes : ∀ state root, Progress limit state (normal state root)) :
@@ -1078,14 +1154,14 @@ private theorem tick_progress
 
 /-- Progress is a statement about the executable graph path, including
 rejected steps and failures before the eventual type has been instantiated. -/
-theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
+theorem runWithFamilyKinds_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (runWithData normal roots visible limit isData depth bindings state root) := by
+    Progress limit state (runWithFamilyKinds normal roots visible limit isData isBoxed depth bindings state root) := by
   induction depth generalizing state root bindings with
   | zero => exact tick_progress (fun _ _ => Progress.atState _ _)
   | succ depth ih =>
-      simp only [runWithData]
+      simp only [runWithFamilyKinds]
       apply tick_progress
       intro entered within
       split
@@ -1117,6 +1193,9 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
         | exact inferFree_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStore_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferLoad_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferReference_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferBorrow_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferDeref_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferIndex_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
@@ -1137,6 +1216,12 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
             (fun state ref _ => normalProgress depth state ref) within
         | simpa only [discard] using (Progress.atState (limit := limit) entered
             (.error (.outsideFragment root) : Except NativeCorePureComputationNormal.Error Inferred))
+
+theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (runWithData normal roots visible limit isData depth bindings state root) :=
+  runWithFamilyKinds_progress normalProgress room
 
 theorem runWith_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
@@ -2014,6 +2099,114 @@ private theorem inferLoad_refines
   simp only [Term.load,expand,expandArgs]
   exact .load typedBuffer (typedIndex i List.mem_cons_self) typedProof
     (typedCallback.convert callbackConv) valueConv ownerConv resultConv removed (Or.inl rfl)
+
+private theorem checkOwnedType_refines
+    (metadata : BoxedFamilies env isBoxed) (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (onBase : Prefix base state.arena)
+    (owner : Represents state.arena original term) (inferredType : Represents state.arena inferred written)
+    (success : (checkOwnedType normal isBoxed state original inferred).result = .ok ()) :
+    let after := (checkOwnedType normal isBoxed state original inferred).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.Conversion.Conv env (expand env written) (.univ 0) ∧ LoanTyping.Owned env (expand env term) := by
+  unfold checkOwnedType at success ⊢
+  obtain ⟨sort,sortOk,sortNext⟩ := Outcome.next_success success
+  rw [sortNext] at success ⊢
+  split at success
+  · rename_i shape
+    subst sort
+    obtain ⟨sortKept,sortBack,converted⟩ := NativeCoreGhostSort.sort_refines normalSound onBase inferredType sortOk
+    obtain ⟨ownerKept,ownerBack,owned⟩ := requireOwned_refines metadata normalSound (onBase.trans sortKept)
+      (owner.frame sortKept) success
+    exact ⟨sortKept.trans ownerKept,ownerBack ∘ sortBack,converted,owned⟩
+  · simp [discard] at success
+
+private theorem inferReference_refines
+    (metadata : BoxedFamilies env isBoxed) (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (owner : Represents state.arena original term)
+    (success : (inferReference infer normal isBoxed state original).result = .ok answer)
+    (ambient : Prefix (inferReference infer normal isBoxed state original).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.ref term) (inferReference infer normal isBoxed state original) answer := by
+  unfold inferReference at success ambient ⊢
+  obtain ⟨inferred,inferOk,inferNext⟩ := Outcome.next_success success
+  rw [inferNext] at success ambient ⊢
+  obtain ⟨⟨⟩,ownedOk,ownedNext⟩ := Outcome.next_success success
+  rw [ownedNext] at success ambient ⊢
+  obtain ⟨root,outputOk,outputNext⟩ := Outcome.next_success success
+  rw [outputNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := checkOwnedType normal isBoxed (infer state original).state original inferred.typeRoot
+  have ownedProgress := checkOwnedType_progress (state := (infer state original).state) (isBoxed := isBoxed)
+    (original := original) (inferred := inferred.typeRoot) normalProgress
+  have outputProgress := append_progress (limit := limit) checked.state (.universe 0) []
+  obtain ⟨inferKept,inferBack,_,inferredRep,ownerTyped⟩ := childSound onBase room owner inferOk
+    (ownedProgress.kept.trans (outputProgress.kept.trans ambient)) retained
+  obtain ⟨ownedKept,ownedBack,sortConv,owned⟩ := checkOwnedType_refines metadata normalSound
+    (onBase.trans inferKept) (owner.frame inferKept) inferredRep ownedOk
+  obtain ⟨outputKept,outputBack,resultRep⟩ := append_refines .nil rfl outputOk
+  refine ⟨inferKept.trans (ownedKept.trans outputKept),outputBack ∘ ownedBack ∘ inferBack,_,resultRep,?_⟩
+  simpa only [Term.ref,Term.univ,expand,expandArgs] using LoanTyping.HasType.refOwned (ownerTyped.convert sortConv) owned
+
+private theorem inferBorrow_refines
+    (metadata : BoxedFamilies env isBoxed) (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (owner : Represents state.arena original term)
+    (success : (inferBorrow infer normal isBoxed state original).result = .ok answer)
+    (ambient : Prefix (inferBorrow infer normal isBoxed state original).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.borrow term) (inferBorrow infer normal isBoxed state original) answer := by
+  unfold inferBorrow at success ambient ⊢
+  obtain ⟨inferred,inferOk,inferNext⟩ := Outcome.next_success success
+  rw [inferNext] at success ambient ⊢
+  obtain ⟨⟨⟩,ownedOk,ownedNext⟩ := Outcome.next_success success
+  rw [ownedNext] at success ambient ⊢
+  obtain ⟨root,outputOk,outputNext⟩ := Outcome.next_success success
+  rw [outputNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := requireOwned normal isBoxed (infer state original).state inferred.typeRoot original
+  have ownedProgress := requireOwned_progress (state := (infer state original).state) (isBoxed := isBoxed)
+    (root := inferred.typeRoot) (rejected := original) normalProgress
+  have outputProgress := append_progress (limit := limit) checked.state .ref [inferred.typeRoot]
+  obtain ⟨inferKept,inferBack,_,inferredRep,ownerTyped⟩ := childSound onBase room owner inferOk
+    (ownedProgress.kept.trans (outputProgress.kept.trans ambient)) retained
+  obtain ⟨ownedKept,ownedBack,owned⟩ :=
+    requireOwned_refines metadata normalSound (onBase.trans inferKept) inferredRep ownedOk
+  obtain ⟨outputKept,outputBack,resultRep⟩ := append_refines (.cons (inferredRep.frame ownedKept) .nil) rfl outputOk
+  refine ⟨inferKept.trans (ownedKept.trans outputKept),outputBack ∘ ownedBack ∘ inferBack,_,resultRep,?_⟩
+  simpa only [Term.borrow,Term.ref,expand,expandArgs] using LoanTyping.HasType.ghostBorrowOwned ownerTyped owned
+
+private theorem inferDeref_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (reference : Represents state.arena original term)
+    (success : (inferDeref infer normal state original).result = .ok answer)
+    (ambient : Prefix (inferDeref infer normal state original).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.deref term) (inferDeref infer normal state original) answer := by
+  unfold inferDeref at success ambient ⊢
+  obtain ⟨inferred,inferOk,inferNext⟩ := Outcome.next_success success
+  rw [inferNext] at success ambient ⊢
+  obtain ⟨root,exposedOk,exposedNext⟩ := Outcome.next_success success
+  rw [exposedNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  have targetProgress := referenceTarget_progress (state := (infer state original).state) (root := inferred.typeRoot)
+    (rejected := original) normalProgress
+  obtain ⟨inferKept,inferBack,_,inferredRep,referenceTyped⟩ :=
+    childSound onBase room reference inferOk (targetProgress.kept.trans ambient) retained
+  obtain ⟨targetKept,targetBack,_,targetRep,converted⟩ :=
+    referenceTarget_refines normalSound (onBase.trans inferKept) inferredRep exposedOk
+  refine ⟨inferKept.trans targetKept,targetBack ∘ inferBack,_,targetRep,?_⟩
+  simpa only [Term.deref,expand,expandArgs] using LoanTyping.HasType.ghostDerefOwned (referenceTyped.convert converted)
 
 private theorem readIndexType_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -3119,27 +3312,27 @@ private theorem global_refines (history : LoanTyping.MixedProgram.History defini
 
 /-- Every supported successful ghost inference derives the represented
 result type in the original expanded context. -/
-theorem runWithData_sound {normal : NormalAt}
-    (metadata : DataFamilies env isData)
+theorem runWithFamilyKinds_sound {normal : NormalAt}
+    (metadata : DataFamilies env isData) (boxedMetadata : BoxedFamilies env isBoxed)
     (history : LoanTyping.MixedProgram.History definitions declarations env)
     (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth)) :
-    InferSound env base ctx limit (runWithData normal roots visible limit isData depth bindings) := by
+    InferSound env base ctx limit (runWithFamilyKinds normal roots visible limit isData isBoxed depth bindings) := by
   induction depth generalizing base bindings ctx with
   | zero =>
       intro state root term answer final _ _ _ success _ _
       by_cases exhausted : limit < state.steps + 1 <;>
-        simp [runWithData, tick, NativeCoreUnsignedCancellation.tick, exhausted] at success
+        simp [runWithFamilyKinds, tick, NativeCoreUnsignedCancellation.tick, exhausted] at success
   | succ depth ih =>
       have child {later nextRows nextCtx} (kept : Prefix base later) (represented : ContextRep env later nextRows nextCtx) :
-          InferSound env later nextCtx limit (runWithData normal roots visible limit isData depth nextRows) :=
+          InferSound env later nextCtx limit (runWithFamilyKinds normal roots visible limit isData isBoxed depth nextRows) :=
         ih (NativeCoreNestedAliases.frame_definitions aligned kept) represented
           (fun d _ _ _ _ extension source success => normalSound d (kept.trans extension) source success)
-      have sameContext : InferSound env base ctx limit (runWithData normal roots visible limit isData depth bindings) :=
+      have sameContext : InferSound env base ctx limit (runWithFamilyKinds normal roots visible limit isData isBoxed depth bindings) :=
         child (.refl _) context
       intro state root term answer final onBase room source success ambient retained
-      simp only [runWithData] at success ambient ⊢
+      simp only [runWithFamilyKinds] at success ambient ⊢
       obtain ⟨entered, within⟩ := tick_success success
       rw [entered] at success ambient ⊢
       cases source with
@@ -3209,7 +3402,7 @@ theorem runWithData_sound {normal : NormalAt}
               apply inferFixed_refines (state := {state with steps := state.steps + 1})
                 (operand := .u64) (output := .universe 0) (depth := depth)
                 (normalSound depth) (normalProgress depth) sameContext
-                (fun _ _ budget => runWithData_progress normalProgress budget)
+                (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                 onBase within (.cons child .nil) rfl .nil rfl success ambient retained
               intro typed
               simp only [expand, expandArgs] at typed ⊢
@@ -3226,7 +3419,7 @@ theorem runWithData_sound {normal : NormalAt}
               apply inferFixed_refines (state := {state with steps := state.steps + 1})
                 (operand := .u64) (output := .eq) (depth := depth)
                 (normalSound depth) (normalProgress depth) sameContext
-                (fun _ _ budget => runWithData_progress normalProgress budget)
+                (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                 onBase within (.cons child .nil) rfl (.cons child (.cons child .nil)) rfl success ambient retained
               intro typed
               simp only [expand, expandArgs] at typed ⊢
@@ -3240,7 +3433,7 @@ theorem runWithData_sound {normal : NormalAt}
               dsimp only at success ambient ⊢
               exact inferZeroLe_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                 (normalSound depth) (normalProgress depth) sameContext
-                (fun _ _ budget => runWithData_progress normalProgress budget)
+                (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                 onBase within child success ambient retained
           case refine | witness | proof =>
             have length : refs.length = 1 := arity
@@ -3252,11 +3445,11 @@ theorem runWithData_sound {normal : NormalAt}
               first
               | exact inferRefine_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within childRep success ambient retained
               | exact inferRefinementProjection_refines (state := {state with steps := state.steps + 1})
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within childRep success ambient retained
           case pack =>
             have length : refs.length = 3 := arity
@@ -3271,7 +3464,7 @@ theorem runWithData_sound {normal : NormalAt}
                   dsimp only at success ambient ⊢
                   exact inferPack_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                     (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within predicateRep wordRep evidenceRep success ambient retained
           case transport =>
             have length : refs.length = 3 := arity
@@ -3286,7 +3479,7 @@ theorem runWithData_sound {normal : NormalAt}
                   dsimp only at success ambient ⊢
                   exact inferTransport_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                     (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within predicateRep equalityRep payloadRep success ambient retained
           case usub =>
             have length : refs.length = 3 := arity
@@ -3301,7 +3494,7 @@ theorem runWithData_sound {normal : NormalAt}
                   dsimp only at success ambient ⊢
                   exact inferSubtract_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                     (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within first second bound success ambient retained
           case eq | lt | uadd | arith =>
             have length : refs.length = 2 := arity
@@ -3315,7 +3508,7 @@ theorem runWithData_sound {normal : NormalAt}
                 apply inferFixed_refines (state := {state with steps := state.steps + 1})
                   (depth := depth)
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within (.cons first (.cons second .nil)) rfl .nil rfl success ambient retained
                 intro typed
                 simp only [expand, expandArgs] at typed ⊢
@@ -3325,7 +3518,7 @@ theorem runWithData_sound {normal : NormalAt}
           case elements count =>
             exact inferElements_refines (state := {state with steps := state.steps + 1}) (depth := depth)
               (normalSound depth) (normalProgress depth) sameContext
-              (fun _ _ budget => runWithData_progress normalProgress budget)
+              (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
               onBase within children success ambient retained
           case alloc =>
             have length : refs.length = 2 := arity
@@ -3338,7 +3531,7 @@ theorem runWithData_sound {normal : NormalAt}
                 dsimp only at success ambient ⊢
                 exact inferAlloc_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within countRep fillRep success ambient retained
           case free =>
             have length : refs.length = 2 := arity
@@ -3351,7 +3544,7 @@ theorem runWithData_sound {normal : NormalAt}
                 dsimp only at success ambient ⊢
                 exact inferFree_refines (state := {state with steps := state.steps + 1})
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within bufferRep tailRep success ambient retained
           case load =>
             have length : refs.length = 4 := arity
@@ -3368,8 +3561,25 @@ theorem runWithData_sound {normal : NormalAt}
                     dsimp only at success ambient ⊢
                     exact inferLoad_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                       history.wellFormed (normalSound depth) (normalProgress depth) sameContext
-                      (fun _ _ budget => runWithData_progress normalProgress budget)
+                      (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                       onBase within bufferRep indexRep proofRep continuationRep success ambient retained
+          case ref | borrow | deref =>
+            have length : refs.length = 1 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> simp at length
+            cases children with
+            | cons childRep tail =>
+              cases tail
+              dsimp only at success ambient ⊢
+              first
+              | exact inferReference_refines (state := {state with steps := state.steps + 1}) boxedMetadata
+                  (normalSound depth) (normalProgress depth) sameContext
+                  onBase within childRep success ambient retained
+              | exact inferBorrow_refines (state := {state with steps := state.steps + 1}) boxedMetadata
+                  (normalSound depth) (normalProgress depth) sameContext
+                  onBase within childRep success ambient retained
+              | exact inferDeref_refines (state := {state with steps := state.steps + 1})
+                  (normalSound depth) (normalProgress depth) sameContext
+                  onBase within childRep success ambient retained
           case index =>
             have length : refs.length = 3 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
@@ -3383,7 +3593,7 @@ theorem runWithData_sound {normal : NormalAt}
                   dsimp only at success ambient ⊢
                   exact inferIndex_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                     (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within subjectRep indexRep proofRep success ambient retained
           case store =>
             have length : refs.length = 4 := arity
@@ -3400,7 +3610,7 @@ theorem runWithData_sound {normal : NormalAt}
                     dsimp only at success ambient ⊢
                     exact inferStore_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                       (normalSound depth) (normalProgress depth) sameContext
-                      (fun _ _ budget => runWithData_progress normalProgress budget)
+                      (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                       onBase within bufferRep indexRep valueRep proofRep success ambient retained
           case absurd =>
             have length : refs.length = 2 := arity
@@ -3413,7 +3623,7 @@ theorem runWithData_sound {normal : NormalAt}
                 dsimp only at success ambient ⊢
                 exact inferAbsurd_refines (state := {state with steps := state.steps + 1})
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within targetRep proofRep success ambient retained
           case decide | strict =>
             have length : refs.length = 2 := arity
@@ -3427,10 +3637,10 @@ theorem runWithData_sound {normal : NormalAt}
                 first
                 | exact inferDecide_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                     (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within first second success ambient retained
                 | exact inferStrict_refines (state := {state with steps := state.steps + 1}) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within first second success ambient retained
           case ltAdd | ltCancel =>
             have length : refs.length = 4 := arity
@@ -3447,7 +3657,7 @@ theorem runWithData_sound {normal : NormalAt}
                     dsimp only at success ambient ⊢
                     exact inferOffsetProof_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                       (normalSound depth) (normalProgress depth) sameContext
-                      (fun _ _ budget => runWithData_progress normalProgress budget)
+                      (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                       onBase within leftRep rightRep deltaRep proofRep success ambient retained
           case ltLe =>
             have length : refs.length = 5 := arity
@@ -3466,7 +3676,7 @@ theorem runWithData_sound {normal : NormalAt}
                       dsimp only at success ambient ⊢
                       exact inferTransitiveProof_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                         (normalSound depth) (normalProgress depth) sameContext
-                        (fun _ _ budget => runWithData_progress normalProgress budget)
+                        (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                         onBase within leftRep middleRep rightRep lowerRep upperRep success ambient retained
           case ifLt | ifEq =>
             have length : refs.length = 4 := arity
@@ -3483,8 +3693,8 @@ theorem runWithData_sound {normal : NormalAt}
                     dsimp only at success ambient ⊢
                     apply inferConditional_refines (state := {state with steps := state.steps + 1}) (depth := depth)
                       history.wellFormed (normalSound depth) (normalProgress depth) sameContext
-                      (fun _ _ budget => runWithData_progress normalProgress budget) ?_
-                      (fun _ _ _ budget => runWithData_progress normalProgress budget)
+                      (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget) ?_
+                      (fun _ _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                       onBase within leftRep rightRep thenRep alternativeRep success ambient retained
                     intro entered assumption kept represented
                     have extended := onBase.trans kept
@@ -3505,8 +3715,8 @@ theorem runWithData_sound {normal : NormalAt}
                 dsimp only at success ambient ⊢
                 apply inferBinding_refines (state := {state with steps := state.steps + 1}) metadata
                   (normalSound depth) (normalProgress depth) sameContext
-                  (fun _ _ budget => runWithData_progress normalProgress budget) ?_
-                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget) ?_
+                  (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                   onBase within domainRep bodyRep success ambient retained
                 intro later kept
                 have extended := onBase.trans kept
@@ -3526,8 +3736,17 @@ theorem runWithData_sound {normal : NormalAt}
                   cases tail
                   exact inferApp_refines (state := {state with steps := state.steps + 1})
                     history.wellFormed (normalSound depth) (normalProgress depth) sameContext
-                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    (fun _ _ budget => runWithFamilyKinds_progress normalProgress budget)
                     onBase within fn arg success ambient retained
+
+theorem runWithData_sound {normal : NormalAt}
+    (metadata : DataFamilies env isData)
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx)
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth)) :
+    InferSound env base ctx limit (runWithData normal roots visible limit isData depth bindings) :=
+  runWithFamilyKinds_sound metadata (fun _ found => by cases found) history aligned context normalProgress normalSound
 
 theorem runWith_sound {normal : NormalAt}
     (history : LoanTyping.MixedProgram.History definitions declarations env)
@@ -3555,8 +3774,8 @@ def CheckedInferences (snapshot : NativeFamilyWire.Snapshot) (env : Environment)
   ∀ {index limit depth initial : Nat} {row : Roots},
     snapshot.definitions[index]? = some row →
     let start : State := ⟨snapshot.arena, initial⟩
-    let output := runWithData (normalize index limit) snapshot.definitions index limit
-      (NativeCoreGhostSort.isDataAt env) depth [] start row.valueRoot
+    let output := runWithFamilyKinds (normalize index limit) snapshot.definitions index limit
+      (NativeCoreGhostSort.isDataAt env) (isBoxedAt env) depth [] start row.valueRoot
     initial ≤ limit →
       Progress limit start output ∧
       ∀ answer, output.result = .ok answer → RetainedComparisons output.state.arena answer →
@@ -3590,11 +3809,11 @@ theorem admitted_program_infers_with
     NativeLoanMixedAdmission.checkBytes_sound admitted
   refine ⟨snapshot, definitions, familyTerms, env, exactBytes, history, ?_⟩
   intro index limit depth initial row found start output room
-  refine ⟨runWithData_progress (metered env snapshot index limit) room, ?_⟩
+  refine ⟨runWithFamilyKinds_progress (metered env snapshot index limit) room, ?_⟩
   intro answer success retained
   obtain ⟨entry, raw, recorded, source, typed⟩ := NativeCoreGlobalNormal.checked_definition_at aligned history found
   obtain ⟨kept, forwards, inferred, held, inferredTyped⟩ :=
-    runWithData_sound (NativeCoreGhostSort.isDataAt_sound env) history aligned .nil
+    runWithFamilyKinds_sound (NativeCoreGhostSort.isDataAt_sound env) (isBoxedAt_sound env) history aligned .nil
       (metered env snapshot index limit) (sound history aligned index limit)
       (.refl _) room source.2 success (.refl _) retained
   exact ⟨kept, forwards valid, entry, raw.value, inferred, recorded, source.2, held, inferredTyped,
@@ -4086,6 +4305,57 @@ theorem admitted_load_checks_dependent_callback :
        completed.state.arena[35]? = some (.var 2) ∧ completed.state.arena[36]? = some (.node .buffer [35]) ∧
        completed.result.map Inferred.typeRoot = .ok 2) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def referencesSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨7,3⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.integer (-7)) [],.node .buffer [0],.node .ref [2],
+    .node .alloc [0,1],.node .borrow [4],.node .deref [5],.node (.universe 0) []]
+
+/-- Ref checks its sort and ownership. Borrow retains the inferred type root
+and Deref exposes that root without allocating a new buffer type. -/
+theorem admitted_buffer_reference_graph :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot referencesSnapshot) = true ∧
+    (let form := run referencesSnapshot.definitions 0 9 32 [] ⟨referencesSnapshot.arena,0⟩ 3
+     form.state.steps = 9 ∧ form.result.map Inferred.typeRoot = .ok 11) ∧
+    (let loan := run referencesSnapshot.definitions 0 12 32 [] ⟨referencesSnapshot.arena,0⟩ 5
+     loan.state.steps = 12 ∧ loan.result.map Inferred.typeRoot = .ok 13 ∧
+       loan.state.arena[13]? = some (.node .ref [12])) ∧
+    (let read := run referencesSnapshot.definitions 0 16 32 [] ⟨referencesSnapshot.arena,0⟩ 6
+     read.state.steps = 16 ∧ read.result.map Inferred.typeRoot = .ok 12 ∧
+       read.state.arena[12]? = some (.node .buffer [0])) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def familyReferenceSnapshot (recursive : Bool) : NativeFamilyWire.Snapshot where
+  definitions := []
+  families := [⟨true,0,0,0,[1,3]⟩]
+  arena := #[.node (.natural 0) [],.node (.ind 0 0) [],.node .u64 [],
+    .node (.pi false) [if recursive then 1 else 2,1],.var 0,.node .borrow [4],.node .deref [5],
+    .node .u64 [],.node .u64 [],.node .u64 []]
+
+private def referenceEnvironment (recursive : Bool) : Option Environment := do
+  let (definitions,families) ← NativeFamilyWire.decodeProgram (familyReferenceSnapshot recursive)
+  LoanTyping.MixedProgram.checkProgram 64 128 definitions (families.map NativeLoanMixedAdmission.declaration)
+
+/-- The checked recursive family permits a ghost borrow and retains its
+original type. A checked flat family with the same arity rejects that borrow. -/
+theorem admitted_family_reference_metadata :
+    let boxed := (referenceEnvironment true).getD empty
+    let flat := (referenceEnvironment false).getD empty
+    let boxedSnapshot := familyReferenceSnapshot true
+    let flatSnapshot := familyReferenceSnapshot false
+    let borrowed := runWithFamilyKinds (NativeCoreExpandedFamilies.raw boxed boxedSnapshot.families [] 0 7)
+      [] 0 7 (NativeCoreGhostSort.isDataAt boxed) (isBoxedAt boxed) 32 [⟨1,false⟩] ⟨boxedSnapshot.arena,0⟩ 6
+    let rejected := runWithFamilyKinds (NativeCoreExpandedFamilies.raw flat flatSnapshot.families [] 0 4)
+      [] 0 4 (NativeCoreGhostSort.isDataAt flat) (isBoxedAt flat) 32 [⟨1,false⟩] ⟨flatSnapshot.arena,0⟩ 5
+    referenceEnvironment true = some boxed ∧ referenceEnvironment false = some flat ∧
+      isBoxedAt boxed 0 = true ∧ isBoxedAt flat 0 = false ∧
+      borrowed.state.steps = 7 ∧ borrowed.state.arena[10]? = some (.node .ref [1]) ∧
+      borrowed.result.map Inferred.typeRoot = .ok 1 ∧
+      rejected.state.steps = 4 ∧ rejected.state.arena = flatSnapshot.arena ∧
+      rejected.result = .error (.outsideFragment 4) := by
   cbv
 
 end Examples

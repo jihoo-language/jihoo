@@ -3813,3 +3813,16 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,769.9 MiB.
+
+### Metered ghost references and admitted family ownership
+
+Ghost Ref now checks the inferred sort and the actual owned head. Borrow
+uses the normalized head for the ownership check and retains the original
+inferred owner type in Ref. Deref exposes that Ref and returns the exact
+target root. Boxed-family metadata comes from the admitted program. An
+accepted recursive family permits Borrow, and a flat family rejects it.
+
+The rebuilt compiler agrees with the Lean examples at 9 ticks for Ref, 12
+for Borrow, 16 for the borrowed buffer's Deref and 7 for a boxed family
+borrow and Deref. The flat family rejection adds no rows. The focused
+build passed 428 jobs and all six new declarations use standard Lean axioms.
