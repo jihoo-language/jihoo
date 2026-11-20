@@ -1207,3 +1207,9 @@ import Jihoo.NativeCoreVariableBeta
 import Jihoo.NativeLoanLoadCallbackResources
 import Jihoo.NativeCoreUnsignedCanonical
 import Jihoo.NativeBindingMachineMutableFreeContinuation
+import Jihoo.NativeCoreUnsignedSoundness
+import Jihoo.NativeCorePureUnsignedSum
+import Jihoo.NativeCoreTransformExact
+import Jihoo.NativeLoanOpenProofNormalization
+import Jihoo.NativeBindingMachineMutableOwnerDemand
+import Jihoo.NativeBindingMachineMutableLoadOwnerDemand

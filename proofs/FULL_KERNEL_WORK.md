@@ -2404,3 +2404,37 @@ released slot. Full control-stack preservation continues beyond this entry.
 
 The aggregate check passed 1,026 Lake jobs, 9,666 declaration audits, and
 all generated fixture comparisons in 9.20 seconds with the warm cache.
+
+### Binder transformations, typed sums, and physical owner demand
+
+The live graph transformation now covers all 54 constructors for signed
+shift, binder-removing substitution, and rewrite without binder removal.
+Successful runs give the independent capture-avoiding tree meaning while
+preserving earlier rows and backward references. Visit accounting charges
+each source occurrence and each shifted replacement occurrence. A worked
+failure retains the earlier child's committed append.
+
+The two operand collections of Core.sum share depth, clock, atom pool,
+and the widened accumulator. Ghost sum construction preserves the exact
+original checked type and raw conversion when the collected pool has no
+root subtraction to cancel. It returns the sorted, canonically emitted
+result after reattaching every Strict prefix in the native wrapping order.
+The remaining cancellation rounds require a typed symbolic subtraction
+equation and the complete guarded branch.
+
+The open arithmetic proof fragment now derives finite successful replay
+from an actual typing derivation and the source grammar. It supports nested
+erased assumptions and arbitrary head chains of Strict, Free, and reflexive
+Transport. Its normalization gives the original proposition's arithmetic
+truth and rules out closed Lt(0,0) derivations in that grammar.
+
+Positive demand in the retained owner context entails a single live
+physical owner with no other demanded alias. Free derives liveness from
+this world and preserves the remaining world. An actual variable Load
+transfers the single unit to the restored binding, leaves older aliases of
+that owner at zero demand, and preserves unrelated live owner units. Both
+operations retain the original dependent continuation typing.
+
+The aggregate check passed 1,032 Lake jobs, 9,702 declaration audits, and
+all generated fixture comparisons in 70.92 seconds while rebuilding the
+affected dependencies.

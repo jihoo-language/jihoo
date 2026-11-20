@@ -76,6 +76,10 @@ private theorem computation_view (typed : HasType env loans ctx mode term type) 
   case dataElim => split <;> trivial
   case convert _ converted ih => exact ih.convert converted
 
+theorem HasType.uadd_inputs (typed : HasType env loans ctx mode (.uadd left right) type) :
+    HasType env [] ctx true left .u64 ∧ HasType env [] ctx true right .u64 ∧ Conversion.Conv env .u64 type :=
+  computation_view typed
+
 /-- The selected true arm receives the typed comparison of the original
 operands. Its evidence binder keeps the exact source proposition. -/
 theorem computed_ifLt_true_preserves (wf : UnifiedProgram.EnvWellFormed env)

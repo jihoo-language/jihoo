@@ -200,6 +200,33 @@ theorem run_refines (represented : Represents arena root term)
               exact ⟨1, ticked.1, ticked.2, ⟨[term], [], [], [root], [], .atom termKind,
                 .cons represented .nil, .nil, by simp, by simp, rfl⟩⟩
 
+/-- The collector in Core.sum starts the right walk with the left walk's
+pool and counter, giving both walks the same depth. -/
+def runOperands (arena : Arena) (limit depth initial left right : Nat) : Outcome Pool :=
+  match run arena limit depth initial left {} with
+  | (.error reason, spent) => (.error reason, spent)
+  | (.ok after, spent) => run arena limit depth spent right after
+
+theorem runOperands_refines (left : Represents arena a first) (right : Represents arena b second)
+    (ran : runOperands arena limit depth initial a b = (.ok after, spent)) :
+    ∃ visits, spent = initial + visits ∧ spent ≤ limit ∧ Agreement arena (.uadd first second) {} after (visits+1) := by
+  unfold runOperands at ran
+  rcases firstRun : run arena limit depth initial a {} with ⟨answer, afterLeft⟩
+  cases answer with
+  | error reason =>
+      simp only [firstRun] at ran
+      cases ran
+  | ok middle =>
+      simp only [firstRun] at ran
+      obtain ⟨leftVisits, counterLeft, _, ⟨leftAtoms, leftPending, leftUpdates, leftRefs, leftPrefixes,
+        leftTrace, leftAtomsRep, leftPendingRep, leftAtomsEq, leftPendingEq, leftWord⟩⟩ := run_refines left firstRun
+      obtain ⟨rightVisits, counterRight, within, ⟨rightAtoms, rightPending, rightUpdates, rightRefs, rightPrefixes,
+        rightTrace, rightAtomsRep, rightPendingRep, rightAtomsEq, rightPendingEq, rightWord⟩⟩ := run_refines right ran
+      refine ⟨leftVisits + rightVisits, by omega, within, ?_⟩
+      exact ⟨_, _, _, _, _, .sum rfl leftTrace rightTrace, append_rep leftAtomsRep rightAtomsRep,
+        append_rep leftPendingRep rightPendingRep, by rw [rightAtomsEq, leftAtomsEq, List.append_assoc],
+        by rw [rightPendingEq, leftPendingEq, List.append_assoc], by rw [runWord_append, leftWord]; exact rightWord⟩
+
 private theorem literalVisits_append (first second : List Update) :
     literalVisits (first ++ second) = literalVisits first + literalVisits second := by
   induction first with
@@ -214,6 +241,28 @@ theorem Collects.literal_budget (collected : Collects term atoms pending updates
   | strict _ _ result => omega
   | literal _ => simp [literalVisits]
   | atom _ => simp [literalVisits]
+
+/-- Each operand walk pays for all its literal occurrences. The synthetic
+root used in the syntax witness does not contribute a paid visit. -/
+theorem Collects.sum_literal_budget (collected : Collects (.uadd a b) atoms pending updates (visits+1)) :
+    literalVisits updates ≤ visits := by
+  generalize original : (.uadd a b : Term) = source at collected
+  generalize count : visits + 1 = total at collected
+  cases collected with
+  | sum viewed first second =>
+      have left := first.literal_budget
+      have right := second.literal_budget
+      rw [literalVisits_append]
+      omega
+  | strict viewed _ =>
+      rw [← original] at viewed
+      cases viewed
+  | literal viewed =>
+      rw [← original] at viewed
+      cases viewed
+  | atom viewed =>
+      rw [← original] at viewed
+      cases viewed
 
 /-- Starting from an empty accumulator, the production tick ceiling
 guarantees exact U128 accumulation even when many visits share one node. -/

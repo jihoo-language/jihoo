@@ -194,4 +194,54 @@ theorem canonicalTerm_typed {terms : List Term} (atoms : ∀ t ∈ terms, LoanTy
           subst term
           exact number
 
+open ACU (Arithmetic sumTerms)
+
+private theorem naturalSum_linear (value : Nat) :
+    Arithmetic (naturalSum value) (sumTerms (List.replicate value (.natural 1))) := by
+  rw [naturalSum]
+  by_cases small : value < 2^64
+  · simp only [small, ite_true]
+    exact Arithmetic.literal_ones value small
+  · simp only [small, ite_false]
+    let left := value / 2
+    let right := value - left
+    have split : left + right = value := by dsimp [left, right]; omega
+    have combined := ((naturalSum_linear left).addCong (naturalSum_linear right)).trans
+      (Arithmetic.sumTerms_append (List.replicate left (.natural 1)) (List.replicate right (.natural 1)))
+    change Arithmetic (.uadd (naturalSum left) (naturalSum right))
+      (sumTerms (List.replicate left (.natural 1) ++ List.replicate right (.natural 1))) at combined
+    rw [List.replicate_append_replicate, split] at combined
+    by_cases equal : right = left
+    · change Arithmetic (.uadd (naturalSum left) (if right = left then naturalSum left else naturalSum right)) _
+      simpa only [equal, ite_true] using combined
+    · change Arithmetic (.uadd (naturalSum left) (if right = left then naturalSum left else naturalSum right)) _
+      simpa only [equal, ite_false] using combined
+termination_by value
+decreasing_by all_goals simp only [left, right] at * <;> omega
+
+private theorem fold_linear (first : Term) (tail : List Term) :
+    Arithmetic (tail.foldl Term.uadd first) (sumTerms (first :: tail)) := by
+  induction tail generalizing first with
+  | nil => exact (Arithmetic.zero first).symm
+  | cons later rest ih =>
+      exact (ih (.uadd first later)).trans (Arithmetic.assoc first later (sumTerms rest))
+
+/-- The graph fold's algebraic meaning is independent of sorting mode and
+contains one mathematical constant, with a symbolic linear presentation. -/
+theorem canonicalTerm_linear (runtime : Bool) (terms : List Term) (constant : Nat) :
+    Arithmetic (canonicalTerm runtime terms constant)
+      (sumTerms (terms ++ List.replicate constant (.natural 1))) := by
+  apply Arithmetic.trans _ (Arithmetic.sumTerms_perm ((orderedTerms_perm runtime terms).append_right _))
+  unfold canonicalTerm
+  cases sorted : orderedTerms runtime terms with
+  | nil => exact naturalSum_linear constant
+  | cons first rest =>
+      rw [emitTree]
+      by_cases zero : constant = 0
+      · simp only [zero, ite_true, List.append_nil, List.replicate_zero]
+        exact fold_linear first rest
+      · simp only [zero, ite_false, List.foldl_append, List.foldl_cons, List.foldl_nil]
+        exact ((fold_linear first rest).addCong (naturalSum_linear constant)).trans
+          (Arithmetic.sumTerms_append _ _)
+
 end Jihoo.NativeKernel.NativeCoreUnsignedCanonical
