@@ -1,4 +1,5 @@
 import Jihoo.NativeBindingMachineMutableLoanedArithmetic
+import Jihoo.NativeLoanArithmeticProofConsistency
 
 /-! A typed loaned reader computes its observation or reaches the exact
 arithmetic overflow prefix. Runtime progress does not take a result oracle. -/
@@ -6,6 +7,8 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open Jihoo.Quantity NativeQuantity CodeKinds
 
 namespace UnsignedOperand
+
+open AffineSum (Expr)
 
 /-- The mathematical sum before testing the machine-width bound. Source
 typing ensures that a used capture has the expected natural head. -/
@@ -65,6 +68,70 @@ theorem checked_value (operand : UnsignedOperand)
       change (if left.sum meanings+right.sum meanings < 2^64 then some _ else none) = _
       exact ite_eq_left bounded
 
+private theorem closed_affine (operand : UnsignedOperand)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanTyping.HasType env loans original.context false operand.term .u64)
+    (context : ValueContext env original meanings) (aligned : CodeAligned original) :
+    ∃ expression : Expr, operand.term.subst meanings = expression.toTerm ∧
+      expression.eval (fun _ => 0) = operand.sum meanings := by
+  induction operand with
+  | literal number =>
+      refine ⟨.literal number, ?_, rfl⟩
+      simp only [term, Term.natural, Term.subst, substArgs, Expr.toTerm]
+  | captured slot =>
+      obtain ⟨number, meaning, _⟩ := word_slot history typed context aligned
+      refine ⟨.literal number, ?_, by simp only [sum, meaning, Expr.eval]⟩
+      simpa only [term, Term.subst, Expr.toTerm] using meaning
+  | add left right leftRec rightRec =>
+      obtain ⟨leftTyped, rightTyped⟩ := typed.uadd_runtime_inputs
+      obtain ⟨a, leftTerm, leftValue⟩ := leftRec leftTyped
+      obtain ⟨b, rightTerm, rightValue⟩ := rightRec rightTyped
+      refine ⟨.add a b, ?_, ?_⟩
+      · simp only [term, Term.uadd, Term.subst, substArgs, Op.binders, liftSub, Expr.toTerm, leftTerm, rightTerm]
+      · simp only [sum, Expr.eval, leftValue, rightValue]
+
+/-- The checked inequality determines the index and length numerals.
+Affine conversion identifies the index with the mathematical sum of the
+runtime words, and the original length converts to the upper bound. -/
+theorem checked_index_bound_of_decide (operand : UnsignedOperand)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanTyping.HasType env loans original.context false operand.term .u64)
+    (context : ValueContext env original meanings) (aligned : CodeAligned original)
+    (bound : LoanTyping.HasType env loans original.context true evidence (.lt operand.term count))
+    (decision : ∃ left right, evidence.subst meanings = .decide left right) :
+    ∃ length,
+      LoanTyping.Conversion.Conv env (count.subst meanings) (.natural length) ∧
+      operand.sum meanings < length ∧ length < 2^64 := by
+  obtain ⟨left, right, decision⟩ := decision
+  have checked : LoanTyping.HasType env [] [] true (.decide left right)
+      (.lt (operand.term.subst meanings) (count.subst meanings)) := by
+    simpa only [decision, Term.lt, Term.subst, substArgs, Op.binders, liftSub] using
+      bound.ghostSubstitution history.wellFormed context.closing
+  obtain ⟨first, second, reduces, lengthReduces, _, lengthWidth, ordered⟩ := checked.decide_truth
+  have endpoints := checked.principalView.lt_injective history.wellFormed.admissible
+  have normalized := endpoints.1.symm.trans reduces
+  obtain ⟨expression, written, evaluated⟩ := operand.closed_affine history typed context aligned
+  rw [written] at normalized
+  have equal := Semantics.LoanArithmetic.affine_conversion_value history.wellFormed
+    expression (.literal first) normalized (fun _ => 0)
+  rw [evaluated] at equal
+  change operand.sum meanings = first at equal
+  exact ⟨second, endpoints.2.symm.trans lengthReduces, by rw [equal]; exact ordered, lengthWidth⟩
+
+theorem checked_value_of_decide (operand : UnsignedOperand)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (typed : LoanTyping.HasType env loans original.context false operand.term .u64)
+    (context : ValueContext env original meanings) (aligned : CodeAligned original)
+    (bound : LoanTyping.HasType env loans original.context true evidence (.lt operand.term count))
+    (decision : ∃ left right, evidence.subst meanings = .decide left right) :
+    operand.value meanings = some (operand.sum meanings) := by
+  obtain ⟨_, _, within, lengthWidth⟩ := operand.checked_index_bound_of_decide history typed context aligned bound decision
+  have width := Nat.lt_trans within lengthWidth
+  apply operand.checked_value history typed context aligned
+  cases operand with
+  | literal | captured => exact True.intro
+  | add => exact width
+
 end UnsignedOperand
 
 private theorem reference_kind_shape (admissible : EnvironmentDelta.Admissible env)
@@ -87,15 +154,13 @@ private theorem reference_kind_shape (admissible : EnvironmentDelta.Admissible e
 
 namespace LoanedArithmetic
 
-/-- This fragment uses Buffer references rather than Array captures at a
-read leaf. The only numeric premise is that an enclosing computed word
-sum fits. Scalar result width is decided during the actual run. -/
-def Ready (env : Environment) (loans : Loans.Stack) (ctx : Context) (meanings : Nat → Term) : LoanedArithmetic → Prop
+/-- A captured read uses a checked Buffer reference. Source evidence
+determines the width of each computed index. -/
+def Ready (env : Environment) (loans : Loans.Stack) (ctx : Context) : LoanedArithmetic → Prop
   | .literal _ => True
-  | .read .bound index _ => index.SumsFit meanings
-  | .read (.captured slot) index _ =>
-      index.SumsFit meanings ∧ ∃ count, LoanTyping.HasType env loans ctx false (.var slot) (.ref (.buffer count))
-  | .arithmetic _ left right => Ready env loans ctx meanings left ∧ Ready env loans ctx meanings right
+  | .read .bound _ _ => True
+  | .read (.captured slot) _ _ => ∃ count, LoanTyping.HasType env loans ctx false (.var slot) (.ref (.buffer count))
+  | .arithmetic _ left right => Ready env loans ctx left ∧ Ready env loans ctx right
 
 private theorem read_replay_ready (reference : ReaderReference) (word : UnsignedOperand)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
@@ -103,18 +168,19 @@ private theorem read_replay_ready (reference : ReaderReference) (word : Unsigned
     (context : ValueContext env original meanings) (aligned : CodeAligned original)
     (references : ReferenceSizes env heap.metadata original meanings)
     (freshLease : heap.metadata.heap.lease fresh = some object)
-    (ready : (.read reference word evidence : LoanedArithmetic).Ready env loans original.context meanings) :
+    (decision : ∃ left right, evidence.subst meanings = .decide left right)
+    (ready : (.read reference word evidence : LoanedArithmetic).Ready env loans original.context) :
     ∃ observation, (.read reference word evidence : LoanedArithmetic).replay original heap fresh meanings =
       some observation := by
-  obtain ⟨_,_,indexTyped,_⟩ := typed.index_inputs
+  obtain ⟨_, _, indexTyped, bound⟩ := typed.index_inputs
+  have offset := word.checked_value_of_decide history indexTyped context aligned bound decision
   cases reference with
   | bound =>
-      have offset := word.checked_value history indexTyped context aligned ready
       let payload := heap.cell object (word.sum meanings)
       refine ⟨⟨decodeInteger payload,[.legacy (.heap (.read fresh (word.sum meanings) payload))]⟩,?_⟩
       simp [replay,ReaderReference.token,freshLease,offset,bind,Option.bind,payload]
   | captured slot =>
-      obtain ⟨wordFits,count,referenceTyped⟩ := ready
+      obtain ⟨count, referenceTyped⟩ := ready
       have closed : LoanClosingTyped env loans false (original.child (.var slot)) meanings
           ((Term.ref (.buffer count)).subst meanings) :=
         ⟨context.closing,.ref (.buffer count),referenceTyped,.refl _⟩
@@ -123,7 +189,6 @@ private theorem read_replay_ready (reference : ReaderReference) (word : Unsigned
         simpa only [Term.subst,substArgs,Op.binders,liftSub] using kind
       obtain ⟨token,rfl⟩ := reference_kind_shape history.wellFormed.admissible referenceKind
       obtain ⟨target,_,lease,_,_,_⟩ := references.typed_variable history referenceTyped stored
-      have offset := word.checked_value history indexTyped context aligned wordFits
       change original.values[slot]? = some (some (.reference token)) at stored
       let payload := heap.cell target (word.sum meanings)
       refine ⟨⟨decodeInteger payload,[.legacy (.heap (.read token (word.sum meanings) payload))]⟩,?_⟩
@@ -171,7 +236,7 @@ theorem checked_progress (tree : LoanedArithmetic)
     (stored : original.values[owner]? = some (some (.owner object)))
     (leased : heap.metadata.heap.lease fresh = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw depth env loans original.context (tree.specialized owner) = some receipt)
-    (evidence : tree.DecideEvidence meanings) (ready : tree.Ready env loans original.context meanings)
+    (evidence : tree.DecideEvidence meanings) (ready : tree.Ready env loans original.context)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
     let state : State := ⟨heap,.evaluate (entry.child tree.term),stack,pending⟩
@@ -187,7 +252,7 @@ theorem checked_progress (tree : LoanedArithmetic)
       exact .inl ⟨_,observed,(LoanedArithmetic.literal number).checked_run history typed context aligned
         sizes references stored leased checked evidence observed domain readerBody origin stack pending⟩
   | read reference word bound =>
-      obtain ⟨observation,observed⟩ := read_replay_ready reference word history typed context aligned references leased ready
+      obtain ⟨observation,observed⟩ := read_replay_ready reference word history typed context aligned references leased evidence ready
       exact .inl ⟨observation,observed,(LoanedArithmetic.read reference word bound).checked_run history typed context
         aligned sizes references stored leased checked evidence observed domain readerBody origin stack pending⟩
   | arithmetic op left right leftRec rightRec =>
@@ -252,7 +317,7 @@ theorem reachable_loaned_arithmetic_progress (program : Term) (fuel : Nat) (tree
     (coverage : LoanCoverage code loans (run fuel (initial program)).state.activeStack)
     (entered : Loans.Entered code.context.length loans)
     (evidence : tree.DecideEvidence meanings)
-    (ready : tree.Ready env (Loans.enter code.context.length owner loans) code.context meanings)
+    (ready : tree.Ready env (Loans.enter code.context.length owner loans) code.context)
     (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some receipt)
     (budget : LoanTyping.ResourceQuantity.LoanBudget code.context.length loans receipt)
     (world : OwnerDemandWorld (run fuel (initial program)).state.heap.metadata code receipt)

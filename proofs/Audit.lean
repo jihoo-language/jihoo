@@ -10433,6 +10433,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.EqualityTransport.checked_family_and_universe_transport
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_arithmetic_operands
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.UnsignedOperand.checked_value
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.UnsignedOperand.checked_index_bound_of_decide
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.UnsignedOperand.checked_value_of_decide
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.replay_no_lifecycle
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.checked_progress
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_loaned_arithmetic_progress
