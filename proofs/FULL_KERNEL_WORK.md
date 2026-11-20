@@ -3965,3 +3965,12 @@ This derives capture liveness for the entered telescope from its initial
 world and the release trace. New slots still require checked facts about
 their mode, liveness, exclusivity and retired aliases. The focused build
 passed 414 jobs and the three new declarations use standard Lean axioms.
+
+### Aggregate check of constructor dispatch, declarations and call entry
+
+At `f1983c6`, 1,141 Lake jobs and the generated fixture comparisons passed.
+The audit covered 10,625 declarations, with 527 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,794.2 MiB.
