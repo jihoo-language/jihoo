@@ -1232,6 +1232,16 @@ fn dependent_lend_callbacks() {
     spend(&short, budget-18)
     assert(!short.infer(13, scope.as_slice(), true, 32).is_ok() && short.node_count() == 18,
         "one fewer checking tick leaves the final callback unbuilt")
+
+    var code = dependent_lend_fixture()
+    let typed = code.infer(13, scope.as_slice(), false, 32).unwrap()
+    assert(code.term(typed) == core.Term.I64, "the active reader permits borrowing the named owner in code")
+    var outside = dependent_lend_fixture()
+    let borrow = outside.add(core.Term.Borrow(0), diag.Span.nowhere()).unwrap()
+    let before = outside.node_count()
+    assert(!outside.infer(borrow, scope.as_slice(), false, 32).is_ok() && outside.node_count() == before,
+        "a code borrow outside its reader is rejected before appending a reference type")
+    assert(budget-remaining_ticks(&outside) == 1, "a code borrow with no active readers uses only its entry tick")
 }
 
 fn main() -> i32 {

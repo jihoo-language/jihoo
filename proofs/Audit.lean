@@ -10719,3 +10719,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeKind.firstOrder_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeKind.firstOrder_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeKind.kind_gates_revisit_domains_in_order
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.run_backward
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.reader_search_rebases_and_stops
+#print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.run_refines

@@ -4215,3 +4215,23 @@ build passed 427 jobs and the six new declarations use standard Lean
 axioms. The native type-family suite passed eight positive controls and
 nine diagnostic rejection cases at checking and at both optimization
 levels. The kind checks are verified as standalone stages.
+
+### Aggregate check through runtime kind inspection
+
+At `776c5ad`, 1,166 Lake jobs and the generated fixture comparisons passed.
+The audit covered 10,711 declarations. Of these, 528 are axiom-free and
+the others use standard Lean axioms. The native check passed 89 fixtures
+and 31 additional cases. Mixed checking passed 69 source fixtures and
+55 exact-byte comparisons. The native type-family suite passed its eight
+positive and nine rejection cases. Peak sampled RSS was 4,877.3 MiB.
+
+### Code borrowing checks the active reader stack
+
+The graph lookup searches the newest reader first and shifts each
+eligible owner's variable into the current context before comparing it.
+Its result equals the loan permission at the current context depth.
+The code borrow branch uses that permission and the original owner's
+ghost typing to form the reference at the original owner type. The
+native fixture accepts a borrow inside the named reader and rejects it
+outside the reader before extending the arena. The focused build passed
+359 jobs and the six audited additions use standard Lean axioms.
