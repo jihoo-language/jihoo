@@ -10634,3 +10634,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.capture_demand_survives
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.transfers_owner_demand_from_start
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_boxed_drop_checks_owner_and_tail
+#print axioms Jihoo.NativeKernel.NativeCoreCodeHeadInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeHeadInference.run_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeHeadInference.relevant_variable_shift_and_erased_rejection
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.runWithModes_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.runWithModes_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.scalarBodies_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.scalarBodies_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.admitted_word_definition_uses_code_body

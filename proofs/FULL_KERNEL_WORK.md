@@ -3985,3 +3985,18 @@ The native and Lean fixtures produce the same signed tail type in five
 ticks and reject the flat family in one tick with no graph append. The
 focused build passed 433 jobs. The new fixture and the updated recursive
 soundness theorem use only standard Lean axioms.
+
+### Code inference for local and scalar heads
+
+The code-mode head checker rejects an erased local after its entry tick.
+A relevant local shifts the original graph domain under its exact caller
+depth and produces the corresponding code typing derivation. Native and
+Lean agree on three ticks and two new rows for a dependent local domain,
+and one tick with no new rows for the erased access.
+
+The declaration driver now checks both modes with sound body visitors at
+the selected sort. Its word declaration uses the actual code-mode head
+checker and spends six ticks across the two original roots and comparison.
+The native exhaustion fixture also compares every committed proof check row.
+The focused build passed 439 jobs and the eight new audited declarations
+use only standard Lean axioms.

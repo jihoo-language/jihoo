@@ -736,6 +736,12 @@ fn ghost_definition_body_checking() {
     assert(short.require(2, 1, [], true, core.DEPTH).is_err(),
         "the final comparison consumes the remaining declaration step")
 
+    assert(short.node_count() == proof.node_count(), "exhaustion keeps the declaration graph length")
+    for row in 0..short.node_count() {
+        let root = row as u32
+        assert(short.term(root) == proof.term(root), "exhaustion keeps each committed declaration row")
+    }
+
     var program = annotated_fixture()
     program.extend().unwrap()
 }
@@ -760,6 +766,43 @@ fn boxed_drop_inference() {
     }, "Drop rejects a flat family before inferring the owner")
     assert(flat.node_count() == 12, "the flat-family rejection appends no graph row")
     assert_spent(&flat, "the flat-family rejection uses one tick")
+}
+
+fn code_local_fixture() -> core.Core {
+    var base = core.Core.new()
+    let span = diag.Span.nowhere()
+    let v = base.add(core.Term.Var(0), span).unwrap()
+    base.add(core.Term.Array(v), span).unwrap()
+    base.add(core.Term.Natural(5), span).unwrap()
+    base
+}
+
+fn code_local_inference() {
+    var relevant = code_local_fixture()
+    // Use the word root to spend ticks without entering the open context.
+    for _ in 0..999997 { relevant.normal(2, core.DEPTH).unwrap() }
+    let inferred = relevant.infer(0, [core.Binding { ty: 1, erased: false }], false, 16).unwrap()
+    assert(inferred == 4 && relevant.term(3) == core.Term.Var(1) && relevant.term(4) == core.Term.Array(3),
+        "a code variable shifts the original dependent domain into caller scope")
+    assert(relevant.normal(2, core.DEPTH).is_err(), "code variable inference uses three ticks")
+
+    var erased = code_local_fixture()
+    for _ in 0..999999 { erased.normal(2, core.DEPTH).unwrap() }
+    assert(match erased.infer(0, [core.Binding { ty: 1, erased: true }], false, 16) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    }, "code mode rejects an erased variable after the entry tick")
+    assert(erased.node_count() == 3 && erased.normal(2, core.DEPTH).is_err(),
+        "erased access retains the entire graph and consumes one tick")
+}
+
+fn code_word_definition() {
+    var word = annotated_fixture()
+    spend(&word, 999994)
+    let kind = word.infer(3, [], true, core.DEPTH).unwrap()
+    let exposed = word.normal(kind, core.DEPTH).unwrap()
+    assert(word.term(exposed) == core.Term.Universe(0), "the word definition uses code mode")
+    word.require(4, 3, [], false, core.DEPTH).unwrap()
+    assert_spent(&word, "the original word annotation and code body use six ticks on one clock")
 }
 
 fn main() -> i32 {
@@ -789,6 +832,8 @@ fn main() -> i32 {
     boxed_drop_inference()
     declaration_annotation_inference()
     ghost_definition_body_checking()
+    code_local_inference()
+    code_word_definition()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }
