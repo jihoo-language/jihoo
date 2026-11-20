@@ -4014,3 +4014,12 @@ for erased `Back`, and 48 for `Give`, and reject a borrowed result type.
 The focused build passed 439 jobs and the seven new declarations use only
 standard Lean axioms. These two branches are checked independently of
 dispatch in the full recursive driver.
+
+### Dependent realizations across exact graph normalization
+
+The raw family-aware normalizer in the authentic mixed history retains the
+original caller annotation and the realization of each semantic value at
+every related valuation. The theorem identifies the actual selected arena
+row, transports source typing to that residual and proves realization
+equivalence in the same dependent type. The focused build and the new
+theorem's standard-axiom audit passed.

@@ -10649,3 +10649,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runGive_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runGive_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples.owner_return_motive_and_result_schedule
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.raw_normalization_preserves_realization
