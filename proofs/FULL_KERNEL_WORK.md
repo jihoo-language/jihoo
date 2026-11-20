@@ -3772,3 +3772,15 @@ interpreted dependent family. The theorem uses literal source contraction
 after realizing the operands. General gluing for wide subtraction and the
 interpretation of all source derivations remain open. The focused build passed
 202 jobs and the nine new declarations use only standard Lean axioms.
+
+### Metered dependent Load callback inference
+
+Ghost Load checks the original buffer length, index and bound, then infers
+the actual successive value and owner binders. It shifts the open length
+once before comparing the owner domain and removes both binders from the
+normalized result. The source rule is reconstructed from the two checked
+domains and the exact lowering. The admitted fixture and the rebuilt
+compiler agree on the initial proof bound, the shifted owner domain and the
+original I64 result at 67 ticks, including the budget failure at the final
+lowering. The focused build passed 427 jobs and the new theorem uses only
+standard Lean axioms.

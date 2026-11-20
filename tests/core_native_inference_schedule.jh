@@ -493,6 +493,49 @@ fn array_and_borrowed_index_inference() {
     assert_spent(&borrowed, "borrowed indexing uses 34 ticks")
 }
 
+fn load_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    let length = c.add(core.Term.Var(0), span).unwrap()
+    let bound = c.add(core.Term.Lt(zero, length), span).unwrap()
+    let outside_length = c.add(core.Term.Var(1), span).unwrap()
+    let fill = c.add(core.Term.Integer(-7), span).unwrap()
+    let owner = c.add(core.Term.Alloc(outside_length, fill), span).unwrap()
+    let lifted_length = c.add(core.Term.Var(2), span).unwrap()
+    let buffer = c.add(core.Term.Buffer(lifted_length), span).unwrap()
+    let body = c.add(core.Term.Free(length, outside_length), span).unwrap()
+    let after_owner = c.add(core.Term.Lam(false, buffer, body), span).unwrap()
+    let callback = c.add(core.Term.Lam(false, signed, after_owner), span).unwrap()
+    let load = c.add(core.Term.Load(owner, zero, length, callback), span).unwrap()
+    let assume = c.add(core.Term.Lam(true, bound, load), span).unwrap()
+    c.add(core.Term.Lam(false, word, assume), span).unwrap()
+    let proof_function = c.add(core.Term.Pi(true, bound, signed), span).unwrap()
+    c.add(core.Term.Pi(false, word, proof_function), span).unwrap()
+    c
+}
+
+fn load_callback_inference() {
+    let context = [core.Binding { ty: 1, erased: false }, core.Binding { ty: 4, erased: true }]
+    var limited = load_fixture()
+    spend(&limited, 999934)
+    assert(match limited.infer(13, context, true, 32) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "load exhausts the budget lowering its callback result")
+    assert(limited.node_count() == 37 && limited.term(36) == core.Term.Buffer(35),
+        "load compared the shifted owner type before lowering the result")
+
+    var completed = load_fixture()
+    spend(&completed, 999933)
+    let result = completed.infer(13, context, true, 32).unwrap()
+    assert(result == 2 && completed.term(24) == core.Term.Lt(0, 5) &&
+        completed.term(35) == core.Term.Var(2) && completed.term(36) == core.Term.Buffer(35),
+        "load checks the original evidence and lifts the open buffer length into the callback")
+    assert_spent(&completed, "load inference uses 67 ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -513,6 +556,7 @@ fn main() -> i32 {
     array_and_allocation_inference()
     buffer_operation_inference()
     array_and_borrowed_index_inference()
+    load_callback_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

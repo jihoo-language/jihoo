@@ -10580,3 +10580,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.absurd_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtraction_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtractions_share_meaning
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_load_checks_dependent_callback

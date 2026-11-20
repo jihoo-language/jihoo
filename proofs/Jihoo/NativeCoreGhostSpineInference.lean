@@ -215,6 +215,43 @@ private def inferIndex (infer : Infer) (normal : Visit) (limit depth : Nat) (sta
           (append afterProof .i64 []).next fun after result =>
             ⟨after,.ok ⟨result,subjectType.compared ++ (indexPairs ++ proofPairs)⟩⟩
 
+private def lowerLoadType (limit depth : Nat) (state : State) (root : Nat) : Outcome Nat :=
+  liftTransform (NativeCoreTransformExact.run limit depth state root (.shift (-2)) 0)
+
+private def checkLoadDomains (normal : Visit) (limit depth : Nat) (state : State)
+    (length continuation valueDomain ownerDomain : Nat) : Outcome ((Nat × Nat) × (Nat × Nat)) :=
+  (append state .i64 []).next fun afterValue signed =>
+    (shiftType limit depth afterValue length 1).next fun afterShift lifted =>
+      (append afterShift .buffer [lifted]).next fun afterOwner buffer =>
+        (requireTypes normal limit depth afterOwner valueDomain signed continuation).next fun afterFirst first =>
+          (requireTypes normal limit depth afterFirst ownerDomain buffer continuation).next fun after second =>
+            ⟨after,.ok (first,second)⟩
+
+private def finishLoad (normal : Visit) (limit depth : Nat) (state : State)
+    (length continuation typeRoot : Nat) : Outcome Inferred :=
+  (normal state typeRoot).next fun exposed root =>
+    match exposed.arena[root]? with
+    | some (.node (.pi false) [valueDomain, rest]) =>
+      match exposed.arena[rest]? with
+      | some (.node (.pi false) [ownerDomain, result]) =>
+        (checkLoadDomains normal limit depth exposed length continuation valueDomain ownerDomain).next
+          fun afterCheck pairs =>
+            (normal afterCheck result).next fun normalized normalRoot =>
+              (lowerLoadType limit depth normalized normalRoot).next fun after outside =>
+                ⟨after,.ok ⟨outside,[pairs.1,pairs.2]⟩⟩
+      | _ => discard exposed continuation
+    | _ => discard exposed continuation
+
+private def inferLoad (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (buffer index proof continuation : Nat) : Outcome Inferred :=
+  (bufferLength infer normal state buffer).next fun afterBuffer checked =>
+    (checkFixed infer normal limit depth afterBuffer .u64 [index]).next fun afterIndex indexPairs =>
+      (checkIndexEvidence infer normal limit depth afterIndex index checked.1 proof).next fun afterProof proofPairs =>
+        (infer afterProof continuation).next fun afterContinuation inferred =>
+          (finishLoad normal limit depth afterContinuation checked.1 continuation inferred.typeRoot).next fun after result =>
+            ⟨after,.ok ⟨result.typeRoot,checked.2 ++ (indexPairs ++ (proofPairs ++
+              (inferred.compared ++ result.compared)))⟩⟩
+
 private def finishDecide (normal : Visit) (state : State) (root first second : Nat) : Outcome Nat :=
   (normal state first).next fun afterFirst left =>
     (normal afterFirst second).next fun afterSecond right =>
@@ -436,6 +473,9 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .store [buffer, index, value, proof]) =>
             inferStore (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               buffer index value proof
+        | some (.node .load [buffer, index, proof, continuation]) =>
+            inferLoad (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              buffer index proof continuation
         | some (.node .index [subject, index, proof]) =>
             inferIndex (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               subject index proof
@@ -654,6 +694,54 @@ private theorem inferIndex_progress
   apply next_progress (checkIndexEvidence_progress infers normalizes indexRoom) indexRoom
   intro _ _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem lowerLoadType_progress (limit depth : Nat) (state : State) (root : Nat) :
+    Progress limit state (lowerLoadType limit depth state root) :=
+  liftTransform_progress (NativeCoreTransformExact.run_progress limit depth state root (.shift (-2)) 0)
+
+private theorem checkLoadDomains_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (checkLoadDomains normal limit depth state length continuation valueDomain ownerDomain) := by
+  apply next_progress (append_progress _ _ _) room
+  intro _ _ valueRoom
+  apply next_progress (shiftType_progress _ _ _ _ _) valueRoom
+  intro _ _ shiftRoom
+  apply next_progress (append_progress _ _ _) shiftRoom
+  intro _ _ ownerRoom
+  apply next_progress (requireTypes_progress (fun state ref _ => normalizes state ref) ownerRoom) ownerRoom
+  intro _ _ firstRoom
+  exact (requireTypes_progress (fun state ref _ => normalizes state ref) firstRoom).next (fun _ => Progress.atState _ _)
+
+private theorem finishLoad_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (finishLoad normal limit depth state length continuation typeRoot) := by
+  unfold finishLoad
+  apply next_progress (normalizes _ _) room
+  intro _ _ exposedRoom
+  split
+  · split
+    · apply next_progress (checkLoadDomains_progress normalizes exposedRoom) exposedRoom
+      intro _ _ checkedRoom
+      exact (normalizes _ _).next (fun _ => (lowerLoadType_progress _ _ _ _).next (fun _ => Progress.atState _ _))
+    · exact Progress.atState _ _
+  · exact Progress.atState _ _
+
+private theorem inferLoad_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferLoad infer normal limit depth state buffer index proof continuation) := by
+  apply next_progress (bufferLength_progress infers normalizes room) room
+  intro _ _ bufferRoom
+  apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) bufferRoom) bufferRoom
+  intro _ _ indexRoom
+  apply next_progress (checkIndexEvidence_progress infers normalizes indexRoom) indexRoom
+  intro _ _ proofRoom
+  apply next_progress (infers _ _ proofRoom) proofRoom
+  intro _ _ continuationRoom
+  exact (finishLoad_progress normalizes continuationRoom).next (fun _ => Progress.atState _ _)
 
 private theorem finishDecide_progress
     (normalizes : ∀ state root, Progress limit state (normal state root)) :
@@ -1028,6 +1116,7 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
         | exact inferAlloc_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferFree_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStore_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferLoad_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferIndex_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
@@ -1730,6 +1819,201 @@ private theorem inferStore_refines
   simp only [expand,expandArgs] at typedIndex typedValue
   simp only [Term.store,expand,expandArgs]
   exact .store typedBuffer (typedIndex i List.mem_cons_self) (typedValue v List.mem_cons_self) typedProof
+
+private theorem checkLoadDomains_refines
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (lengthRep : Represents state.arena length n)
+    (valueRep : Represents state.arena valueDomain x)
+    (ownerRep : Represents state.arena ownerDomain b)
+    (success : (checkLoadDomains normal limit depth state length continuation valueDomain ownerDomain).result = .ok pairs)
+    (ambient : Prefix (checkLoadDomains normal limit depth state length continuation valueDomain ownerDomain).state.arena final)
+    (firstKept : PairRetained final pairs.1) (secondKept : PairRetained final pairs.2) :
+    let after := (checkLoadDomains normal limit depth state length continuation valueDomain ownerDomain).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.Conversion.Conv env (expand env x) .i64 ∧
+      LoanTyping.Conversion.Conv env (expand env b) (.buffer ((expand env n).rename Nat.succ)) := by
+  unfold checkLoadDomains at success ambient ⊢
+  obtain ⟨signed,signedOk,signedNext⟩ := Outcome.next_success success
+  rw [signedNext] at success ambient ⊢
+  obtain ⟨lifted,liftedOk,liftedNext⟩ := Outcome.next_success success
+  rw [liftedNext] at success ambient ⊢
+  obtain ⟨buffer,bufferOk,bufferNext⟩ := Outcome.next_success success
+  rw [bufferNext] at success ambient ⊢
+  obtain ⟨first,firstOk,firstNext⟩ := Outcome.next_success success
+  rw [firstNext] at success ambient ⊢
+  obtain ⟨second,secondOk,secondNext⟩ := Outcome.next_success success
+  rw [secondNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst pairs
+  let emitted := append state .i64 []
+  let shifted := shiftType limit depth emitted.state length 1
+  let assembled := append shifted.state .buffer [lifted]
+  let compared := requireTypes normal limit depth assembled.state valueDomain signed continuation
+  have signedRoom := (append_progress (limit := limit) state .i64 []).accepted room signed signedOk
+  have liftedRoom := (shiftType_progress limit depth emitted.state length 1).accepted signedRoom lifted liftedOk
+  have bufferRoom := (append_progress (limit := limit) shifted.state .buffer [lifted]).accepted liftedRoom buffer bufferOk
+  have firstProgress := requireTypes_progress (state := assembled.state) (limit := limit) (depth := depth)
+    (actual := valueDomain) (expected := signed) (argument := continuation) (fun state root _ => normalProgress state root) bufferRoom
+  have firstRoom := firstProgress.accepted bufferRoom first firstOk
+  have secondProgress := requireTypes_progress (state := compared.state) (limit := limit) (depth := depth)
+    (actual := ownerDomain) (expected := buffer) (argument := continuation) (fun state root _ => normalProgress state root) firstRoom
+  obtain ⟨signedPrefix,signedBack,signedRep⟩ := append_refines (op := .i64) .nil rfl signedOk
+  obtain ⟨liftedPrefix,liftedBack,liftedRep⟩ := shiftType_refines (lengthRep.frame signedPrefix) liftedOk
+  have throughShift := signedPrefix.trans liftedPrefix
+  obtain ⟨bufferPrefix,bufferBack,bufferRep⟩ := append_refines (.cons liftedRep .nil) rfl bufferOk
+  have throughBuffer := throughShift.trans bufferPrefix
+  obtain ⟨firstPrefix,firstBack,valueConv⟩ := requireTypes_refines normalSound (onBase.trans throughBuffer)
+    (valueRep.frame throughBuffer) (signedRep.frame (liftedPrefix.trans bufferPrefix)) firstOk (secondProgress.kept.trans ambient) firstKept
+  have throughFirst := throughBuffer.trans firstPrefix
+  obtain ⟨secondPrefix,secondBack,ownerConv⟩ := requireTypes_refines normalSound (onBase.trans throughFirst)
+    (ownerRep.frame throughFirst) (bufferRep.frame firstPrefix) secondOk ambient secondKept
+  refine ⟨throughFirst.trans secondPrefix,secondBack ∘ firstBack ∘ bufferBack ∘ liftedBack ∘ signedBack,
+    ?_,?_⟩
+  · simpa only [Term.i64,expand,expandArgs] using valueConv
+  · simpa only [Term.buffer,EnvironmentDelta.expand_node_cons,expandArgs,EnvironmentDelta.expand_renaming wf.admissible] using ownerConv
+
+private theorem finishLoad_refines
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (lengthRep : Represents state.arena length n) (typeRep : Represents state.arena typeRoot kType)
+    (success : (finishLoad normal limit depth state length continuation typeRoot).result = .ok answer)
+    (ambient : Prefix (finishLoad normal limit depth state length continuation typeRoot).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    let after := (finishLoad normal limit depth state length continuation typeRoot).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ valueDomain ownerDomain result written outside,
+        Represents after answer.typeRoot outside ∧
+        LoanTyping.Conversion.Conv env (expand env kType) (.pi false valueDomain (.pi false ownerDomain result)) ∧
+        LoanTyping.Conversion.Conv env valueDomain .i64 ∧
+        LoanTyping.Conversion.Conv env ownerDomain (.buffer ((expand env n).rename Nat.succ)) ∧
+        LoanTyping.Conversion.Conv env result written ∧
+        PartialRenaming.shift (-2) 0 written = some (expand env outside) := by
+  unfold finishLoad at success ambient ⊢
+  obtain ⟨root,exposedOk,exposedNext⟩ := Outcome.next_success success
+  rw [exposedNext] at success ambient ⊢
+  split at success
+  · rename_i valueDomain rest outer
+    simp only [outer] at ambient
+    split at success
+    · rename_i ownerDomain result inner
+      simp only [inner] at ambient
+      obtain ⟨pairs,domainsOk,domainsNext⟩ := Outcome.next_success success
+      rw [domainsNext] at success ambient ⊢
+      obtain ⟨normalRoot,resultOk,resultNext⟩ := Outcome.next_success success
+      rw [resultNext] at success ambient ⊢
+      obtain ⟨outside,loweredOk,loweredNext⟩ := Outcome.next_success success
+      rw [loweredNext] at success ambient ⊢
+      simp only [Except.ok.injEq] at success
+      subst answer
+      let exposed := normal state typeRoot
+      let checked := checkLoadDomains normal limit depth exposed.state length continuation valueDomain ownerDomain
+      let normalized := normal checked.state result
+      have exposedRoom := (normalProgress state typeRoot).accepted room root exposedOk
+      have resultProgress := normalProgress checked.state result
+      have lowerProgress := lowerLoadType_progress limit depth normalized.state normalRoot
+      obtain ⟨exposedPrefix,exposedBack,exposedType,exposedRep,typeConv⟩ := normalSound onBase typeRep exposedOk
+      obtain ⟨x,tail,shape,valueRep,tailRep⟩ := binary_read exposedRep outer
+      obtain ⟨b,r,tailShape,ownerRep,resultRep⟩ := binary_read tailRep inner
+      obtain ⟨checkedPrefix,checkedBack,valueConv,ownerConv⟩ := checkLoadDomains_refines wf normalSound normalProgress
+        (onBase.trans exposedPrefix) exposedRoom (lengthRep.frame exposedPrefix) valueRep ownerRep domainsOk
+        (resultProgress.kept.trans (lowerProgress.kept.trans ambient))
+        (retained pairs.1 (by simp)) (retained pairs.2 (by simp))
+      have throughCheck := exposedPrefix.trans checkedPrefix
+      obtain ⟨normalizedPrefix,normalizedBack,normalType,normalRep,resultConv⟩ := normalSound
+        (onBase.trans throughCheck) (resultRep.frame checkedPrefix) resultOk
+      obtain ⟨lowerPrefix,lowerBack,residual,removed,outsideRep⟩ :=
+        (NativeCoreTransformExact.run_refines (mode := .shift (-2)) (binders := 0) (value := normalType)
+          normalRep trivial (liftTransform_success loweredOk)).1
+      change PartialRenaming.shift (-2) 0 normalType = some residual at removed
+      have weakened := load_result_reweakens removed
+      have removedExpanded : PartialRenaming.shift (-2) 0 (expand env normalType) = some (expand env residual) := by
+        rw [← weakened,EnvironmentDelta.expand_renaming wf.admissible]
+        exact load_result_shifted (expand env residual)
+      refine ⟨throughCheck.trans (normalizedPrefix.trans lowerPrefix),
+        lowerBack ∘ normalizedBack ∘ checkedBack ∘ exposedBack,_,_,_,_,residual,outsideRep,?_,
+        valueConv,ownerConv,resultConv.converted,removedExpanded⟩
+      simpa only [shape,tailShape,Term.pi,EnvironmentDelta.expand_node_cons,expandArgs] using typeConv.converted
+    · simp [discard] at success
+  · simp [discard] at success
+
+private theorem inferLoad_refines
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (bufferRep : Represents state.arena buffer b) (indexRep : Represents state.arena index i)
+    (proofRep : Represents state.arena proof p) (continuationRep : Represents state.arena continuation k)
+    (success : (inferLoad infer normal limit depth state buffer index proof continuation).result = .ok answer)
+    (ambient : Prefix (inferLoad infer normal limit depth state buffer index proof continuation).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.load b i p k) (inferLoad infer normal limit depth state buffer index proof continuation) answer := by
+  unfold inferLoad at success ambient ⊢
+  obtain ⟨checked,bufferOk,bufferNext⟩ := Outcome.next_success success
+  rw [bufferNext] at success ambient ⊢
+  obtain ⟨indexPairs,indexOk,indexNext⟩ := Outcome.next_success success
+  rw [indexNext] at success ambient ⊢
+  obtain ⟨proofPairs,proofOk,proofNext⟩ := Outcome.next_success success
+  rw [proofNext] at success ambient ⊢
+  obtain ⟨inferred,continuationOk,continuationNext⟩ := Outcome.next_success success
+  rw [continuationNext] at success ambient ⊢
+  obtain ⟨result,resultOk,resultNext⟩ := Outcome.next_success success
+  rw [resultNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checkedBuffer := bufferLength infer normal state buffer
+  let checkedIndex := checkFixed infer normal limit depth checkedBuffer.state .u64 [index]
+  let checkedProof := checkIndexEvidence infer normal limit depth checkedIndex.state index checked.1 proof
+  let callback := infer checkedProof.state continuation
+  have bufferProgress := bufferLength_progress (state := state) (buffer := buffer) childProgress normalProgress room
+  have bufferRoom := bufferProgress.accepted room checked bufferOk
+  have indexProgress := checkFixed_progress (state := checkedBuffer.state) (operand := .u64) (args := [index])
+    (depth := depth) childProgress (fun state root _ => normalProgress state root) bufferRoom
+  have indexRoom := indexProgress.accepted bufferRoom indexPairs indexOk
+  have proofProgress := checkIndexEvidence_progress (state := checkedIndex.state) (index := index) (length := checked.1)
+    (proof := proof) (depth := depth) childProgress normalProgress indexRoom
+  have proofRoom := proofProgress.accepted indexRoom proofPairs proofOk
+  have callbackProgress := childProgress checkedProof.state continuation proofRoom
+  have callbackRoom := callbackProgress.accepted proofRoom inferred continuationOk
+  have resultProgress := finishLoad_progress (state := callback.state) (length := checked.1) (continuation := continuation)
+    (typeRoot := inferred.typeRoot) (depth := depth) normalProgress callbackRoom
+  have callbackFinal := resultProgress.kept.trans ambient
+  have proofFinal := callbackProgress.kept.trans callbackFinal
+  have indexFinal := proofProgress.kept.trans proofFinal
+  obtain ⟨bufferKept,bufferBack,_,lengthRep,typedBuffer⟩ := bufferLength_refines normalSound normalProgress childSound
+    childProgress onBase room bufferRep bufferOk (indexProgress.kept.trans indexFinal)
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨indexKept,indexBack,typedIndex⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    (onBase.trans bufferKept) bufferRoom (.cons (indexRep.frame bufferKept) .nil) rfl indexOk indexFinal
+    (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_left _ member)))
+  have throughIndex := bufferKept.trans indexKept
+  obtain ⟨proofKept,proofBack,typedProof⟩ := checkIndexEvidence_refines normalSound normalProgress childSound childProgress
+    (onBase.trans throughIndex) indexRoom (indexRep.frame throughIndex) (lengthRep.frame indexKept) (proofRep.frame throughIndex)
+    proofOk proofFinal (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _
+      (List.mem_append_left _ member))))
+  have throughProof := throughIndex.trans proofKept
+  obtain ⟨callbackKept,callbackBack,_,callbackRep,typedCallback⟩ := childSound (onBase.trans throughProof) proofRoom
+    (continuationRep.frame throughProof) continuationOk callbackFinal
+    (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _
+      (List.mem_append_right _ (List.mem_append_left _ member)))))
+  have throughCallback := throughProof.trans callbackKept
+  obtain ⟨resultKept,resultBack,_,_,_,_,_,resultRep,callbackConv,valueConv,ownerConv,resultConv,removed⟩ :=
+    finishLoad_refines wf normalSound normalProgress (onBase.trans throughCallback) callbackRoom
+      (lengthRep.frame (indexKept.trans (proofKept.trans callbackKept))) callbackRep resultOk ambient
+      (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _
+        (List.mem_append_right _ (List.mem_append_right _ member)))))
+  refine ⟨throughCallback.trans resultKept,resultBack ∘ callbackBack ∘ proofBack ∘ indexBack ∘ bufferBack,
+    _,resultRep,?_⟩
+  simp only [expand,expandArgs] at typedIndex
+  simp only [Term.load,expand,expandArgs]
+  exact .load typedBuffer (typedIndex i List.mem_cons_self) typedProof
+    (typedCallback.convert callbackConv) valueConv ownerConv resultConv removed (Or.inl rfl)
 
 private theorem readIndexType_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -3069,6 +3353,23 @@ theorem runWithData_sound {normal : NormalAt}
                   (normalSound depth) (normalProgress depth) sameContext
                   (fun _ _ budget => runWithData_progress normalProgress budget)
                   onBase within bufferRep tailRep success ambient retained
+          case load =>
+            have length : refs.length = 4 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons bufferRep rest =>
+              cases rest with
+              | cons indexRep rest =>
+                cases rest with
+                | cons proofRep rest =>
+                  cases rest with
+                  | cons continuationRep tail =>
+                    cases tail
+                    dsimp only at success ambient ⊢
+                    exact inferLoad_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                      history.wellFormed (normalSound depth) (normalProgress depth) sameContext
+                      (fun _ _ budget => runWithData_progress normalProgress budget)
+                      onBase within bufferRep indexRep proofRep continuationRep success ambient retained
           case index =>
             have length : refs.length = 3 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
@@ -3761,6 +4062,29 @@ theorem admitted_array_and_borrowed_index_infer_signed_result :
     (let borrowed := run indexSnapshot.definitions 0 34 32 [⟨8,false⟩] ⟨indexSnapshot.arena,0⟩ 10
      borrowed.state.steps = 34 ∧ borrowed.result.map Inferred.typeRoot = .ok 21 ∧
        borrowed.state.arena[16]? = some (.node .lt [1,0]) ∧ borrowed.state.arena[21]? = some (.node .i64 [])) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def loadSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨17,15⟩]
+  families := []
+  arena := #[.node (.natural 0) [],.node .u64 [],.node .i64 [],.var 0,.node .lt [0,3],.var 1,
+    .node (.integer (-7)) [],.node .alloc [5,6],.var 2,.node .buffer [8],.node .free [3,5],
+    .node (.lam false) [9,10],.node (.lam false) [2,11],.node .load [7,0,3,12],
+    .node (.lam true) [4,13],.node (.lam false) [1,14],.node (.pi true) [4,2],.node (.pi false) [1,16]]
+
+/-- Load shifts the original open length into the callback before checking the
+new owner domain. The callback result survives lowering past both binders. -/
+theorem admitted_load_checks_dependent_callback :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot loadSnapshot) = true ∧
+    (let stopped := run loadSnapshot.definitions 0 66 32 [⟨4,true⟩,⟨1,false⟩] ⟨loadSnapshot.arena,0⟩ 13
+     stopped.state.steps = 67 ∧ stopped.state.arena.size = 37 ∧
+       stopped.result = .error (.substitution (.tick (.stepLimit 2)))) ∧
+    (let completed := run loadSnapshot.definitions 0 67 32 [⟨4,true⟩,⟨1,false⟩] ⟨loadSnapshot.arena,0⟩ 13
+     completed.state.steps = 67 ∧ completed.state.arena.size = 37 ∧
+       completed.state.arena[24]? = some (.node .lt [0,5]) ∧
+       completed.state.arena[35]? = some (.var 2) ∧ completed.state.arena[36]? = some (.node .buffer [35]) ∧
+       completed.result.map Inferred.typeRoot = .ok 2) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 
