@@ -974,6 +974,7 @@ import Jihoo.NativeDependentRelationExamples
 import Jihoo.NativeDependentNumericCoherence
 import Jihoo.NativeDependentRefinementRelation
 import Jihoo.NativeDependentEqualityRelation
+import Jihoo.NativeDependentInequalityRelation
 import Jihoo.NativeScopeCheck
 import Jihoo.NativeLoanScopeInputExamples
 import Jihoo.NativeLoanConversion

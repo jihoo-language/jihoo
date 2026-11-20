@@ -10571,3 +10571,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_comparison_aligns_hidden_pack_proofs
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.opened_telescope
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_array_and_borrowed_index_infer_signed_result
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_decision_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_closed_decision_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.zeroLe_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ltAdd_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ltCancel_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ltLe_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.absurd_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtraction_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtractions_share_meaning

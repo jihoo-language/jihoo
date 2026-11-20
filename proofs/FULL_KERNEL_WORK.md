@@ -3756,3 +3756,19 @@ bound and return I64. The admitted examples agree with the rebuilt compiler
 at 36 ticks for the array and 34 for the borrow, including the exact bound
 and result roots. The focused build passed 427 jobs and the new theorem
 uses only standard Lean axioms.
+
+### Inequality evidence in open dependent contexts
+
+The concrete dependent relation now interprets Lt, ZeroLe, shifting and
+cancelling strict bounds, transitivity and Absurd. A checked Decide recovers
+the original literal comparisons from its actual Loan64 derivation and proves
+the order of the two interpreted words at every realized valuation. In an
+empty context this constructs the proposition's semantic proof.
+
+Bounded subtraction uses the proof of the original `b < a + 1` fiber and
+the word bound only at realized valuations. Different valid evidence terms
+produce the same subtraction value and the same result when passed to any
+interpreted dependent family. The theorem uses literal source contraction
+after realizing the operands. General gluing for wide subtraction and the
+interpretation of all source derivations remain open. The focused build passed
+202 jobs and the nine new declarations use only standard Lean axioms.
