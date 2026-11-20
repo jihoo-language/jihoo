@@ -3890,3 +3890,12 @@ tick, with the same instantiated evidence type and final index root. Both
 reject the incomplete field list. The focused build passed 432 jobs and
 the nine new declarations use only standard Lean axioms. This branch is
 available separately from the recursive inference dispatch.
+
+### Aggregate check of family and constructor inference
+
+At `62a6e12`, 1,135 Lake jobs and the generated fixture comparisons passed.
+The exact audit covered 10,609 declarations, with 527 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,780.5 MiB.
