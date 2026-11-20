@@ -3804,3 +3804,12 @@ mathematical difference, including values wider than one word. The output
 retains its original type and possible Strict prefixes. The focused build
 passed 520 jobs and all seven new declarations use only standard Lean
 axioms.
+
+### Aggregate check of call entry and dependent arithmetic
+
+At `76ca5c2`, 1,126 Lake jobs and the generated fixture comparisons passed.
+The exact audit covered 10,580 declarations, with 526 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,769.9 MiB.
