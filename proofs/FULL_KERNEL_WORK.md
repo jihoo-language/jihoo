@@ -4203,3 +4203,15 @@ to the capture-avoiding source substitutions. The native fixture agrees
 on every appended callback row. It also distinguishes the last complete
 callback state from the state obtained with one fewer checking tick.
 The focused build and the five new audited declarations passed.
+
+### Runtime type-argument kind checks
+
+The runtime kind classifier visits the supplied type and follows its
+normalized product codomains without spending additional ticks. The
+first-order gate normalizes the expected kind again and checks each
+domain in binder order. Its refinement builds a convertible kind whose
+domains are all U64 and whose terminal sort is a universe. The focused
+build passed 427 jobs and the six new declarations use standard Lean
+axioms. The native type-family suite passed eight positive controls and
+nine diagnostic rejection cases at checking and at both optimization
+levels. The kind checks are verified as standalone stages.

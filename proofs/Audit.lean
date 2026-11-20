@@ -10713,3 +10713,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.select_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.build_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.callback_graph_keeps_original_owner
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.sortAt_represents
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.classify_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.classify_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.firstOrder_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.firstOrder_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeKind.kind_gates_revisit_domains_in_order

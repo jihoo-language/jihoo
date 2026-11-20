@@ -1319,6 +1319,7 @@ import Jihoo.NativeCoreCodeHeadInference
 import Jihoo.NativeCoreGhostDefinitionChecking
 import Jihoo.NativeCoreCodeScalarInference
 import Jihoo.NativeCoreCodeScalarDeclarations
+import Jihoo.NativeCoreCodeKind
 import Jihoo.NativeCoreGhostBackMotive
 import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostOwnerReturnExamples
