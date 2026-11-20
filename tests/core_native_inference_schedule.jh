@@ -247,6 +247,39 @@ fn proof_irrelevance_under_type_family() {
     assert(c.equal(left, right, core.DEPTH).unwrap(), "dependent type comparison skips both Pack proofs")
 }
 
+fn refinement_projection() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let predicate = refinement_predicate(&c)
+    let refinement = c.add(core.Term.Refine(predicate), span).unwrap()
+    let subject = c.add(core.Term.Var(0), span).unwrap()
+    let proof = c.add(core.Term.Proof(subject), span).unwrap()
+    let context = [core.Binding { ty: refinement, erased: false }]
+    spend(&c, 999986)
+    let inferred = c.infer(proof, context, true, 24).unwrap()
+    assert(inferred == 8 && c.node_count() == 9, "proof projection result position")
+    assert(c.term(7) == core.Term.Witness(subject), "proof projection keeps the original subject")
+    assert(c.term(inferred) == core.Term.App(predicate, 7), "proof projection applies its predicate")
+    assert_spent(&c, "proof projection used 14 ticks")
+}
+
+fn transport_evidence_exhaustion() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let predicate = refinement_predicate(&c)
+    let seven = c.add(core.Term.Natural(7), span).unwrap()
+    let proof = c.add(core.Term.Refl(seven), span).unwrap()
+    let transport = c.add(core.Term.Transport(predicate, proof, proof), span).unwrap()
+    c.add(core.Term.Eq(seven, seven), span).unwrap()
+    spend(&c, 999968)
+    assert(match c.infer(transport, [], true, 24) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "transport runs out of budget entering the source proof")
+    assert(c.node_count() == 19, "exposed equality and required fiber survive exhaustion")
+    assert(c.term(17) == core.Term.Eq(seven, seven), "transport exposes the inferred equality")
+    assert(c.term(18) == core.Term.App(predicate, seven), "transport requires the original source fiber")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -258,6 +291,8 @@ fn main() -> i32 {
     refinement_inference()
     pack_evidence_exhaustion()
     proof_irrelevance_under_type_family()
-    println("Native Core.infer matched primitive, binder, evidence, conditional and refinement graph traces and checking costs")
+    refinement_projection()
+    transport_evidence_exhaustion()
+    println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }
