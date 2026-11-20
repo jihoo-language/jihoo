@@ -3457,6 +3457,18 @@ inequality nodes retained. The native regression also checks both successful
 directions. The focused build passed 329 jobs and the 34-declaration audit
 used only standard Lean axioms.
 
+### Metered transitive inequality inference
+
+`LtLe` builds the upper endpoint's successor and the two ordered bounds
+before visiting either proof. The metered inference proof uses the original
+five operands and constructs the Loan64 transitivity judgment once the
+normalizer accepts both evidence types. Lean and the rebuilt compiler agree
+on the prefix at tick 14. The compiler completes both proof checks and
+commits the final inequality. The restricted Lean normalizer reaches the
+upper bound's addition and reports its coverage boundary on that fixture.
+The focused build passed 329 jobs and the 35 audited declarations use only
+standard Lean axioms.
+
 ### Relevant closure entry with returned non-owner values
 
 The actual pending argument frame opens the saved closure at the dependent

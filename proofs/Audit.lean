@@ -10542,3 +10542,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.OpenedLambdas.context_length
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.LoanBudget.scopes
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_app_loan_budgets
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_transitive_proof_keeps_ordered_bounds

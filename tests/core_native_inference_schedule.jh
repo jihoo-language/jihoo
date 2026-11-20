@@ -316,6 +316,38 @@ fn offset_proof_inference() {
     assert(cancelled.term(original) == core.Term.Lt(0, 1), "LtCancel returns the original inequality")
 }
 
+fn transitive_proof_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let three = c.add(core.Term.Natural(3), span).unwrap()
+    let lower = c.add(core.Term.Decide(zero, one), span).unwrap()
+    let upper = c.add(core.Term.Decide(one, three), span).unwrap()
+    c.add(core.Term.LtLe(zero, one, two, lower, upper), span).unwrap()
+    c.add(core.Term.Lt(zero, two), span).unwrap()
+    c
+}
+
+fn transitive_proof_inference() {
+    var limited = transitive_proof_fixture()
+    spend(&limited, 999987)
+    assert(match limited.infer(6, [], true, 24) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "transitivity exhausts the budget before checking the first proof")
+    assert(limited.node_count() == 16, "both transitivity bounds survive exhaustion")
+    assert(limited.term(12) == core.Term.Natural(1) && limited.term(13) == core.Term.UAdd(2, 12),
+        "the upper bound keeps the original endpoint and fresh successor")
+    assert(limited.term(14) == core.Term.Lt(0, 1) && limited.term(15) == core.Term.Lt(1, 13),
+        "the lower and upper propositions were built in order")
+
+    var closed = transitive_proof_fixture()
+    let inferred = closed.infer(6, [], true, 24).unwrap()
+    assert((inferred as i64) + 1 == closed.node_count() && closed.term(inferred) == core.Term.Lt(0, 2),
+        "transitivity commits the original endpoints after both proofs")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -330,6 +362,7 @@ fn main() -> i32 {
     refinement_projection()
     transport_evidence_exhaustion()
     offset_proof_inference()
+    transitive_proof_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

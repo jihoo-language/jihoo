@@ -215,6 +215,21 @@ private def inferOffsetProof (infer : Infer) (normal : Visit) (limit depth : Nat
           ⟨after, .ok ⟨if forward then bounds.2 else bounds.1, operands ++ compared⟩⟩
 
 
+private def transitiveBounds (state : State) (left middle right : Nat) : Outcome (Nat × Nat) :=
+  (addOne state right).next fun afterSuccessor successor =>
+    (append afterSuccessor .lt [left, middle]).next fun afterLower lower =>
+      (append afterLower .lt [middle, successor]).next fun afterUpper upper =>
+        ⟨afterUpper, .ok (lower, upper)⟩
+
+private def inferTransitiveProof (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (left middle right lower upper : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [left, middle, right]).next fun checked operands =>
+    (transitiveBounds checked left middle right).next fun assembled bounds =>
+      (requireOperands infer normal limit depth bounds.1 assembled [lower]).next fun checkedLower lowerPairs =>
+        (requireOperands infer normal limit depth bounds.2 checkedLower [upper]).next fun checkedUpper upperPairs =>
+          (append checkedUpper .lt [left, right]).next fun after result =>
+            ⟨after, .ok ⟨result, operands ++ (lowerPairs ++ upperPairs)⟩⟩
+
 private def conditionOp (equality : Bool) : Op := if equality then .eq else .lt
 
 private def conditionalOp (equality : Bool) : Op := if equality then .ifEq else .ifLt
@@ -360,7 +375,9 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .ltCancel [a, b, delta, proof]) =>
             inferOffsetProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               false a b delta proof
-
+        | some (.node .ltLe [a, b, c, lower, upper]) =>
+            inferTransitiveProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              a b c lower upper
         | some (.node .ifEq [a, b, yes, no]) =>
             inferConditional (runWithData normal roots visible limit isData depth ctx)
               (fun assumption => runWithData normal roots visible limit isData depth (⟨assumption, true⟩ :: ctx))
@@ -561,6 +578,26 @@ private theorem inferOffsetProof_progress
   intro compared _ _
   exact Progress.atState _ _
 
+
+private theorem transitiveBounds_progress (state : State) (left middle right : Nat) :
+    Progress limit state (transitiveBounds state left middle right) :=
+  (addOne_progress _ _).next (fun _ => (append_progress _ _ _).next (fun _ =>
+    (append_progress _ _ _).next (fun _ => Progress.atState _ _)))
+
+private theorem inferTransitiveProof_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferTransitiveProof infer normal limit depth state left middle right lower upper) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro _ _ operandsRoom
+  apply next_progress (transitiveBounds_progress _ _ _ _) operandsRoom
+  intro _ _ boundsRoom
+  apply next_progress (requireOperands_progress infers (fun state root _ => normalizes state root) boundsRoom) boundsRoom
+  intro _ _ lowerRoom
+  apply next_progress (requireOperands_progress infers (fun state root _ => normalizes state root) lowerRoom) lowerRoom
+  intro _ _ _
+  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
 
 private theorem finishConditional_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (inferAlternative state root))
@@ -780,7 +817,7 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
         | exact inferZeroLe_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferSubtract_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferOffsetProof_progress (fun _ _ room => ih room) (normalProgress depth) within
-
+        | exact inferTransitiveProof_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferConditional_progress (fun _ _ room => ih room) (fun _ _ _ room => ih room)
             (normalProgress depth) within
         | exact inferRefine_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1541,6 +1578,99 @@ private theorem inferOffsetProof_refines
     simp only [ite_true, Term.ltAdd, Term.lt, Term.uadd, expand, expandArgs]
     exact .ltAdd first second offset evidence
 
+private theorem transitiveBounds_refines
+    (leftRep : Represents state.arena left a) (middleRep : Represents state.arena middle b)
+    (rightRep : Represents state.arena right c)
+    (success : (transitiveBounds state left middle right).result = .ok bounds) :
+    let after := (transitiveBounds state left middle right).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      Represents after bounds.1 (.lt a b) ∧ Represents after bounds.2 (.lt b (.uadd c (.natural 1))) := by
+  unfold transitiveBounds at success ⊢
+  obtain ⟨successor, successorOk, successorNext⟩ := Outcome.next_success success
+  rw [successorNext] at success ⊢
+  obtain ⟨lower, lowerOk, lowerNext⟩ := Outcome.next_success success
+  rw [lowerNext] at success ⊢
+  obtain ⟨upper, upperOk, upperNext⟩ := Outcome.next_success success
+  rw [upperNext] at success ⊢
+  simp only [Except.ok.injEq] at success
+  subst bounds
+  obtain ⟨successorKept, successorBack, successorRep⟩ := addOne_refines rightRep successorOk
+  obtain ⟨lowerKept, lowerBack, lowerRep⟩ := append_refines
+    (.cons (leftRep.frame successorKept) (.cons (middleRep.frame successorKept) .nil)) rfl lowerOk
+  have throughLower := successorKept.trans lowerKept
+  obtain ⟨upperKept, upperBack, upperRep⟩ := append_refines
+    (.cons (middleRep.frame throughLower) (.cons (successorRep.frame lowerKept) .nil)) rfl upperOk
+  exact ⟨throughLower.trans upperKept, upperBack ∘ lowerBack ∘ successorBack, lowerRep.frame upperKept, upperRep⟩
+
+private theorem inferTransitiveProof_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (leftRep : Represents state.arena left a) (middleRep : Represents state.arena middle b)
+    (rightRep : Represents state.arena right c) (lowerRep : Represents state.arena lower p)
+    (upperRep : Represents state.arena upper q)
+    (success : (inferTransitiveProof infer normal limit depth state left middle right lower upper).result = .ok answer)
+    (ambient : Prefix (inferTransitiveProof infer normal limit depth state left middle right lower upper).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.ltLe a b c p q)
+      (inferTransitiveProof infer normal limit depth state left middle right lower upper) answer := by
+  unfold inferTransitiveProof at success ambient ⊢
+  obtain ⟨operands, operandsOk, operandsNext⟩ := Outcome.next_success success
+  rw [operandsNext] at success ambient ⊢
+  obtain ⟨bounds, boundsOk, boundsNext⟩ := Outcome.next_success success
+  rw [boundsNext] at success ambient ⊢
+  obtain ⟨lowerPairs, lowerOk, lowerNext⟩ := Outcome.next_success success
+  rw [lowerNext] at success ambient ⊢
+  obtain ⟨upperPairs, upperOk, upperNext⟩ := Outcome.next_success success
+  rw [upperNext] at success ambient ⊢
+  obtain ⟨selected, selectedOk, selectedNext⟩ := Outcome.next_success success
+  rw [selectedNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let operandsCheck := checkFixed infer normal limit depth state .u64 [left, middle, right]
+  let assembled := transitiveBounds operandsCheck.state left middle right
+  let lowerCheck := requireOperands infer normal limit depth bounds.1 assembled.state [lower]
+  let upperCheck := requireOperands infer normal limit depth bounds.2 lowerCheck.state [upper]
+  have operandsProgress := checkFixed_progress (operand := .u64) (args := [left, middle, right]) (depth := depth)
+    childProgress (fun state root _ => normalProgress state root) room
+  have operandsRoom := operandsProgress.accepted room operands operandsOk
+  have boundsProgress := transitiveBounds_progress (limit := limit) operandsCheck.state left middle right
+  have boundsRoom := boundsProgress.accepted operandsRoom bounds boundsOk
+  have lowerProgress := requireOperands_progress (state := assembled.state)
+    (expected := bounds.1) (args := [lower]) (depth := depth)
+    childProgress (fun state ref _ => normalProgress state ref) boundsRoom
+  have lowerRoom := lowerProgress.accepted boundsRoom lowerPairs lowerOk
+  have upperProgress := requireOperands_progress (state := lowerCheck.state)
+    (expected := bounds.2) (args := [upper]) (depth := depth)
+    childProgress (fun state ref _ => normalProgress state ref) lowerRoom
+  have resultFinal := (append_progress (limit := limit) upperCheck.state .lt [left,right]).kept.trans ambient
+  have upperFinal := upperProgress.kept.trans resultFinal
+  obtain ⟨operandsKept, operandsBack, typed⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    onBase room (.cons leftRep (.cons middleRep (.cons rightRep .nil))) rfl operandsOk
+    (boundsProgress.kept.trans (lowerProgress.kept.trans upperFinal))
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨boundsKept, boundsBack, needLower, needUpper⟩ := transitiveBounds_refines
+    (leftRep.frame operandsKept) (middleRep.frame operandsKept) (rightRep.frame operandsKept) boundsOk
+  have throughBounds := operandsKept.trans boundsKept
+  obtain ⟨lowerKept, lowerBack, lowerTyped⟩ := requireOperands_refines normalSound normalProgress childSound childProgress
+    (onBase.trans throughBounds) boundsRoom (.cons (lowerRep.frame throughBounds) .nil) needLower lowerOk upperFinal
+    (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_left _ member)))
+  have throughLower := throughBounds.trans lowerKept
+  obtain ⟨upperKept, upperBack, upperTyped⟩ := requireOperands_refines normalSound normalProgress childSound childProgress
+    (onBase.trans throughLower) lowerRoom (.cons (upperRep.frame throughLower) .nil) (needUpper.frame lowerKept) upperOk
+    resultFinal (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _ member)))
+  have throughUpper := throughLower.trans upperKept
+  obtain ⟨resultKept, resultBack, resultRep⟩ := append_refines
+    (.cons (leftRep.frame throughUpper) (.cons (rightRep.frame throughUpper) .nil)) rfl selectedOk
+  refine ⟨throughUpper.trans resultKept, resultBack ∘ upperBack ∘ lowerBack ∘ boundsBack ∘ operandsBack, _, resultRep, ?_⟩
+  simp only [Term.ltLe, expand, expandArgs]
+  simp only [Term.lt, Term.uadd, Term.natural, expand, expandArgs] at typed lowerTyped upperTyped
+  exact .ltLe (typed a List.mem_cons_self) (typed b (List.mem_cons_of_mem _ List.mem_cons_self))
+    (typed c (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self)))
+    (lowerTyped p List.mem_cons_self) (upperTyped q List.mem_cons_self)
+
 private theorem finishConditional_refines
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -2300,6 +2430,25 @@ theorem runWithData_sound {normal : NormalAt}
                       (normalSound depth) (normalProgress depth) sameContext
                       (fun _ _ budget => runWithData_progress normalProgress budget)
                       onBase within leftRep rightRep deltaRep proofRep success ambient retained
+          case ltLe =>
+            have length : refs.length = 5 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons leftRep rest =>
+              cases rest with
+              | cons middleRep rest =>
+                cases rest with
+                | cons rightRep rest =>
+                  cases rest with
+                  | cons lowerRep rest =>
+                    cases rest with
+                    | cons upperRep tail =>
+                      cases tail
+                      dsimp only at success ambient ⊢
+                      exact inferTransitiveProof_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                        (normalSound depth) (normalProgress depth) sameContext
+                        (fun _ _ budget => runWithData_progress normalProgress budget)
+                        onBase within leftRep middleRep rightRep lowerRep upperRep success ambient retained
           case ifLt | ifEq =>
             have length : refs.length = 4 := arity
             rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨yes, _ | ⟨no, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> simp at length
@@ -2782,6 +2931,26 @@ theorem admitted_offset_proof_keeps_both_bounds :
         .node .uadd [0, 2], .node .uadd [1, 2], .node .lt [0, 1], .node .lt [12, 13]], 14⟩,
         .error (.tick (.stepLimit 3))⟩ ∧
     (run offsetSnapshot.definitions 0 64 16 [] ⟨offsetSnapshot.arena, 0⟩ 4).result.map Inferred.typeRoot = .ok 15 := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def transitiveSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨7, 6⟩]
+  families := []
+  arena := #[.node (.natural 0) [], .node (.natural 1) [], .node (.natural 2) [], .node (.natural 3) [],
+    .node .decide [0, 1], .node .decide [1, 3], .node .ltLe [0, 1, 2, 4, 5], .node .lt [0, 2]]
+
+/-- The first proof is visited only after both comparison bounds have been
+built. At a larger budget the restricted normalizer reaches the upper
+bound's addition, which it does not yet handle. -/
+theorem admitted_transitive_proof_keeps_ordered_bounds :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot transitiveSnapshot) = true ∧
+    run transitiveSnapshot.definitions 0 13 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6 =
+      ⟨⟨transitiveSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 [], .node .u64 [],
+        .node (.natural 1) [], .node .uadd [2, 12], .node .lt [0, 1], .node .lt [1, 13]], 14⟩,
+        .error (.tick (.stepLimit 4))⟩ ∧
+    (run transitiveSnapshot.definitions 0 96 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6).result =
+      .error (.outsideFragment 13) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 
