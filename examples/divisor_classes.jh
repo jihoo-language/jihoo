@@ -1,0 +1,34 @@
+// Vertices A, B, and C of a triangle are numbered 0, 1, and 2.
+// Firing at A moves 3A to A + B + C. Reversing a firing at B gives 3B.
+//   jihoo run examples/divisor_classes.jh
+
+import std.divisor as d
+import std.fmt
+
+type Triangle = d.Graph(3, (d.Edge(0, 1), d.Edge(1, 2), d.Edge(2, 0)))
+type ThreeAtA = d.At(0, 3)
+type ThreeAtB = d.At(1, 3)
+
+struct Shipment(Index: type) {
+    payload: Box(String)
+}
+
+fn deliver(sink shipment: Shipment(d.Class(Triangle, ThreeAtB))) {
+    let Shipment { payload } = move shipment
+    fmt.println("Received {} at B", payload.deref().as_str())
+}
+
+type TransferSlots {
+    d.Period(let N) => [u8; N]
+}
+
+type Minimum = TransferSlots(d.Order(Triangle, d.At(0, 1), d.At(1, 1)))
+
+fn main() {
+    let shipment = Shipment(d.Class(Triangle, ThreeAtA)) {
+        payload: Box.new(String.from("a parcel"))
+    }
+    deliver(shipment)
+
+    fmt.println("The smallest transferable batch from A to B has {} chips", size_of(Minimum))
+}

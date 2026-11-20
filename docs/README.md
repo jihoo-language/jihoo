@@ -27,6 +27,7 @@ same on GitHub.
 - [Generics and traits](language/generics.md)
 - [Closed type families](language/type-families.md)
 - [Observer-indexed history types](language/observed-histories.md)
+- [Graph divisor types](language/divisor-classes.md)
 - [Compile-time evaluation](language/comptime.md)
 - [Contracts](language/contracts.md)
 - [Dependent types](language/dependent-types.md)

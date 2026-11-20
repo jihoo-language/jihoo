@@ -1,0 +1,13 @@
+// error: `parcel` is used here after it was moved away
+import std.divisor as d
+
+type Tree = d.Graph(2, d.Edge(0, 1))
+struct Parcel(Index: type) { payload: String }
+
+fn deliver(sink parcel: Parcel(d.Class(Tree, d.At(1, 1)))) {}
+
+fn main() {
+    let parcel = Parcel(d.Class(Tree, d.At(0, 1))) { payload: String.from("a parcel") }
+    deliver(parcel)
+    deliver(parcel)
+}

@@ -159,6 +159,12 @@ that can distinguish the schedules, yielding results such as `Apart(3)`.
 The checker validates reads and transfers throughout both histories.
 [Observer-indexed history types](docs/language/observed-histories.md)
 
+Experimental graph divisor types describe placements related by local
+exchanges. On a triangle a single credit at one vertex and a single credit
+at its neighbor have different types, while three at either vertex have
+the same class. The compiler computes that minimum of three as a type.
+[Graph divisor types](docs/language/divisor-classes.md)
+
 Ordinary modules can compute a type by matching another type against the
 equations of a closed type family. For example, `Dual(Client)` derives the
 server side of a protocol, including the payload and order of its replies.

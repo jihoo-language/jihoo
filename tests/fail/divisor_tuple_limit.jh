@@ -1,0 +1,19 @@
+// error: graph divisor expression exceeds its 4096-step tuple limit
+import std.divisor as d
+
+type Empty0 = ()
+type Empty1 = (Empty0, Empty0)
+type Empty2 = (Empty1, Empty1)
+type Empty3 = (Empty2, Empty2)
+type Empty4 = (Empty3, Empty3)
+type Empty5 = (Empty4, Empty4)
+type Empty6 = (Empty5, Empty5)
+type Empty7 = (Empty6, Empty6)
+type Empty8 = (Empty7, Empty7)
+type Empty9 = (Empty8, Empty8)
+type Empty10 = (Empty9, Empty9)
+type Empty11 = (Empty10, Empty10)
+
+// The edge expression expands to 4097 tuple nodes and contains no edges.
+fn inspect(value: d.Class(d.Graph(1, (Empty11, Empty0)), ())) {}
+fn main() {}

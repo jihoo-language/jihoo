@@ -38,8 +38,9 @@ pub struct Ast {
     pub modules: Vec(ModuleAst)
     pub root: u32
     pub prelude: Option(u32)
-    // The loaded standard-library history module, if any.
+    // Standard modules that encode computed type indices, if loaded.
     pub history: Option(u32)
+    pub divisor: Option(u32)
     // std.derive, loaded when some item has `#[derive(...)]`.
     pub derive: Option(u32)
     // The function the program starts in: `main`, or for `jihoo test` the
@@ -237,13 +238,15 @@ fn load_all(
         names = l.add_tests(root_idx, root, &sources, overlay)?
         entry = String.from(TEST_ENTRY)
     }
-    let history = l.history_module()
+    let history = l.standard_module("std/history")
+    let divisor = l.standard_module("std/divisor")
     match l {
         Loader { modules, .. } => Ok(Ast {
             modules: modules,
             root: root_idx,
             prelude: prelude,
             history: history,
+            divisor: divisor,
             derive: derive,
             entry: entry,
             tests: names
@@ -450,9 +453,9 @@ impl Loader {
         None
     }
 
-    fn history_module(self) -> Option(u32) {
+    fn standard_module(self, rel: str) -> Option(u32) {
         for d in self.search {
-            let Some(p) = self.find_in(d.as_str(), "std/history") else { continue }
+            let Some(p) = self.find_in(d.as_str(), rel) else { continue }
             let key = file_key(p.as_str())
             let Some(module) = self.by_path.get(key) else { return None }
             return Some(module)

@@ -1,0 +1,13 @@
+// error: divisor chip count must fit in i64
+import std.divisor as d
+
+type G = d.Graph(1, ())
+type Minus = d.Class(G, d.At(0, -1))
+const MAX: u128 = (0 as u128) -% 1
+
+fn forward(comptime N: u128, value: Minus) -> d.Class(G, d.At(0, N)) { value }
+
+fn main() {
+    let value = Minus {}
+    let invalid = forward(MAX, value)
+}

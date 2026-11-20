@@ -1,0 +1,6 @@
+// error: divisor period must fit in i64
+import std.divisor as d
+
+fn main() {
+    let period = d.Period(true) {}
+}

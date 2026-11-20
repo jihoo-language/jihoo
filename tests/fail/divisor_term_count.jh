@@ -1,0 +1,8 @@
+// error: divisor chip count must fit in i64
+import std.divisor as d
+
+const HUGE: i128 = (1 as i128) << 100
+type G = d.Graph(1, ())
+
+fn inspect(value: d.Order(G, d.At(0, HUGE), d.At(0, HUGE))) {}
+fn main() {}

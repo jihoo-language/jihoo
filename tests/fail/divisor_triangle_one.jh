@@ -1,0 +1,13 @@
+// error: expected `Tagged(DivisorClass(Graph(3, [0-1, 0-2, 1-2]), degree=[1, 0, 0], residue=[0, 2, 1]))`
+// error: found `Tagged(DivisorClass(Graph(3, [0-1, 0-2, 1-2]), degree=[1, 0, 0], residue=[0, 0, 0]))`
+import std.divisor as d
+
+type Triangle = d.Graph(3, (d.Edge(0, 1), d.Edge(1, 2), d.Edge(2, 0)))
+struct Tagged(Index: type) {}
+
+fn accept(sink chips: Tagged(d.Class(Triangle, d.At(1, 1)))) {}
+
+fn main() {
+    let chips = Tagged(d.Class(Triangle, d.At(0, 1))) {}
+    accept(chips)
+}

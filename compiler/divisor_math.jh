@@ -1,0 +1,123 @@
+pub struct Coordinates {
+    pub degree: [i128; 8]
+    pub residue: [i64; 8]
+    modulus: [i64; 8]
+}
+
+impl Coordinates {
+    pub fn order(self) -> Option(i64) {
+        var order: i64 = 1
+        for vertex in 0..8 {
+            if self.degree[vertex] != 0 { return None }
+            let modulus = self.modulus[vertex]
+            let denominator = modulus / gcd(modulus, self.residue[vertex])
+            // This LCM divides the product of the component determinants.
+            // Their reduced sizes sum to at most seven, so the product is
+            // at most 7! * 32^7, even with the Leibniz bound.
+            order = order / gcd(order, denominator) * denominator
+        }
+        Some(order)
+    }
+}
+
+fn gcd(a: i64, b: i64) -> i64 {
+    var x = a
+    var y = b
+    while y != 0 {
+        let remainder = x % y
+        x = y
+        y = remainder
+    }
+    x
+}
+
+fn determinant(size: i64, matrix: [i128]) -> i128 {
+    // Each subset uses the first |subset| rows and the selected columns.
+    // Expand along its last row, from the rightmost column with positive sign.
+    // There is at most one chip column. Every term and partial sum is bounded
+    // in magnitude by 7! * 32^6 * (2 * 4096 * 2^63) < 2^127.
+    var minors: [i128; 128] = [0; 128]
+    minors[0] = 1
+    let limit: i64 = 1 << size
+    for subset in 1..limit {
+        var columns = subset
+        var row = 0
+        while columns != 0 {
+            columns = columns & (columns - 1)
+            row += 1
+        }
+        let start = (row - 1) * size
+        var sign: i128 = 1
+        var column = size
+        while column > 0 {
+            column -= 1
+            let bit: i64 = 1 << column
+            if (subset & bit) != 0 {
+                minors[subset] += sign * matrix[start + column] * minors[subset ^ bit]
+                sign = 0 - sign
+            }
+        }
+    }
+    minors[limit - 1]
+}
+
+// The decoder guarantees a loopless undirected multigraph on 1..8 vertices
+// with at most 32 edges. Adjacency is row-major with stride n. Chips come from
+// at most 4096 signed i64 terms per divisor, with up to two divisors combined.
+pub fn coordinates(n: i64, adjacency: [i64], chips: [i128]) -> Coordinates {
+    var result = Coordinates { degree: [0; 8], residue: [0; 8], modulus: [1; 8] }
+    var seen: [bool; 8] = [false; 8]
+    for root in 0..n {
+        if seen[root] { continue }
+        var vertices: [i64; 8] = [0; 8]
+        vertices[0] = root
+        seen[root] = true
+        var count = 1
+        var next = 0
+        while next < count {
+            let vertex = vertices[next]
+            result.degree[root] += chips[vertex]
+            for neighbor in 0..n {
+                if !seen[neighbor] && adjacency[vertex * n + neighbor] != 0 {
+                    seen[neighbor] = true
+                    vertices[count] = neighbor
+                    count += 1
+                }
+            }
+            next += 1
+        }
+
+        let size = count - 1
+        var matrix: [i128; 49] = [0; 49]
+        for row in 0..size {
+            let vertex = vertices[row + 1]
+            let start = vertex * n
+            var degree: i64 = 0
+            for neighbor in 0..n { degree += adjacency[start + neighbor] }
+            for column in 0..size {
+                matrix[row * size + column] = if row == column { degree as i128 }
+                else { 0 - adjacency[start + vertices[column + 1]] as i128 }
+            }
+        }
+
+        // Fix the root potential at zero. The reduced Laplacian determinant
+        // counts spanning trees, and is positive even for a singleton (1).
+        // Cramer's rule gives each remaining potential modulo the integers.
+        let modulus = determinant(size, matrix)
+        for column in 0..size {
+            var original: [i128; 7] = [0; 7]
+            for row in 0..size {
+                let slot = row * size + column
+                original[row] = matrix[slot]
+                matrix[slot] = chips[vertices[row + 1]]
+            }
+            let remainder = determinant(size, matrix) % modulus
+            let vertex = vertices[column + 1]
+            result.modulus[vertex] = modulus as i64
+            result.residue[vertex] = (if remainder < 0 { remainder + modulus }
+                else { remainder }) as i64
+            for row in 0..size { matrix[row * size + column] = original[row] }
+        }
+    }
+    result
+}

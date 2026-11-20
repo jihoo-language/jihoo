@@ -13,6 +13,7 @@ import core_elab
 import interp
 import ast
 import diag
+import divisor
 import history
 import lex
 import load
@@ -37,6 +38,8 @@ pub const DERIVED_IMPL: u32 = 4294967295
 pub enum CVal {
     Type(u32)
     Int(i128)
+    // Unsigned integers too large to be represented by Int.
+    UintHigh(u128)
     Bool(bool)
     // A closure passed to a `comptime` parameter: its lifted function and
     // its environment's type.
@@ -48,6 +51,7 @@ impl Clone for CVal {
         match self {
             Type(t) => CVal.Type(t)
             Int(i) => CVal.Int(i)
+            UintHigh(i) => CVal.UintHigh(i)
             Bool(b) => CVal.Bool(b)
             Lambda(f, t) => CVal.Lambda(f, t)
         }
@@ -60,6 +64,11 @@ impl Eq for CVal {
     }
 }
 
+fn cval_integer(bits: i128, ty: u32) -> CVal {
+    if ty == types.U128 && bits < 0 { CVal.UintHigh(bits as u128) }
+    else { CVal.Int(bits) }
+}
+
 pub fn cval_key(c: CVal) -> String {
     var s = String.new()
     match c {
@@ -69,6 +78,10 @@ pub fn cval_key(c: CVal) -> String {
         }
         Int(i) => {
             s.push('i')
+            i.show(&s)
+        }
+        UintHigh(i) => {
+            s.push('u')
             i.show(&s)
         }
         Bool(b) => s.push_str(if b { "b1" } else { "b0" })
@@ -383,6 +396,7 @@ pub struct Sema {
     pub ast: *load.Ast
     pub types: Types
     pub history: history.History
+    divisor_markers: Option(divisor.Markers)
     pub mods: Vec(ModScope)
     pub adts: Vec(AdtDecl)
     pub fns: Vec(FnDeclInfo)
@@ -471,6 +485,7 @@ impl Sema {
             ast: &a
             types: Types.new()
             history: history.History.new()
+            divisor_markers: None
             mods: Vec(ModScope).new()
             adts: Vec(AdtDecl).new()
             fns: Vec(FnDeclInfo).new()
@@ -585,6 +600,7 @@ impl Sema {
             None => {}
         }
         self.find_history()
+        self.find_divisor()
         // Impls: attach to their type and trait.
         for i in 0..self.impls.len() {
             let module = self.impls[i].module
@@ -754,6 +770,40 @@ impl Sema {
         })
     }
 
+    fn find_divisor(inout self) {
+        let Some(m) = at(self.ast).divisor else { return }
+        let Some(graph) = self.lang_adt(m, "Graph") else { return }
+        let Some(edge) = self.lang_adt(m, "Edge") else { return }
+        let Some(at) = self.lang_adt(m, "At") else { return }
+        let Some(class) = self.lang_adt(m, "Class") else { return }
+        let Some(order) = self.lang_adt(m, "Order") else { return }
+        let Some(period) = self.lang_adt(m, "Period") else { return }
+        let Some(unbalanced) = self.lang_adt(m, "Unbalanced") else { return }
+        let Some(index) = self.lang_adt(m, "DivisorClass") else { return }
+        self.divisor_markers = Some(divisor.Markers {
+            graph, edge, at, class, order, period, unbalanced, index
+        })
+    }
+
+    fn is_computed_adt(self, decl: u32) -> bool {
+        if self.history.is_computed(decl) { return true }
+        match self.divisor_markers {
+            Some(markers) => markers.is_computed(decl)
+            None => false
+        }
+    }
+
+    fn is_encoding_adt(self, decl: u32) -> bool {
+        self.history.is_encoding(decl) || self.is_divisor_graph(decl)
+    }
+
+    fn is_divisor_graph(self, decl: u32) -> bool {
+        match self.divisor_markers {
+            Some(markers) => decl == markers.graph
+            None => false
+        }
+    }
+
     // The struct or enum an impl is for, when its type names one.
     fn impl_head(self, module: u32, t: ast.Ty, params: Vec(ast.Param)) -> Option(u32) {
         match t.kind {
@@ -762,7 +812,7 @@ impl Sema {
                     return None
                 }
                 match self.lookup_path(module, p) {
-                    Some((Adt(a), _)) if !self.history.is_computed(a) => return Some(a)
+                    Some((Adt(a), _)) if !self.is_computed_adt(a) => return Some(a)
                     _ => {}
                 }
             }
@@ -774,7 +824,7 @@ impl Sema {
     pub fn computed_type_path(self, module: u32, p: Vec(String)) -> bool {
         match self.lookup_path(module, p) {
             Some((Family(_), _)) => true
-            Some((Adt(a), _)) => self.history.is_computed(a)
+            Some((Adt(a), _)) => self.is_computed_adt(a)
             _ => false
         }
     }
@@ -1478,7 +1528,7 @@ impl Sema {
         }
         let r = self.const_expr(arg, env, Some(pty))?
         match r.c {
-            Int(v, _) => Ok(CVal.Int(v))
+            Int(v, _) => Ok(cval_integer(v, r.ty))
             Bool(b) => Ok(CVal.Bool(b))
             _ => Err(ty_err(
                 arg.span,
@@ -1642,6 +1692,10 @@ impl Sema {
             Some(t) => return Ok(t)
             None => {}
         }
+        match self.divisor_markers {
+            Some(markers) => markers.check_numeric_args(decl, args, span)?
+            None => {}
+        }
         if self.family_stack.len() > 0 {
             self.check_family_arguments(args, span)?
         }
@@ -1675,6 +1729,29 @@ impl Sema {
             self.adt_insts.insert(key, t)
             return Ok(t)
         }
+        match self.divisor_markers {
+            Some(markers) if decl == markers.class => {
+                let name = markers.classify(self.types, self.adt_args_of, args, span)?
+                let canonical = "divisor|" + name.as_str()
+                let t = match self.adt_insts.get(canonical) {
+                    Some(t) => t
+                    None => self.adt_instance_body(
+                        markers.index, Vec(CVal).new(), canonical, Some(name), span
+                    )?
+                }
+                self.adt_insts.insert(key, t)
+                return Ok(t)
+            }
+            Some(markers) if decl == markers.order => {
+                let (result, result_args) = markers.measure_order(
+                    self.types, self.adt_args_of, args, span
+                )?
+                let t = self.adt_instance(result, result_args, span)?
+                self.adt_insts.insert(key, t)
+                return Ok(t)
+            }
+            _ => {}
+        }
         self.adt_instance_body(decl, args, key, None, span)
     }
 
@@ -1683,14 +1760,14 @@ impl Sema {
         decl: u32,
         args: Vec(CVal),
         sink key: String,
-        sink observed_name: Option(String),
+        sink display_name: Option(String),
         span: Span
     ) -> Result(u32, Diag) {
         let module = self.adts[decl as i64].module
         var name = self.adts[decl as i64].name.clone()
         let is_std = self.module_name(module).starts_with("std.")
-        match move observed_name {
-            Some(observed) => name = observed
+        match move display_name {
+            Some(display) => name = display
             None => {
                 if module != at(self.ast).root && at(self.ast).prelude != Some(module) && !is_std {
                     name = self.module_name(module) + "." + name.as_str()
@@ -1700,7 +1777,7 @@ impl Sema {
         if args.len() > 0 {
             var n = name.clone()
             n.push('(')
-            let encoding = self.history.is_encoding(decl)
+            let encoding = self.is_encoding_adt(decl)
             for i, a in args {
                 if i > 0 {
                     n.push_str(", ")
@@ -1772,14 +1849,18 @@ impl Sema {
             }
         }
         var view_arg = false
-        for a in args {
-            match a {
-                Type(x) => {
-                    if self.types.is_view(x) {
-                        view_arg = true
+        // A divisor graph's edge tuple is compiler data. Looking for borrows
+        // in it would unfold shared tuple types before the divisor limit runs.
+        if !self.is_divisor_graph(decl) {
+            for a in args {
+                match a {
+                    Type(x) => {
+                        if self.types.is_view(x) {
+                            view_arg = true
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
         }
         self.types.adts[idx].view = marked || view_arg
@@ -1879,6 +1960,7 @@ impl Sema {
         match c {
             Type(t) => self.types.show(t)
             Int(i) => i.to_string()
+            UintHigh(i) => i.to_string()
             Bool(b) => (if b { "true" } else { "false" }).to_string()
             Lambda(f, _) => {
                 var s = String.from("closure#")
@@ -2168,10 +2250,7 @@ impl Sema {
         }
         let r = self.const_expr(e, Env.new(module), None)?
         Ok(match r.c {
-            Int(a, _) => match v {
-                Int(b) => a == b
-                _ => false
-            }
+            Int(a, _) => v == cval_integer(a, r.ty)
             Bool(a) => match v {
                 Bool(b) => a == b
                 _ => false
@@ -2855,6 +2934,9 @@ impl Sema {
     pub fn const_int(inout self, e: ast.Expr, env: Env) -> Result(i128, Diag) {
         let r = self.const_expr(e, env, Some(types.I64))?
         match r.c {
+            Int(v, _) if r.ty == types.U128 && v < 0 => {
+                Err(ty_err(e.span, "compile-time integer does not fit in i128"))
+            }
             Int(v, _) => Ok(v)
             _ => Err(ty_err(e.span, "expected a compile-time integer"))
         }
@@ -2997,6 +3079,9 @@ impl Sema {
                             let t = exp_int.unwrap_or(types.I64)
                             Ok(TypedConst { c: Const.Int(i, t), ty: t })
                         }
+                        UintHigh(i) => Ok(TypedConst {
+                            c: Const.Int(i as i128, types.U128), ty: types.U128
+                        })
                         Bool(b) => Ok(TypedConst { c: Const.Bool(b), ty: types.BOOL })
                         _ => Err(ty_err(e.span, ("`" + n.as_str() +
                             "` is not a constant value").as_str()))

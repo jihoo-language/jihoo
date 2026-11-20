@@ -1,0 +1,8 @@
+// error: divisor chip count must fit in i64
+import std.divisor as d
+
+const HUGE: u128 = (0 as u128) -% 1
+
+fn main() {
+    let value = d.Class(d.Graph(1, ()), d.At(0, HUGE)) {}
+}

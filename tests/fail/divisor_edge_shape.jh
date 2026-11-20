@@ -1,0 +1,7 @@
+// error: expected `divisor.Edge` in the graph
+import std.divisor as d
+
+struct Edge(A: i64, B: i64) {}
+
+fn inspect(value: d.Class(d.Graph(2, Edge(0, 1)), ())) {}
+fn main() {}

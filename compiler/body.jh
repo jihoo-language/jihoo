@@ -2104,11 +2104,12 @@ impl sema.Sema {
             return Ok(Val { vk: v.vk.clone(), ty: t, temp: v.temp })
         }
         let from = v.ty
-        // An integer literal typed before its type was known.
+        // An integer literal typed before its type was known. A high u128
+        // value requires an explicit cast to change its type.
         match v.vk.clone() {
             Op(o) => match o {
                 Const(c) => match c {
-                    Int(x, _) => {
+                    Int(x, _) if from != types.U128 || x >= 0 => {
                         if self.types.is_int(to) && self.types.is_int(from) &&
                             self.int_fits(x, to) {
                             return Ok(val_op(int_const(x, to), to))
@@ -2966,8 +2967,10 @@ impl sema.Sema {
                     }
                     None => {}
                 }
-                if fb.env.get(n.as_str()).is_some() {
-                    return None
+                match fb.env.get(n.as_str()) {
+                    Some(UintHigh(_)) => return Some(types.U128)
+                    Some(_) => return None
+                    None => {}
                 }
                 // A `static`: its written type.
                 match self.lookup(fb.env.module, n.as_str())? {
@@ -3093,6 +3096,7 @@ impl sema.Sema {
                     }
                     Ok(val_op(int_const(i, t), t))
                 }
+                UintHigh(i) => Ok(val_op(int_const(i as i128, types.U128), types.U128))
                 Bool(b) => Ok(val_op(Operand.Const(Const.Bool(b)), types.BOOL))
                 Type(_) => Err(err(span, ("`" + n + "` is a type, not a value").as_str()))
                 Lambda(_, _) => Err(err(span, "a compile-time closure can only be called"))
@@ -4127,7 +4131,7 @@ impl sema.Sema {
             match bv.vk.clone() {
                 Op(o) => match o {
                     Const(c) => match c {
-                        Int(v, _) => {
+                        Int(v, _) if bv.ty != types.U128 || v >= 0 => {
                             if self.types.is_int(at) && self.int_fits(v, at) {
                                 bv = val_op(int_const(v, at), at)
                             } else if self.types.is_float(at) {

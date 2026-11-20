@@ -1,0 +1,7 @@
+// error: expected `divisor.At` in the divisor
+import std.divisor as d
+
+struct At(Vertex: i64, Count: i64) {}
+
+fn inspect(value: d.Order(d.Graph(1, ()), (), At(0, 1))) {}
+fn main() {}

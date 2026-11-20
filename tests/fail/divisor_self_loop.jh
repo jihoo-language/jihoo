@@ -1,0 +1,5 @@
+// error: graph cannot contain self-loops
+import std.divisor as d
+
+fn inspect(value: d.Class(d.Graph(1, d.Edge(0, 0)), ())) {}
+fn main() {}

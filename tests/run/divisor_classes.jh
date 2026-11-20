@@ -1,0 +1,97 @@
+import std.divisor as d
+import std.history as h
+
+type Triangle = d.Graph(3, (d.Edge(0, 1), d.Edge(1, 2), d.Edge(2, 0)))
+type Reordered = d.Graph(3, ((d.Edge(0, 2), ()), (d.Edge(1, 0), d.Edge(2, 1))))
+type Tree = d.Graph(3, (d.Edge(0, 1), d.Edge(1, 2)))
+type Isolated = d.Graph(1, ())
+type TwoEdges = (d.Edge(0, 1), d.Edge(1, 0))
+type FourEdges = (TwoEdges, TwoEdges)
+type EightEdges = (FourEdges, FourEdges)
+type SixteenEdges = (EightEdges, EightEdges)
+type ThirtyTwoEdges = (SixteenEdges, SixteenEdges)
+type DoubleEdge = d.Graph(2, TwoEdges)
+type Largest = d.Graph(8, ThirtyTwoEdges)
+type Disconnected = d.Graph(
+    6,
+    (d.Edge(0, 1), d.Edge(0, 1), d.Edge(2, 3), d.Edge(3, 4), d.Edge(4, 2))
+)
+type Complete = d.Graph(
+    4,
+    (d.Edge(0, 1), d.Edge(0, 2), d.Edge(0, 3), d.Edge(1, 2), d.Edge(1, 3), d.Edge(2, 3))
+)
+
+type A = d.At(0, 1)
+type B = d.At(1, 1)
+type ThreeA = d.At(0, 3)
+type ThreeB = d.At(1, 3)
+type Spread = (A, B, d.At(2, 1))
+type Repeated = (A, (A, (), d.At(1, -2)), (A, d.At(1, 2)))
+const MIN_CHIPS: i64 = -9223372036854775807 - 1
+type SmallA = d.At(0, MIN_CHIPS)
+type LargeA = d.At(0, 9223372036854775807)
+type LargeB = d.At(1, 9223372036854775807)
+
+struct Tagged(Index: type) {}
+
+// Local constructors with the same names are ordinary types.
+struct Class(G: type, D: type) { value: i64 }
+struct Order(G: type, D: type, E: type) { value: i64 }
+
+type Slots {
+    d.Period(let N) => [u8; N]
+    d.Unbalanced => bool
+}
+
+type TriangleOrder {
+    (let D, let E) => d.Order(Triangle, D, E)
+}
+
+struct Written {}
+
+type Write {
+    let D => h.Put(d.Class(Triangle, D), Written, ())
+}
+
+fn require(comptime T: type, sink witness: T) {}
+
+fn main() {
+    require(Tagged(d.Class(Triangle, ThreeA)), Tagged(d.Class(Triangle, Spread)) {})
+    require(Tagged(d.Class(Triangle, Spread)), Tagged(d.Class(Triangle, ThreeB)) {})
+    require(Tagged(d.Class(Triangle, ThreeB)), Tagged(d.Class(Reordered, Repeated)) {})
+    require(
+        Tagged(d.Class(Triangle, (d.At(0, -3), d.At(2, 4)))),
+        Tagged(d.Class(Triangle, (d.At(1, -3), d.At(2, 4)))) {}
+    )
+    require(Tagged(d.Class(Tree, A)), Tagged(d.Class(Tree, B)) {})
+    require(Tagged(d.Class(Isolated, ())), Tagged(d.Class(Isolated, d.At(0, 0))) {})
+    require(Tagged(d.Class(Isolated, ())), Tagged(d.Class(Isolated, (SmallA, LargeA, A))) {})
+
+    let slots: Slots(TriangleOrder((A, B))) = [1, 2, 3]
+    require(d.Order(Triangle, B, A), d.Period(3) {})
+    require(d.Order(Triangle, d.At(0, 2), d.At(1, 2)), d.Period(3) {})
+    require(d.Order(Triangle, ThreeA, ThreeB), d.Period(1) {})
+    // Each coefficient sum is divisible by three and larger than i64 can hold.
+    require(d.Order(Triangle, (LargeA, LargeA, LargeA), (LargeB, LargeB, LargeB)), d.Period(1) {})
+    require(d.Order(Tree, A, B), d.Period(1) {})
+    require(d.Order(DoubleEdge, A, B), d.Period(2) {})
+    require(d.Order(Largest, A, B), d.Period(32) {})
+    require(d.Order(Disconnected, (A, d.At(2, 1)), (B, d.At(3, 1))), d.Period(6) {})
+    require(d.Order(Complete, A, B), d.Period(4) {})
+    let transferable: Slots(d.Order(Disconnected, d.At(5, 1), A)) = false
+
+    require(
+        h.Separation(Write(ThreeA), Write(ThreeB), d.Class(Triangle, ThreeA)),
+        h.Indistinguishable {}
+    )
+    require(h.Separation(Write(A), Write(B), d.Class(Triangle, A)), h.Apart(0) {})
+
+    let local_class = Class((), bool) { value: 4 }
+    let local_order = Order((), bool, i64) { value: 5 }
+    println(slots[2])
+    //> 3
+    println(transferable)
+    //> false
+    println(local_class.value + local_order.value)
+    //> 9
+}

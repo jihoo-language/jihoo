@@ -1,0 +1,14 @@
+// error: expected `Tagged(DivisorClass(Graph(3, [0-1, 1-2]), degree=[0, 0, 0], residue=[0, 0, 0]))`
+// error: found `Tagged(DivisorClass(Graph(3, [0-2, 1-2]), degree=[0, 0, 0], residue=[0, 0, 0]))`
+import std.divisor as d
+
+type FirstPath = d.Graph(3, (d.Edge(0, 1), d.Edge(1, 2)))
+type SecondPath = d.Graph(3, (d.Edge(0, 2), d.Edge(2, 1)))
+struct Tagged(Index: type) {}
+
+fn accept(sink chips: Tagged(d.Class(FirstPath, ()))) {}
+
+fn main() {
+    let chips = Tagged(d.Class(SecondPath, ())) {}
+    accept(chips)
+}

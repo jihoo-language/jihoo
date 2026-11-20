@@ -1,0 +1,33 @@
+const MAX: u128 = (0 as u128) -% 1
+
+struct Unsigned(N: u128) { payload: i64 }
+struct Signed(N: i128) {}
+
+type Rebuild {
+    Unsigned(let N) => Unsigned(N)
+}
+
+type Compare {
+    (Unsigned(let N), Signed(let N)) => i64
+    _ => bool
+}
+
+fn preserve(comptime N: u128, sink value: Unsigned(N)) -> Rebuild(Unsigned(N)) { value }
+
+fn specialize(comptime N: u128) -> (u128, i64) { (N, N as i64) }
+
+fn main() {
+    let tag: Unsigned(MAX) = preserve(MAX, Unsigned(MAX) { payload: 7 })
+    let equal: Compare((Unsigned(4), Signed(4))) = 1
+    let different: Compare((Unsigned(MAX), Signed(-1))) = false
+    println(tag.payload + equal)
+    //> 8
+    println(different)
+    //> false
+
+    let (original, cast) = specialize(MAX)
+    println(original == MAX)
+    //> true
+    println(cast)
+    //> -1
+}

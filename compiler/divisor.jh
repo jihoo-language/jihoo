@@ -1,0 +1,240 @@
+// Decode the standard divisor markers and construct canonical type indices.
+
+import diag
+import divisor_math
+import sema
+import types
+
+type Span = diag.Span
+type Diag = diag.Diag
+type CVal = sema.CVal
+
+const MAX_STEPS = 4096
+const I64_LIMIT: i128 = 1 << 63
+const GRAPH_EXPECTED = "expected a `divisor.Graph`"
+const EDGE_EXPECTED = "expected `divisor.Edge` in the graph"
+const CHIPS_EXPECTED = "expected `divisor.At` in the divisor"
+
+pub struct Markers {
+    pub graph: u32
+    pub edge: u32
+    pub at: u32
+    pub class: u32
+    pub order: u32
+    pub period: u32
+    pub unbalanced: u32
+    pub index: u32
+}
+
+impl Markers {
+    pub fn is_computed(self, decl: u32) -> bool {
+        decl == self.class || decl == self.order
+    }
+
+    pub fn check_numeric_args(self, decl: u32, args: Vec(CVal), span: Span) -> Result((), Diag) {
+        for i, a in args {
+            let Some(error) = self.numeric_argument_error(decl, i) else { continue }
+            match a {
+                Int(v) if v >= 0 - I64_LIMIT && v < I64_LIMIT => {}
+                _ => return Err(Diag.new(span, error))
+            }
+        }
+        Ok(())
+    }
+
+    fn numeric_argument_error(self, decl: u32, position: i64) -> Option(str) {
+        if decl == self.graph && position == 0 { return Some("graph must have 1 to 8 vertices") }
+        if decl == self.edge { return Some("edge endpoint is outside the graph") }
+        if decl == self.at {
+            return Some(if position == 0 { "divisor vertex is outside the graph" }
+                else { "divisor chip count must fit in i64" })
+        }
+        if decl == self.period { return Some("divisor period must fit in i64") }
+        None
+    }
+
+    pub fn classify(
+        self,
+        t: types.Types,
+        instance_args: Map(u32, Vec(CVal)),
+        args: Vec(CVal),
+        span: Span
+    ) -> Result(String, Diag) {
+        let message = "`divisor.Class` takes a graph and a divisor type"
+        if args.len() != 2 { return Err(Diag.new(span, message)) }
+        let (CVal.Type(graph_ty), CVal.Type(chips_ty)) = (args[0].clone(), args[1].clone()) else {
+            return Err(Diag.new(span, message))
+        }
+        let graph = self.decode_graph(t, instance_args, graph_ty, span)?
+        let chips = self.decode_chips(t, instance_args, chips_ty, graph.n, span)?
+        let coordinates = divisor_math.coordinates(graph.n, graph.adjacency, chips)
+        Ok(graph.class_name(coordinates))
+    }
+
+    pub fn measure_order(
+        self,
+        t: types.Types,
+        instance_args: Map(u32, Vec(CVal)),
+        args: Vec(CVal),
+        span: Span
+    ) -> Result((u32, Vec(CVal)), Diag) {
+        let message = "`divisor.Order` takes a graph and two divisor types"
+        if args.len() != 3 { return Err(Diag.new(span, message)) }
+        let (CVal.Type(graph_ty), CVal.Type(left_ty), CVal.Type(right_ty)) = (
+            args[0].clone(), args[1].clone(), args[2].clone()
+        ) else {
+            return Err(Diag.new(span, message))
+        }
+        let graph = self.decode_graph(t, instance_args, graph_ty, span)?
+        var difference = self.decode_chips(t, instance_args, left_ty, graph.n, span)?
+        let right = self.decode_chips(t, instance_args, right_ty, graph.n, span)?
+        for i in 0..graph.n { difference[i] -= right[i] }
+        let coordinates = divisor_math.coordinates(graph.n, graph.adjacency, difference)
+        var result_args = Vec(CVal).new()
+        match coordinates.order() {
+            Some(period) => {
+                result_args.push(CVal.Int(period as i128))
+                Ok((self.period, result_args))
+            }
+            None => Ok((self.unbalanced, result_args))
+        }
+    }
+
+    fn decode_graph(
+        self, t: types.Types, instance_args: Map(u32, Vec(CVal)), ty: u32, span: Span
+    ) -> Result(Graph, Diag) {
+        let (CVal.Int(count), CVal.Type(edges_ty)) = marker_pair(
+            t, instance_args, ty, self.graph, span, GRAPH_EXPECTED
+        )? else { return Err(Diag.new(span, GRAPH_EXPECTED)) }
+        if count < 1 || count > 8 {
+            return Err(Diag.new(span, "graph must have 1 to 8 vertices"))
+        }
+        let n = count as i64
+        var graph = Graph { n, adjacency: [0; 64] }
+        var edges = TupleLeaves.new(edges_ty)
+        var occurrences = 0
+        loop {
+            let Some(ty) = edges.next(t, span)? else { break }
+            let (CVal.Int(a), CVal.Int(b)) = marker_pair(
+                t, instance_args, ty, self.edge, span, EDGE_EXPECTED
+            )? else { return Err(Diag.new(span, EDGE_EXPECTED)) }
+            if a < 0 || b < 0 || a >= count || b >= count {
+                return Err(Diag.new(span, "edge endpoint is outside the graph"))
+            }
+            if a == b { return Err(Diag.new(span, "graph cannot contain self-loops")) }
+            occurrences += 1
+            if occurrences > 32 { return Err(Diag.new(span, "graph exceeds its 32-edge limit")) }
+            graph.adjacency[a as i64 * n + b as i64] += 1
+            graph.adjacency[b as i64 * n + a as i64] += 1
+        }
+        Ok(graph)
+    }
+
+    fn decode_chips(
+        self, t: types.Types, instance_args: Map(u32, Vec(CVal)), ty: u32, n: i64, span: Span
+    ) -> Result([i128; 8], Diag) {
+        var chips: [i128; 8] = [0; 8]
+        var entries = TupleLeaves.new(ty)
+        loop {
+            let Some(ty) = entries.next(t, span)? else { break }
+            let (CVal.Int(vertex), CVal.Int(value)) = marker_pair(
+                t, instance_args, ty, self.at, span, CHIPS_EXPECTED
+            )? else { return Err(Diag.new(span, CHIPS_EXPECTED)) }
+            if vertex < 0 || vertex >= n as i128 {
+                return Err(Diag.new(span, "divisor vertex is outside the graph"))
+            }
+            chips[vertex as i64] += value
+        }
+        Ok(chips)
+    }
+}
+
+struct Graph {
+    n: i64
+    adjacency: [i64; 64]
+}
+
+impl Graph {
+    // This compact display also serves as the intern key after a prefix. It
+    // retains every labelled edge multiplicity and every coordinate.
+    fn class_name(self, coordinates: divisor_math.Coordinates) -> String {
+        var out = String.from("DivisorClass(Graph(")
+        self.n.show(&out)
+        out.push_str(", [")
+        var first = true
+        for a in 0..self.n {
+            for b in a + 1..self.n {
+                let copies = self.adjacency[a * self.n + b]
+                if copies == 0 { continue }
+                if !first { out.push_str(", ") }
+                first = false
+                a.show(&out)
+                out.push('-')
+                b.show(&out)
+                if copies > 1 {
+                    out.push('*')
+                    copies.show(&out)
+                }
+            }
+        }
+        out.push_str("]), degree=[")
+        for i in 0..self.n {
+            if i > 0 { out.push_str(", ") }
+            coordinates.degree[i].show(&out)
+        }
+        out.push_str("], residue=[")
+        for i in 0..self.n {
+            if i > 0 { out.push_str(", ") }
+            coordinates.residue[i].show(&out)
+        }
+        out.push_str("])")
+        out
+    }
+}
+
+fn marker_pair(
+    t: types.Types,
+    instance_args: Map(u32, Vec(CVal)),
+    ty: u32,
+    decl: u32,
+    span: Span,
+    message: str
+) -> Result((CVal, CVal), Diag) {
+    let Some(i) = t.adt_index(ty) else { return Err(Diag.new(span, message)) }
+    if t.adts[i as i64].decl != decl { return Err(Diag.new(span, message)) }
+    let Some(args) = instance_args.get(ty) else { return Err(Diag.new(span, message)) }
+    if args.len() != 2 { return Err(Diag.new(span, message)) }
+    Ok((args[0].clone(), args[1].clone()))
+}
+
+struct TupleLeaves {
+    pending: Vec(u32)
+    steps: i64
+}
+
+impl TupleLeaves {
+    fn new(ty: u32) -> TupleLeaves {
+        var pending = Vec(u32).new()
+        pending.push(ty)
+        TupleLeaves { pending, steps: 0 }
+    }
+
+    fn next(inout self, t: types.Types, span: Span) -> Result(Option(u32), Diag) {
+        loop {
+            let Some(ty) = self.pending.pop() else { return Ok(None) }
+            self.steps += 1
+            let types.TyKind.Tuple(children) = t.kind(ty) else { return Ok(Some(ty)) }
+            var i = children.len()
+            if self.steps + self.pending.len() + i > MAX_STEPS {
+                return Err(Diag.new(
+                    span,
+                    "graph divisor expression exceeds its 4096-step tuple limit"
+                ))
+            }
+            while i > 0 {
+                i -= 1
+                self.pending.push(children[i])
+            }
+        }
+    }
+}

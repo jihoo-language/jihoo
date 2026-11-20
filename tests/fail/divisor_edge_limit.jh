@@ -1,0 +1,12 @@
+// error: graph exceeds its 32-edge limit
+import std.divisor as d
+
+type One = d.Edge(0, 1)
+type Two = (One, One)
+type Four = (Two, Two)
+type Eight = (Four, Four)
+type Sixteen = (Eight, Eight)
+type ThirtyTwo = (Sixteen, Sixteen)
+
+fn inspect(value: d.Class(d.Graph(2, (ThirtyTwo, One)), ())) {}
+fn main() {}

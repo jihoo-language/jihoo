@@ -1,0 +1,15 @@
+// Type-level divisors on labelled, undirected multigraphs.
+pub struct Graph(N: i64, Edges: type) {}
+pub struct Edge(A: i64, B: i64) {}
+pub struct At(Vertex: i64, Chips: i64) {}
+
+// Edges and chip entries are unordered sums. Use () for an empty sum.
+// The compiler reduces Class to one index for each graph and divisor class.
+pub struct Class(G: type, D: type) {}
+
+// The least positive multiple making Left and Right equivalent.
+pub struct Order(G: type, Left: type, Right: type) {}
+pub struct Period(N: i64) {}
+pub struct Unbalanced {}
+
+struct DivisorClass {}
