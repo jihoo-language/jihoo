@@ -3434,6 +3434,17 @@ evidence. The machine enters the body directly, returns 7 and emits only
 the closure activation. The focused build passed 407 jobs and the four
 new theorems use only standard Lean axioms.
 
+### Erased entry into a leading lambda telescope
+
+The saved erased closure enters its original body at the closed dependent
+result type even when that body begins with another lambda. Reintroducing
+the inner closure boundary preserves zero demand for captured owners and
+active loans. The body keeps its original projection under the erased binder.
+
+The admitted example skips an overflowing erased operand, closes the inner
+lambda, and returns the relevant input `11`. The focused build passed 407
+jobs. The three audited declarations use only standard Lean axioms.
+
 ### Proof irrelevance in dependent type comparison
 
 Two closed Type1 annotations apply the same bound type family to

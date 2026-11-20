@@ -46,6 +46,29 @@ theorem projectRaw_erased_closure_origin
   cases resolved
   exact ⟨bodyReceipt,bodyProjected,by simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using same⟩
 
+/-- Zero demand for the telescope tail is also zero in the body's original
+receipt when the next leading lambda reintroduces its closure boundary. -/
+theorem projectRaw_body_zero_demand
+    (projected : projectRaw fuel env loans ctx body = some receipt)
+    (unused : (functionTail body receipt).demand index = some 0) :
+    receipt.demand index = some 0 := by
+  by_cases leading : lambdaHead body = true
+  · have written : ∃ erased domain nested, body = .lam erased domain nested := by
+      fun_cases lambdaHead body
+      · exact ⟨_,_,_,rfl⟩
+      · simp_all [lambdaHead]
+    obtain ⟨erased,domain,nested,rfl⟩ := written
+    cases fuel with
+    | zero => simp [projectRaw] at projected
+    | succ fuel =>
+      obtain ⟨mode,inner,_,_,rfl⟩ := projectRaw_closure_origin projected
+      have outerLambda : lambdaHead (.lam erased domain nested) = true := rfl
+      have innerUnused : (Control.scope mode (functionTail nested inner)).demand index = some 0 := by
+        simpa only [functionTail,outerLambda,ite_true,unclose] using unused
+      rw [Control.demand, innerUnused] <;> rfl
+  · have single : lambdaHead body = false := by cases found : lambdaHead body <;> simp_all
+    simpa only [functionTail,single,Bool.false_eq_true,ite_false] using unused
+
 theorem strict_projection
     (checked : projectRaw (fuel+1) env loans ctx (.strict first later) = some receipt) :
     ∃ firstReceipt laterReceipt,
@@ -369,7 +392,6 @@ theorem saved_checked_erased_closure_entry (state : State) (capture argument : C
     (entered : Loans.Entered capture.context.length loans)
     (returned : state.control = .returned (.closure true domain body capture.context capture.origins capture.values))
     (stackShape : state.stack = .function argument :: stack)
-    (singleBody : lambdaHead body = false)
     (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans capture.context (.lam true domain body) =
       some closureReceipt)
     (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total capture closureReceipt) :
@@ -394,30 +416,37 @@ theorem saved_checked_erased_closure_entry (state : State) (capture argument : C
   have doesNotOwn : ∀ object, (none : Option Value) ≠ some (.owner object) := by
     intro object different
     cases different
-  obtain ⟨receipt,bodyProjected,rfl⟩ :=
-    LoanTyping.ResourceQuantity.projectRaw_erased_closure_origin singleBody checked
-  have unused index object (stored : capture.values[index]? = some (some (.owner object))) :
-      (.scope .erased receipt : Jihoo.Quantity.Control).demand index = some 0 :=
-    captured_scope_zero (total index object stored).choose_spec
-  have scopedTotal : OwnerDemandWorld.Total capture (.scope .erased receipt) :=
-    fun index object stored => ⟨0,unused index object stored⟩
-  have scopedWorld : OwnerDemandWorld state.heap.metadata capture (.scope .erased receipt) := by
+  obtain ⟨mode,receipt,modeResolved,bodyProjected,rfl⟩ := LoanTyping.ResourceQuantity.projectRaw_closure_origin checked
+  cases modeResolved
+  let next := enter true domain body capture.context capture.origins capture.values argument.origin none
+  have scopeValid : LocalScopes (.scope .erased (functionTail body receipt)) := valid
+  have unused index object (stored : next.values[index]? = some (some (.owner object))) :
+      receipt.demand index = some 0 := by
+    cases index with
+    | zero => cases stored
+    | succ index =>
+      have unchanged : capture.values[index]? = some (some (.owner object)) := stored
+      have outer := captured_scope_zero (total index object unchanged).choose_spec
+      exact LoanTyping.ResourceQuantity.projectRaw_body_zero_demand bodyProjected
+        ((demand_under_checked_scope scopeValid index).symm.trans outer)
+  have nextSlots := slots.enter entered true domain body argument.origin none
+  have bodyWorld : OwnerDemandWorld state.heap.metadata next receipt := by
     refine ⟨?_,?_⟩
     · intro index object uses stored positive
       rw [unused index object stored] at positive
       cases positive
     · intro index alias object uses different stored previous positive
       exact unused alias object previous
-  have scopedBudget : LoanTyping.ResourceQuantity.LoanBudget capture.context.length loans (.scope .erased receipt) := by
+  have bodyBudget : LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt := by
     intro index active
-    obtain ⟨object,stored,_⟩ := slots index active
+    obtain ⟨object,stored,_⟩ := nextSlots index active
     exact unused index object stored
-  have world := scopedWorld.enter_nonowner_scope (erased := true) scopedTotal (show LocalScopes (.scope .erased receipt) from valid)
-    domain body argument.origin doesNotOwn
+  have bodyTotal : OwnerDemandWorld.Total next receipt :=
+    fun index object stored => ⟨0,unused index object stored⟩
   refine ⟨?_,opened,erased_value_context context opened.1 body argument.origin,
-    slots.enter entered true domain body argument.origin none,
+    nextSlots,
     coverage.enter_nonowner entered true domain body argument.origin none doesNotOwn,
-    receipt,bodyProjected,scopedBudget.scope entered,world⟩
+    receipt,bodyProjected,bodyBudget,bodyWorld,bodyTotal⟩
   simp only [step,returned,stackShape,returnAction,applyValue,executeLegacy,execute,Option.map_some]
 
 namespace Examples
@@ -451,6 +480,23 @@ theorem checked_erased_call_skips_overflowing_evidence :
     let result := run 12 (initial erasedCall)
     observe result = .integer 7 ∧
       result.events = [.legacy (.activate true (.integer 7) ignoredEvidence)] := by
+  refine ⟨?_,?_⟩
+  · cbv
+  · exact ⟨rfl,by cbv⟩
+
+private def erasedTelescope : Term :=
+  .app (.app (.lam true (.lt (.natural 0) (.natural 1)) (.lam false .u64 (.var 0))) ignoredEvidence)
+    (.natural 11)
+
+/-- The erased call enters a second lambda with its original closure
+boundary, then evaluates and binds the relevant argument normally. -/
+theorem checked_erased_telescope_recloses_inner_lambda :
+    LoanTyping.MixedProgram.checkDeclaration 48 96 .empty ⟨.u64,erasedTelescope⟩ =
+      some ⟨.u64,erasedTelescope⟩ ∧
+    let result := run 16 (initial erasedTelescope)
+    observe result = .natural 11 ∧ result.events =
+      [.legacy (.activate true (.lam false .u64 (.var 0)) ignoredEvidence),
+        .legacy (.activate false (.var 0) (.natural 11))] := by
   refine ⟨?_,?_⟩
   · cbv
   · exact ⟨rfl,by cbv⟩
