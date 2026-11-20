@@ -42,4 +42,14 @@ theorem owner_return_motive_and_result_schedule :
   refine ⟨by cbv,by cbv,by cbv,?_⟩
   exact ⟨by cbv,by cbv,⟨18,by cbv,by cbv⟩⟩
 
+private def recursive (limit root : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  NativeCoreGhostSpineInference.runWith normal [] 0 limit 32 [] ⟨input,0⟩ root
+
+/-- Dispatch at the original written root follows the same exact graph and
+meter as the checked Back and Give branches after their entry tick. -/
+theorem recursive_owner_return_schedule :
+    recursive 32 4 = form 32 false 3 ∧ recursive 36 13 = form 36 true 12 ∧
+      recursive 128 10 = form 128 false 9 ∧ recursive 48 7 = give 48 := by cbv
+
 end Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples

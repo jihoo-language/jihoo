@@ -4045,3 +4045,13 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,798.5 MiB.
+
+### Recursive dispatch for Back and Give
+
+The recursive ghost driver now enters `Back` and `Give` at the written
+root and uses the same child visitor for their owner, motive, and result
+checks. Its soundness theorem derives the corresponding Loan64 rules
+inside any supported recursive branch. The recursive fixtures reproduce
+the complete previously measured native schedules and the rejected
+borrowed-result case. The focused build passed 436 jobs and the audits of
+the soundness theorem and the new fixture use only standard Lean axioms.

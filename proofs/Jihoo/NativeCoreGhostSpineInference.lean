@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreGhostTypeRequirement
 import Jihoo.NativeCoreGhostConstructorInference
+import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostSort
 import Jihoo.NativeCoreGhostReferenceTypes
 import Jihoo.NativeCoreGhostLiteralAddition
@@ -554,6 +555,14 @@ def runVisits (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
         | some (.node .ref [owner]) =>
             inferReference (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) isBoxed entered owner
+        | some (.node (.back erased) [owner, motive]) =>
+            NativeCoreGhostOwnerReturns.runBack
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (normal depth) isBoxed limit depth entered erased owner motive
+        | some (.node (.give erased) [motive, owner, result]) =>
+            NativeCoreGhostOwnerReturns.runGive
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (normal depth) isBoxed limit depth entered erased motive owner result
         | some (.node .borrow [owner]) =>
             inferBorrow (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) isBoxed entered owner
@@ -1257,6 +1266,8 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
         | exact inferStore_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferLoad_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferReference_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact NativeCoreGhostOwnerReturns.runBack_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact NativeCoreGhostOwnerReturns.runGive_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferBorrow_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDeref_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferIndex_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -3484,7 +3495,7 @@ theorem runVisits_sound {normal : NormalAt}
       | @node _ op refs terms read arity children =>
           simp only [read] at success ambient ⊢
           cases op <;> simp only [Op.arity] at arity
-          case elim | fold | lend | back | give | take | view | loop | caseOf =>
+          case elim | fold | lend | take | view | loop | caseOf =>
             simp only [discard, reduceCtorEq] at success
           all_goals try
             have empty := List.length_eq_zero_iff.mp arity
@@ -3729,6 +3740,34 @@ theorem runVisits_sound {normal : NormalAt}
                       history.wellFormed (normalSound depth) (normalProgress depth) sameContext
                       (fun _ _ budget => runVisits_progress normalProgress budget)
                       onBase within bufferRep indexRep proofRep continuationRep success ambient retained
+          case back erased =>
+            have length : refs.length = 2 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons ownerRep tail =>
+              cases tail with
+              | cons motiveRep tail =>
+                cases tail
+                dsimp only at success ambient ⊢
+                exact NativeCoreGhostOwnerReturns.runBack_refines (state := {state with steps := state.steps + 1})
+                  boxedMetadata (normalSound depth) (normalProgress depth) sameContext
+                  (fun _ _ budget => runVisits_progress normalProgress budget)
+                  onBase within ownerRep motiveRep success ambient retained
+          case give erased =>
+            have length : refs.length = 3 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons motiveRep tail =>
+              cases tail with
+              | cons ownerRep tail =>
+                cases tail with
+                | cons resultRep tail =>
+                  cases tail
+                  dsimp only at success ambient ⊢
+                  exact NativeCoreGhostOwnerReturns.runGive_refines (state := {state with steps := state.steps + 1})
+                    boxedMetadata (normalSound depth) (normalProgress depth) sameContext
+                    (fun _ _ budget => runVisits_progress normalProgress budget)
+                    onBase within motiveRep ownerRep resultRep success ambient retained
           case ref | borrow | deref =>
             have length : refs.length = 1 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> simp at length
