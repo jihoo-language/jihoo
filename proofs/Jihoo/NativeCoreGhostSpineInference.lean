@@ -1,4 +1,5 @@
-import Jihoo.NativeCoreTypedEqual
+import Jihoo.NativeCoreGhostTypeRequirement
+import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreGhostSort
 import Jihoo.NativeCoreGhostReferenceTypes
 import Jihoo.NativeCoreGhostLiteralAddition
@@ -25,13 +26,6 @@ structure GraphBinding where
   erased : Bool
   deriving Repr
 
-structure Inferred where
-  typeRoot : Nat
-  compared : List (Nat × Nat)
-  deriving Repr
-
-abbrev Visit := State → Nat → Outcome Nat
-abbrev Infer := State → Nat → Outcome Inferred
 abbrev NormalAt := Nat → Visit
 
 private structure InferredBinder where
@@ -122,16 +116,6 @@ private def tick (limit depth : Nat) (state : State) (root : Nat)
   match paid with
   | .error reason => ⟨state, .error (.tick reason)⟩
   | .ok () => entered state
-
-/-- Core.require normalizes the inferred argument type, then the expected
-domain, and uses identity on their live roots. The original argument
-reference, not either type root, is later substituted into the codomain. -/
-def requireTypes (normal : Visit) (limit depth : Nat) (state : State)
-    (actual expected argument : Nat) : Outcome (Nat × Nat) :=
-  (normal state actual).next fun afterLeft left =>
-    (normal afterLeft expected).next fun afterRight right =>
-      (NativeCoreTypedEqual.identify limit depth afterRight left right).next fun afterIdentity same =>
-        if same then ⟨afterIdentity, .ok (left, right)⟩ else discard afterIdentity argument
 
 /-- Check each operand before visiting the next one. All operands share the
 single expected type node just emitted by the native inference branch. -/
@@ -498,7 +482,8 @@ private def inferFamily (infer : Infer) (normal : Visit) (limit : Nat)
 de Bruijn index zero looks up the newest binding. Visibility is shared
 by inference and all type normalization visits. -/
 def runVisits (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
-    (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool)) :
+    (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
+    (constructorRoots : Nat → Nat → Option Nat) :
     Nat → Nat → List GraphBinding → Infer
   | 0, depth, _, state, root => tick limit depth state root (fun entered => discard entered root)
   | _ + 1, 0, _, state, root => tick limit 0 state root (fun entered => discard entered root)
@@ -523,107 +508,115 @@ def runVisits (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
             if value < 2^64 then emit entered .u64 else discard entered root
         | some (.node (.integer value) []) =>
             if -(2^63 : Int) ≤ value ∧ value < (2^63 : Int) then emit entered .i64 else discard entered root
+        | some (.node (.con family constructor _) fields) =>
+            NativeCoreGhostConstructorInference.runSelected
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (normal depth) limit depth root ctx.length constructorRoots entered family constructor fields
         | some (.node (.ind family count) indices) =>
-            inferFamily (runVisits normal roots visible limit isData isBoxed shapeTable visits indexCheckDepth ctx)
+            inferFamily (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits indexCheckDepth ctx)
               (normal indexCheckDepth) limit shapeTable entered root family count indices
         | some (.node .array [n]) | some (.node .buffer [n]) =>
-            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               .u64 [n] (.universe 0) []
         | some (.node (.elements count) elements) =>
-            inferElements (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferElements (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               root count elements
         | some (.node .alloc [n, fill]) =>
-            inferAlloc (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered n fill
+            inferAlloc (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered n fill
         | some (.node .free [buffer, tail]) =>
-            inferFree (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) entered buffer tail
+            inferFree (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) entered buffer tail
         | some (.node .store [buffer, index, value, proof]) =>
-            inferStore (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferStore (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               buffer index value proof
         | some (.node .load [buffer, index, proof, continuation]) =>
-            inferLoad (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferLoad (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               buffer index proof continuation
         | some (.node .ref [owner]) =>
-            inferReference (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
+            inferReference (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) isBoxed entered owner
         | some (.node .borrow [owner]) =>
-            inferBorrow (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
+            inferBorrow (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) isBoxed entered owner
         | some (.node .deref [reference]) =>
-            inferDeref (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
+            inferDeref (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) entered reference
         | some (.node .index [subject, index, proof]) =>
-            inferIndex (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferIndex (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               subject index proof
         | some (.node .eq [a, b]) | some (.node .lt [a, b]) =>
-            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .prop []
         | some (.node .refl [a]) =>
-            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               .u64 [a] .eq [a, a]
         | some (.node .uadd [a, b]) =>
-            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .u64 []
         | some (.node (.arith _) [a, b]) =>
-            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               .i64 [a, b] .i64 []
         | some (.node .decide [a, b]) =>
-            inferDecide (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferDecide (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               root a b
         | some (.node .strict [a, b]) =>
-            inferStrict (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) entered a b
+            inferStrict (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) entered a b
         | some (.node .zeroLe [a]) =>
-            inferZeroLe (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered a
+            inferZeroLe (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered a
         | some (.node .usub [a, b, proof]) =>
-            inferSubtract (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferSubtract (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               a b proof
         | some (.node .ltAdd [a, b, delta, proof]) =>
-            inferOffsetProof (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               true a b delta proof
         | some (.node .ltCancel [a, b, delta, proof]) =>
-            inferOffsetProof (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               false a b delta proof
         | some (.node .ltLe [a, b, c, lower, upper]) =>
-            inferTransitiveProof (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferTransitiveProof (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               a b c lower upper
         | some (.node .ifEq [a, b, yes, no]) =>
-            inferConditional (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
-              (fun assumption => runVisits normal roots visible limit isData isBoxed shapeTable visits depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (fun assumption => runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered true a b yes no
         | some (.node .ifLt [a, b, yes, no]) =>
-            inferConditional (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
-              (fun assumption => runVisits normal roots visible limit isData isBoxed shapeTable visits depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (fun assumption => runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered false a b yes no
         | some (.node .refine [predicate]) =>
-            inferRefine (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered predicate
+            inferRefine (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered predicate
         | some (.node .pack [predicate, word, evidence]) =>
-            inferPack (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferPack (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               predicate word evidence
         | some (.node .transport [predicate, equality, payload]) =>
-            inferTransport (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered
+            inferTransport (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered
               predicate equality payload
         | some (.node .absurd [target, proof]) =>
-            inferAbsurd (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) entered target proof
+            inferAbsurd (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) entered target proof
         | some (.node .witness [subject]) =>
-            inferRefinementProjection (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) entered false subject
+            inferRefinementProjection (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) entered false subject
         | some (.node .proof [subject]) =>
-            inferRefinementProjection (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) entered true subject
+            inferRefinementProjection (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) entered true subject
         | some (.node (.pi erased) [a, b]) =>
-            inferBinding (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
-              (runVisits normal roots visible limit isData isBoxed shapeTable visits depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered true erased a b
         | some (.node (.lam erased) [a, b]) =>
-            inferBinding (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx)
-              (runVisits normal roots visible limit isData isBoxed shapeTable visits depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered false erased a b
         | some (.node .app [f, a]) =>
-            inferApp (runVisits normal roots visible limit isData isBoxed shapeTable visits depth ctx) (normal depth) limit depth entered f a
+            inferApp (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx) (normal depth) limit depth entered f a
         | _ => discard entered root
 
-def runWithFamilyShapes (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
+def runWithConstructors (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
     (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
-    (depth : Nat) (ctx : List GraphBinding) : Infer :=
+    (constructorRoots : Nat → Nat → Option Nat) (depth : Nat) (ctx : List GraphBinding) : Infer :=
   fun state root =>
-    runVisits normal roots visible limit isData isBoxed shapeTable (limit+1-state.steps) depth ctx state root
+    runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots (limit+1-state.steps) depth ctx state root
+
+def runWithFamilyShapes (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
+    (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool)) : Nat → List GraphBinding → Infer :=
+  runWithConstructors normal roots visible limit isData isBoxed shapeTable (fun _ _ => none)
 
 def runWithFamilyKinds (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
     (isData isBoxed : Nat → Bool) : Nat → List GraphBinding → Infer :=
@@ -638,48 +631,6 @@ def runWith (normal : NormalAt) (roots : List Roots) (visible limit : Nat) : Nat
 
 def run (roots : List Roots) (visible limit : Nat) : Nat → List GraphBinding → Infer :=
   runWith (NativeCoreGhostLiteralAddition.run roots visible limit) roots visible limit
-
-private theorem next_progress {before : Outcome α} {later : State → α → Outcome β}
-    (prior : Progress limit state before) (room : state.steps ≤ limit)
-    (following : ∀ value, before.result = .ok value → before.state.steps ≤ limit →
-      Progress limit before.state (later before.state value)) :
-    Progress limit state (before.next later) := by
-  cases found : before.result with
-  | error reason =>
-      simp only [Outcome.next, found]
-      exact ⟨prior.kept, prior.monotone, prior.bounded, fun _ _ impossible => by cases impossible⟩
-  | ok value =>
-      have within := prior.accepted room value found
-      have after := following value found within
-      simp only [Outcome.next, found]
-      exact ⟨prior.kept.trans after.kept, Nat.le_trans prior.monotone after.monotone,
-        fun _ => after.bounded within, fun _ output done => after.accepted within output done⟩
-
-private theorem identify_progress (room : state.steps ≤ limit) :
-    Progress limit state (NativeCoreTypedEqual.identify limit depth state left right) := by
-  have bounds := NativeCoreIdentical.runArena_step_bounds (arena := state.arena)
-    (depth := depth) (a := left) (b := right) room
-  generalize found : NativeCoreIdentical.runArena state.arena limit depth state.steps left right = outcome at bounds ⊢
-  rcases outcome with ⟨result, spent⟩
-  simp only [NativeCoreTypedEqual.identify, found]
-  refine ⟨.refl _, bounds.1, fun _ => bounds.2.1, fun _ value success => ?_⟩
-  cases result with
-  | error reason => simp [Except.mapError] at success
-  | ok answer =>
-      have found : answer = value := Except.ok.inj (by simpa only [Except.mapError] using success)
-      exact bounds.2.2 value (congrArg Except.ok found)
-
-theorem requireTypes_progress
-    (metered : ∀ state root, state.steps ≤ limit → Progress limit state (normal state root))
-    (room : state.steps ≤ limit) :
-    Progress limit state (requireTypes normal limit depth state actual expected argument) := by
-  apply next_progress (metered _ _ room) room
-  intro left _ leftRoom
-  apply next_progress (metered _ _ leftRoom) leftRoom
-  intro right _ rightRoom
-  apply next_progress (identify_progress rightRoom) rightRoom
-  intro same _ _
-  cases same <;> exact Progress.atState _ _
 
 private theorem requireOperands_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -1217,7 +1168,7 @@ rejected steps and failures before the eventual type has been instantiated. -/
 theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (runVisits normal roots visible limit isData isBoxed shapeTable visits depth bindings state root) := by
+    Progress limit state (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth bindings state root) := by
   induction visits generalizing depth state root bindings with
   | zero => exact tick_progress (fun _ _ => Progress.atState _ _)
   | succ visits ih =>
@@ -1251,6 +1202,8 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
       all_goals with_reducible first
         | exact inferFixed_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
+        | exact NativeCoreGhostConstructorInference.runSelected_progress
+            (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferFamily_progress (fun _ _ room => ih (depth := indexCheckDepth) room)
             (normalProgress indexCheckDepth) within
         | exact inferElements_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1282,11 +1235,18 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
         | simpa only [discard] using (Progress.atState (limit := limit) entered
             (.error (.outsideFragment root) : Except NativeCorePureComputationNormal.Error Inferred))
 
+theorem runWithConstructors_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state
+      (runWithConstructors normal roots visible limit isData isBoxed shapeTable constructorRoots depth bindings state root) :=
+  runVisits_progress normalProgress room
+
 theorem runWithFamilyShapes_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
     Progress limit state (runWithFamilyShapes normal roots visible limit isData isBoxed shapeTable depth bindings state root) :=
-  runVisits_progress normalProgress room
+  runWithConstructors_progress normalProgress room
 
 theorem runWithFamilyKinds_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
@@ -1319,6 +1279,12 @@ inductive ContextRep (env : Environment) (arena : Arena) : List GraphBinding →
   | nil : ContextRep env arena [] []
   | cons : BindingRep env arena row binding → ContextRep env arena rows ctx →
       ContextRep env arena (row :: rows) (binding :: ctx)
+
+private theorem ContextRep.length_eq (represented : ContextRep env arena bindings ctx) :
+    bindings.length = ctx.length := by
+  induction represented with
+  | nil => rfl
+  | cons _ _ ih => simpa only [List.length_cons] using congrArg Nat.succ ih
 
 theorem ContextRep.frame (represented : ContextRep env arena rows ctx) (kept : Prefix arena after) :
     ContextRep env after rows ctx := by
@@ -1429,68 +1395,6 @@ private theorem tick_success (success : (tick limit depth state root visit).resu
   · simp [tick, NativeCoreUnsignedCancellation.tick, outside, tooDeep, missing] at success
   exact ⟨by simp [tick, NativeCoreUnsignedCancellation.tick, outside, tooDeep, missing], by omega⟩
 
-def PairRetained (arena : Arena) (pair : Nat × Nat) : Prop :=
-  ∃ first second, Represents arena pair.1 first ∧ Represents arena pair.2 second ∧
-    FullyRetained first ∧ FullyRetained second
-
-def RetainedComparisons (arena : Arena) (answer : Inferred) : Prop :=
-  ∀ pair ∈ answer.compared, PairRetained arena pair
-
-private theorem identify_true
-    (left : Represents state.arena a first) (right : Represents state.arena b second)
-    (success : (NativeCoreTypedEqual.identify limit depth state a b).result = .ok true) :
-    (NativeCoreTypedEqual.identify limit depth state a b).state.arena = state.arena ∧
-      NativeCoreCompare.project first = NativeCoreCompare.project second := by
-  rcases compared : NativeCoreIdentical.runArena state.arena limit depth state.steps a b with ⟨result, steps⟩
-  cases result with
-  | error reason => simp [NativeCoreTypedEqual.identify, compared, Except.mapError] at success
-  | ok flag =>
-      simp [NativeCoreTypedEqual.identify, compared, Except.mapError] at success
-      subst flag
-      exact ⟨by simp [NativeCoreTypedEqual.identify, compared],
-        (NativeCoreIdentical.runArena_refines left right compared).mp rfl⟩
-
-/-- Retention is evidence about the actual two comparison outcomes.
-Full syntax equality reflects their projected identity, and the normalizer
-supplies conversion from each original type to its corresponding outcome. -/
-theorem requireTypes_refines
-    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
-    (leftRep : Represents state.arena actual actualType) (rightRep : Represents state.arena expected expectedType)
-    (success : (requireTypes normal limit depth state actual expected argument).result = .ok pair)
-    (ambient : Prefix (requireTypes normal limit depth state actual expected argument).state.arena final)
-    (retained : PairRetained final pair) :
-    let output := requireTypes normal limit depth state actual expected argument
-    Prefix state.arena output.state.arena ∧ (Backward state.arena → Backward output.state.arena) ∧
-      LoanTyping.Conversion.Conv env (expand env actualType) (expand env expectedType) := by
-  unfold requireTypes at success ambient ⊢
-  obtain ⟨a, firstOk, firstNext⟩ := Outcome.next_success success
-  obtain ⟨firstKept, firstBack, first, firstRep, firstChange⟩ := normalSound onBase leftRep firstOk
-  rw [firstNext] at success ambient ⊢
-  obtain ⟨b, secondOk, secondNext⟩ := Outcome.next_success success
-  obtain ⟨secondKept, secondBack, second, secondRep, secondChange⟩ :=
-    normalSound (onBase.trans firstKept) (rightRep.frame firstKept) secondOk
-  rw [secondNext] at success ambient ⊢
-  obtain ⟨flag, identical, identityNext⟩ := Outcome.next_success success
-  rw [identityNext] at success ambient ⊢
-  cases flag with
-  | false => simp [discard] at success
-  | true =>
-      simp at success
-      subst pair
-      have firstFinal := firstRep.frame secondKept
-      obtain ⟨unchanged, same⟩ := identify_true firstFinal secondRep identical
-      simp [unchanged] at ambient ⊢
-      obtain ⟨left, right, leftRep, rightRep, leftKept, rightKept⟩ := retained
-      have sameLeft := (firstFinal.frame ambient).unique leftRep
-      have sameRight := (secondRep.frame ambient).unique rightRep
-      have syntactic : first = second := NativeCoreCompare.project_injective_of_fully_retained
-        (sameLeft.symm ▸ leftKept) (sameRight.symm ▸ rightKept) same
-      refine ⟨firstKept.trans secondKept, secondBack ∘ firstBack, ?_⟩
-      have converted : LoanTyping.Conversion.Conv env (expand env actualType) (expand env first) :=
-        firstChange.converted
-      rw [syntactic] at converted
-      exact converted.trans secondChange.converted.symm
-
 private theorem binary_read
     (represented : Represents arena root term) (read : arena[root]? = some (.node op [a, b])) :
     ∃ first second, term = .node op [first, second] ∧ Represents arena a first ∧ Represents arena b second := by
@@ -1505,18 +1409,6 @@ private theorem binary_read
         | cons second tail =>
           cases tail
           exact ⟨_, _, rfl, first, second⟩
-
-structure Refines (env : Environment) (arena : Arena) (ctx : Context) (source : Term)
-    (outcome : Outcome Inferred) (answer : Inferred) : Prop where
-  kept : Prefix arena outcome.state.arena
-  backward : Backward arena → Backward outcome.state.arena
-  inferred : ∃ type, Represents outcome.state.arena answer.typeRoot type ∧
-    LoanTyping.HasType env [] ctx true (expand env source) (expand env type)
-
-def InferSound (env : Environment) (base : Arena) (ctx : Context) (limit : Nat) (visit : Infer) : Prop :=
-  ∀ {state root term answer final}, Prefix base state.arena → state.steps ≤ limit → Represents state.arena root term →
-    (visit state root).result = .ok answer → Prefix (visit state root).state.arena final →
-    RetainedComparisons final answer → Refines env state.arena ctx term (visit state root) answer
 
 private theorem inferBinder_refines
     (metadata : DataFamilies env isData)
@@ -3432,10 +3324,11 @@ theorem runVisits_sound {normal : NormalAt}
     (metadata : DataFamilies env isData) (boxedMetadata : BoxedFamilies env isBoxed)
     (familyMetadata : FamilyShapeTable env shapeTable)
     (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (constructorMetadata : NativeCoreGhostConstructorInference.ConstructorTable env base constructorRoots)
     (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth)) :
-    InferSound env base ctx limit (runVisits normal roots visible limit isData isBoxed shapeTable visits depth bindings) := by
+    InferSound env base ctx limit (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth bindings) := by
   induction visits generalizing depth base bindings ctx with
   | zero =>
       intro state root term answer final _ _ _ success _ _
@@ -3451,10 +3344,10 @@ theorem runVisits_sound {normal : NormalAt}
         simp [runVisits, tick, NativeCoreUnsignedCancellation.tick, exhausted] at success
     | succ depth =>
       have child {later nextRows nextCtx nextDepth} (kept : Prefix base later) (represented : ContextRep env later nextRows nextCtx) :
-          InferSound env later nextCtx limit (runVisits normal roots visible limit isData isBoxed shapeTable visits nextDepth nextRows) :=
-        ih (NativeCoreNestedAliases.frame_definitions aligned kept) represented
+          InferSound env later nextCtx limit (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits nextDepth nextRows) :=
+        ih (constructorMetadata.frame kept) (NativeCoreNestedAliases.frame_definitions aligned kept) represented
           (fun d _ _ _ _ extension source success => normalSound d (kept.trans extension) source success)
-      have sameContext : InferSound env base ctx limit (runVisits normal roots visible limit isData isBoxed shapeTable visits depth bindings) :=
+      have sameContext : InferSound env base ctx limit (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth bindings) :=
         child (.refl _) context
       intro state root term answer final onBase room source success ambient retained
       simp only [runVisits] at success ambient ⊢
@@ -3640,6 +3533,14 @@ theorem runVisits_sound {normal : NormalAt}
                 have left := typed _ List.mem_cons_self
                 have right := typed _ (List.mem_cons_of_mem _ List.mem_cons_self)
                 first | exact .eq left right | exact .lt left right | exact .uadd left right | exact .arith left right
+          case con family constructor count =>
+            have length := context.length_eq
+            rw [length] at success ambient ⊢
+            exact NativeCoreGhostConstructorInference.runSelected_refines
+              (state := {state with steps := state.steps + 1}) (depth := depth)
+              history.wellFormed constructorMetadata (normalSound depth) (normalProgress depth) sameContext
+              (fun _ _ budget => runVisits_progress normalProgress budget)
+              onBase within children arity success ambient retained
           case ind family count =>
             exact inferFamily_refines (state := {state with steps := state.steps + 1}) familyMetadata
               (normalSound indexCheckDepth) (normalProgress indexCheckDepth) (child (.refl _) context)
@@ -3869,6 +3770,19 @@ theorem runVisits_sound {normal : NormalAt}
                     (fun _ _ budget => runVisits_progress normalProgress budget)
                     onBase within fn arg success ambient retained
 
+theorem runWithConstructors_sound {normal : NormalAt}
+    (metadata : DataFamilies env isData) (boxedMetadata : BoxedFamilies env isBoxed)
+    (familyMetadata : FamilyShapeTable env shapeTable)
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (constructorMetadata : NativeCoreGhostConstructorInference.ConstructorTable env base constructorRoots)
+    (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx)
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth)) :
+    InferSound env base ctx limit (runWithConstructors normal roots visible limit isData isBoxed shapeTable constructorRoots depth bindings) := by
+  intro state root term answer final onBase room source success ambient retained
+  exact runVisits_sound metadata boxedMetadata familyMetadata history constructorMetadata aligned context normalProgress normalSound
+    onBase room source success ambient retained
+
 theorem runWithFamilyShapes_sound {normal : NormalAt}
     (metadata : DataFamilies env isData) (boxedMetadata : BoxedFamilies env isBoxed)
     (familyMetadata : FamilyShapeTable env shapeTable)
@@ -3876,10 +3790,9 @@ theorem runWithFamilyShapes_sound {normal : NormalAt}
     (aligned : RepresentsDefinitions base roots definitions) (context : ContextRep env base bindings ctx)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth)) :
-    InferSound env base ctx limit (runWithFamilyShapes normal roots visible limit isData isBoxed shapeTable depth bindings) := by
-  intro state root term answer final onBase room source success ambient retained
-  exact runVisits_sound metadata boxedMetadata familyMetadata history aligned context normalProgress normalSound
-    onBase room source success ambient retained
+    InferSound env base ctx limit (runWithFamilyShapes normal roots visible limit isData isBoxed shapeTable depth bindings) :=
+  runWithConstructors_sound metadata boxedMetadata familyMetadata history
+    (fun _ _ _ impossible => by cases impossible) aligned context normalProgress normalSound
 
 theorem runWithFamilyKinds_sound {normal : NormalAt}
     (metadata : DataFamilies env isData) (boxedMetadata : BoxedFamilies env isBoxed)
@@ -3926,8 +3839,9 @@ def CheckedInferences (snapshot : NativeFamilyWire.Snapshot) (env : Environment)
   ∀ {index limit depth initial : Nat} {row : Roots},
     snapshot.definitions[index]? = some row →
     let start : State := ⟨snapshot.arena, initial⟩
-    let output := runWithFamilyShapes (normalize index limit) snapshot.definitions index limit
-      (NativeCoreGhostSort.isDataAt env) (isBoxedAt env) (visibleFamilyShape env index) depth [] start row.valueRoot
+    let output := runWithConstructors (normalize index limit) snapshot.definitions index limit
+      (NativeCoreGhostSort.isDataAt env) (isBoxedAt env) (visibleFamilyShape env index)
+      (NativeCoreGhostConstructorInference.constructorAt snapshot.families index) depth [] start row.valueRoot
     initial ≤ limit →
       Progress limit start output ∧
       ∀ answer, output.result = .ok answer → RetainedComparisons output.state.arena answer →
@@ -3957,16 +3871,17 @@ theorem admitted_program_infers_with
       NativeFamilyWire.encodeSnapshot snapshot = bytes ∧
       LoanTyping.MixedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env ∧
       CheckedInferences snapshot env (normalize env snapshot) := by
-  obtain ⟨snapshot, definitions, familyTerms, env, exactBytes, _, valid, aligned, _, history, wf⟩ :=
+  obtain ⟨snapshot, definitions, familyTerms, env, exactBytes, _, valid, aligned, familyGraph, history, wf⟩ :=
     NativeLoanMixedAdmission.checkBytes_sound admitted
   refine ⟨snapshot, definitions, familyTerms, env, exactBytes, history, ?_⟩
   intro index limit depth initial row found start output room
-  refine ⟨runWithFamilyShapes_progress (metered env snapshot index limit) room, ?_⟩
+  refine ⟨runWithConstructors_progress (metered env snapshot index limit) room, ?_⟩
   intro answer success retained
   obtain ⟨entry, raw, recorded, source, typed⟩ := NativeCoreGlobalNormal.checked_definition_at aligned history found
   obtain ⟨kept, forwards, inferred, held, inferredTyped⟩ :=
-    runWithFamilyShapes_sound (NativeCoreGhostSort.isDataAt_sound env) (isBoxedAt_sound env)
-      (visibleFamilyShape_sound env index) history aligned .nil
+    runWithConstructors_sound (NativeCoreGhostSort.isDataAt_sound env) (isBoxedAt_sound env)
+      (visibleFamilyShape_sound env index) history
+      (NativeCoreGhostConstructorInference.constructorAt_sound history familyGraph index) aligned .nil
       (metered env snapshot index limit) (sound history aligned index limit)
       (.refl _) room source.2 success (.refl _) retained
   exact ⟨kept, forwards valid, entry, raw.value, inferred, recorded, source.2, held, inferredTyped,

@@ -142,40 +142,76 @@ theorem run_from_checked_graph {family constructor count : Nat} {row : NativeFam
   exact run_refines history.wellFormed normalSound normalProgress inferSound inferProgress onBase room
     found signatureFound (sourceRep.frame onBase) aligned fieldsRep length success ambient retained
 
-open NativeProgramWire
+def ConstructorTable (env : Environment) (arena : Arena) (constructors : Nat → Nat → Option Nat) : Prop :=
+  ∀ family constructor root, constructors family constructor = some root → ∃ entry signature source,
+    env.families[family]? = some entry ∧ entry.signatures[constructor]? = some signature ∧
+    Represents arena root source ∧ RawLend.Conv env (expand env source) (signatureTerm family signature)
 
-private def constructorSnapshot : NativeFamilyWire.Snapshot where
-  definitions := []
-  families := [⟨false,0,1,0,[7]⟩]
-  arena := #[.node (.natural 3) [],.node .u64 [],.var 0,.var 1,.node .eq [2,2],
-    .node (.ind 0 1) [3],.node (.pi true) [4,5],.node (.pi false) [1,6],.node .refl [0],
-    .node (.con 0 0 1) [0],.node (.con 0 0 2) [0,8],.node (.universe 0) [],.node .u64 [],
-    .node .prop [],.node .u64 []]
+theorem ConstructorTable.frame (checked : ConstructorTable env arena constructors) (kept : Prefix arena after) :
+    ConstructorTable env after constructors := by
+  intro family constructor root selected
+  obtain ⟨entry,signature,source,found,signatureFound,represented,converted⟩ := checked family constructor root selected
+  exact ⟨entry,signature,source,found,signatureFound,represented.frame kept,converted⟩
 
-private def constructorEnvironment : Option Environment := do
-  let (defs,families) ← NativeFamilyWire.decodeProgram constructorSnapshot
-  LoanTyping.MixedProgram.checkProgram 64 128 defs (families.map NativeLoanMixedAdmission.declaration)
+def constructorAt (rows : List NativeFamilyWire.FamilyRoots) (visible family constructor : Nat) : Option Nat := do
+  let row ← rows[family]?
+  if row.globals ≤ visible then row.constructors[constructor]? else none
 
-private def constructorVisit (limit root : Nat) (fields : List Nat) : Outcome Inferred :=
-  let env := constructorEnvironment.getD empty
-  let normal := NativeCoreExpandedFamilies.raw env constructorSnapshot.families [] 0 limit
-  let infer := NativeCoreGhostSpineInference.runWithFamilyShapes normal [] 0 limit
-    (NativeCoreGhostSort.isDataAt env) (NativeCoreGhostReferenceTypes.isBoxedAt env)
-    (NativeCoreGhostSpineInference.visibleFamilyShape env 0) 31 []
-  run infer (normal 31) limit 31 root 0 ⟨constructorSnapshot.arena,1⟩ 7 fields
+theorem constructorAt_sound
+    (history : LoanTyping.MixedProgram.History definitions
+      (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : NativeFamilyWire.RepresentsFamilies arena familyRows familyTerms) (visible : Nat) :
+    ConstructorTable env arena (constructorAt familyRows visible) := by
+  intro family constructor root selected
+  unfold constructorAt at selected
+  obtain ⟨row,found,pending⟩ := Option.bind_eq_some_iff.mp selected
+  split at pending
+  · obtain ⟨entry,signature,source,familyFound,signatureFound,_,represented,converted⟩ :=
+      NativeCoreConstructorTelescopeAlignment.checked_constructor_root
+        (ScopedProgram.History.ofLoanMixed history) rows found pending
+    exact ⟨entry,signature,source,familyFound,signatureFound,represented,converted⟩
+  · cases pending
 
-/-- The initial graph is the checked native family arena. Its dependent
-evidence field sees the first argument and the final result contains the
-same index root. The outer inference visit has already spent one tick. -/
-theorem admitted_dependent_constructor_meters_fields :
-    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot constructorSnapshot) = true ∧
-    (let complete := constructorVisit 54 10 [0,8]
-     complete.state.steps = 54 ∧ complete.state.arena.size = 22 ∧
-       complete.state.arena[16]? = some (.node .eq [0,0]) ∧
-       complete.state.arena[17]? = some (.node (.ind 0 1) [0]) ∧
-       complete.result.map Inferred.typeRoot = .ok 17) ∧
-    (constructorVisit 54 9 [0]).result = .error (.outsideFragment 9) := by
-  rw [NativeLoanMixedAdmission.checkBytes_encode]
-  cbv
+/-- The constructor table query precedes all of the charged checking and
+does not allocate a new type. Its success selects the original raw root. -/
+def runSelected (infer : Infer) (normal : Visit) (limit depth root contextLength : Nat)
+    (constructors : Nat → Nat → Option Nat) (state : State) (family constructor : Nat)
+    (fields : List Nat) : Outcome Inferred :=
+  match constructors family constructor with
+  | none => ⟨state,.error (.outsideFragment root)⟩
+  | some signature => run infer normal limit depth root contextLength state signature fields
+
+theorem runSelected_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (runSelected infer normal limit depth root contextLength constructors state family constructor fields) := by
+  unfold runSelected
+  split
+  · exact Progress.atState _ _
+  · exact run_progress infers normalizes room
+
+theorem runSelected_refines {family constructor count : Nat}
+    (wf : UnifiedProgram.EnvWellFormed env) (checked : ConstructorTable env base constructors)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (fieldsRep : RepresentsList state.arena fields args) (length : fields.length = count)
+    (success : (runSelected infer normal limit depth root ctx.length constructors state family constructor fields).result =
+      .ok answer)
+    (ambient : Prefix (runSelected infer normal limit depth root ctx.length constructors state family constructor fields).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.node (.con family constructor count) args)
+      (runSelected infer normal limit depth root ctx.length constructors state family constructor fields) answer := by
+  unfold runSelected at success ambient ⊢
+  split at success
+  · cases success
+  · rename_i rawRoot read
+    simp only [read] at ambient ⊢
+    obtain ⟨entry,signature,source,found,signatureFound,represented,converted⟩ := checked family constructor rawRoot read
+    exact run_refines wf normalSound normalProgress inferSound inferProgress onBase room
+      found signatureFound (represented.frame onBase) converted fieldsRep length success ambient retained
 
 end Jihoo.NativeKernel.NativeCoreGhostConstructorInference

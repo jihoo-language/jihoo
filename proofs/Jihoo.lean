@@ -1310,5 +1310,6 @@ import Jihoo.NativeCoreGhostSpineInference
 import Jihoo.NativeCoreVisibleFamilyPrefix
 import Jihoo.NativeCoreGhostConstructorFields
 import Jihoo.NativeCoreGhostConstructorInference
+import Jihoo.NativeCoreGhostConstructorExamples
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

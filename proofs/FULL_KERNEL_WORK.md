@@ -3899,3 +3899,16 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,780.5 MiB.
+
+### Constructor dispatch in recursive ghost inference
+
+The recursive graph driver now retrieves the constructor from the checked
+family graph visible at the current declaration. It shifts the written
+signature by the source context length and calls the metered field checker
+with the same recursive inference function used for other operands. Its
+soundness theorem therefore produces the typed constructor result for
+nested calls as well as for the outer expression.
+
+The recursive fixture reproduces the native graph and all 54 ticks from
+the initial state. The focused build passed 434 jobs and the four new
+audited declarations use only standard Lean axioms.

@@ -1,4 +1,4 @@
-import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreGhostTypeRequirement
 
 /-! A native ghost constructor field walk starts with the live shifted
 signature. Each field is checked in the caller's context and the original
@@ -9,7 +9,7 @@ open NativeArena Environment
 open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
-open NativeCoreGhostSpineInference (Visit Infer Inferred InferSound requireTypes requireTypes_progress requireTypes_refines RetainedComparisons)
+open NativeCoreGhostSpineInference (Visit Infer Inferred InferSound requireTypes requireTypes_progress requireTypes_refines RetainedComparisons next_progress)
 open EnvironmentDelta (expand expandArgs)
 
 private def reject (state : State) (root : Nat) : Outcome α := ⟨state,.error (.outsideFragment root)⟩
@@ -50,22 +50,6 @@ def run (infer : Infer) (normal : Visit) (limit depth root : Nat) : List Nat →
               (run infer normal limit depth root rest instantiated tail).next fun after output =>
                 ⟨after,.ok ⟨output.typeRoot,inferred.compared ++ (comparison :: output.compared)⟩⟩
       | _ => reject exposed argument
-
-private theorem next_progress {before : Outcome α} {later : State → α → Outcome β}
-    (prior : Progress limit state before) (room : state.steps ≤ limit)
-    (following : ∀ value, before.result = .ok value → before.state.steps ≤ limit →
-      Progress limit before.state (later before.state value)) :
-    Progress limit state (before.next later) := by
-  cases found : before.result with
-  | error reason =>
-    simp only [Outcome.next,found]
-    exact ⟨prior.kept,prior.monotone,prior.bounded,fun _ _ impossible => by cases impossible⟩
-  | ok value =>
-    have within := prior.accepted room value found
-    have after := following value found within
-    simp only [Outcome.next,found]
-    exact ⟨prior.kept.trans after.kept,Nat.le_trans prior.monotone after.monotone,
-      fun _ => after.bounded within,fun _ output success => after.accepted within output success⟩
 
 theorem run_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
