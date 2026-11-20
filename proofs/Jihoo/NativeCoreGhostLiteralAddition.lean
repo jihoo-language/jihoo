@@ -1,9 +1,10 @@
 import Jihoo.NativeCoreNestedAliases
 import Jihoo.NativeCoreUnsignedSum
 import Jihoo.NativeLoanComputationPreservation
+import Jihoo.NativeNumeralForward
 
-/-! The bounded literal branch of ghost UAdd uses the same two collection
-visits and the same natural-sum arena append as native Core.sum. It is a
+/-! The literal branch of ghost UAdd uses the same two collection visits
+and the same balanced natural-sum graph as native Core.sum. It is a
 post-operand extension, so surrounding dependent type formation can use it
 throughout the recursive ghost traversal. -/
 namespace Jihoo.NativeKernel.NativeCoreGhostLiteralAddition
@@ -14,6 +15,102 @@ open NativeCorePureComputationNormal (Error Outcome Progress PostExtension Expan
 open NativeCoreUnsignedCancellation (tick)
 open NativeCoreUnsignedCollect (Pool)
 open EnvironmentDelta (expand expandArgs)
+open EnvironmentDelta.NumeralForward (Represents replicate_ones forward_preserves)
+open NativeConstantAccumulator (naturalSum)
+open ACU (ArithmeticRed compact)
+open NativeKernel.Conversion (ListRel)
+
+private theorem split_nonempty_compact (xs ys : List Term) (first : xs ≠ []) (second : ys ≠ []) :
+    ArithmeticRed (compact (xs++ys)) (.uadd (compact xs) (compact ys)) := by
+  induction xs with
+  | nil => contradiction
+  | cons x xs ih =>
+    cases xs with
+    | nil =>
+      cases ys with
+      | nil => contradiction
+      | cons y ys => exact .refl _
+    | cons y xs =>
+      have split := ih (by simp)
+      change ArithmeticRed (.uadd x (compact ((y::xs)++ys))) (.uadd (.uadd x (compact (y::xs))) (compact ys))
+      exact (ArithmeticRed.addCong (.refl x) split).trans (.assocLeft _ _ _)
+
+private theorem contract_word_tree (represented : Represents input value) (fits : value < 2^64) :
+    ArithmeticRed input (.natural value) := by
+  induction represented with
+  | natural => exact .refl _
+  | add first second ihFirst ihSecond =>
+    exact (ArithmeticRed.addCong (ihFirst (by omega)) (ihSecond (by omega))).trans (.literalAdd _ _ fits)
+
+private theorem literal_sum_arithmetic (m n : Nat) (leftFits : m < 2^64) (rightFits : n < 2^64) :
+    ArithmeticRed (.uadd (.natural m) (.natural n)) (naturalSum (m+n)) := by
+  by_cases fits : m+n < 2^64
+  · rw [naturalSum,ite_eq_left fits]
+    exact .literalAdd m n fits
+  let left := (m+n)/2
+  let right := m+n-left
+  have leftPositive : 0 < left := by dsimp [left]; omega
+  have rightPositive : 0 < right := by dsimp [right,left]; omega
+  have leftWord : left < 2^64 := by dsimp [left]; omega
+  have rightWord : right < 2^64 := by dsimp [right,left]; omega
+  have length : left+right = m+n := by dsimp [right,left]; omega
+  have tree : naturalSum (m+n) = .uadd (.natural left) (.natural right) := by
+    rw [naturalSum,ite_eq_right fits]
+    change Term.uadd (naturalSum left) (if right = left then naturalSum left else naturalSum right) = _
+    by_cases halves : right = left
+    · rw [ite_eq_left halves,halves,naturalSum,ite_eq_left leftWord]
+    · rw [ite_eq_right halves,naturalSum,ite_eq_left leftWord,naturalSum,ite_eq_left rightWord]
+  let ones := fun value : Nat => List.replicate value (Term.natural 1)
+  have combined : ArithmeticRed (.uadd (.natural m) (.natural n)) (compact (ones (m+n))) := by
+    have first := ArithmeticRed.addCong (ArithmeticRed.literalSplit m leftFits) (.literalSplit n rightFits)
+    have joined := ArithmeticRed.compact_append (ones m) (ones n)
+    have same : ones m ++ ones n = ones (m+n) := List.replicate_append_replicate
+    exact first.trans (same ▸ joined)
+  have reorganized : ArithmeticRed (compact (ones (m+n))) (.uadd (compact (ones left)) (compact (ones right))) := by
+    have checked := split_nonempty_compact (ones left) (ones right)
+      (by simp [ones,Nat.ne_of_gt leftPositive]) (by simp [ones,Nat.ne_of_gt rightPositive])
+    have same : ones left ++ ones right = ones (m+n) := by rw [show ones left ++ ones right = ones (left+right) from List.replicate_append_replicate,length]
+    rw [← same]
+    exact checked
+  rw [tree]
+  exact combined.trans (reorganized.trans (.addCong (contract_word_tree (replicate_ones left) leftWord)
+    (contract_word_tree (replicate_ones right) rightWord)))
+
+private theorem numeric_arithmetic_steps (reduction : ArithmeticRed input output) :
+    ∀ {number}, Represents input number → LoanTyping.ComputationEvaluation.Steps env input output := by
+  induction reduction using ArithmeticRed.rec
+    (motive_2 := fun xs ys _ => ListRel
+      (fun a b => ∀ {number}, Represents a number → LoanTyping.ComputationEvaluation.Steps env a b) xs ys) with
+  | refl => intro _ _; exact .family .refl
+  | trans first _ ihFirst ihSecond =>
+    intro number represented
+    exact .trans (ihFirst represented) (ihSecond (forward_preserves (env := env) (.acu (.arithmetic first)) represented))
+  | node op _ ih =>
+    intro number represented
+    cases represented with
+    | natural => cases ih; exact .family .refl
+    | add left right =>
+      cases ih with
+      | cons first tail =>
+        cases tail with
+        | cons second last =>
+          cases last
+          exact .node .uadd (by decide) (.cons (first left) (.cons (second right) .nil))
+  | assocRight => intro _ _; exact .arithmetic (.assocRight _ _ _)
+  | assocLeft => intro _ _; exact .arithmetic (.assocLeft _ _ _)
+  | comm => intro _ _; exact .arithmetic (.comm _ _)
+  | zeroRight => intro _ _; exact .arithmetic (.zeroRight _)
+  | zeroLeft => intro _ _; exact .arithmetic (.zeroLeft _)
+  | literalSplit value fits => intro _ _; exact .arithmetic (.literalSplit value fits)
+  | literalAdd m n fits => intro _ _; exact .arithmetic (.literalAdd m n fits)
+  | nil => exact .nil
+  | cons _ _ first tail => exact .cons first tail
+
+private theorem expand_numeric (represented : Represents term value) : expand env term = term := by
+  induction represented with
+  | natural value => simp only [Term.natural,expand,expandArgs]
+  | add left right ihLeft ihRight =>
+    simp only [Term.uadd,expand,expandArgs,ihLeft,ihRight]
 
 private def collectVisit (limit depth : Nat) (state : State) (root : Nat) : Outcome Unit :=
   let visited := tick state.arena limit depth state.steps root
@@ -48,24 +145,22 @@ private theorem literalSum_progress (limit depth : Nat) (state : State) (left ri
   (collectVisit_progress _ _ _ _).next (fun _ => (collectVisit_progress _ _ _ _).next (fun _ =>
     Progress.uncharged (NativeCoreNaturalSum.run_prefix _ _) rfl))
 
-private theorem literalSum_refines (success : (literalSum limit depth state left right (m+n)).result = .ok root)
-    (fits : m+n < 2^64) :
-    let after := (literalSum limit depth state left right (m+n)).state.arena
-    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧ Represents after root (.natural (m+n)) := by
+private theorem literalSum_refines (success : (literalSum limit depth state left right value).result = .ok root) :
+    let after := (literalSum limit depth state left right value).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧ Represents after root (naturalSum value) := by
   unfold literalSum at success ⊢
   obtain ⟨_,first,firstNext⟩ := Outcome.next_success success
   rw [firstNext] at success ⊢
   obtain ⟨_,second,secondNext⟩ := Outcome.next_success success
   rw [secondNext] at success ⊢
-  have emitted : (NativeCoreNaturalSum.run (m+n) state.arena).result = .ok root := by
-    change ((NativeCoreNaturalSum.run (m+n) state.arena).result.mapError Error.add) = .ok root at success
-    cases built : (NativeCoreNaturalSum.run (m+n) state.arena).result with
+  have emitted : (NativeCoreNaturalSum.run value state.arena).result = .ok root := by
+    change ((NativeCoreNaturalSum.run value state.arena).result.mapError Error.add) = .ok root at success
+    cases built : (NativeCoreNaturalSum.run value state.arena).result with
     | error reason => simp [built,Except.mapError] at success
     | ok selected =>
       have same : selected = root := Except.ok.inj (by simpa only [built,Except.mapError] using success)
       exact congrArg Except.ok same
   obtain ⟨represented,backward,_⟩ := NativeCoreNaturalSum.run_refines _ _ emitted
-  rw [NativeConstantAccumulator.naturalSum,ite_eq_left fits] at represented
   exact ⟨NativeCoreNaturalSum.run_prefix _ _,backward,represented⟩
 
 private def finish (limit depth root : Nat) (state : State) (refs : List Nat) : Outcome Nat :=
@@ -73,7 +168,7 @@ private def finish (limit depth root : Nat) (state : State) (refs : List Nat) : 
   | [left,right] =>
     match state.arena[left]?,state.arena[right]? with
     | some (.node (.natural m) []),some (.node (.natural n) []) =>
-      if m+n < 2^64 then literalSum limit depth state left right (m+n)
+      if m < 2^64 ∧ n < 2^64 then literalSum limit depth state left right (m+n)
       else ⟨state,.error (.outsideFragment root)⟩
     | _,_ => ⟨state,.error (.outsideFragment root)⟩
   | _ => ⟨state,.error (.outsideFragment root)⟩
@@ -123,13 +218,15 @@ theorem extension_sound (history : LoanTyping.MixedProgram.History definitions d
               cases last
               rw [first.unique (.node leftRead rfl .nil),second.unique (.node rightRead rfl .nil)]
         subst terms
-        obtain ⟨kept,backward,represented⟩ := literalSum_refines success fits
-        have reduced := (LoanTyping.ComputationEvaluation.Steps.arithmetic (.literalAdd _ _ fits) :
-          LoanTyping.ComputationEvaluation.Steps env (.uadd (.natural m) (.natural n)) (.natural (m+n))).ghost_transform
-            (ScopedProgram.History.ofLoanMixed history)
+        obtain ⟨kept,backward,represented⟩ := literalSum_refines success
+        have numeric : Represents (.uadd (.natural m) (.natural n)) (m+n) := .add (.natural _) (.natural _)
+        have arithmetic := numeric_arithmetic_steps (env := env) (literal_sum_arithmetic m n fits.1 fits.2) numeric
+        have reduced := arithmetic.ghost_transform (ScopedProgram.History.ofLoanMixed history)
+        have outputNumeric := (NativeConstantAccumulator.naturalSum_correct (env := env)
+          (loans := []) (ctx := []) (mode := true) (m+n)).1
         simp only [ite_eq_left fits]
         exact ⟨kept,backward,_,represented,
-          by simpa only [ExpandedNormalization,Term.natural,Term.uadd,expand,expandArgs] using reduced⟩
+          by simpa only [ExpandedNormalization,expand_numeric numeric,expand_numeric outputNumeric] using reduced⟩
       · cases success
     · cases success
   · cases success
@@ -151,13 +248,13 @@ theorem run_refines (history : LoanTyping.MixedProgram.History definitions decla
     (NativeCorePureComputationNormal.expandedRules history.wellFormed) (extension_sound history)
     (NativeCoreNestedAliases.extension_sound history aligned) onBase held success
 
-/-- With two bounded literal operands, the installed Core.sum model visits
-exactly the two original references and then emits a single natural word.
+/-- With two word literals, the installed Core.sum model visits exactly
+the two original references and then emits the balanced sum.
 The amount charged is independent of the result of the graph append. -/
 theorem native_sum_literals_exact (env : Environment) (state : State) (limit depth : Nat)
     (first : state.arena[left]? = some (.node (.natural m) []))
     (second : state.arena[right]? = some (.node (.natural n) []))
-    (fits : m+n < 2^64) (room : state.steps+2 ≤ limit) (nested : depth ≠ 0) :
+    (leftFits : m < 2^64) (rightFits : n < 2^64) (room : state.steps+2 ≤ limit) (nested : depth ≠ 0) :
     let emitted := NativeCoreNaturalSum.run (m+n) state.arena
     NativeCoreUnsignedSum.run env false state.arena limit depth state.steps left right =
       ⟨emitted.arena, emitted.result.mapError .graph, some (state.steps+2)⟩ := by
@@ -174,7 +271,7 @@ theorem native_sum_literals_exact (env : Environment) (state : State) (limit dep
       simp only [NativeCoreUnsignedCollect.runOperands,NativeCoreUnsignedCollect.run,NativeCoreUnsignedCancellation.tick,
         firstRoom,secondRoom, Nat.succ_ne_zero, Nat.not_le.mpr leftVisible, Nat.not_le.mpr rightVisible,
         ite_false,first,second,Option.map_some,NativeCoreUnsignedCollect.nodeView,NativeCoreUnsignedCollect.view,
-        UInt64.toNat_ofNat_of_lt' (by omega : m < 2^64),UInt64.toNat_ofNat_of_lt' (by omega : n < 2^64)]
+        UInt64.toNat_ofNat_of_lt' leftFits,UInt64.toNat_ofNat_of_lt' rightFits]
       simp [literals,Nat.add_assoc]
     have stable : NativeCoreUnsignedSumRounds.rounds env false state.arena limit (depth+1) literals (state.steps+2) =
         (.ok (literals,0),state.steps+2) := rfl
@@ -204,7 +301,7 @@ on the appended arena, graph errors and shared clock. -/
 theorem literalSum_matches_native (env : Environment) (state : State) (limit depth : Nat)
     (first : state.arena[left]? = some (.node (.natural m) []))
     (second : state.arena[right]? = some (.node (.natural n) []))
-    (fits : m+n < 2^64) (room : state.steps+2 ≤ limit) (nested : depth ≠ 0) :
+    (leftFits : m < 2^64) (rightFits : n < 2^64) (room : state.steps+2 ≤ limit) (nested : depth ≠ 0) :
     let mapped := literalSum limit depth state left right (m+n)
     let native := NativeCoreUnsignedSum.run env false state.arena limit depth state.steps left right
     mapped.state.arena = native.arena ∧ native.steps = some mapped.state.steps ∧
@@ -220,9 +317,23 @@ theorem literalSum_matches_native (env : Environment) (state : State) (limit dep
     simp only [literalSum,collectVisit,tick,firstRoom,secondRoom,nested,
       Nat.not_le.mpr leftVisible,Nat.not_le.mpr rightVisible,ite_false,Except.mapError,Outcome.next]
   dsimp only
-  rw [modeled,native_sum_literals_exact env state limit depth first second fits room nested]
+  rw [modeled,native_sum_literals_exact env state limit depth first second leftFits rightFits room nested]
   simp only [emit]
   generalize NativeCoreNaturalSum.run (m+n) state.arena = built
   rcases built with ⟨next,failed | root⟩ <;> exact ⟨True.intro,True.intro,rfl⟩
+
+namespace Examples
+
+private def wide : Arena := #[.node (.natural (2^64-1)) [],.node (.natural 1) [],.node .uadd [0,1]]
+
+/-- Both equal halves share one arena row. The fifth tick is the second
+collection visit, after which the balanced result is committed. -/
+theorem wide_literal_sum_uses_one_halved_leaf :
+    let finished := run [] 0 5 8 ⟨wide,0⟩ 2
+    finished.state.steps = 5 ∧ finished.result = .ok 4 ∧
+      finished.state.arena = wide ++ #[.node (.natural (2^63)) [],.node .uadd [3,3]] := by
+  cbv
+
+end Examples
 
 end Jihoo.NativeKernel.NativeCoreGhostLiteralAddition

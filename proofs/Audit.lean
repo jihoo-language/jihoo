@@ -10558,3 +10558,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.converted_operands_common_proposition
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_pack_applications_share_meaning
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.typed_computed_pack_resume
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.Examples.wide_literal_sum_uses_one_halved_leaf

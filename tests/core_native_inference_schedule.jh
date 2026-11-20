@@ -365,6 +365,20 @@ fn absurd_inference() {
     assert_spent(&c, "absurd normalizes the upper endpoint after exposing Lt")
 }
 
+fn wide_ghost_sum() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let largest = c.add(core.Term.Natural(18446744073709551615), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let sum = c.add(core.Term.UAdd(largest, one), span).unwrap()
+    spend(&c, 999995)
+    let value = c.normal(sum, 8).unwrap()
+    assert(value == 4 && c.node_count() == 5, "wide ghost sum commits one shared half and the result")
+    assert(c.term(3) == core.Term.Natural(9223372036854775808), "wide sum halves fit U64")
+    assert(c.term(value) == core.Term.UAdd(3, 3), "equal halves reuse one graph reference")
+    assert_spent(&c, "wide ghost sum uses five ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -381,6 +395,7 @@ fn main() -> i32 {
     offset_proof_inference()
     transitive_proof_inference()
     absurd_inference()
+    wide_ghost_sum()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

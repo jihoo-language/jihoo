@@ -3475,6 +3475,13 @@ ticks and place the final inequality at row 26 of a 27-row arena. The
 focused build passed 427 jobs and its nine-declaration audit used only
 standard Lean axioms.
 
+The same ghost traversal also handles sums of two U64 literals whose total
+exceeds a word. Arithmetic reduction constructs the balanced result before
+lifting that reduction through the typed computation relation. The native
+sum model and Lean agree on the shared half in `U64.max + 1` and all five
+ticks. The focused rebuild passed 427 jobs and the audit used only
+standard Lean axioms.
+
 ### Ghost inference of an impossible case
 
 `Absurd` checks the requested type's sort, exposes the evidence's original
