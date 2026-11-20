@@ -805,6 +805,55 @@ fn code_word_definition() {
     assert_spent(&word, "the original word annotation and code body use six ticks on one clock")
 }
 
+fn owner_return_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let owner = c.add(core.Term.Buffer(two), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let motive = c.add(core.Term.Lam(false, owner, word), span).unwrap()
+    c.add(core.Term.Back(false, owner, motive), span).unwrap()
+    let zero = c.add(core.Term.Integer(0), span).unwrap()
+    let allocated = c.add(core.Term.Alloc(two, zero), span).unwrap()
+    c.add(core.Term.Give(false, motive, allocated, two), span).unwrap()
+    let borrowed = c.add(core.Term.Ref(owner), span).unwrap()
+    let ref_motive = c.add(core.Term.Lam(false, owner, borrowed), span).unwrap()
+    c.add(core.Term.Back(false, owner, ref_motive), span).unwrap()
+    let equality = c.add(core.Term.Eq(two, two), span).unwrap()
+    let proof_motive = c.add(core.Term.Lam(false, owner, equality), span).unwrap()
+    c.add(core.Term.Back(true, owner, proof_motive), span).unwrap()
+    c
+}
+
+fn owner_return_inference() {
+    var back = owner_return_fixture()
+    spend(&back, 999968)
+    let kind = back.infer(4, [], true, 32).unwrap()
+    assert(kind == 22 && back.term(kind) == core.Term.Universe(0), "Back forms a Type0")
+    assert_spent(&back, "Back checks the result representation in thirty-two ticks")
+
+    var given = owner_return_fixture()
+    spend(&given, 999952)
+    let ty = given.infer(7, [], true, 32).unwrap()
+    assert(ty == 26 && given.node_count() == 27, "Give appends its checked return type last")
+    let core.Term.Back(false, owner_type, 3) = given.term(ty) else {
+        panic("Give keeps the original motive")
+    }
+    assert(given.term(owner_type) == core.Term.Buffer(0), "Give retains the inferred owner's length")
+    assert_spent(&given, "Give checks its result application in forty-eight ticks")
+
+    var evidence = owner_return_fixture()
+    spend(&evidence, 999964)
+    let kind = evidence.infer(13, [], true, 32).unwrap()
+    assert(kind == 25 && evidence.term(kind) == core.Term.Universe(0), "an erased motive forms Back at Type0")
+    assert_spent(&evidence, "erased Back skips the result representation check and spends thirty-six ticks")
+
+    var rejected = owner_return_fixture()
+    assert(match rejected.infer(10, [], true, 32) {
+        Err(e) => e.msg == "core: the result after giving back has one representation and holds no borrow", _ => false
+    }, "Back rejects a borrowed result even in ghost inference")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -834,6 +883,7 @@ fn main() -> i32 {
     ghost_definition_body_checking()
     code_local_inference()
     code_word_definition()
+    owner_return_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

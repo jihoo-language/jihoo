@@ -1316,5 +1316,8 @@ import Jihoo.NativeCoreGhostConstructorExamples
 import Jihoo.NativeCoreGhostDeclarationAnnotations
 import Jihoo.NativeCoreCodeHeadInference
 import Jihoo.NativeCoreGhostDefinitionChecking
+import Jihoo.NativeCoreGhostBackMotive
+import Jihoo.NativeCoreGhostOwnerReturns
+import Jihoo.NativeCoreGhostOwnerReturnExamples
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

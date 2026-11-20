@@ -10642,3 +10642,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.scalarBodies_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.scalarBodies_sound
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.admitted_word_definition_uses_code_body
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runBack_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runBack_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runGive_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runGive_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples.owner_return_motive_and_result_schedule

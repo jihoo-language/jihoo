@@ -4000,3 +4000,17 @@ checker and spends six ticks across the two original roots and comparison.
 The native exhaustion fixture also compares every committed proof check row.
 The focused build passed 439 jobs and the eight new audited declarations
 use only standard Lean axioms.
+
+### Owner-return type and result inference
+
+The ghost `Back` and `Give` branches use the native motive check. The
+inferred motive exposes a relevant owner argument and a sort selected by
+erasure. Relevant results pass the representation check. `Give` checks
+the result against an application of the written motive to the original
+owner expression. Its output retains that motive and the owner's type.
+
+The native and Lean fixtures agree on 32 ticks for relevant `Back`, 36
+for erased `Back`, and 48 for `Give`, and reject a borrowed result type.
+The focused build passed 439 jobs and the seven new declarations use only
+standard Lean axioms. These two branches are checked independently of
+dispatch in the full recursive driver.
