@@ -4184,3 +4184,11 @@ as a premise. The native and Lean samples agree on 63 steps and the final
 graph row. A missing case is rejected before any graph allocation. The
 focused build passed 445 jobs and the four additions to the audit use
 standard Lean axioms.
+
+### Recursive dispatch for dependent Loop
+
+The recursive ghost inference driver now checks Loop from its original
+root. It uses the visible family layout for the callback effect scan. The
+data and proposition fixtures retain their earlier native schedules and
+result rows after recursive dispatch. The focused build passed 441 jobs.
+The recursive soundness theorem and the new fixture use standard Lean axioms.

@@ -10707,3 +10707,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropElimination.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropElimination.constructor_subject_arity
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropEliminationExamples.indexed_proposition_checks_motive_branch_and_evidence
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopExamples.recursive_dispatch_checks_data_and_proof

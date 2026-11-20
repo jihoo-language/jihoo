@@ -44,4 +44,16 @@ theorem loop_checks_data_and_successor_proof :
      proof.state.steps = 196 ∧ proof.result.map Inferred.typeRoot = .ok 83 ∧
        proof.state.arena[83]? = some (.node .app [21,0]) ∧ proof.state.arena.size = 84) := by cbv
 
+/-- Recursive inference enters the same two Loop schedules using the
+shared clock, including the original successor expression in the proof. -/
+theorem recursive_dispatch_checks_data_and_proof :
+    (let normal := NativeCorePureComputationNormal.runWithExtensions postSum (NativeCoreNestedAliases.extension [] 0) 99
+     let inferred := NativeCoreGhostSpineInference.runWith normal [] 0 99 32 [] ⟨input,0⟩ 10
+     inferred.state.steps = 99 ∧ inferred.result.map Inferred.typeRoot = .ok 58 ∧
+       inferred.state.arena[58]? = some (.node .app [5,0]) ∧ inferred.state.arena.size = 59) ∧
+    (let normal := NativeCorePureComputationNormal.runWithExtensions postSum (NativeCoreNestedAliases.extension [] 0) 196
+     let inferred := NativeCoreGhostSpineInference.runWith normal [] 0 196 32 [] ⟨input,0⟩ 24
+     inferred.state.steps = 196 ∧ inferred.result.map Inferred.typeRoot = .ok 83 ∧
+       inferred.state.arena[83]? = some (.node .app [21,0]) ∧ inferred.state.arena.size = 84) := by cbv
+
 end Jihoo.NativeKernel.NativeCoreGhostLoopExamples
