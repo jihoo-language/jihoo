@@ -3784,3 +3784,23 @@ compiler agree on the initial proof bound, the shifted owner domain and the
 original I64 result at 67 ticks, including the budget failure at the final
 lowering. The focused build passed 427 jobs and the new theorem uses only
 standard Lean axioms.
+
+### Actual call entry and dependent arithmetic branches
+
+The mutable machine now has a call-entry theorem for the original checked
+application spine. It pushes the actual function frames, runs each relevant
+operand in its saved argument frame, skips each erased operand, and produces
+one activation and one runtime slot per consumed binder. Unconsumed
+arguments remain on the stack. The resulting code retains the original
+dependent body and closing substitution, and the final slot list gives its
+ownership demand when the local liveness, alias and retirement conditions
+hold. Arbitrary operand success and owner retirement still need to follow
+from the full source execution invariant.
+
+The gluing model uses the actual IfLt branch rule with the erased Decide
+term in the true arm and the unchanged valuation in the false arm. Native
+ghost cancellation on checked literal sum trees realizes the exact
+mathematical difference, including values wider than one word. The output
+retains its original type and possible Strict prefixes. The focused build
+passed 520 jobs and all seven new declarations use only standard Lean
+axioms.

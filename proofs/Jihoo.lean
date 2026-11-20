@@ -975,6 +975,8 @@ import Jihoo.NativeDependentNumericCoherence
 import Jihoo.NativeDependentRefinementRelation
 import Jihoo.NativeDependentEqualityRelation
 import Jihoo.NativeDependentInequalityRelation
+import Jihoo.NativeDependentBranchRelation
+import Jihoo.NativeDependentWideSubtraction
 import Jihoo.NativeScopeCheck
 import Jihoo.NativeLoanScopeInputExamples
 import Jihoo.NativeLoanConversion
@@ -1256,6 +1258,7 @@ import Jihoo.NativeCoreElimNormal
 import Jihoo.NativeCoreRecursiveElim
 import Jihoo.NativeBindingMachineMutableCheckedClosure
 import Jihoo.NativeBindingMachineMutableTelescopeDemand
+import Jihoo.NativeBindingMachineMutableCallEntry
 import Jihoo.NativeLoanIndexedPropositionModel
 import Jihoo.NativeCoreViewNormal
 import Jihoo.NativeCoreViewShape

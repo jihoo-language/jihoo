@@ -10581,3 +10581,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtraction_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.bounded_subtractions_share_meaning
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_load_checks_dependent_callback
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.retains_original_bindings
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.executes
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.executes_from_source
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.closed_source_body
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.transfers_owner_demand
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.ifLt_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.native_literal_subtraction_realizes
