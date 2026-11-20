@@ -373,6 +373,7 @@
               Jihoo.NativeLoanTypingInput \
               Jihoo.NativeLoanGlobalInput \
               Jihoo.NativeLoanMixedAdmission \
+              Jihoo.NativeLoanPureMixedAdmission \
               Jihoo.NativeLoanQuantityInput \
               Jihoo.NativeACUBoundedNormalizer \
               Jihoo.NativeEnvironmentDeltaBounded \

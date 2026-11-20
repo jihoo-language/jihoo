@@ -2184,6 +2184,10 @@ original array result type, using the concrete accumulated values.
 The aggregate check passed 1,004 Lake jobs, 9,533 declaration audits, and all
 generated fixture comparisons. The axiom audit accepts only the standard
 Lean axioms `propext`, `Quot.sound`, and `Classical.choice`.
+The focused Nix graph-certificate build now includes the pure mixed
+admission module imported by the version-6 validator. Both system
+derivations evaluated, and the native mixed regression passed again after
+building the validator's imports.
 
 General consistency, contextual preservation across the rest of the
 language, the source-to-runtime ownership invariant, and refinement of the
