@@ -2,6 +2,7 @@ import Jihoo.NativeLoanQuantityOrigins
 import Jihoo.NativeBindingMachineLoanTyping
 import Jihoo.NativeCallResourceContracts
 import Jihoo.NativeExactClosing
+import Jihoo.NativeLoanBorrowedBudget
 
 /-! The actual loan resource projection retains both the complete leading
 source telescope and the replay that authenticates its supplied arguments.
@@ -35,6 +36,12 @@ theorem openHead_lambdas (opened : openHead fuel env loans ctx head supplied = s
         exact .cons (resolve_sound resolved) (ih found)
     · cases opened
       exact .done
+
+theorem OpenedLambdas.context_length (opening : OpenedLambdas env loans ctx head supplied opened) :
+    opened.context.length = ctx.length + opened.modes.length := by
+  induction opening with
+  | done => simp
+  | cons _ _ ih => simpa only [List.length_cons,Nat.add_right_comm _ 1,Nat.add_assoc] using ih
 
 /-- The original application projection supplies every relevant argument
 receipt in source order and the actual opened body receipt. -/
@@ -135,5 +142,68 @@ theorem project_app_binding_store (wf : UnifiedProgram.EnvWellFormed env)
     rw [application] at applied
     exact ⟨fuel,head,supplied,entries,result,opened,runtime,body,bodyType,remaining,rfl,spine,accepted,applied,
       entered,bodyTyped,bodyProjected,arguments,⟨store,converted,tail⟩,same⟩
+
+theorem LoanBudget.scopes (budget : LoanBudget depth loans (.scopes modes body))
+    (entered : Loans.Entered depth loans) : LoanBudget (depth + modes.length) loans body := by
+  induction modes generalizing depth with
+  | nil => exact budget
+  | cons mode tail ih =>
+    have enteredBody : Loans.Entered (depth+1) loans :=
+      fun frame member => Nat.le_trans (entered frame member) (Nat.le_succ _)
+    simpa only [List.length_cons,Nat.add_right_comm _ 1,Nat.add_assoc] using ih (budget.scope entered) enteredBody
+
+private theorem local_scopes_body (valid : LocalScopes (.scopes modes body)) : LocalScopes body := by
+  induction modes with
+  | nil => exact valid
+  | cons mode tail ih =>
+    apply ih
+    cases mode
+    · exact valid.2
+    · exact valid.2
+    · exact valid
+    · exact valid
+
+private theorem runtime_budgets (budget : LoanBudget depth loans (sequence operands))
+    (valid : LocalScopes (sequence operands)) :
+    ∀ operand ∈ operands, LoanBudget depth loans operand ∧ LocalScopes operand := by
+  induction operands with
+  | nil => intro _ impossible; cases impossible
+  | cons first tail ih =>
+    intro operand member
+    rcases List.mem_cons.mp member with rfl | later
+    · exact ⟨budget.sequence.1,valid.1⟩
+    · exact ih budget.sequence.2 valid.2 operand later
+
+/-- Every relevant operand and the entire opened CODE body have zero
+ownership demand for each active loan. The body's budget uses the actual
+context depth after opening the complete dependent telescope. -/
+theorem projectRaw_app_loan_budgets
+    (checked : projectRaw (fuel+1) env loans ctx (.app function argument) = some control)
+    (budget : LoanBudget ctx.length loans control) (valid : LocalScopes control)
+    (entered : Loans.Entered ctx.length loans) :
+    ∃ head supplied entries result opened runtime body,
+      splitSpine fuel (.app function argument) [] = some (head,supplied) ∧
+      ResourceReplay.checked fuel env loans ctx false head supplied = some (entries,result) ∧
+      openHead fuel env loans ctx head supplied = some opened ∧
+      (ResourceReplay.runtimeArguments entries).mapM (projectRaw fuel env loans ctx) = some runtime ∧
+      projectRaw fuel env loans opened.context opened.body = some body ∧
+      LoanBudget opened.context.length loans body ∧ LocalScopes body ∧
+      ∀ operand ∈ runtime, LoanBudget ctx.length loans operand ∧ LocalScopes operand := by
+  obtain ⟨head,supplied,entries,result,opened,runtime,body,spine,replayed,opening,operands,projected,same⟩ :=
+    projectRaw_app_origin checked
+  have parts : LoanBudget ctx.length loans (.scopes opened.modes body) ∧ LocalScopes (.scopes opened.modes body) ∧
+      LoanBudget ctx.length loans (sequence runtime) ∧ LocalScopes (sequence runtime) := by
+    rw [same] at budget valid
+    cases modes : opened.modes with
+    | nil =>
+      simp only [modes,List.isEmpty,ite_true] at budget valid ⊢
+      exact ⟨budget.sequence.1,valid.1,budget.sequence.2,valid.2⟩
+    | cons mode rest =>
+      simp only [modes,List.isEmpty,Bool.false_eq_true,ite_false] at budget valid ⊢
+      exact ⟨budget.sequence.2,valid.2,budget.sequence.1,valid.1⟩
+  have bodyBudget := parts.1.scopes entered
+  rw [← (openHead_lambdas opening).context_length] at bodyBudget
+  exact ⟨head,supplied,entries,result,opened,runtime,body,spine,replayed,opening,operands,projected,
+    bodyBudget,local_scopes_body parts.2.1,runtime_budgets parts.2.2.1 parts.2.2.2⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity

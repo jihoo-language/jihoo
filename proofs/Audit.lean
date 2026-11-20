@@ -10539,3 +10539,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.transport_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.unequal_words_unrealizable
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_reflexive_residual_realizes
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.OpenedLambdas.context_length
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.LoanBudget.scopes
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_app_loan_budgets

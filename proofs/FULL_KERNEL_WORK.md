@@ -3491,6 +3491,12 @@ The theorem retains the original CODE body derivation, the exact closed
 result at that boundary and the remaining application replay. It permits
 different caller and capture contexts and uses no CODE substitution rule.
 
+The same projected application carries the enclosing loan budget through
+every relevant operand and through all consumed local scopes. Each active
+loan has zero owner demand in the original body at the depth of the opened
+telescope. The focused build passed 274 jobs and the seven-declaration
+audit used only standard Lean axioms.
+
 ### Dependent semantics of equality transport
 
 The equality relation combines agreement of the represented natural values
