@@ -12,7 +12,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | Remaining obligation | Starting point |
 | --- | --- |
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
-| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It commutes Strict out of Case and data Elim for families whose indices are all parameters when the motive can use the enclosing context independently of the scrutinee. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
+| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It commutes Strict out of Case and data Elim when the motive can use the enclosing context and the family's indices independently of the scrutinee. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. Closed arithmetic evidence at the original index and the physical allocation length prove the computed unsigned sum fits. General execution across arbitrary closures and dependent runtime forms remains open. |
 | Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, primitive operators with fixed operand types, Decide, Strict, ZeroLe, USub, and conditional branches. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
 
@@ -3389,3 +3389,18 @@ The nested example uses LtAdd over ZeroLe as its read evidence. It reads the
 fresh lease at index 1 and faults on signed overflow before reading the
 captured outer lease. Both leases remain live at the fault. The focused
 Lake build passed all 422 jobs.
+
+### Indexed motives for Strict family scrutinees
+
+The Strict visitor now follows the nonparameter index binders before
+checking the final scrutinee binder. Lowering and reweakening prove that
+the motive's body remains independent of that binder under every
+substitution for the earlier indices. Case and data Elim keep their
+original checked branch types and reconstruct the original result type
+using the authenticated family arity.
+
+The exact-byte fixture uses `Box(n)` with a `Buffer(n)` field. Both
+eliminators keep the overflowing prefix and give the selected allocation
+type `Buffer(2)`. The rebuilt native compiler independently admits both
+definitions, checks their original-type preservation and returns the
+same Strict graph shape.

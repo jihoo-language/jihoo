@@ -4,8 +4,8 @@ import Jihoo.NativeLoanCheckerPolicySoundness
 
 /-! Pure Case and data Elim move a retained Strict scrutinee outside the
 eliminator. A motive that ignores the scrutinee gives the same original
-checked type on either side of this graph rewrite, including when its body
-uses variables from the enclosing context. -/
+checked type on either side of this graph rewrite. Its result may depend on
+the family's indices and on variables from the enclosing context. -/
 namespace Jihoo.NativeKernel.NativeCoreFamilyStrict
 
 open NativeArena Environment
@@ -24,33 +24,54 @@ def familyTerm (analysis : Bool) (family : Nat) (motive : Term) (arms : List Ter
   .node (familyOp analysis family arms.length) (motive :: (arms ++ [subject]))
 
 structure Stable (env : Environment) (family : Nat) (motive : Term) : Prop where
-  data : ∃ entry, env.families[family]? = some entry ∧
-    entry.declaration.data = true ∧ entry.declaration.params = entry.declaration.arity
-  result : ∀ a b, LoanTyping.Conversion.Conv env (.app (expand env motive) a) (.app (expand env motive) b)
+  data : ∃ entry, env.families[family]? = some entry ∧ entry.declaration.data = true
+  result : ∀ {entry} {indices : List Term}, env.families[family]? = some entry →
+    indices.length = entry.declaration.arity - entry.declaration.params →
+    ∀ a b, LoanTyping.Conversion.Conv env
+      (.app (applications (expand env motive) indices) a)
+      (.app (applications (expand env motive) indices) b)
 
 private theorem Stable.metadata (stable : Stable env family motive) (found : env.families[family]? = some entry) :
-    entry.declaration.data = true ∧ entry.declaration.params = entry.declaration.arity := by
-  obtain ⟨other, listed, data, fixed⟩ := stable.data
+    entry.declaration.data = true := by
+  obtain ⟨other, listed, data⟩ := stable.data
   have same := Option.some.inj (listed.symm.trans found)
   subst other
-  exact ⟨data, fixed⟩
+  exact data
+
+private theorem arguments_refl (env : Environment) (indices : List Term) :
+    ListRel (LoanTyping.Conversion.Conv env) indices indices := by
+  induction indices with
+  | nil => exact .nil
+  | cons value _ rest => exact .cons (.refl value) rest
 
 theorem Stable.transport (stable : Stable env family motive)
     (converted : LoanTyping.Conversion.Conv env (expand env motive) (expand env normalized)) :
     Stable env family normalized := by
-  refine ⟨stable.data, fun a b => ?_⟩
+  refine ⟨stable.data, fun {entry} {indices} found size a b => ?_⟩
   have app (x : Term) : LoanTyping.Conversion.Conv env
-      (.app (expand env motive) x) (.app (expand env normalized) x) :=
-    .node .app (.cons converted (.cons (.refl _) .nil))
-  exact (app a).symm.trans ((stable.result a b).trans (app b))
+      (.app (applications (expand env motive) indices) x)
+      (.app (applications (expand env normalized) indices) x) :=
+    .node .app (.cons (LoanTyping.applications_congr converted (arguments_refl env indices)) (.cons (.refl _) .nil))
+  exact (app a).symm.trans ((stable.result found size a b).trans (app b))
+
+private def ignoresScrutinee (env : Environment) (depth : Nat) (arena : Arena) : Nat → Nat → Bool
+  | 0, motive =>
+      match arena[motive]? with
+      | some (.node (.lam _) [_, body]) =>
+          ((decode depth arena body).map (fun term =>
+            (PartialRenaming.shift (-1) 0 (expand env term)).isSome)).getD false
+      | _ => false
+  | n + 1, motive =>
+      match arena[motive]? with
+      | some (.node (.lam _) [_, body]) => ignoresScrutinee env depth arena n body
+      | _ => false
 
 def constantMotive (env : Environment) (depth : Nat) (arena : Arena) (family motive : Nat) : Bool :=
-  match env.families[family]?, arena[motive]? with
-  | some entry, some (.node (.lam _) [_, body]) =>
-      entry.declaration.data && (entry.declaration.params == entry.declaration.arity) &&
-        ((decode depth arena body).map (fun term =>
-          (PartialRenaming.shift (-1) 0 (expand env term)).isSome)).getD false
-  | _, _ => false
+  match env.families[family]? with
+  | some entry =>
+      entry.declaration.data &&
+        ignoresScrutinee env depth arena (entry.declaration.arity - entry.declaration.params) motive
+  | none => false
 
 private theorem binary_read (represented : Represents arena root term)
     (read : arena[root]? = some (.node op [a, b])) :
@@ -67,42 +88,105 @@ private theorem binary_read (represented : Represents arena root term)
           cases tail
           exact ⟨_, _, rfl, first, second⟩
 
+private inductive IgnoresLast : Nat → Term → Prop where
+  | last {erased : Bool} {domain body : Term} : IgnoresLast 0 (.lam erased domain (body.rename Nat.succ))
+  | index {n : Nat} {body : Term} {erased : Bool} {domain : Term} :
+      IgnoresLast n body → IgnoresLast (n + 1) (.lam erased domain body)
+
+private theorem ignoresScrutinee_sound (represented : Represents arena root motive)
+    (accepted : ignoresScrutinee env depth arena n root = true) :
+    IgnoresLast n (expand env motive) := by
+  induction n generalizing motive root with
+  | zero =>
+    simp only [ignoresScrutinee] at accepted
+    split at accepted
+    case h_2 => cases accepted
+    case h_1 erased domain body read =>
+      obtain ⟨A, B, rfl, _, bodyRep⟩ := binary_read represented read
+      cases decoded : decode depth arena body with
+      | none => simp [decoded] at accepted
+      | some term =>
+        have same := bodyRep.unique (decode_sound decoded)
+        subst term
+        have canLower : (PartialRenaming.shift (-1) 0 (expand env B)).isSome = true := by
+          simpa [decoded] using accepted
+        cases lowered : PartialRenaming.shift (-1) 0 (expand env B) with
+        | none => simp [lowered] at canLower
+        | some outer =>
+          have weakened := LoanTyping.Checker.branch_type_reweakens lowered
+          simp only [expand_node_cons, expandArgs]
+          rw [← weakened]
+          exact .last
+  | succ n ih =>
+    simp only [ignoresScrutinee] at accepted
+    split at accepted
+    case h_2 => cases accepted
+    case h_1 erased domain body read =>
+      obtain ⟨A, B, rfl, _, bodyRep⟩ := binary_read represented read
+      simp only [expand_node_cons, expandArgs]
+      exact .index (ih bodyRep accepted)
+
+private theorem substitute_lambda (erased : Bool) (domain body : Term) (values : Nat → Term) :
+    (Term.lam erased domain body).subst values =
+      .lam erased (domain.subst values) (body.subst (liftSubOne values)) := by
+  simp only [Term.lam, Term.subst, substArgs, Op.binders, liftSub]
+
+private theorem IgnoresLast.substitution (shape : IgnoresLast n motive) (values : Nat → Term) :
+    IgnoresLast n (motive.subst values) := by
+  induction shape generalizing values with
+  | @last erased domain body =>
+    have shifted : (body.rename Nat.succ).subst (liftSubOne values) =
+        (body.subst values).rename Nat.succ := by
+      simp only [Term.subst_rename, Term.rename_subst, liftSubOne]
+    rw [substitute_lambda, shifted]
+    exact .last
+  | @index n body erased domain _ ih =>
+    rw [substitute_lambda]
+    exact .index (ih (liftSubOne values))
+
+private theorem beta (env : Environment) (erased : Bool) (domain body value : Term) :
+    LoanTyping.Conversion.Conv env (.app (.lam erased domain body) value) (body.subst (single value)) :=
+  (RawLend.Forward.acu (.compute (.beta erased domain body value))).toConv
+
+private theorem IgnoresLast.stable (shape : IgnoresLast indices.length motive) :
+    LoanTyping.Conversion.Conv env (.app (applications motive indices) a) (.app (applications motive indices) b) := by
+  induction indices generalizing motive with
+  | nil =>
+    cases shape with
+    | @last erased domain body =>
+      have reduce (value : Term) :
+          LoanTyping.Conversion.Conv env (.app (.lam erased domain (body.rename Nat.succ)) value) body := by
+        simpa only [Term.shift_subst_single] using beta env erased domain (body.rename Nat.succ) value
+      exact (reduce a).trans (reduce b).symm
+  | cons first rest ih =>
+    cases shape with
+    | @index n body erased domain shape =>
+      have applied := LoanTyping.applications_congr (beta env erased domain body first) (arguments_refl env rest)
+      have reduce (value : Term) := RawLend.Conv.node .app (.cons applied (.cons (.refl value) .nil))
+      exact (reduce a).trans ((ih (shape.substitution (single first))).trans (reduce b).symm)
+
 theorem constantMotive_sound (represented : Represents arena root motive)
     (accepted : constantMotive env depth arena family root = true) :
     Stable env family motive := by
   unfold constantMotive at accepted
-  split at accepted
-  case h_2 => cases accepted
-  case h_1 entry erased domain body found read =>
-    obtain ⟨data, complete⟩ := Bool.and_eq_true_iff.mp accepted
-    obtain ⟨data, fixed⟩ := Bool.and_eq_true_iff.mp data
-    refine ⟨⟨entry, found, data, beq_iff_eq.mp fixed⟩, ?_⟩
-    obtain ⟨A, B, rfl, _, bodyRep⟩ := binary_read represented read
-    cases decoded : decode depth arena body with
-    | none => simp [decoded] at complete
-    | some closed =>
-      have same := bodyRep.unique (decode_sound decoded)
-      subst closed
-      have canLower : (PartialRenaming.shift (-1) 0 (expand env B)).isSome = true := by
-        simpa [decoded] using complete
-      cases lowered : PartialRenaming.shift (-1) 0 (expand env B) with
-      | none => simp [lowered] at canLower
-      | some outer =>
-        have weakened := LoanTyping.Checker.branch_type_reweakens lowered
-        intro a b
-        simp only [expand_node_cons, expandArgs]
-        have beta (arg : Term) : LoanTyping.Conversion.Conv env
-            (.app (.lam erased (expand env A) (expand env B)) arg) outer := by
-          have reduced := RawLend.Forward.acu (env := env)
-            (.compute (.beta erased (expand env A) (expand env B) arg))
-          simpa only [← weakened, Term.shift_subst_single] using reduced.toConv
-        exact (beta a).trans (beta b).symm
+  cases metadata : env.families[family]? with
+  | none => simp [metadata] at accepted
+  | some entry =>
+    simp only [metadata, Bool.and_eq_true] at accepted
+    obtain ⟨data, skipped⟩ := accepted
+    refine ⟨⟨entry, metadata, data⟩, fun {other} {indices} found size a b => ?_⟩
+    have same := Option.some.inj (metadata.symm.trans found)
+    subst other
+    have shape := ignoresScrutinee_sound represented skipped
+    rw [← size] at shape
+    exact shape.stable
 
 private theorem data_elim_scrutinee_context
     (typed : LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms scrutinee) type)
-    (metadata : ∀ {entry}, env.families[family]? = some entry →
-      entry.declaration.data = true ∧ entry.declaration.params = entry.declaration.arity)
-    (stable : ∀ a b, LoanTyping.Conversion.Conv env (.app motive a) (.app motive b)) :
+    (metadata : ∀ {entry}, env.families[family]? = some entry → entry.declaration.data = true)
+    (stable : ∀ {entry} {indices : List Term}, env.families[family]? = some entry →
+      indices.length = entry.declaration.arity - entry.declaration.params →
+      ∀ a b, LoanTyping.Conversion.Conv env (.app (applications motive indices) a) (.app (applications motive indices) b)) :
     ∃ scrutineeType, LoanTyping.HasType env [] ctx true scrutinee scrutineeType ∧
       ∀ {replacement}, LoanTyping.HasType env [] ctx true replacement scrutineeType →
         LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms replacement) type := by
@@ -112,17 +196,16 @@ private theorem data_elim_scrutinee_context
   obtain ⟨rfl, single⟩ := List.append_inj' tails (by simp)
   obtain rfl := (List.cons.inj single).1
   rcases kind with ⟨data, _⟩ | ⟨data, proof, types, size, motiveTyped, scrutineeTyped, generated, branches, result⟩
-  · rw [(metadata found).1] at data
+  · rw [metadata found] at data
     cases data
-  have suffix : indices.drop entry.declaration.params = [] :=
-    List.drop_eq_nil_of_le (by simp only [size, (metadata found).2, Nat.le_refl])
   refine ⟨_, scrutineeTyped, fun replacementTyped => ?_⟩
   have replaced := LoanTyping.HasType.dataElim (analysis := false) (ghost := true) found data
     (by intro impossible; cases impossible) size motiveTyped (by simpa only [Bool.true_or] using replacementTyped)
     (by simpa only [Bool.not_false, Bool.and_true] using generated)
     (by simpa only [Bool.true_or] using branches) (Or.inl rfl)
-  simp only [suffix, applications, List.foldl_nil] at result replaced
-  exact replaced.convert ((stable _ _).trans result)
+  have indexCount : (indices.drop entry.declaration.params).length = entry.declaration.arity - entry.declaration.params := by
+    rw [List.length_drop, size]
+  exact replaced.convert ((stable found indexCount _ _).trans result)
 
 private theorem expanded_familyTerm (env : Environment) :
     expand env (familyTerm analysis family motive arms subject) =
@@ -139,7 +222,7 @@ private theorem scrutinee_context (stable : Stable env family motive)
   · obtain ⟨T, scrutineeTyped, rebuild⟩ := data_elim_scrutinee_context typed stable.metadata stable.result
     exact ⟨T, scrutineeTyped, fun replacementTyped => rebuild replacementTyped⟩
   · obtain ⟨T, scrutineeTyped, rebuild⟩ :=
-      LoanTyping.FamilyIota.case_scrutinee_context typed (fun found => (stable.metadata found).2) stable.result
+      LoanTyping.FamilyIota.case_scrutinee_context typed stable.result
     exact ⟨T, scrutineeTyped, fun replacementTyped => rebuild replacementTyped⟩
 
 theorem changeScrutinee (stable : Stable env family motive) (change : ExpandedChange env scrutinee replacement) :

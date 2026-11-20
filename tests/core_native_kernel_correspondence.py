@@ -280,11 +280,14 @@ def run(compiler, checker, output):
     writer = output / 'core-native-schema'
     transformer = output / 'core-native-transforms'
     inference_schedule = output / 'core-native-inference-schedule'
+    indexed_strict = output / 'core-native-indexed-strict'
     for source, target in (('tests/core_native_snapshots.jh', exporter),
                            ('tests/core_native_schema.jh', writer),
                            ('tests/core_native_transforms.jh', transformer),
-                           ('tests/core_native_inference_schedule.jh', inference_schedule)):
+                           ('tests/core_native_inference_schedule.jh', inference_schedule),
+                           ('tests/core_native_indexed_strict.jh', indexed_strict)):
         success(command([*compiler, 'build', '-O2', '-I', 'compiler', source, '-o', target]))
+    success(command([indexed_strict]))
     inference = success(command([inference_schedule]))
     (output / 'inference-schedule-report.txt').write_bytes(inference)
     schema = success(command(['python3', 'tests/native_kernel_schema.py',

@@ -100,13 +100,13 @@ theorem strict_case_inputs
   exact ⟨prefixType, _, prefixTyped, inner,
     (RawValue.Conv.node .app (.cons (.refl _) (.cons (.symm (.strict effect value)) .nil))).trans (.old result)⟩
 
-/-- For a motive with a stable result on a family without changing indices,
-the same checked arms can consume any replacement of the scrutinee type. -/
+/-- When the motive's result is stable in its final argument, the same
+checked arms consume any replacement at the original indexed scrutinee type. -/
 theorem case_scrutinee_context
     (typed : HasType env [] ctx true (caseTerm family motive cases scrutinee) type)
-    (fixedIndices : ∀ {entry}, env.families[family]? = some entry →
-      entry.declaration.params = entry.declaration.arity)
-    (stable : ∀ a b, Conversion.Conv env (.app motive a) (.app motive b)) :
+    (stable : ∀ {entry} {indices : List Term}, env.families[family]? = some entry →
+      indices.length = entry.declaration.arity - entry.declaration.params →
+      ∀ a b, Conversion.Conv env (.app (applications motive indices) a) (.app (applications motive indices) b)) :
     ∃ scrutineeType, HasType env [] ctx true scrutinee scrutineeType ∧
       ∀ {replacement}, HasType env [] ctx true replacement scrutineeType →
         HasType env [] ctx true (caseTerm family motive cases replacement) type := by
@@ -115,15 +115,14 @@ theorem case_scrutinee_context
   obtain ⟨rfl, tails⟩ := List.cons.inj layout
   obtain ⟨rfl, single⟩ := List.append_inj' tails (by simp)
   obtain rfl := (List.cons.inj single).1
-  have suffix : indices.drop entry.declaration.params = [] :=
-    List.drop_eq_nil_of_le (by simp only [size, fixedIndices found, Nat.le_refl])
   refine ⟨_, scrutineeTyped, fun replacementTyped => ?_⟩
   have replaced := HasType.dataElim (analysis := true) (ghost := true) found data (fun _ => boxed) size
     motiveTyped (by simpa only [Bool.true_or] using replacementTyped)
     (by simpa only [Bool.not_true, Bool.and_false] using generated)
     (by simpa only [Bool.true_or] using branches) (Or.inl rfl)
-  simp only [suffix, applications, List.foldl_nil] at result replaced
-  exact replaced.convert ((stable _ _).trans result)
+  have indexCount : (indices.drop entry.declaration.params).length = entry.declaration.arity - entry.declaration.params := by
+    rw [List.length_drop, size]
+  exact replaced.convert ((stable found indexCount _ _).trans result)
 
 private theorem mapped_length {α β : Type} {inputs : List α} {outputs : List β} {f : α → Option β}
     (built : inputs.mapM f = some outputs) :

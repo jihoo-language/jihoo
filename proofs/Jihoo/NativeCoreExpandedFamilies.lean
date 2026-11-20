@@ -424,6 +424,72 @@ theorem strict_scrutinee_child_exhaustion_keeps_inner_eliminator :
 
 end StrictScrutinee
 
+namespace IndexedStrictScrutinee
+
+private def box (length : Term) : Term := .node (.ind 0 1) [length]
+private def size : Term := .natural 2
+private def buffer : Term := .buffer size
+private def allocation : Term := .alloc size (.integer 0)
+private def overflow : Term := .arith .add (.integer 9223372036854775807) (.integer 1)
+private def motive : Term :=
+  .lam false .u64 (.lam false (box (.var 0)) (.buffer (.var 1)))
+private def arm : Term := .lam false .u64 (.lam false (.buffer (.var 0)) (.var 0))
+private def subject : Term := .strict overflow (.node (.con 0 0 2) [size, allocation])
+private def caseEntry : GlobalDeclaration := ⟨buffer, FamilyIota.caseTerm 0 motive [arm] subject⟩
+private def elimEntry : GlobalDeclaration := ⟨buffer, FamilyIota.elimTerm 0 motive [arm] subject⟩
+private def family : FamilyDeclaration := ⟨true, 0, 1,
+  [.pi false .u64 (.pi false (.buffer (.var 0)) (box (.var 1)))], 0⟩
+private def env : Environment := ⟨#[caseEntry, elimEntry], #[⟨family,
+  [⟨[⟨false, .u64, none⟩, ⟨false, .buffer (.var 0), none⟩], [.var 1]⟩], true⟩]⟩
+
+private def snapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨20, 18⟩, ⟨20, 19⟩]
+  families := [⟨true, 0, 1, 0, [23]⟩]
+  arena := #[.node .u64 [], .node (.natural 2) [], .node (.integer 0) [], .node .alloc [1, 2],
+    .var 0, .var 1, .node (.ind 0 1) [4], .node .buffer [4], .node .buffer [5],
+    .node (.lam false) [6, 8], .node (.lam false) [0, 9], .node (.lam false) [7, 4],
+    .node (.lam false) [0, 11], .node (.con 0 0 2) [1, 3], .node (.integer 9223372036854775807) [],
+    .node (.integer 1) [], .node (.arith .add) [14, 15], .node .strict [16, 13],
+    .node (.caseOf 0 1) [10, 12, 17], .node (.elim 0 1) [10, 12, 17],
+    .node .buffer [1], .node (.ind 0 1) [5], .node (.pi false) [7, 21], .node (.pi false) [0, 22]]
+
+private def evaluate (visible root : Nat) : Outcome Nat :=
+  run env snapshot.families snapshot.definitions visible 256 32 ⟨snapshot.arena, 0⟩ root
+
+private def observed (outcome : Outcome Nat) : Option Term :=
+  match outcome.result with
+  | .ok root => decode 8 outcome.state.arena root
+  | .error _ => none
+
+/-- The motive uses the nonparameter index as the length of a buffer and
+ignores the boxed scrutinee. Both eliminators keep the original Buffer(2)
+type and retain the overflowing prefix before returning the selected field. -/
+theorem checked_indexed_case_and_elim_retain_strict_scrutinee :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot snapshot) = true ∧
+    observed (evaluate 0 18) = some (.strict overflow allocation) ∧
+    observed (evaluate 1 19) = some (.strict overflow allocation) ∧
+    LoanTyping.HasType env [] [] true (.strict overflow allocation) buffer := by
+  have admitted : NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot snapshot) = true := by
+    rw [NativeLoanMixedAdmission.checkBytes_encode]
+    cbv
+  have history : LoanTyping.MixedProgram.History [caseEntry, elimEntry] [family] env :=
+    LoanTyping.MixedProgram.checkProgram_sound (fuel := 64) (quantityFuel := 128) (by cbv)
+  have aligned : RepresentsDefinitions snapshot.arena snapshot.definitions [caseEntry, elimEntry] :=
+    decodeRoots_sound (by cbv)
+  have caseObserved : observed (evaluate 0 18) = some (.strict overflow allocation) := by cbv
+  have elimObserved : observed (evaluate 1 19) = some (.strict overflow allocation) := by cbv
+  refine ⟨admitted, caseObserved, elimObserved, ?_⟩
+  cases success : (evaluate 1 19).result with
+  | error reason => simp only [observed, success, reduceCtorEq] at elimObserved
+  | ok root =>
+    have result : Represents (evaluate 1 19).state.arena root (.strict overflow allocation) :=
+      decode_sound (by simpa only [observed, success] using elimObserved)
+    have typed := keeps_type history aligned (show snapshot.definitions[1]? = some ⟨20, 19⟩ from rfl)
+      (show env.globals[1]? = some elimEntry from rfl) success result
+    simpa only [elimEntry, overflow, allocation, size, EnvironmentDelta.expand, EnvironmentDelta.expandArgs] using typed
+
+end IndexedStrictScrutinee
+
 end Examples
 
 end Jihoo.NativeKernel.NativeCoreExpandedFamilies

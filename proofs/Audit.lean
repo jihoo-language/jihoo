@@ -10498,3 +10498,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.supported_affine_bound
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.reference_index_typing
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.UnsignedOperand.checked_value_of_arithmetic_bound
+#print axioms Jihoo.NativeKernel.NativeCoreExpandedFamilies.Examples.IndexedStrictScrutinee.checked_indexed_case_and_elim_retain_strict_scrutinee

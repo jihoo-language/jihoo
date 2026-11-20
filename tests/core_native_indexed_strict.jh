@@ -1,0 +1,53 @@
+import core
+import diag
+
+fn ids(xs: [u32]) -> Vec(u32) {
+    var out = Vec(u32).new()
+    for x in xs { out.push(x) }
+    out
+}
+
+fn main() -> i32 {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let u = c.add(core.Term.U64, span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let zero = c.add(core.Term.Integer(0), span).unwrap()
+    let allocated = c.add(core.Term.Alloc(two, zero), span).unwrap()
+    let recent = c.add(core.Term.Var(0), span).unwrap()
+    let older = c.add(core.Term.Var(1), span).unwrap()
+    let box = c.add(core.Term.Ind(0, ids([recent])), span).unwrap()
+    let inner_length = c.add(core.Term.Buffer(recent), span).unwrap()
+    let outer_length = c.add(core.Term.Buffer(older), span).unwrap()
+    let on_box = c.add(core.Term.Lam(false, box, outer_length), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, u, on_box), span).unwrap()
+    let take_field = c.add(core.Term.Lam(false, inner_length, recent), span).unwrap()
+    let arm = c.add(core.Term.Lam(false, u, take_field), span).unwrap()
+    let boxed = c.add(core.Term.Con(0, 0, ids([two, allocated])), span).unwrap()
+    let maximum = c.add(core.Term.Integer(9223372036854775807), span).unwrap()
+    let one = c.add(core.Term.Integer(1), span).unwrap()
+    let overflow = c.add(core.Term.Arith(core.Arith.Add, maximum, one), span).unwrap()
+    let subject = c.add(core.Term.Strict(overflow, boxed), span).unwrap()
+    let case = c.add(core.Term.Case(0, motive, ids([arm]), subject), span).unwrap()
+    let elim = c.add(core.Term.Elim(0, motive, ids([arm]), subject), span).unwrap()
+    let buffer = c.add(core.Term.Buffer(two), span).unwrap()
+    let output = c.add(core.Term.Ind(0, ids([older])), span).unwrap()
+    let owns_field = c.add(core.Term.Pi(false, inner_length, output), span).unwrap()
+    let signature = c.add(core.Term.Pi(false, u, owns_field), span).unwrap()
+    c.push_family(core.Family { name: "Box".to_string(), data: true, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Box".to_string(), ty: signature })
+    c.push_definition(core.Definition { name: "case_buffer".to_string(), ty: buffer, value: case,
+        exported: false, span })
+    c.push_definition(core.Definition { name: "elim_buffer".to_string(), ty: buffer, value: elim,
+        exported: false, span })
+    match c.preserves() {
+        Ok(_) => {}
+        Err(e) => { eprintln(e.msg); return 1 }
+    }
+    let normal_case = c.normal(case, core.DEPTH).unwrap()
+    let normal_elim = c.normal(elim, core.DEPTH).unwrap()
+    assert(c.term(normal_case) == core.Term.Strict(overflow, allocated), "indexed Case retains the signed overflow")
+    assert(c.term(normal_elim) == core.Term.Strict(overflow, allocated), "indexed Elim retains the signed overflow")
+    0
+}
