@@ -1309,6 +1309,52 @@ fn parametric_data_motive_domain(proof: bool) {
         "the selected elimination sort preserves the declared motive result")
 }
 
+fn code_application_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    c.add(core.Term.Pi(false, word, signed), span).unwrap()
+    let fn_ref = c.add(core.Term.Var(0), span).unwrap()
+    let value = c.add(core.Term.Natural(7), span).unwrap()
+    c.add(core.Term.App(fn_ref, value), span).unwrap()
+    c
+}
+
+fn code_erasure_application_fixture(erased: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    c.add(core.Term.Pi(erased, word, signed), span).unwrap()
+    let function = c.add(core.Term.Var(1), span).unwrap()
+    let argument = c.add(core.Term.Var(0), span).unwrap()
+    c.add(core.Term.App(function, argument), span).unwrap()
+    c
+}
+
+fn code_application_inference() {
+    var baseline = code_application_fixture()
+    let budget = remaining_ticks(&baseline)
+    var c = code_application_fixture()
+    var context = Vec(core.Binding).new()
+    context.push(core.Binding { ty: 2, erased: false })
+    let result = c.infer(5, context.as_slice(), false, 32).unwrap()
+    assert(result == 1 && c.node_count() == 7 && budget-remaining_ticks(&c) == 15,
+        "saturated code call returns the original signed type after its result inspection")
+
+    context.push(core.Binding { ty: 0, erased: true })
+    var erased = code_erasure_application_fixture(true)
+    let inferred = erased.infer(5, context.as_slice(), false, 32).unwrap()
+    assert(inferred == 1 && erased.node_count() == 6 && budget-remaining_ticks(&erased) == 16,
+        "an erased function domain checks an erased local argument in ghost mode")
+
+    var relevant = code_erasure_application_fixture(false)
+    assert(!relevant.infer(5, context.as_slice(), false, 32).is_ok() &&
+        relevant.node_count() == 6 && budget-remaining_ticks(&relevant) == 9,
+        "a relevant function domain rejects the erased local at the start of its argument visit")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1344,6 +1390,7 @@ fn main() -> i32 {
     code_local_inference()
     scalar_code_inference()
     scalar_code_declaration()
+    code_application_inference()
     loop_motive_inference()
     dependent_lend_callbacks()
     code_word_definition()

@@ -4295,3 +4295,15 @@ Recursive inference reproduces the same graph and comparison receipts.
 The native checker and Lean agree on 104 ticks for the dependent reader
 and 110 for the generic reader. The focused build passed 444 jobs and the
 ten new audited declarations use standard Lean axioms.
+
+### Saturated runtime applications
+
+The code application driver visits the original callee in head position
+and checks the argument in the mode selected by its binder. The type
+argument policy runs before substitution. At the top of a saturated
+spine, result inspection leaves the original instantiated type root in
+place. Native and Lean agree on 15 ticks for an ordinary call and 16 for
+a call with an erased argument. A relevant call rejects that erased
+argument after nine ticks. Unsaturated top-level function values still
+require the native ownership scan. The focused build passed 448 jobs
+and the four new audited declarations use standard Lean axioms.

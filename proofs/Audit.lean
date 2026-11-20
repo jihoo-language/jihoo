@@ -10753,3 +10753,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendExamples.two_lend_paths_keep_the_outer_result
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendExamples.recursive_lend_uses_shared_counter
+#print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.run_backward
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplication.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplication.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplication.saturated_code_application_selects_argument_mode

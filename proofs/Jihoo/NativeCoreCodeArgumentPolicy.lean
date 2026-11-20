@@ -115,4 +115,40 @@ theorem policy_preserves_distinct_checking_schedules :
       run normal empty 14 8 ⟨input,0⟩ 4 5 = ⟨⟨input,7⟩,.error (.outsideFragment 5)⟩ ∧
       run normal empty 14 8 ⟨input,0⟩ 3 8 = ⟨⟨input,14⟩,.error (.outsideFragment 8)⟩ := by cbv
 
+/-- The kind and plain-argument phases keep all established graph references
+backward. The metered scan itself allocates no nodes. -/
+theorem run_backward (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
+    (onBase : Prefix base state.arena) (backward : Backward state.arena)
+    (domainRep : Represents state.arena domain D) (argRep : Represents state.arena argument A)
+    (success : (run normal env limit depth state domain argument).result = .ok ()) :
+    Backward (run normal env limit depth state domain argument).state.arena := by
+  unfold run at success ⊢
+  obtain ⟨typeArgument,classified,next⟩ := Outcome.next_success success
+  rw [next] at success ⊢
+  obtain ⟨classKept,classBack,_,_,_⟩ :=
+    NativeCoreCodeKind.classify_refines (normalSound depth) onBase backward domainRep classified
+  cases typeArgument with
+  | false => exact classBack
+  | true =>
+    simp only [ite_true] at success ⊢
+    obtain ⟨kind,checked,nextKind⟩ := Outcome.next_success success
+    rw [nextKind] at success ⊢
+    cases kind with
+    | false => cases success
+    | true =>
+      simp only [ite_true] at success ⊢
+      obtain ⟨plain,observed,nextPlain⟩ := Outcome.next_success success
+      rw [nextPlain] at success ⊢
+      cases plain with
+      | false => cases success
+      | true =>
+        simp only [ite_true]
+        obtain ⟨kindKept,kindBack,_,_,_,_⟩ :=
+          NativeCoreCodeKind.firstOrder_refines normalSound (onBase.trans classKept) (domainRep.frame classKept) checked
+        have kept := classKept.trans kindKept
+        unfold NativeCoreCodePlain.run at observed ⊢
+        obtain ⟨_,normalized,after⟩ := Outcome.next_success observed
+        rw [after,NativeCoreCodePlain.scan_arena]
+        exact (normalSound depth (onBase.trans kept) (argRep.frame kept) normalized).2.1 (kindBack classBack)
+
 end Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy
