@@ -4284,3 +4284,14 @@ original motive, and the Lean fixture checks their common eighteen-tick
 motive phase. An erased index is rejected before the expected family
 domain is built. The focused build passed 432 jobs and the four new
 audited declarations use standard Lean axioms.
+
+### Recursive ghost Lend inference
+
+The generic reader and the specialized dependent reader both derive the
+original source Lend rule. The dependent route uses the exact substituted
+reader and continuation, checks the original binder annotations, and
+lowers the continuation's normalized result back to the caller's scope.
+Recursive inference reproduces the same graph and comparison receipts.
+The native checker and Lean agree on 104 ticks for the dependent reader
+and 110 for the generic reader. The focused build passed 444 jobs and the
+ten new audited declarations use standard Lean axioms.

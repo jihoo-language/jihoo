@@ -10743,3 +10743,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.telescope_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.data_and_proposition_motives_share_domain_schedule
+#print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.select_frame
+#print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.run_none
+#print axioms Jihoo.NativeKernel.NativeCoreDependentLendCallbacks.run_selected_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBinderCheck.inferBinder_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBinderCheck.inferBinder_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.run_generic_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendExamples.two_lend_paths_keep_the_outer_result
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendExamples.recursive_lend_uses_shared_counter

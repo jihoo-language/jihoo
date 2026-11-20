@@ -4,7 +4,9 @@ import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostTakeInference
 import Jihoo.NativeCoreGhostFoldInference
 import Jihoo.NativeCoreGhostLoopInference
+import Jihoo.NativeCoreGhostLendInference
 import Jihoo.NativeCoreGhostSort
+import Jihoo.NativeCoreGhostBinderCheck
 import Jihoo.NativeCoreGhostReferenceTypes
 import Jihoo.NativeCoreGhostLiteralAddition
 import Jihoo.NativeLoanTypeUniqueness
@@ -23,6 +25,7 @@ open NativeCoreCompare (FullyRetained)
 open NativeCoreBinderTraversal (VisitsFrom)
 open EnvironmentDelta (expand expandArgs)
 open NativeCoreGhostSort (DataFamilies)
+open NativeCoreGhostBinderCheck
 open NativeCoreGhostReferenceTypes
 
 structure GraphBinding where
@@ -31,17 +34,6 @@ structure GraphBinding where
   deriving Repr
 
 abbrev NormalAt := Nat → Visit
-
-private structure InferredBinder where
-  sort : SortTag
-  compared : List (Nat × Nat)
-
-private def inferBinder (infer : Infer) (normal : Visit) (isData : Nat → Bool)
-    (state : State) (domain : Nat) (erased : Bool) : Outcome InferredBinder :=
-  (infer state domain).next fun afterDomain domainType =>
-    (NativeCoreGhostSort.sort normal afterDomain domainType.typeRoot).next fun afterSort selected =>
-      (NativeCoreGhostSort.policy normal isData afterSort domain erased selected).next fun after _ =>
-        ⟨after, .ok ⟨selected, domainType.compared⟩⟩
 
 private def sortOp : SortTag → Op
   | .prop => .prop
@@ -580,6 +572,10 @@ def runVisits (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
             NativeCoreGhostLoopInference.run isBoxed (CoreEffectAnalysis.graphMemoryFreeWith familyLayouts)
               (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) limit depth entered count motive initial body
+        | some (.node .lend [owner, reader, continuation]) =>
+            NativeCoreGhostLendInference.run
+              (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
+              (normal depth) isData isBoxed limit depth entered owner reader continuation
         | some (.node .borrow [owner]) =>
             inferBorrow (runVisits normal roots visible limit isData isBoxed shapeTable constructorRoots visits depth ctx)
               (normal depth) isBoxed entered owner
@@ -1141,16 +1137,6 @@ private theorem inferTransport_progress
     exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
   · exact Progress.atState _ _
 
-private theorem inferBinder_progress
-    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
-    (normalizes : ∀ state root, Progress limit state (normal state root))
-    (room : state.steps ≤ limit) :
-    Progress limit state (inferBinder infer normal isData state domain erased) := by
-  apply next_progress (infers _ _ room) room
-  intro inferred _ _
-  exact (NativeCoreGhostSort.sort_progress normalizes).next (fun _ =>
-    (NativeCoreGhostSort.policy_progress normalizes).next (fun _ => Progress.atState _ _))
-
 private theorem finishBinding_progress
     (normalizes : ∀ state root, Progress limit state (normal state root)) :
     Progress limit state (finishBinding normal state product erased domain rangeRoot domainSort) := by
@@ -1288,6 +1274,7 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
         | exact NativeCoreGhostTakeInference.run_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact NativeCoreGhostFoldInference.runWith_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact NativeCoreGhostLoopInference.run_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact NativeCoreGhostLendInference.run_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferBorrow_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDeref_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferIndex_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1485,46 +1472,6 @@ private theorem binary_read
         | cons second tail =>
           cases tail
           exact ⟨_, _, rfl, first, second⟩
-
-private theorem inferBinder_refines
-    (metadata : DataFamilies env isData)
-    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
-    (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
-    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
-    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
-    (domainRep : Represents state.arena domain term)
-    (success : (inferBinder infer normal isData state domain erased).result = .ok answer)
-    (ambient : Prefix (inferBinder infer normal isData state domain erased).state.arena final)
-    (retained : ∀ pair ∈ answer.compared, PairRetained final pair) :
-    let after := (inferBinder infer normal isData state domain erased).state.arena
-    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.Binder env [] ctx erased (expand env term) answer.sort := by
-  unfold inferBinder at success ambient ⊢
-  obtain ⟨inferred, inferenceOk, inferredNext⟩ := Outcome.next_success success
-  rw [inferredNext] at success ambient ⊢
-  obtain ⟨selected, sortOk, sortNext⟩ := Outcome.next_success success
-  rw [sortNext] at success ambient ⊢
-  obtain ⟨⟨⟩, policyOk, policyNext⟩ := Outcome.next_success success
-  rw [policyNext] at success ambient ⊢
-  simp only [Except.ok.injEq] at success
-  subst answer
-  have inferProgress := childProgress state domain room
-  let sorted := NativeCoreGhostSort.sort normal (infer state domain).state inferred.typeRoot
-  have sortProgress := NativeCoreGhostSort.sort_progress (state := (infer state domain).state)
-    (typeRoot := inferred.typeRoot) normalProgress
-  have policyProgress := NativeCoreGhostSort.policy_progress (state := sorted.state) (isData := isData)
-    (domain := domain) (selected := selected) (erased := erased) normalProgress
-  have afterSort := policyProgress.kept.trans ambient
-  obtain ⟨_, inferBack, _, inferredRep, domainTyped⟩ := childSound onBase room domainRep inferenceOk
-    (sortProgress.kept.trans afterSort) retained
-  obtain ⟨sortedKept, sortedBack, exposed⟩ := NativeCoreGhostSort.sort_refines normalSound
-    (onBase.trans inferProgress.kept) inferredRep sortOk
-  have throughSort := inferProgress.kept.trans sortedKept
-  obtain ⟨policyKept, policyBack, allowed⟩ := NativeCoreGhostSort.policy_refines normalSound metadata
-    (onBase.trans throughSort) (domainRep.frame throughSort) policyOk
-  exact ⟨throughSort.trans policyKept, policyBack ∘ sortedBack ∘ inferBack,
-    .intro (domainTyped.convert exposed) allowed⟩
 
 private theorem finishBinding_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -3515,7 +3462,7 @@ theorem runVisits_sound {normal : NormalAt}
       | @node _ op refs terms read arity children =>
           simp only [read] at success ambient ⊢
           cases op <;> simp only [Op.arity] at arity
-          case elim | lend | view | caseOf =>
+          case elim | view | caseOf =>
             simp only [discard, reduceCtorEq] at success
           all_goals try
             have empty := List.length_eq_zero_iff.mp arity
@@ -3833,6 +3780,21 @@ theorem runVisits_sound {normal : NormalAt}
                       history.wellFormed (normalSound depth) (normalProgress depth) sameContext
                       (fun _ _ budget => runVisits_progress normalProgress budget)
                       onBase within countRep motiveRep initialRep bodyRep success ambient retained
+          case lend =>
+            have length : refs.length = 3 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons ownerRep tail =>
+              cases tail with
+              | cons readerRep tail =>
+                cases tail with
+                | cons contRep tail =>
+                  cases tail
+                  dsimp only at success ambient ⊢
+                  exact NativeCoreGhostLendInference.run_refines (state := {state with steps := state.steps + 1})
+                    history.wellFormed metadata boxedMetadata (normalSound depth) (normalProgress depth) sameContext
+                    (fun _ _ budget => runVisits_progress normalProgress budget)
+                    onBase within ownerRep readerRep contRep success ambient retained
           case ref | borrow | deref =>
             have length : refs.length = 1 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> simp at length

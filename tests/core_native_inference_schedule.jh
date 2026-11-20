@@ -1224,6 +1224,16 @@ fn dependent_lend_callbacks() {
         c.term(20) == core.Term.Lam(false, 8, 19), "specialized callbacks refer to the original owner")
     var baseline = dependent_lend_fixture()
     let budget = remaining_ticks(&baseline)
+    assert(result == 8 && c.node_count() == 37 && budget-remaining_ticks(&c) == 104,
+        "the specialized ghost reader returns the original signed type in 104 ticks")
+    var generic = dependent_lend_fixture()
+    let span = diag.Span.nowhere()
+    let initial = generic.add(core.Term.Integer(6), span).unwrap()
+    let owner = generic.add(core.Term.Alloc(1, initial), span).unwrap()
+    let generic_lend = generic.add(core.Term.Lend(owner, 7, 12), span).unwrap()
+    let generic_result = generic.infer(generic_lend, scope.as_slice(), true, 32).unwrap()
+    assert(generic_result == 8 && generic.node_count() == 42 && budget-remaining_ticks(&generic) == 110,
+        "the generic ghost reader returns the original signed type in 110 ticks")
     var complete = dependent_lend_fixture()
     spend(&complete, budget-19)
     assert(!complete.infer(13, scope.as_slice(), true, 32).is_ok() && complete.node_count() == 21,

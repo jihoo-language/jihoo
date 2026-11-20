@@ -1346,5 +1346,8 @@ import Jihoo.NativeCoreGhostPropCases
 import Jihoo.NativeCoreGhostPropElimination
 import Jihoo.NativeCoreGhostPropEliminationExamples
 import Jihoo.NativeCoreDependentLendCallbacks
+import Jihoo.NativeCoreGhostBinderCheck
+import Jihoo.NativeCoreGhostLendInference
+import Jihoo.NativeCoreGhostLendExamples
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

@@ -120,6 +120,40 @@ theorem select_refines
     exact ownerRep.unique (.var ownerRead)
   · cases selected
 
+private theorem relevantLambda_frame (source : Represents start root term) (kept : Prefix start after) :
+    relevantLambda after root = relevantLambda start root := by
+  cases source with
+  | var read => simp only [relevantLambda,read,kept.lookup read]
+  | node read _ _ => simp only [relevantLambda,read,kept.lookup read]
+
+/-- The native selector reads only the original owner and callback syntax.
+Its answer is unaffected by nodes appended by type checking. -/
+theorem select_frame (ownerRep : Represents start owner x) (readerRep : Represents start reader f)
+    (continuationRep : Represents start continuation g) (kept : Prefix start after) :
+    select after owner reader continuation = select start owner reader continuation := by
+  cases ownerRep with
+  | var ownerRead =>
+    simp only [select,ownerRead,kept.lookup ownerRead,relevantLambda_frame readerRep kept,
+      relevantLambda_frame continuationRep kept]
+    cases readerShape : relevantLambda start reader with
+    | none => rfl
+    | some first =>
+      obtain ⟨domain,body⟩ := first
+      cases continuationShape : relevantLambda start continuation with
+      | none => rfl
+      | some next =>
+        obtain ⟨value,inner⟩ := next
+        obtain ⟨_,_,_,_,innerRep⟩ := relevantLambda_refines continuationRep continuationShape
+        let shape : Nat × Nat → Callbacks := fun pair => ⟨domain,body,value,pair.1,pair.2⟩
+        change (relevantLambda after inner >>= fun pair => some (shape pair)) =
+          (relevantLambda start inner >>= fun pair => some (shape pair))
+        rw [relevantLambda_frame innerRep kept]
+  | node ownerRead _ _ => simp only [select,ownerRead,kept.lookup ownerRead]
+
+theorem run_none (selected : select state.arena owner reader continuation = none) :
+    run limit depth state owner reader continuation = ⟨state,.ok none⟩ := by
+  simp only [run,selected]
+
 /-- Every successful specialization retains the original reader annotation
 and produces precisely the two capture-avoiding source substitutions. -/
 theorem build_refines (ownerRep : Represents state.arena owner (.var index))
@@ -164,6 +198,33 @@ theorem build_refines (ownerRep : Represents state.arena owner (.var index))
   have kept := throughResume.trans contKept
   exact ⟨kept,contBack ∘ resumedBack ∘ shiftBack ∘ readBack ∘ borrowBack,domainRep.frame kept,
     readRep.frame (shiftKept.trans (resumedKept.trans contKept)),contRep⟩
+
+/-- A successful selected branch is typed through the actual graph references
+to the original callback domains and the two specialized expressions. -/
+theorem run_selected_refines (ownerRep : Represents state.arena owner x) (readerRep : Represents state.arena reader f)
+    (continuationRep : Represents state.arena continuation g)
+    (success : (run limit depth state owner reader continuation).result = .ok (some prepared)) :
+    let after := (run limit depth state owner reader continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ shape index A read B C body, select state.arena owner reader continuation = some shape ∧
+        x = .var index ∧ f = .lam false A read ∧ g = .lam false B (.lam false C body) ∧
+        Represents after prepared.domain A ∧ Represents after prepared.reader (Lending.read (.var index) read) ∧
+        Represents after prepared.continuation (Lending.restore (.var index) B body) ∧
+        Represents after shape.first B ∧ Represents after shape.again C := by
+  unfold run at success ⊢
+  cases selected : select state.arena owner reader continuation with
+  | none => simp only [selected] at success; cases success
+  | some shape =>
+    simp only [selected] at success ⊢
+    obtain ⟨result,built,next⟩ := Outcome.next_success success
+    rw [next] at success ⊢
+    simp only [Except.ok.injEq,Option.some.injEq] at success
+    subst result
+    obtain ⟨index,A,read,B,C,body,rfl,readerShape,contShape,domainRep,bodyRep,firstRep,againRep,resumeRep⟩ :=
+      select_refines ownerRep readerRep continuationRep selected
+    obtain ⟨kept,backward,domain,read,resumed⟩ := build_refines ownerRep domainRep bodyRep firstRep resumeRep built
+    exact ⟨kept,backward,shape,index,A,_,B,C,body,rfl,rfl,readerShape,contShape,domain,read,resumed,
+      firstRep.frame kept,againRep.frame kept⟩
 
 private def input : Arena := #[.var 0,.node (.natural 1) [],.node .buffer [1],.node .ref [2],
   .node (.natural 0) [],.node .decide [4,1],.node .index [0,4,5],.node (.lam false) [3,6],
