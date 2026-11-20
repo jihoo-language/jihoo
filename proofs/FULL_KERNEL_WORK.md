@@ -3691,6 +3691,14 @@ realize one result in the same fiber. At an ignored evidence field, raw
 conversion of the two retained operands transports both proofs to a common
 formed proposition. The focused builds and four-declaration audit passed.
 
+A saved relevant closure now binds the actual refinement word in its
+runtime slot and uses the checked Pack representative to close the original
+dependent result. The checked body retains its captured owners and active
+loans. A Witness of the new slot returns the same word at that original
+result type in four machine steps, with the original activation event and
+saved continuation. The focused build passed 410 jobs and the three new
+theorems use only standard Lean axioms.
+
 ### Aggregate check of call telescopes and literal arithmetic
 
 At `62b0f7b`, 1,120 Lake jobs and the generated fixture comparisons passed.

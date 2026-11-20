@@ -1,4 +1,5 @@
 import Jihoo.NativeBindingMachineMutableOwnedResult
+import Jihoo.NativeBindingMachineMutableRefinement
 import Jihoo.NativeBindingMachineMutableReaderReturnDemand
 import Jihoo.NativeBindingMachineReaderResume
 
@@ -513,6 +514,106 @@ theorem saved_checked_nonowner_closure_entry (state : State) (capture : Code)
     ⟨nextContext.closing,bodyType,bodyTyped,bodyResult⟩,nextContext,nextSizes,nextSlots,
     coverage.enter_nonowner entered false domain body origin (some value) notOwner,
     receipt,bodyProjected,bodyBudget,bodyWorld,bodyTotal⟩
+
+/-- A saved relevant closure can bind a refinement's actual word while its
+dependent result is closed by the checked Pack representative. The physical
+value is reusable and the original source origin remains in the activation. -/
+theorem saved_checked_refinement_closure_entry (state : State) (capture : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (functionTyped : LoanClosingTyped env loans false (capture.child (.lam false domain body)) meanings
+      (.pi false inputType resultType))
+    (argument : RefinementWord env source inputType (.natural number))
+    (slots : LoanSlots capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (coverage : LoanCoverage capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (entered : Loans.Entered capture.context.length loans)
+    (returned : state.control = .returned (.natural number))
+    (stackShape : state.stack = .argument (.closure false domain body capture.context capture.origins capture.values)
+      origin :: stack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans capture.context (.lam false domain body) =
+      some closureReceipt)
+    (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total capture closureReceipt) :
+    let next := enter false domain body capture.context capture.origins capture.values origin (some (.natural number))
+    let nextMeanings := consValues source meanings
+    step state = some (⟨state.heap,.evaluate next,stack,state.pending⟩,some (.legacy (.activate false body origin))) ∧
+    LoanClosingTyped env loans false next nextMeanings (resultType.subst (single source)) ∧
+    next.values[0]? = some (some (.natural number)) ∧
+    RefinementWord env (nextMeanings 0) inputType (.natural number) ∧
+    LoanSlots next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    LoanCoverage next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    ∃ receipt, LoanTyping.ResourceQuantity.projectRaw fuel env loans next.context next.term = some receipt ∧
+      LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt ∧
+      OwnerDemandWorld state.heap.metadata next receipt ∧ OwnerDemandWorld.Total next receipt := by
+  let closedFunction : Code := ⟨.lam false domain body,capture.context,meanings,capture.values⟩
+  have sourceFunction : LoanSourceTyped env loans false closedFunction (.pi false inputType resultType) := functionTyped
+  have opened := (enter_loan_source_typed history sourceFunction (LoanSourceTyped.initial argument.ghost_type)
+    (some (.natural number))).2
+  have nextTyped : LoanClosingTyped env loans false
+      (enter false domain body capture.context capture.origins capture.values origin (some (.natural number)))
+      (consValues source meanings) (resultType.subst (single source)) := by
+    simpa only [LoanSourceTyped,LoanClosingTyped,enter,Code.origin,Code.initial,Term.subst_id] using opened
+  obtain ⟨mode,receipt,_,bodyProjected,rfl⟩ := LoanTyping.ResourceQuantity.projectRaw_closure_origin checked
+  have nonowner : ∀ object, some (Value.natural number) ≠ some (.owner object) := by
+    intro object different
+    cases different
+  obtain ⟨nextSlots,bodyBudget,bodyWorld,bodyTotal⟩ :=
+    checked_nonowner_body_world (heap := state.heap.metadata) capture bodyProjected valid total slots entered
+      origin nonowner
+  exact ⟨enter_retained_call_step state capture domain body origin (.natural number) returned stackShape,
+    nextTyped,rfl,argument,nextSlots,coverage.enter_nonowner entered false domain body origin _ nonowner,
+    receipt,bodyProjected,bodyBudget,bodyWorld,bodyTotal⟩
+
+/-- A particular source Pack determines its stored word independently of
+which convertible type a caller requests for it. -/
+theorem RefinementWord.representation_unique
+    (first : RefinementWord env source type value) (second : RefinementWord env source otherType otherValue) :
+    value = otherValue := by
+  obtain ⟨leftPredicate,left,leftEvidence,leftShape,rfl,_,_,_,_⟩ := first
+  obtain ⟨rightPredicate,right,rightEvidence,rightShape,rfl,_,_,_,_⟩ := second
+  have same : Term.node .pack [leftPredicate,.natural left,leftEvidence] =
+      Term.node .pack [rightPredicate,.natural right,rightEvidence] := leftShape.symm.trans rightShape
+  have arguments := (Term.node.inj same).2
+  have words := (List.cons.inj (List.cons.inj arguments).2).1
+  exact congrArg Value.natural (Op.natural.inj (Term.node.inj words).1)
+
+/-- Entering a checked refinement parameter and projecting its Witness
+returns the same physical word at the original dependent result. The actual
+saved continuation, provenance and suspended heap actions are retained. -/
+theorem saved_refinement_closure_witness_returns (state : State) (capture : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (functionTyped : LoanClosingTyped env loans false
+      (capture.child (.lam false domain (.witness (.var 0)))) meanings (.pi false inputType resultType))
+    (argument : RefinementWord env source inputType (.natural number))
+    (slots : LoanSlots capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (coverage : LoanCoverage capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (entered : Loans.Entered capture.context.length loans)
+    (returned : state.control = .returned (.natural number))
+    (stackShape : state.stack = .argument
+      (.closure false domain (.witness (.var 0)) capture.context capture.origins capture.values) origin :: stack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans capture.context
+      (.lam false domain (.witness (.var 0))) = some closureReceipt)
+    (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total capture closureReceipt) :
+    run 4 state = ⟨⟨state.heap,.returned (.natural number),stack,state.pending⟩,
+      [.legacy (.activate false (.witness (.var 0)) origin)],4⟩ ∧
+    LoanTyping.HasType env [] [] false (.natural number) (resultType.subst (single source)) := by
+  let body := Term.witness (.var 0)
+  let next := enter false domain body capture.context capture.origins capture.values origin (some (.natural number))
+  let enteredState : State := ⟨state.heap,.evaluate next,stack,state.pending⟩
+  obtain ⟨activation,typed,stored,word,_,_,_⟩ := saved_checked_refinement_closure_entry state capture history
+    functionTyped argument slots coverage entered returned stackShape checked valid total
+  obtain ⟨_,observed,_,refined,execution,resultTyped⟩ := typed_variable_witness enteredState history rfl typed rfl stored word
+  have same := Value.natural.inj (word.representation_unique refined)
+  subst observed
+  refine ⟨?_,resultTyped⟩
+  change (match step state with
+    | none => Result.mk state [] 0
+    | some (nextState,event) =>
+      let result := run 3 nextState
+      Result.mk result.state (event.toList ++ result.events) (result.steps+1)) = _
+  rw [activation]
+  all_goals
+    change (let result := run 3 enteredState
+            Result.mk result.state ([.legacy (.activate false body origin)] ++ result.events) (result.steps+1)) = _
+    rw [execution] <;> rfl
 
 namespace Examples
 
