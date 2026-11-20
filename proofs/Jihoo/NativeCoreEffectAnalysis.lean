@@ -20,13 +20,32 @@ private def visitChildren (visit : α → Bool) (op : Op) : Nat → List α → 
 private def memoryNode (env : Environment) (visit : α → Bool) (op : Op) (children : List α) : Bool :=
   iterationMemoryFree env (.node op []) && (skipsChildren op || visitChildren visit op 0 children)
 
-def graphMemoryFree (env : Environment) (arena : Arena) : Nat → Nat → Bool
+private def memoryHead (families : Nat → Option Bool) : Op → Bool
+  | .alloc | .load | .store | .free | .drop _ | .caseOf _ _ => false
+  | .con family _ _ | .elim family _ => (families family).any (! ·)
+  | _ => true
+
+/-- `some boxed` describes a visible checked family. Unknown family entries
+reject the effect query. The body scan uses the same table as inference. -/
+def graphMemoryFreeWith (families : Nat → Option Bool) (arena : Arena) : Nat → Nat → Bool
   | 0, _ => false
   | depth+1, root =>
       match arena[root]? with
       | none => false
       | some (.var _) => true
-      | some (.node op children) => memoryNode env (graphMemoryFree env arena depth) op children
+      | some (.node op children) =>
+        memoryHead families op && (skipsChildren op || visitChildren (graphMemoryFreeWith families arena depth) op 0 children)
+
+def graphMemoryFree (env : Environment) (arena : Arena) : Nat → Nat → Bool :=
+  graphMemoryFreeWith (fun family => env.families[family]?.map (·.boxed)) arena
+
+private theorem memoryHead_eq (env : Environment) (op : Op) :
+    memoryHead (fun family => env.families[family]?.map (·.boxed)) op = iterationMemoryFree env (.node op []) := by
+  cases op <;> simp only [memoryHead,iterationMemoryFree,iterationMemoryFreeArgs]
+  case con family constructor count =>
+    cases env.families[family]? <;> simp
+  case elim family cases =>
+    cases env.families[family]? <;> simp
 
 def termMemoryFree (env : Environment) : Nat → Term → Bool
   | 0, _ => false
@@ -50,10 +69,13 @@ theorem graphMemoryFree_refines (represented : Represents arena root term) (dept
   | zero => rfl
   | succ depth ih =>
       cases represented with
-      | var lookup => simp only [graphMemoryFree,lookup,termMemoryFree]
+      | var lookup => simp only [graphMemoryFree,graphMemoryFreeWith,lookup,termMemoryFree]
       | node lookup _ children =>
-          simp only [graphMemoryFree,lookup,termMemoryFree,memoryNode]
-          rw [represented_children children (fun represented => ih represented)]
+          simp only [graphMemoryFree,graphMemoryFreeWith,lookup,termMemoryFree,memoryNode,memoryHead_eq]
+          have each {childRoot childTerm} (represented : Represents arena childRoot childTerm) :
+              graphMemoryFreeWith (fun family => env.families[family]?.map (·.boxed)) arena depth childRoot =
+                termMemoryFree env depth childTerm := ih represented
+          rw [represented_children children each]
 
 private theorem unbounded_children (env : Environment) (op : Op) (offset : Nat) (children : List Term) :
     visitChildren (iterationMemoryFree env) op offset children = iterationMemoryFreeArgs env op offset children := by

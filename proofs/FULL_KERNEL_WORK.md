@@ -4092,3 +4092,12 @@ build represents the specified proposition motive type for any arity.
 The native and Lean two-index fixtures agree on all four appended rows
 without a checking tick. The focused build passed 329 jobs and the three
 new audited declarations use only standard Lean axioms.
+
+### Fold can use the visible family layout for effect checks
+
+The graph effect scan accepts a checked family layout lookup. The existing
+environment entry uses the same traversal and agrees with the represented
+term. The Fold branch receives its owner classification and body effect
+check through this interface. Its soundness theorem still derives typed
+ownership from checked boxed metadata. The focused build passed 456 jobs
+and the two new audited declarations use standard Lean axioms.

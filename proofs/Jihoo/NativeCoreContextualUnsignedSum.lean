@@ -78,7 +78,7 @@ private theorem rounds_exact (rows : Inputs arena left right numerator denominat
     NativeCoreUnsignedSumRounds.rounds env runtime arena limit (depth+2) before initial =
       (.ok ({atoms := #[numerator], pending := #[kept]}, 1), initial+4) := by
   have denominatorFree : CoreEffectAnalysis.graphMemoryFree env arena (depth+2) denominator = true := by
-    simp only [CoreEffectAnalysis.graphMemoryFree, rows.denominatorRow]
+    simp only [CoreEffectAnalysis.graphMemoryFree, CoreEffectAnalysis.graphMemoryFreeWith, rows.denominatorRow]
   have roundDone := cancel_once (env := env) (runtime := runtime) (depth := depth) rows inBudget
   let before : Pool := {atoms := #[left, denominator], pending := #[kept]}
   let after : Pool := {atoms := #[numerator], pending := #[kept]}
