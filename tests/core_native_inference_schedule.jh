@@ -174,6 +174,52 @@ fn conditional_inference() {
     assert_spent(&c, "conditional inference used 39 ticks")
 }
 
+fn refinement_predicate(inout c: core.Core) -> u32 {
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let argument = c.add(core.Term.Var(0), span).unwrap()
+    let equality = c.add(core.Term.Eq(argument, argument), span).unwrap()
+    c.add(core.Term.Lam(false, word, equality), span).unwrap()
+}
+
+fn refinement_inference() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let predicate = refinement_predicate(&c)
+    let refinement = c.add(core.Term.Refine(predicate), span).unwrap()
+    c.add(core.Term.Universe(0), span).unwrap()
+    spend(&c, 999976)
+    let inferred = c.infer(refinement, [], true, 24).unwrap()
+    assert(inferred == 13 && c.node_count() == 14, "refinement result position")
+    assert(c.term(6) == core.Term.U64 && c.term(7) == core.Term.Prop, "required predicate domain and range")
+    assert(c.term(8) == core.Term.Pi(false, 6, 7), "required predicate arrow")
+    assert(c.term(9) == core.Term.Universe(0) && c.term(10) == core.Term.U64, "predicate checks")
+    assert(c.term(11) == core.Term.Prop && c.term(12) == core.Term.Pi(false, 0, 11), "inferred predicate arrow")
+    assert(c.term(inferred) == core.Term.Universe(0), "refinements inhabit Type0")
+    assert_spent(&c, "refinement inference used 24 ticks")
+}
+
+fn pack_evidence_exhaustion() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let predicate = refinement_predicate(&c)
+    c.add(core.Term.Refine(predicate), span).unwrap()
+    let word = c.add(core.Term.Natural(7), span).unwrap()
+    let evidence = c.add(core.Term.Refl(word), span).unwrap()
+    let pack = c.add(core.Term.Pack(predicate, word, evidence), span).unwrap()
+    spend(&c, 999972)
+    assert(match c.infer(pack, [], true, 24) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "packing exhausts the budget entering evidence inference")
+    assert(c.node_count() == 18, "required predicate application survives exhaustion")
+    assert(c.term(8) == core.Term.U64 && c.term(9) == core.Term.Prop, "packing predicate domain and range")
+    assert(c.term(10) == core.Term.Pi(false, 8, 9), "packing predicate arrow")
+    assert(c.term(11) == core.Term.Universe(0) && c.term(12) == core.Term.U64, "packing predicate checks")
+    assert(c.term(13) == core.Term.Prop && c.term(14) == core.Term.Pi(false, 0, 13), "inferred packing predicate")
+    assert(c.term(15) == core.Term.U64 && c.term(16) == core.Term.U64, "witness type check")
+    assert(c.term(17) == core.Term.App(predicate, word), "evidence type uses the original witness")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -182,6 +228,8 @@ fn main() -> i32 {
     zero_bound_inference()
     subtract_bound_exhaustion()
     conditional_inference()
-    println("Native Core.infer matched primitive, binder, evidence and conditional graph traces and checking costs")
+    refinement_inference()
+    pack_evidence_exhaustion()
+    println("Native Core.infer matched primitive, binder, evidence, conditional and refinement graph traces and checking costs")
     0
 }
