@@ -1292,3 +1292,7 @@ import Jihoo.NativeCoreTypedEqual
 import Jihoo.NativeCoreExpandedFamilies
 import Jihoo.NativeLoanUniverseEqualityTransport
 import Jihoo.NativeBindingMachineMutableLoanedArithmetic
+import Jihoo.NativeBindingMachineMutableLoanedArithmeticProgress
+import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreFamilyStrict
+import Jihoo.NativeLoanOpenDependentTransport

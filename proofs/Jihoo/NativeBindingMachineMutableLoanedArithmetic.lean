@@ -6,7 +6,7 @@ references at computed indices. Signed arithmetic preserves read order. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity
 open Jihoo.Quantity NativeQuantity
 
-private theorem projectRaw_arithmetic_operands
+theorem projectRaw_arithmetic_operands
     (checked : projectRaw fuel env loans ctx (.arith op left right) = some receipt) :
     ∃ depth first second,
       projectRaw depth env loans ctx left = some first ∧ projectRaw depth env loans ctx right = some second ∧

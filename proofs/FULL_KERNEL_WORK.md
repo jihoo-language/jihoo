@@ -11,10 +11,10 @@ Version 0.7.0 is gated on the complete verification obligations below.
 
 | Remaining obligation | Starting point |
 | --- | --- |
-| General consistency and typed normalization | `NativeLoanUniverseEqualityTransport.lean` reads the motive, endpoints and payload from actual checked Transport typing. Reflected affine equality moves a dependent family carrier or supported universe proposition code to its target. General dependent telescopes and arbitrary checked ghost derivations still need the fundamental theorem. |
-| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. Connect specialized Lend, wider View shapes, Strict scrutinee rules and the remaining effect rules. |
-| Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmetic.lean` interprets an ordered reader tree containing fresh and captured live references. It derives checked bounds at every read and restores the original world, preserving all older lease observations. The theorem assumes successful signed evaluation and supported bound evidence. General execution across arbitrary closures and dependent runtime forms remains open. |
-| Production refinement | `NativeCoreTypedEqual.lean` composes recursive family normalization of both roots in one arena and clock with exact projected identity. The selected admitted definitions retain their respective types. Prove the remaining native graph branches and the full implementation refinement for normalization, comparison, inference and mixed admission. |
+| General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
+| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It now commutes Strict out of Case and data Elim when the expanded motive is independent of the scrutinized value and the family indices are all parameters. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
+| Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. It requires supported bound evidence and fitting unsigned sums. General execution across arbitrary closures and dependent runtime forms remains open. |
+| Production refinement | `NativeCoreGhostSpineInference.lean` proves the graph schedule for ghost application spines with local, global, scalar and universe heads. It infers a type convertible to the admitted declaration type after recursive family normalization when the compared types retain all positions. Extend inference to the remaining constructors and code checking, and prove the full implementation refinement. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -3208,5 +3208,61 @@ older lease's indexed observation. An admitted nested fixture reads
 reads the old value again after the inner close and returns 47.
 
 The aggregate check passed 1,111 Lake jobs, 10,423 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Ghost application inference, Strict scrutinees, open Transport, and reader progress
+
+Ghost inference now shares the graph and step counter with type weakening,
+Pi exposure, argument-type normalization, identity, and capture-avoiding
+codomain substitution. Local variable lookup derives the exact weakening
+from the pre-binder context. Global lookup uses the original declaration
+type root from the admitted graph. Each argument check normalizes both types
+before identity. The codomain is instantiated with the original argument
+reference. When the compared types retain every position, identity supplies
+kernel conversion. The established Loan64 uniqueness theorem then relates
+the represented inferred type to the original checked declaration type.
+The same proof accepts the recursive family visitor for both normalization
+phases. The executable fragment covers variables, globals, applications and
+scalar and universe heads in ghost mode.
+
+The admitted two-application fixture infers `Eq(7,7)` in 59 ticks, including
+substitution under an erased binder. It also checks prefix retention when
+the final substitution exceeds the work budget, and weakening of an older
+erased binder in an open context. A direct Jihoo `Core.infer` run on the
+same source nodes and checked prefix returned the same represented type
+and appended the same four nodes in order, with references relative to the
+arena after prefix checking.
+
+The typed family visitor now handles the native Strict scrutinee branch for
+Case and data Elim on data families whose indices are all parameters. If the
+expanded lambda motive has a closed body, actual beta conversion preserves
+the exact result type as Strict moves outside the family operation. In the
+admitted Buffer examples, a signed overflow remains the Strict prefix.
+Both graph traces append the inner elimination, branch application and
+outer Strict in 45 ticks. A step budget of 17 retains the newly appended
+elimination when its next child visit fails.
+
+The open Transport proof obtains the body derivation from the actual
+byte-admitted declaration and instantiates its written affine telescope.
+Erased beta may hide an equality assumption. The source spine computes
+the fuel to expose it, and the satisfying valuation supplies the closed
+Refl witness. The typed residual has the original instantiated annotation
+when the checker supplies its formation. A canonical byte fixture
+transports a strict inequality from one bound word to a distinct
+equality-related bound word. Its proof works for every satisfying
+valuation, including the largest U64 values, where the affine result
+indices exceed the word range.
+
+For a supported checked reader, the machine theorem now derives the
+successful read operands and reports either a typed restoration after
+closing or the exact signed overflow prefix with the lease still open.
+Captured indices obtain their scalar width from the originating typing.
+Computed word sums require a fitting mathematical result, and captured
+reads require a checked Buffer reference in the original context. The
+admitted overflow example reads through the fresh lease and faults before
+the older captured read. It keeps both leases in the terminal state.
+
+The aggregate check passed 1,115 Lake jobs, 10,467 distinct declaration
 audits, and all generated fixture comparisons under the project resource
 guard. The audit found only Lean's three standard axioms.

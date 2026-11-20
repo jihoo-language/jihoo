@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreExpandedTraversal
 import Jihoo.NativeCoreRecursiveView
+import Jihoo.NativeCoreFamilyStrict
 
 /-! Case, Elim and View share recursive delta with the typed value and binder
 walker. The original dependent operands retain expanded conversion; the
@@ -46,40 +47,86 @@ private theorem typedRules (history : ScopedProgram.History definitions declarat
 def familyExtension (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (roots : List Roots) (visible : Nat) : Extension where
   accepts := (NativeCoreRecursiveView.extension env families).accepts
   walk visit limit depth root state op before :=
-    (visitOperands (raw env families roots visible limit depth) state before).next fun next after =>
+    let rawVisit := raw env families roots visible limit depth
+    let finish := fun next after =>
       (NativeCoreRecursiveView.extension env families).finish visit limit depth root next op before after
+    match NativeCoreFamilyStrict.plan env depth state.arena op before with
+    | some chosen => NativeCoreFamilyStrict.walk rawVisit visit finish state chosen
+    | none => (visitOperands rawVisit state before).next finish
 
 theorem familyExtension_metered (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (roots : List Roots) (visible : Nat) :
     (familyExtension env families roots visible).Metered := by
   intro visit limit depth root state op before accepted metered
-  change Progress limit state
-    ((visitOperands (raw env families roots visible limit depth) state before).next
-      (fun next after => (NativeCoreRecursiveView.extension env families).finish visit limit depth root next op before after))
-  apply (visitOperands_progress (raw_progress env families roots visible limit depth) state before).next
-  intro after
-  exact NativeCoreRecursiveView.extension_metered env families (depth := depth) (before := before) accepted metered
+  have fallback (current : State) (after : List Nat) :
+      Progress limit current ((NativeCoreRecursiveView.extension env families).finish
+        visit limit depth root current op before after) :=
+    NativeCoreRecursiveView.extension_metered env families (depth := depth) (before := before) accepted metered
+  cases planned : NativeCoreFamilyStrict.plan env depth state.arena op before with
+  | none =>
+      simp only [familyExtension, planned]
+      exact (visitOperands_progress (raw_progress env families roots visible limit depth) state before).next
+        (fun after => fallback _ after)
+  | some chosen =>
+      simp only [familyExtension, planned]
+      exact NativeCoreFamilyStrict.walk_progress (raw_progress env families roots visible limit depth) metered fallback
 
 theorem familyExtension_sound (history : LoanTyping.MixedProgram.History definitions declarations env)
     (aligned : RepresentsDefinitions base roots definitions) :
     (familyExtension env families roots visible).SoundFrom base (ExpandedChange env) := by
   intro visit limit depth root state op refs terms selected accepted onBase read represented width visitor done
-  simp only [familyExtension] at done ⊢
-  obtain ⟨refs', visited, branch⟩ := Outcome.next_success done
-  rw [branch] at done ⊢
-  obtain ⟨kept, backward, length, terms', represented', changed⟩ :=
-    visitOperands_relatesFrom (relation := ExpandedNormalization env) onBase represented
-      (fun prior child result => by
-        obtain ⟨kept, backward, value⟩ := raw_refines history aligned prior child result
-        exact ⟨kept, backward, value⟩) visited
   have sound : (NativeCoreRecursiveView.extension env families).SoundFrom base (ExpandedChange env) :=
     NativeCoreRecursiveView.extension_soundFrom (typedRules (ScopedProgram.History.ofLoanMixed history))
       (fun step => (computeNormalization history.wellFormed step).expanded.preserves)
-  obtain ⟨ordinary, nonglobal⟩ := sound.1 accepted
-  have normalizeChildren := (expandedRules history.wellFormed).node ordinary nonglobal changed
-  obtain ⟨later, preserved, residual, exactRep, reduced⟩ :=
-    sound.2 accepted (onBase.trans kept) (kept.lookup read) represented' (length.trans width) visitor done
-  exact ⟨kept.trans later, fun valid => preserved (backward valid), residual, exactRep,
-    fun typed => reduced (normalizeChildren.preserves typed)⟩
+  cases planned : NativeCoreFamilyStrict.plan env depth state.arena op refs with
+  | none =>
+      simp only [familyExtension, planned] at done ⊢
+      obtain ⟨refs', visited, branch⟩ := Outcome.next_success done
+      rw [branch] at done ⊢
+      obtain ⟨kept, backward, length, terms', represented', changed⟩ :=
+        visitOperands_relatesFrom (relation := ExpandedNormalization env) onBase represented
+          (fun prior child result => by
+            obtain ⟨kept, backward, value⟩ := raw_refines history aligned prior child result
+            exact ⟨kept, backward, value⟩) visited
+      obtain ⟨ordinary, nonglobal⟩ := sound.1 accepted
+      have normalizeChildren := (expandedRules history.wellFormed).node ordinary nonglobal changed
+      obtain ⟨later, preserved, residual, exactRep, reduced⟩ :=
+        sound.2 accepted (onBase.trans kept) (kept.lookup read) represented' (length.trans width) visitor done
+      exact ⟨kept.trans later, fun valid => preserved (backward valid), residual, exactRep,
+        fun typed => reduced (normalizeChildren.preserves typed)⟩
+  | some chosen =>
+      simp only [familyExtension, planned] at done ⊢
+      obtain ⟨opShape, refsShape, eligible⟩ := NativeCoreFamilyStrict.plan_sound planned
+      subst op refs
+      cases represented with
+      | cons motive tail =>
+          have size : (chosen.arms ++ [chosen.scrutinee]).length = chosen.arms.length + 1 := by simp
+          obtain ⟨armRefs, subjectRef, arms, subject, refsEq, rfl, _, armRep, subjectRep⟩ :=
+            NativeCoreCaseEvaluation.represented_branches tail size
+          obtain ⟨rfl, last⟩ := List.append_inj' refsEq (by simp)
+          obtain rfl := (List.cons.inj last).1
+          have exactCount := NativeCoreIdentical.represented_length armRep
+          let fallback : State → List Nat → Outcome Nat := fun next after =>
+            (NativeCoreRecursiveView.extension env families).finish visit limit depth root next
+              (NativeCoreFamilyStrict.familyOp chosen.analysis chosen.family chosen.arms.length)
+              (chosen.motive :: (chosen.arms ++ [chosen.scrutinee])) after
+          have fallbackSound {next newMotive newArms newScrutinee p cases x selected}
+              (kept : Prefix state.arena next.arena) (armCount : newArms.length = chosen.arms.length)
+              (motiveRep : Represents next.arena newMotive p) (armsRep : RepresentsList next.arena newArms cases)
+              (scrutineeRep : Represents next.arena newScrutinee x)
+              (done : (fallback next (newMotive :: (newArms ++ [newScrutinee]))).result = .ok selected) :
+              RefinesFor (ExpandedChange env) next (NativeCoreFamilyStrict.familyTerm chosen.analysis chosen.family p cases x)
+                (fallback next (newMotive :: (newArms ++ [newScrutinee]))) selected := by
+            have resultCount := armCount.symm.trans (NativeCoreIdentical.represented_length armsRep)
+            have children := RepresentsList.cons motiveRep (NativeCoreFamilyStrict.represented_snoc armsRep scrutineeRep)
+            have expectedWidth : (newMotive :: (newArms ++ [newScrutinee])).length =
+                (NativeCoreFamilyStrict.familyOp chosen.analysis chosen.family chosen.arms.length).arity := by
+              cases chosen.analysis <;> simp [NativeCoreFamilyStrict.familyOp, Op.arity, armCount] <;> omega
+            simpa only [NativeCoreFamilyStrict.familyTerm, ← resultCount, fallback] using
+              sound.2 accepted (onBase.trans kept) (kept.lookup read) children expectedWidth visitor done
+          have refined := NativeCoreFamilyStrict.walk_refines history.wellFormed onBase
+            (NativeCoreFamilyStrict.constantMotive_sound motive eligible) motive armRep subjectRep
+            (fun prior child result => raw_refines history aligned prior child result) visitor fallbackSound done
+          simpa only [NativeCoreFamilyStrict.familyTerm, ← exactCount] using refined
 
 def extension (env : Environment) (families : List NativeFamilyWire.FamilyRoots) (roots : List Roots) (visible : Nat) : Extension :=
   (familyExtension env families roots visible).orElse
@@ -314,6 +361,68 @@ theorem checked_recursive_view_uses_global_arm :
     by simpa only [entry, base, EnvironmentDelta.expand, EnvironmentDelta.expandArgs] using typed⟩
 
 end View
+
+namespace StrictScrutinee
+
+private def size : Term := .natural 2
+private def box : Term := .node (.ind 0 0) []
+private def buffer : Term := .buffer size
+private def allocation : Term := .alloc size (.integer 0)
+private def motive : Term := .lam false box buffer
+private def arm : Term := .lam false buffer (.var 0)
+private def overflow : Term := .arith .add (.integer 9223372036854775807) (.integer 1)
+private def subject : Term := .strict overflow (.node (.con 0 0 1) [allocation])
+private def caseEntry : GlobalDeclaration := ⟨buffer, FamilyIota.caseTerm 0 motive [arm] subject⟩
+private def elimEntry : GlobalDeclaration := ⟨buffer, FamilyIota.elimTerm 0 motive [arm] subject⟩
+private def family : FamilyDeclaration := ⟨true, 0, 0, [.pi false buffer box], 0⟩
+private def env : Environment :=
+  ⟨#[caseEntry, elimEntry], #[⟨family, [⟨[⟨false, buffer, none⟩], []⟩], true⟩]⟩
+
+private def snapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨4, 13⟩, ⟨4, 14⟩]
+  families := [⟨true, 0, 0, 0, [15]⟩]
+  arena := #[.node (.natural 2) [], .node (.integer 0) [], .node .alloc [0, 1], .node (.ind 0 0) [],
+    .node .buffer [0], .node (.lam false) [3, 4], .var 0, .node (.lam false) [4, 6],
+    .node (.con 0 0 1) [2], .node (.integer 9223372036854775807) [], .node (.integer 1) [],
+    .node (.arith .add) [9, 10], .node .strict [11, 8], .node (.caseOf 0 1) [5, 7, 12],
+    .node (.elim 0 1) [5, 7, 12], .node (.pi false) [4, 3]]
+
+private def committed (op : Op) : Arena :=
+  snapshot.arena ++ #[.node op [5, 7, 8], .node .app [7, 2], .node .strict [11, 2]]
+private def evaluate (visible limit root : Nat) : Outcome Nat :=
+  run env snapshot.families snapshot.definitions visible limit 32 ⟨snapshot.arena, 0⟩ root
+
+/-- Both admitted eliminators retain the overflowing prefix. The inner
+eliminator is appended before iota and the outer Strict is written last. -/
+theorem checked_case_and_data_elim_retain_strict_scrutinee :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot snapshot) = true ∧
+    evaluate 0 45 13 = ⟨⟨committed (.caseOf 0 1), 45⟩, .ok 18⟩ ∧
+    evaluate 1 45 14 = ⟨⟨committed (.elim 0 1), 45⟩, .ok 18⟩ ∧
+    LoanTyping.HasType env [] [] true (.strict overflow allocation) buffer := by
+  have admitted : NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot snapshot) = true := by
+    rw [NativeLoanMixedAdmission.checkBytes_encode]
+    cbv
+  have history : LoanTyping.MixedProgram.History [caseEntry, elimEntry] [family] env :=
+    LoanTyping.MixedProgram.checkProgram_sound (fuel := 64) (quantityFuel := 128) (by cbv)
+  have aligned : RepresentsDefinitions snapshot.arena snapshot.definitions [caseEntry, elimEntry] :=
+    decodeRoots_sound (by cbv)
+  have caseEvaluated : evaluate 0 45 13 = ⟨⟨committed (.caseOf 0 1), 45⟩, .ok 18⟩ := by cbv
+  have elimEvaluated : evaluate 1 45 14 = ⟨⟨committed (.elim 0 1), 45⟩, .ok 18⟩ := by cbv
+  have result : Represents (evaluate 1 45 14).state.arena 18 (.strict overflow allocation) := by
+    rw [elimEvaluated]
+    exact decode_sound (fuel := 6) rfl
+  have typed := keeps_type history aligned (show snapshot.definitions[1]? = some ⟨4, 14⟩ from rfl)
+    (show env.globals[1]? = some elimEntry from rfl) (congrArg Outcome.result elimEvaluated) result
+  exact ⟨admitted, caseEvaluated, elimEvaluated,
+    by simpa only [elimEntry, overflow, allocation, size, EnvironmentDelta.expand, EnvironmentDelta.expandArgs] using typed⟩
+
+theorem strict_scrutinee_child_exhaustion_keeps_inner_eliminator :
+    evaluate 0 17 13 = ⟨⟨snapshot.arena.push (.node (.caseOf 0 1) [5, 7, 8]), 18⟩,
+      .error (.tick (.stepLimit 16))⟩ ∧
+    evaluate 1 17 14 = ⟨⟨snapshot.arena.push (.node (.elim 0 1) [5, 7, 8]), 18⟩,
+      .error (.tick (.stepLimit 16))⟩ := by cbv
+
+end StrictScrutinee
 
 end Examples
 
