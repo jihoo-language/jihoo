@@ -2364,9 +2364,43 @@ The wide-constant emitter now appends to the arena in native order, shares
 equal halves and preserves the old prefix even when an append fails. The
 represented result preserves the collected value, has the U64 ghost type,
 and its unfolded depth is at most 21 for a collection from zero within the
-production step budget. Full unsigned normalization still needs the
-canonical sorting and rebuilding loop and the cancellation rules' interaction
-with typing and retained traps.
+production step budget.
 
 The aggregate check passed 1,018 Lake jobs, 9,626 declaration audits, and
 all generated fixture comparisons in 13.16 seconds with the warm cache.
+
+### Canonical ordering, source assumptions, and typed continuation entry
+
+The live and serialized structural orders share a comparison traversal.
+Canonical sorting spends one tick per variable insertion comparison and uses
+the live structural order for ghost nonvariables. It preserves the input
+order of runtime nonvariables. The sorted references represent a permutation
+of the original atoms. Canonical graph emission folds the ordered references
+from the left, preserves the earlier arena, and produces a U64 term from
+U64 atoms. An oversized runtime constant returns the native fallback signal
+before sorting or appending.
+
+An actual ghost checker derivation in a mixed local context can now be
+closed with typed substitutions constructed from a U64 valuation and
+true erased Lt and Eq assumptions. The wide variant handles affine
+expressions whose operands exceed U64 by constructing Loan64 evidence
+from mathematical arithmetic. Successful proof observation derives truth
+at the original instantiated proposition.
+
+Pure variable-body applications use the native identity shift and binder
+decrement. The graph result is reached by raw reduction of the original
+admitted term. The original ghost type is recovered in the identity case
+with structurally normal operands, and the model tracks the traversal
+counter across the application.
+
+The executable mixed checker supplies the typed entry of an arbitrary
+explicit two-binder Load callback after 19 actual allocation, store, read,
+and activation steps. Its captured scalar has the written value and the
+restored owner has its original live physical Buffer and size. The checked
+resource projection supplies the one-unit owner budget. For an admitted
+callback whose body starts by freeing that owner, 22 actual steps reach the
+remaining body with dependent typing and no residual demand for the
+released slot. Full control-stack preservation continues beyond this entry.
+
+The aggregate check passed 1,026 Lake jobs, 9,666 declaration audits, and
+all generated fixture comparisons in 9.20 seconds with the warm cache.

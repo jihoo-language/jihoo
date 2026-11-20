@@ -409,25 +409,31 @@ private def compareRefs (step : Nat → Nat → Nat → Option (Ordering × Nat)
       | .eq => compareRefs step remaining xs ys
       | other => some (other, remaining)
 
-/-- Direct graph comparison. Each call consumes one tick; a recursive strict
-descent or child call uses one less depth. Like Core.compare, a shared root
-can return immediately after the tick, and children are compared in order. -/
-def compareGraph (words : List NodeWords) : Nat → Nat → Nat → Nat → Option (Ordering × Nat)
+/-- Each call consumes one tick. A shared root can return immediately after
+the tick, and each recursive child or Strict descent uses one less depth. -/
+private def compareViews (read : Nat → Option (View Nat)) : Nat → Nat → Nat → Nat → Option (Ordering × Nat)
   | 0, _, _, _ => none
   | _ + 1, 0, _, _ => none
   | depth + 1, work + 1, a, b => do
-      let left ← words[a]?
+      let left ← read a
       if a = b then some (.eq, work) else
-        match wireView left with
-        | .strict result => compareGraph words depth work result b
+        match left with
+        | .strict result => compareViews read depth work result b
         | .plain x xs => do
-            let right ← words[b]?
-            match wireView right with
-            | .strict result => compareGraph words depth work a result
+            let right ← read b
+            match right with
+            | .strict result => compareViews read depth work a result
             | .plain y ys =>
                 match compareHeader x y with
-                | .eq => compareRefs (compareGraph words depth) work xs ys
+                | .eq => compareRefs (compareViews read depth) work xs ys
                 | other => some (other, work)
+
+def compareGraph (words : List NodeWords) : Nat → Nat → Nat → Nat → Option (Ordering × Nat) :=
+  compareViews (fun ref => words[ref]?.map wireView)
+
+/-- Compare live rows, including atoms appended earlier in normalization. -/
+def compareArena (arena : Arena) : Nat → Nat → Nat → Nat → Option (Ordering × Nat) :=
+  compareViews (fun ref => arena[ref]?.map nodeView)
 
 private theorem represented_take (count : Nat) (children : RepresentsList arena refs terms) :
     RepresentsList arena (refs.take count) (terms.take count) := by
@@ -510,6 +516,16 @@ theorem comparison_rows_agree {words : List NodeWords} {nodes : List Node}
       cases aligned
       simp only [List.map_cons, wireView_refines decoded, ih rest]
 
+theorem compareArena_agrees_wire (aligned : words.mapM NodeWords.toNode = some arena.toList) :
+    compareArena arena depth work a b = compareGraph words depth work a b := by
+  have views := comparison_rows_agree aligned
+  have reads : (fun ref : Nat => arena[ref]?.map nodeView) = fun ref => words[ref]?.map wireView := by
+    funext ref
+    have corresponding := congrArg (fun rows : List (View Nat) => rows[ref]?) views
+    simpa using corresponding.symm
+  unfold compareArena compareGraph
+  rw [reads]
+
 /-- An observed row at a represented root is related to the same projected
 subtree or to the exact ordered list of retained child terms. -/
 theorem wire_matches {words : List NodeWords} {arena : Arena}
@@ -545,19 +561,20 @@ private theorem compareRefs_sound {step : Nat → Nat → Nat → Option (Orderi
           | eq => exact ih rightRest computed
           | gt => cases computed; rfl
 
-private theorem compareGraph_sound_core
-    (aligned : words.mapM NodeWords.toNode = some arena.toList)
+private theorem compareViews_sound {read : Nat → Option (View Nat)}
+    (observes : ∀ {root term}, Represents arena root term →
+      ∃ observed, read root = some observed ∧ ViewMatches arena observed term)
     (left : Represents arena a first) (right : Represents arena b second)
-    (computed : compareGraph words depth work a b = some (result, remaining)) :
+    (computed : compareViews read depth work a b = some (result, remaining)) :
     result = compareShape (project first) (project second) := by
   induction depth generalizing work a b first second result remaining with
-  | zero => simp [compareGraph] at computed
+  | zero => simp [compareViews] at computed
   | succ depth ih =>
       cases work with
-      | zero => simp [compareGraph] at computed
+      | zero => simp [compareViews] at computed
       | succ work =>
-          obtain ⟨leftWord, atLeft, leftView⟩ := wire_matches aligned left
-          simp only [compareGraph, atLeft, Bind.bind, Option.bind] at computed
+          obtain ⟨leftObserved, atLeft, leftView⟩ := observes left
+          simp only [compareViews, atLeft, Bind.bind, Option.bind] at computed
           by_cases same : a = b
           · subst b
             simp only [ite_true, Option.some.injEq, Prod.mk.injEq] at computed
@@ -565,25 +582,21 @@ private theorem compareGraph_sound_core
             subst second
             exact computed.1.symm.trans ((compareShape_eq _ _).mpr rfl).symm
           · rw [ite_eq_right same] at computed
-            cases shapeLeft : wireView leftWord with
+            cases leftObserved with
             | strict next =>
-                rw [shapeLeft] at leftView computed
                 obtain ⟨child, childRep, eq⟩ := leftView
                 rw [eq]
                 exact ih childRep right computed
             | plain x xs =>
-                rw [shapeLeft] at leftView computed
                 obtain ⟨childrenLeft, kidsLeft, eqLeft⟩ := leftView
-                obtain ⟨rightWord, atRight, rightView⟩ := wire_matches aligned right
+                obtain ⟨rightObserved, atRight, rightView⟩ := observes right
                 simp only [atRight] at computed
-                cases shapeRight : wireView rightWord with
+                cases rightObserved with
                 | strict next =>
-                    rw [shapeRight] at rightView computed
                     obtain ⟨child, childRep, eq⟩ := rightView
                     rw [eq]
                     exact ih left childRep computed
                 | plain y ys =>
-                    rw [shapeRight] at rightView computed
                     obtain ⟨childrenRight, kidsRight, eqRight⟩ := rightView
                     rw [eqLeft, eqRight, compareShape]
                     dsimp only at computed
@@ -591,6 +604,16 @@ private theorem compareGraph_sound_core
                     · cases computed; rfl
                     · exact compareRefs_sound (fun _ _ _ _ _ _ _ => ih) kidsLeft kidsRight computed
                     · cases computed; rfl
+
+/-- On represented live terms the sorted ordering uses the same projection
+as identity, with the exact simulated comparison budget. -/
+theorem compareArena_refines (left : Represents arena a first) (right : Represents arena b second)
+    (computed : compareArena arena depth work a b = some (result, remaining)) :
+    result = compareShape (project first) (project second) := by
+  apply compareViews_sound _ left right computed
+  intro _ _ represented
+  obtain ⟨node, read, matched⟩ := arena_view_matches represented
+  exact ⟨nodeView node, by simp [read], matched⟩
 
 /-- Successful direct graph comparison agrees with the independent tree
 projection throughout the decoded version-6 arena. -/
@@ -606,7 +629,8 @@ theorem compareGraph_refines (fits : ∀ word ∈ words, word.fits)
   | some nodes =>
       simp only [aligned, Option.map_some, Option.some.injEq, Prod.mk.injEq] at parsed
       obtain ⟨rfl, rfl⟩ := parsed
-      exact compareGraph_sound_core (by simpa using aligned) left right computed
+      rw [← compareArena_agrees_wire (by simpa using aligned)] at computed
+      exact compareArena_refines left right computed
 
 theorem compareGraph_zero_iff (fits : ∀ word ∈ words, word.fits)
     (parsed : NativeFamilyWire.parseSnapshot (encodeObservedProgram definitions families words ++ tail) =
