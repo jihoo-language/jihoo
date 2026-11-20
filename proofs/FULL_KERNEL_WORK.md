@@ -3487,3 +3487,16 @@ same word with different proofs of the predicate. These local semantic
 rules compose with the existing dependent relation. Reconstructing the
 relation from arbitrary checked terms remains open. The focused build
 passed 100 jobs and a six-declaration axiom audit.
+
+### Aggregate check of the refinement and transport checkpoint
+
+At `7e5b05a`, the proof shell completed 1,117 Lake jobs, generated fixture
+comparisons and the exact audit of 10,508 declarations. The 526
+axiom-free declarations and the remaining dependencies all met the
+standard-axiom check.
+
+Jihoo 0.6.0 passed 89 native kernel fixtures and 31 additional checks
+with the expanded inference schedule and indexed Strict regression.
+Mixed declaration checking also passed 69 source fixtures and 55
+exact-byte checks. The proof guard reported 4,783.9 MiB peak sampled
+RSS for the combined run.
