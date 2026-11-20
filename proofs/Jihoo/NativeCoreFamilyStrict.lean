@@ -1,10 +1,11 @@
 import Jihoo.NativeCoreExpandedTraversal
 import Jihoo.NativeCoreCaseStrict
-import Jihoo.NativeScopeCheck
+import Jihoo.NativeLoanCheckerPolicySoundness
 
 /-! Pure Case and data Elim move a retained Strict scrutinee outside the
 eliminator. A motive that ignores the scrutinee gives the same original
-checked type on either side of this graph rewrite. -/
+checked type on either side of this graph rewrite, including when its body
+uses variables from the enclosing context. -/
 namespace Jihoo.NativeKernel.NativeCoreFamilyStrict
 
 open NativeArena Environment
@@ -47,7 +48,8 @@ def constantMotive (env : Environment) (depth : Nat) (arena : Arena) (family mot
   match env.families[family]?, arena[motive]? with
   | some entry, some (.node (.lam _) [_, body]) =>
       entry.declaration.data && (entry.declaration.params == entry.declaration.arity) &&
-        ((decode depth arena body).map (fun term => scopeCheck 0 (expand env term))).getD false
+        ((decode depth arena body).map (fun term =>
+          (PartialRenaming.shift (-1) 0 (expand env term)).isSome)).getD false
   | _, _ => false
 
 private theorem binary_read (represented : Represents arena root term)
@@ -81,15 +83,20 @@ theorem constantMotive_sound (represented : Represents arena root motive)
     | some closed =>
       have same := bodyRep.unique (decode_sound decoded)
       subst closed
-      have closedBody : (expand env B).Scoped 0 := scopeCheck_sound (by simpa [decoded] using complete)
-      intro a b
-      simp only [expand_node_cons, expandArgs]
-      have beta (arg : Term) : LoanTyping.Conversion.Conv env
-          (.app (.lam erased (expand env A) (expand env B)) arg) (expand env B) := by
-        have reduced := RawLend.Forward.acu (env := env)
-          (.compute (.beta erased (expand env A) (expand env B) arg))
-        simpa only [Environment.closed_subst closedBody] using reduced.toConv
-      exact (beta a).trans (beta b).symm
+      have canLower : (PartialRenaming.shift (-1) 0 (expand env B)).isSome = true := by
+        simpa [decoded] using complete
+      cases lowered : PartialRenaming.shift (-1) 0 (expand env B) with
+      | none => simp [lowered] at canLower
+      | some outer =>
+        have weakened := LoanTyping.Checker.branch_type_reweakens lowered
+        intro a b
+        simp only [expand_node_cons, expandArgs]
+        have beta (arg : Term) : LoanTyping.Conversion.Conv env
+            (.app (.lam erased (expand env A) (expand env B)) arg) outer := by
+          have reduced := RawLend.Forward.acu (env := env)
+            (.compute (.beta erased (expand env A) (expand env B) arg))
+          simpa only [← weakened, Term.shift_subst_single] using reduced.toConv
+        exact (beta a).trans (beta b).symm
 
 private theorem data_elim_scrutinee_context
     (typed : LoanTyping.HasType env [] ctx true (FamilyIota.elimTerm family motive arms scrutinee) type)
@@ -372,5 +379,25 @@ theorem walk_refines (wf : UnifiedProgram.EnvWellFormed env) (onBase : Prefix ba
         exact reconsidered.preserves typed
       exact ⟨throughSubject.trans last, lastBack ∘ followingBack ∘ backward, result, held, fun typed =>
         converted (changeScrutinee stableNew changed (rawChanged typed))⟩
+
+namespace Examples
+
+private def box : Term := .node (.ind 0 0) []
+private def buffer : Term := .buffer (.natural 2)
+private def family : FamilyDeclaration := ⟨true, 0, 0, [.pi false buffer box], 0⟩
+private def env : Environment := ⟨#[], #[⟨family, [⟨[⟨false, buffer, none⟩], []⟩], true⟩]⟩
+private def arena : Arena := #[.node (.ind 0 0) [], .var 0, .var 1, .node .buffer [2], .node .u64 [],
+  .node .strict [1, 4], .node (.lam false) [0, 3], .node (.lam false) [0, 5]]
+
+/-- Buffer uses the older length binder. The other motive refers to the
+scrutinee itself and the same check rejects it. -/
+theorem open_motive_keeps_outer_index :
+    constantMotive env 8 arena 0 6 = true ∧ constantMotive env 8 arena 0 7 = false ∧
+      Stable env 0 (.lam false box (.buffer (.var 1))) := by
+  have accepted : constantMotive env 8 arena 0 6 = true := by cbv
+  have represented : Represents arena 6 (.lam false box (.buffer (.var 1))) := decode_sound (fuel := 4) rfl
+  exact ⟨accepted, by cbv, constantMotive_sound represented accepted⟩
+
+end Examples
 
 end Jihoo.NativeKernel.NativeCoreFamilyStrict

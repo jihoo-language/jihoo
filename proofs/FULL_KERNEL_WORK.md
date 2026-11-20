@@ -12,7 +12,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | Remaining obligation | Starting point |
 | --- | --- |
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
-| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It now commutes Strict out of Case and data Elim when the expanded motive is independent of the scrutinized value and the family indices are all parameters. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
+| Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It commutes Strict out of Case and data Elim for families whose indices are all parameters when the motive can use the enclosing context independently of the scrutinee. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. It requires supported bound evidence and fitting unsigned sums. General execution across arbitrary closures and dependent runtime forms remains open. |
 | Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, primitive operators with fixed operand types, Decide, Strict, ZeroLe, and USub. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
 
@@ -3322,3 +3322,15 @@ The exact-byte ZeroLe example keeps the successor of the largest U64 as a
 ghost sum. The subtraction example exhausts its budget at the first tick of
 the bound comparison, with both proposition graphs committed. Native
 `Core.infer` checks the same arena and work boundaries.
+
+### Open motives for Strict family scrutinees
+
+The Case and data Elim guard lowers the expanded motive body across the
+scrutinee binder. Successful lowering reweakens to the original body, so
+beta substitution with either scrutinee yields the same type in the
+enclosing context. This connects the existing Strict visitor to motives
+such as `Buffer(n)` where `n` belongs to an older binder.
+
+The Lean regression checks that this open motive satisfies the preservation
+guard and that a separate motive that uses the scrutinee is rejected. The
+existing exact-byte Case and data Elim examples also pass.

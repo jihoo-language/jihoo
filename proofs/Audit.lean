@@ -10479,6 +10479,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.plan_sound
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.walk_progress
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.walk_refines
+#print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.Examples.open_motive_keeps_outer_index
 #print axioms Jihoo.NativeKernel.NativeCoreExpandedFamilies.Examples.StrictScrutinee.checked_case_and_data_elim_retain_strict_scrutinee
 #print axioms Jihoo.NativeKernel.NativeCoreExpandedFamilies.Examples.StrictScrutinee.strict_scrutinee_child_exhaustion_keeps_inner_eliminator
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.OpenDependentTransport.expose?_preserves
