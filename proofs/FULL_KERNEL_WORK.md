@@ -3433,3 +3433,16 @@ The admitted regression places overflowing arithmetic inside the erased
 evidence. The machine enters the body directly, returns 7 and emits only
 the closure activation. The focused build passed 407 jobs and the four
 new theorems use only standard Lean axioms.
+
+### Proof irrelevance in dependent type comparison
+
+Two closed Type1 annotations apply the same bound type family to
+`Pack` values with the same witness and different proofs of `Lt(0,1)`.
+The rebuilt compiler checks both annotations and accepts their equality.
+The corresponding Lean graph identity succeeds. The raw conversion
+classes are distinct by constructor injectivity, neutral application
+injectivity and the separation of ZeroLe and Decide. Native refinement
+therefore needs typed proof irrelevance at ignored fields.
+
+The focused build passed 290 jobs. The separation theorem uses only the
+three standard Lean axioms.

@@ -220,6 +220,33 @@ fn pack_evidence_exhaustion() {
     assert(c.term(17) == core.Term.App(predicate, word), "evidence type uses the original witness")
 }
 
+fn proof_irrelevance_under_type_family() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let u = c.add(core.Term.U64, span).unwrap()
+    let arg = c.add(core.Term.Var(0), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let bound = c.add(core.Term.Lt(arg, one), span).unwrap()
+    let predicate = c.add(core.Term.Lam(false, u, bound), span).unwrap()
+    let refined = c.add(core.Term.Refine(predicate), span).unwrap()
+    let sort = c.add(core.Term.Universe(0), span).unwrap()
+    let family = c.add(core.Term.Pi(false, refined, sort), span).unwrap()
+    let by_zero = c.add(core.Term.ZeroLe(zero), span).unwrap()
+    let by_decision = c.add(core.Term.Decide(zero, one), span).unwrap()
+    let first = c.add(core.Term.Pack(predicate, zero, by_zero), span).unwrap()
+    let second = c.add(core.Term.Pack(predicate, zero, by_decision), span).unwrap()
+    let left_body = c.add(core.Term.App(arg, first), span).unwrap()
+    let right_body = c.add(core.Term.App(arg, second), span).unwrap()
+    let left = c.add(core.Term.Pi(false, family, left_body), span).unwrap()
+    let right = c.add(core.Term.Pi(false, family, right_body), span).unwrap()
+    let left_sort = c.infer(left, [], true, core.DEPTH).unwrap()
+    let right_sort = c.infer(right, [], true, core.DEPTH).unwrap()
+    assert(c.term(left_sort) == core.Term.Universe(1), "left type is closed and well-formed")
+    assert(c.term(right_sort) == core.Term.Universe(1), "right type is closed and well-formed")
+    assert(c.equal(left, right, core.DEPTH).unwrap(), "dependent type comparison skips both Pack proofs")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -230,6 +257,7 @@ fn main() -> i32 {
     conditional_inference()
     refinement_inference()
     pack_evidence_exhaustion()
+    proof_irrelevance_under_type_family()
     println("Native Core.infer matched primitive, binder, evidence, conditional and refinement graph traces and checking costs")
     0
 }

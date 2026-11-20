@@ -1,5 +1,7 @@
 import Jihoo.NativeLoanPureTyping
+import Jihoo.NativeLoanCheckerSoundness
 import Jihoo.NativeCoreIdentical
+import Jihoo.NativeFamilyIotaNeutralCoherence
 
 /-! Core.identical ignores evidence in three constructors. Recovering the
 well-formed proposition of each skipped occurrence from the source checker
@@ -126,3 +128,62 @@ theorem live_identity_common_proposition
   · exact ⟨rfl, SharedOperands.give.common_proposition firstTyped secondTyped⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence
+
+namespace Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples
+
+open NativeArena NativeProgramWire
+
+private def zero : Term := .natural 0
+private def one : Term := .natural 1
+private def predicate : Term := .lam false .u64 (.lt (.var 0) one)
+private def familyDomain : Term := .pi false (.refine predicate) (.univ 0)
+private def pack (evidence : Term) : Term := .pack predicate zero evidence
+private def dependentType (evidence : Term) : Term :=
+  .pi false familyDomain (.app (.var 0) (pack evidence))
+
+private def arena : Arena := #[
+  .node .u64 [], .var 0, .node (.natural 0) [], .node (.natural 1) [],
+  .node .lt [1, 3], .node (.lam false) [0, 4], .node .refine [5],
+  .node (.universe 0) [], .node (.pi false) [6, 7],
+  .node .zeroLe [2], .node .decide [2, 3], .node .pack [5, 2, 9], .node .pack [5, 2, 10],
+  .node .app [1, 11], .node .app [1, 12], .node (.pi false) [8, 13], .node (.pi false) [8, 14]]
+
+private theorem emptyWorld : UnifiedProgram.EnvWellFormed empty :=
+  UnifiedProgram.UnifiedProgramChecked.empty.wellFormed
+
+private theorem different_evidence :
+    ¬ FamilyIota.Extended.Conv empty (.zeroLe zero) (.decide zero one) :=
+  fun converted => FamilyIota.Extended.Conv.full_rigid_disjoint rfl rfl
+    (by intro same; cases same) converted emptyWorld.admissible
+
+/-- Both domains are actual checked closed types. Native graph identity
+equates them because it skips the packed evidence under the bound family's
+application. The full raw conversion keeps that field, even for valid proofs
+of the same dependent proposition. -/
+theorem checked_closed_types_need_typed_evidence_irrelevance :
+    HasType empty [] [] true (dependentType (.zeroLe zero)) (.univ 1) ∧
+    HasType empty [] [] true (dependentType (.decide zero one)) (.univ 1) ∧
+    Represents arena 15 (dependentType (.zeroLe zero)) ∧
+    Represents arena 16 (dependentType (.decide zero one)) ∧
+    (NativeCoreIdentical.runArena arena 128 24 0 15 16).1 = .ok true ∧
+    ¬ RawValue.Conv empty (dependentType (.zeroLe zero)) (dependentType (.decide zero one)) := by
+  refine ⟨Checker.infer_sound (fuel := 64) (by cbv), Checker.infer_sound (fuel := 64) (by cbv),
+    decode_sound (fuel := 12) (by rfl), decode_sound (fuel := 12) (by rfl), by cbv, ?_⟩
+  intro comparable
+  have projected := comparable.projected emptyWorld.admissible
+  have first : Semantics.ValueErasure.Loan.project empty (dependentType (.zeroLe zero)) =
+      dependentType (.zeroLe zero) := by cbv
+  have second : Semantics.ValueErasure.Loan.project empty (dependentType (.decide zero one)) =
+      dependentType (.decide zero one) := by cbv
+  rw [first, second] at projected
+  have bodies := (projected.pi_injective emptyWorld.admissible).2.2
+  have packs := (bodies.family_application_injective emptyWorld.admissible).2
+  obtain ⟨_, arguments⟩ := packs.full_rigid_node_injective rfl rfl emptyWorld.admissible
+  cases arguments with
+  | cons _ rest =>
+    cases rest with
+    | cons _ rest =>
+      cases rest with
+      | cons evidence _ => exact different_evidence evidence
+
+end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples
