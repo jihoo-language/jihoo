@@ -1336,5 +1336,7 @@ import Jihoo.NativeCorePropCaseType
 import Jihoo.NativeCorePropSignatureConversion
 import Jihoo.NativeCorePropSignatureAuthentication
 import Jihoo.NativeCoreGhostPropCases
+import Jihoo.NativeCoreGhostPropElimination
+import Jihoo.NativeCoreGhostPropEliminationExamples
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

@@ -10703,3 +10703,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.table_frame
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropElimination.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropElimination.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropElimination.constructor_subject_arity
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropEliminationExamples.indexed_proposition_checks_motive_branch_and_evidence

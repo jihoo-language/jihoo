@@ -4163,3 +4163,24 @@ written case at the native generated type and derives typing against the
 corresponding signature in the checked table. The focused build passed
 338 jobs. One of the eight new audited declarations is axiom-free and
 the others use only standard Lean axioms.
+
+### Aggregate check of scalar declarations, Loop and proposition branches
+
+At `0bd3f87`, 1,162 Lake jobs and the generated fixture comparisons passed.
+The audit covered 10,695 declarations. Of these, 528 are axiom-free and
+the rest use standard Lean axioms. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including pure admission of the native
+snapshot. Peak sampled process-tree RSS was 4,865.6 MiB.
+
+### Indexed proposition elimination inference
+
+The proposition driver checks the original motive and branches, then
+infers and normalizes the evidence's type. It appends the original motive
+applied to each index read from that type. For constructor evidence, the
+arity follows from the actual checked signature and dependent argument
+typing. The general refinement takes the arity property of the evidence
+as a premise. The native and Lean samples agree on 63 steps and the final
+graph row. A missing case is rejected before any graph allocation. The
+focused build passed 445 jobs and the four additions to the audit use
+standard Lean axioms.

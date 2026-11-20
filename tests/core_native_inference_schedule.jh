@@ -1146,6 +1146,47 @@ fn loop_motive_inference() {
     assert_spent(&proof, "the proposition loop checks every dependent operand in one hundred ninety-six ticks")
 }
 
+fn proposition_elimination_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let bound = c.add(core.Term.Var(0), span).unwrap()
+    let equality = c.add(core.Term.Eq(bound, bound), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, equality), span).unwrap()
+    let branch = c.add(core.Term.Refl(two), span).unwrap()
+    var indices = Vec(u32).new()
+    indices.push(two)
+    let result = c.add(core.Term.Ind(0, indices), span).unwrap()
+    let evidence = c.add(core.Term.Con(0, 0, Vec(u32).new()), span).unwrap()
+    var cases = Vec(u32).new()
+    cases.push(branch)
+    c.add(core.Term.Elim(0, motive, cases, evidence), span).unwrap()
+    c.add(core.Term.Elim(0, motive, Vec(u32).new(), evidence), span).unwrap()
+    c.push_family(core.Family { name: "IndexedEvidence".to_string(), data: false, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: result })
+    c.check().unwrap()
+    c
+}
+
+fn proposition_elimination_inference() {
+    var baseline = proposition_elimination_fixture()
+    let budget = remaining_ticks(&baseline)
+    var accepted = proposition_elimination_fixture()
+    let start = accepted.node_count()
+    let result = accepted.infer(8, Vec(core.Binding).new().as_slice(), true, 32).unwrap()
+    let finish = accepted.node_count()
+    let cost = budget-remaining_ticks(&accepted)
+    assert(accepted.term(result) == core.Term.App(4, 0), "elimination result uses the original motive and evidence index")
+    assert(start == 12 && result == 24 && finish == 25 && cost == 63, "indexed proposition induction schedule")
+    var wrong = proposition_elimination_fixture()
+    let before = wrong.node_count()
+    assert(!wrong.infer(9, Vec(core.Binding).new().as_slice(), true, 32).is_ok() && wrong.node_count() == before,
+        "elimination rejects a missing case before constructing the motive")
+    assert(budget-remaining_ticks(&wrong) == 1, "a missing branch uses only the entry tick")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1171,6 +1212,7 @@ fn main() -> i32 {
     family_index_inference()
     proposition_motive_telescope()
     proposition_case_telescope()
+    proposition_elimination_inference()
     dependent_constructor_inference()
     boxed_drop_inference()
     declaration_annotation_inference()
