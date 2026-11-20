@@ -8,7 +8,8 @@ namespace Jihoo.NativeKernel.NativeCorePureStructuralNormal
 
 open NativeArena NativeProgramWire
 open Environment.LoanTyping.MixedProgram (History)
-open NativeCoreGlobalNormal (runPure runPure_conversion)
+open NativeCoreGlobalNormal (runPure runPure_conversion runPure_expanded_conversion
+  runPure_step_bounds head discardRest discard_target alias_target)
 open NativeKernel.Conversion (ListRel)
 
 /-- A pure normalization branch that rebuilds its constructor directly from
@@ -214,9 +215,9 @@ private def finishNested (root : Nat) (op : Op) (before : List Nat)
       | .ok (arena, selected) => ⟨arena, .ok selected, children.steps⟩
 
 /-- Visit structural children with the current arena and a shared step
-counter. Appends made by earlier children survive an error in a later child.
-Atomic roots and the allocation-free Free, Drop, and global paths use the
-existing leaf traversal. -/
+counter. Transparent globals and pure Free and Drop can lead back into
+structural normalization. Appends made by earlier children survive an error
+in a later child. -/
 def runNested (roots : List Roots) (visible limit : Nat) : Nat → Arena → Nat → Nat → Outcome Nat
   | 0, arena, steps, root => leaf arena roots visible limit 0 steps root
   | depth + 1, arena, steps, root =>
@@ -226,8 +227,182 @@ def runNested (roots : List Roots) (visible limit : Nat) : Nat → Arena → Nat
       | some (.node op refs) =>
           if structural op then
             finishNested root op refs (nestedChildren (runNested roots visible limit depth) refs arena next)
-          else leaf arena roots visible limit (depth + 1) steps root
+          else
+            match discardRest (.node op refs) with
+            | some rest => runNested roots visible limit depth arena next rest
+            | none =>
+                match head (.node op refs) with
+                | .alias index =>
+                    if visible ≤ index then ⟨arena, .error (.normal (.invisibleGlobal root index)), next⟩ else
+                    match roots[index]? with
+                    | none => ⟨arena, .error (.normal (.missingDefinition root index)), next⟩
+                    | some definition => runNested roots visible limit depth arena next definition.valueRoot
+                | _ => leaf arena roots visible limit (depth + 1) steps root
       | _ => leaf arena roots visible limit (depth + 1) steps root
+
+private structure Cost (arena : Arena) (initial limit : Nat) (computed : Outcome α) : Prop where
+  spent : initial ≤ computed.steps
+  growth : computed.arena.size + initial ≤ arena.size + computed.steps
+  budget : initial ≤ limit → computed.steps ≤ limit + 1
+  success : ∀ selected, computed.result = .ok selected → computed.steps ≤ limit
+
+private theorem Cost.tick_error (reason : Error) :
+    Cost arena initial limit (⟨arena, .error reason, initial + 1⟩ : Outcome α) := by
+  refine ⟨Nat.le_succ _, Nat.add_le_add_left (Nat.le_succ _) _, Nat.succ_le_succ, ?_⟩
+  intro _ impossible
+  cases impossible
+
+private theorem Cost.prepend (available : initial + 1 ≤ limit)
+    (remaining : Cost arena (initial + 1) limit computed) : Cost arena initial limit computed where
+  spent := Nat.le_trans (Nat.le_succ _) remaining.spent
+  growth := Nat.le_trans (Nat.add_le_add_left (Nat.le_succ _) _) remaining.growth
+  budget _ := remaining.budget available
+  success := remaining.success
+
+private theorem leaf_cost :
+    Cost arena initial limit (leaf arena roots visible limit depth initial root) := by
+  have bounds := runPure_step_bounds arena roots visible limit depth initial root
+  rcases done : runPure arena roots visible limit depth initial root with ⟨result, spent⟩
+  dsimp only at bounds
+  rw [done] at bounds
+  cases result with
+  | error reason =>
+      simp only [leaf, done, Except.mapError]
+      have spent := Nat.le_of_lt bounds.1
+      refine ⟨spent, Nat.add_le_add_left spent _, bounds.2.1, ?_⟩
+      intro _ impossible
+      cases impossible
+  | ok selected =>
+      simp only [leaf, done, Except.mapError]
+      have spent := Nat.le_of_lt bounds.1
+      refine ⟨spent, Nat.add_le_add_left spent _, bounds.2.1, ?_⟩
+      intro _ _
+      exact bounds.2.2 selected rfl
+
+private theorem nestedChildren_cost (within : initial ≤ limit)
+    (visitCost : ∀ arena initial root, Cost arena initial limit (visit arena initial root)) :
+    Cost arena initial limit (nestedChildren visit refs arena initial) := by
+  induction refs generalizing arena initial with
+  | nil => exact ⟨Nat.le_refl _, Nat.le_refl _, fun room => Nat.le_trans room (Nat.le_succ _), fun _ _ => within⟩
+  | cons root refs ih =>
+      let first := visit arena initial root
+      have cost := visitCost arena initial root
+      change Cost arena initial limit first at cost
+      cases choice : first.result with
+      | error reason =>
+          simp only [nestedChildren, show (visit arena initial root).result = .error reason from choice]
+          refine ⟨cost.spent, cost.growth, cost.budget, ?_⟩
+          intro _ impossible
+          cases impossible
+      | ok child =>
+          let later := nestedChildren visit refs first.arena first.steps
+          have room := cost.success child choice
+          have rest := ih (arena := first.arena) (initial := first.steps) room
+          change Cost first.arena first.steps limit later at rest
+          simp only [nestedChildren, show (visit arena initial root).result = .ok child from choice]
+          refine ⟨Nat.le_trans cost.spent rest.spent, ?_, fun _ => rest.budget room, ?_⟩
+          · have before := cost.growth
+            have after := rest.growth
+            change later.arena.size + initial ≤ arena.size + later.steps
+            omega
+          · intro _ chosen
+            cases outcome : later.result with
+            | error reason =>
+                dsimp only [later, first] at outcome
+                simp [outcome, Except.map] at chosen
+            | ok selected => exact rest.success selected outcome
+
+private theorem finish_growth (added : finish arena root op before after = .ok (extended, selected)) :
+    extended.size ≤ arena.size + 1 := by
+  unfold finish at added
+  split at added
+  · cases added
+    exact Nat.le_succ _
+  · cases append : NativeCoreGraph.addNode arena (.node op after) with
+    | error reason => simp [append, Except.mapError] at added
+    | ok result =>
+        simp only [append, Except.mapError, Except.ok.injEq] at added
+        subst result
+        exact Nat.le_of_eq (NativeCoreGraph.addNode_commits append).2.2.2.1
+
+private theorem finishNested_cost (available : initial + 1 ≤ limit)
+    (childrenCost : Cost arena (initial + 1) limit children) :
+    Cost arena initial limit (finishNested root op before children) := by
+  have spent := (childrenCost.prepend available).spent
+  have budget := (childrenCost.prepend available).budget
+  cases choice : children.result with
+  | error reason =>
+      simp only [finishNested, choice]
+      refine ⟨spent, (childrenCost.prepend available).growth, budget, ?_⟩
+      intro _ impossible
+      cases impossible
+  | ok result =>
+      cases finished : finish children.arena root op before result with
+      | error reason =>
+          simp only [finishNested, choice, finished]
+          refine ⟨spent, (childrenCost.prepend available).growth, budget, ?_⟩
+          intro _ impossible
+          cases impossible
+      | ok pair =>
+          obtain ⟨extended, selected⟩ := pair
+          simp only [finishNested, choice, finished]
+          refine ⟨spent, ?_, budget, fun _ _ => childrenCost.success result choice⟩
+          have before := childrenCost.growth
+          have after := finish_growth finished
+          change extended.size + initial ≤ arena.size + children.steps
+          omega
+
+private theorem nested_cost :
+    Cost arena initial limit (runNested roots visible limit depth arena initial root) := by
+  induction depth generalizing arena initial root with
+  | zero => exact leaf_cost
+  | succ depth ih =>
+      by_cases over : limit < initial + 1
+      · simp only [runNested, over, ite_true]
+        exact Cost.tick_error _
+      have room := Nat.le_of_not_gt over
+      cases read : arena[root]? with
+      | none => simpa only [runNested, ite_eq_right over, read] using
+          (leaf_cost (arena := arena) (roots := roots) (visible := visible) (limit := limit)
+            (depth := depth + 1) (initial := initial) (root := root))
+      | some node =>
+          cases node with
+          | var _ => simpa only [runNested, ite_eq_right over, read] using
+              (leaf_cost (arena := arena) (roots := roots) (visible := visible) (limit := limit)
+                (depth := depth + 1) (initial := initial) (root := root))
+          | node op refs =>
+              by_cases supported : structural op = true
+              · simp only [runNested, ite_eq_right over, read, supported, ite_true]
+                exact finishNested_cost room (nestedChildren_cost room fun _ _ _ => ih)
+              · simp only [runNested, ite_eq_right over, read, ite_eq_right supported]
+                cases skip : discardRest (.node op refs) with
+                | some rest => exact (ih (root := rest)).prepend room
+                | none =>
+                    simp only
+                    cases kind : head (.node op refs) with
+                    | atomic | outside => exact leaf_cost
+                    | alias index =>
+                        simp only
+                        by_cases hidden : visible ≤ index
+                        · simp only [hidden, ite_true]
+                          exact Cost.tick_error _
+                        simp only [ite_eq_right hidden]
+                        cases lookup : roots[index]? with
+                        | none => exact Cost.tick_error _
+                        | some definition =>
+                            simp only
+                            exact (ih (root := definition.valueRoot)).prepend room
+
+/-- Every appended row is accounted for by a charged visit. Failure can
+retain earlier appends and can exceed the limit by at most its final tick. -/
+theorem runNested_cost (arena : Arena) (roots : List Roots) (visible limit depth initial root : Nat) :
+    let computed := runNested roots visible limit depth arena initial root
+    computed.arena.size + initial ≤ arena.size + computed.steps ∧
+      (initial ≤ limit → computed.steps ≤ limit + 1) ∧
+      ∀ selected, computed.result = .ok selected → computed.steps ≤ limit :=
+  let proof := nested_cost (arena := arena) (roots := roots) (visible := visible) (limit := limit)
+    (depth := depth) (initial := initial) (root := root)
+  ⟨proof.growth, proof.budget, proof.success⟩
 
 private structure Refines (before : Arena) (computed : Outcome α) (valid : Arena → α → Prop) : Prop where
   kept : Prefix before computed.arena
@@ -235,12 +410,22 @@ private structure Refines (before : Arena) (computed : Outcome α) (valid : Aren
   success : ∀ selected, computed.result = .ok selected → valid computed.arena selected
 
 private abbrev TermResult (env : Environment) (source : Term) (arena : Arena) (selected : Nat) : Prop :=
-  ∃ result, Represents arena selected result ∧ Environment.RawValue.Forward env source result
+  ∃ result, Represents arena selected result ∧
+    Environment.RawValue.Forward env (EnvironmentDelta.expand env source) result
 
 private abbrev ChildrenResult (env : Environment) (inputs : List Term) (arity : Nat)
     (arena : Arena) (selected : List Nat) : Prop :=
   ∃ outputs, RepresentsList arena selected outputs ∧ selected.length = arity ∧
-    ListRel (Environment.RawValue.Forward env) inputs outputs
+    ListRel (Environment.RawValue.Forward env) (inputs.map (EnvironmentDelta.expand env)) outputs
+
+private theorem Refines.prepend (rest : Refines arena computed (TermResult env tail))
+    (first : Environment.RawValue.Forward env (EnvironmentDelta.expand env source)
+      (EnvironmentDelta.expand env tail)) :
+    Refines arena computed (TermResult env source) := by
+  refine ⟨rest.kept, rest.backward, ?_⟩
+  intro selected found
+  obtain ⟨result, represented, changed⟩ := rest.success selected found
+  exact ⟨result, represented, first.trans changed⟩
 
 private theorem failure_refines (kept : Prefix arena current) (backward : Backward arena → Backward current) :
     Refines arena (⟨current, .error reason, spent⟩ : Outcome α) valid :=
@@ -265,7 +450,7 @@ private theorem leaf_refines (aligned : RepresentsDefinitions arena roots defini
       refine ⟨Prefix.refl _, id, ?_⟩
       intro selected found
       cases found
-      exact runPure_conversion aligned history source ran
+      exact runPure_expanded_conversion aligned history source ran
 
 private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena roots definitions)
     (source : RepresentsList arena refs inputs)
@@ -306,6 +491,7 @@ private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena ro
 
 private theorem finishNested_refines (read : arena[root]? = some (.node op before))
     (arity : before.length = op.arity)
+    (ordinary : GlobalEnvironment.ordinary op = true)
     (normalized : Refines arena children (ChildrenResult env inputs before.length)) :
     Refines arena (finishNested root op before children) (TermResult env (.node op inputs)) := by
   cases childResult : children.result with
@@ -326,7 +512,12 @@ private theorem finishNested_refines (read : arena[root]? = some (.node op befor
           refine ⟨normalized.kept.trans kept, fun h => backward (normalized.backward h), ?_⟩
           intro index found
           cases found
-          exact ⟨_, result, .node op changed⟩
+          refine ⟨_, result, ?_⟩
+          rw [EnvironmentDelta.expand_ordinary ordinary, EnvironmentDelta.expandArgs_map]
+          exact .node op changed
+
+private theorem structural_ordinary (supported : structural op = true) : GlobalEnvironment.ordinary op = true := by
+  cases op <;> simp_all [structural, GlobalEnvironment.ordinary]
 
 private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env) (source : Represents arena root term) :
@@ -343,9 +534,35 @@ private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roo
       | @node _ op refs inputs read arity children =>
           by_cases supported : structural op = true
           · simp only [runNested, ite_eq_right exhausted, read, supported, ite_true]
-            exact finishNested_refines read arity (nestedChildren_refines aligned children (fun a h => ih a h))
-          · simpa only [runNested, ite_eq_right exhausted, read, ite_eq_right supported] using
-              leaf_refines aligned history (.node read arity children)
+            exact finishNested_refines read arity (structural_ordinary supported)
+              (nestedChildren_refines aligned children (fun a h => ih a h))
+          · cases skip : discardRest (.node op refs) with
+            | some rest =>
+                simp only [runNested, ite_eq_right exhausted, read, ite_eq_right supported, skip]
+                obtain ⟨_, represented, change, _⟩ :=
+                  discard_target (env := env) (.node read arity children) read skip
+                exact (ih aligned represented).prepend change
+            | none =>
+                cases kind : head (.node op refs) with
+                | atomic | outside =>
+                    simpa only [runNested, ite_eq_right exhausted, read, ite_eq_right supported, skip, kind] using
+                      leaf_refines aligned history (.node read arity children)
+                | alias index =>
+                    by_cases hidden : visible ≤ index
+                    · simp only [runNested, ite_eq_right exhausted, read, ite_eq_right supported, skip, kind,
+                        hidden, ite_true]
+                      exact failure_refines (Prefix.refl _) id
+                    · cases lookup : roots[index]? with
+                      | none =>
+                          simp only [runNested, ite_eq_right exhausted, read, ite_eq_right supported, skip, kind,
+                            ite_eq_right hidden, lookup]
+                          exact failure_refines (Prefix.refl _) id
+                      | some definition =>
+                          simp only [runNested, ite_eq_right exhausted, read, ite_eq_right supported, skip, kind,
+                            ite_eq_right hidden, lookup]
+                          obtain ⟨_, represented, same⟩ :=
+                            alias_target aligned history (.node read arity children) read kind lookup
+                          exact (ih aligned represented).prepend (by rw [same]; exact .refl)
 
 /-- Arbitrarily nested supported structural nodes preserve arena prefixes and
 backward references, even on error. A successful reference represents a pure
@@ -358,7 +575,12 @@ theorem runNested_refines (aligned : RepresentsDefinitions arena roots definitio
         ∃ normalized, Represents output.arena selected normalized ∧ Environment.RawValue.Forward env term normalized := by
   have proof := runNested_refines_aux (visible := visible) (limit := limit) (depth := depth)
     (initial := initial) aligned history source
-  exact ⟨proof.kept, proof.backward, proof.success⟩
+  refine ⟨proof.kept, proof.backward, ?_⟩
+  intro selected found
+  obtain ⟨normalized, represented, changed⟩ := proof.success selected found
+  have expanded : Environment.RawValue.Forward env term (EnvironmentDelta.expand env term) :=
+    .old (.old (.old (EnvironmentDelta.expand_forward env term)))
+  exact ⟨normalized, represented, expanded.trans changed⟩
 
 /-- Successful and faulted traversals retain the checked graph prefix from
 the admitted bytes and only append nodes with earlier child references. -/
@@ -388,5 +610,15 @@ theorem nested_shared_child_example :
       ⟨(first.push (.node .eq [0, 0])).push (.node .eq [4, 5]), .ok 6, 9⟩ ∧
     runNested [] 0 8 4 arena 0 3 = ⟨first, .error (.normal (.stepLimit 0)), 9⟩ := by
   exact ⟨rfl, rfl⟩
+
+/-- An alias through a pure Drop reaches a composite equality. Normalizing
+its Free child leaves both operands pointing to the original literal. -/
+theorem nested_discard_alias_example :
+    let arena : Arena := #[.node (.natural 7) [], .node .free [0, 0], .node .eq [1, 0],
+      .node (.drop 0) [0, 2], .node (.global 0) []]
+    runNested [⟨2, 3⟩] 1 6 5 arena 0 4 = ⟨arena.push (.node .eq [0, 0]), .ok 5, 6⟩ ∧
+      runNested [⟨2, 3⟩] 1 5 5 arena 0 4 = ⟨arena, .error (.normal (.stepLimit 0)), 6⟩ ∧
+      runNested [⟨2, 3⟩] 0 6 5 arena 0 4 = ⟨arena, .error (.normal (.invisibleGlobal 4 0)), 1⟩ := by
+  exact ⟨rfl, rfl, rfl⟩
 
 end Jihoo.NativeKernel.NativeCorePureStructuralNormal

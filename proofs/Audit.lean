@@ -9541,3 +9541,16 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_refines
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_checkBytes_refines
 #print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.nested_shared_child_example
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.runPure_step_bounds
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.discard_target
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.alias_target
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalNormal.runPure_expanded_conversion
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.runNested_cost
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralNormal.nested_discard_alias_example
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_typed_array_call_entry
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.Step.preserves
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.observe?_sound
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_arithmetic_truth
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_global_arithmetic_truth
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checker_rejects_observable_false_inequality
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation.checked_transport_application

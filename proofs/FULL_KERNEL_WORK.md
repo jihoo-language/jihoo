@@ -2192,3 +2192,29 @@ building the validator's imports.
 General consistency, contextual preservation across the rest of the
 language, the source-to-runtime ownership invariant, and refinement of the
 production compiler remain open.
+
+### Composite delta normalization, array call entry, and proof observation
+
+The recursive graph normalizer now reenters structural normalization after
+transparent global lookup and the pure Free and Drop continuations. A
+successful run retains its forward reduction under the authentic mixed
+history. Arena growth is bounded by charged visits. A run entering within
+budget can exceed the limit only by the final rejecting tick.
+
+An actual final array element return can resume an argument frame and enter
+its saved closure. The two-transition theorem derives the dependent result
+typing and the value context from the constructed array and the original
+source typing. Captured source typing remains a premise. Relating the
+saved argument origin to the constructed array remains an open obligation.
+
+Bounded observation now works directly on extended ghost derivations and
+the stored bodies of exact-byte mixed admission. Typed beta, reflexive
+Transport, Strict, and Free preserve the original result type. Contextual
+steps cover lambda bodies and application callees. Recognized arithmetic
+residuals give truth for the original accepted type and rule out a false
+closed numeral inequality when observation succeeds. General termination
+and coverage of all source proof terms remain open.
+
+The aggregate check passed 1,006 Lake jobs, 9,546 declaration audits, and
+all generated fixture comparisons. With the existing Lake cache, the
+resource-limited aggregate check took 13.48 seconds.

@@ -479,7 +479,7 @@ theorem forward_arena_alias_example :
       equal snapshot words 1 5 3 0 0 2 = (.error (.left (.invisibleGlobal 0 1)), 1) := by
   exact ⟨rfl, rfl, rfl⟩
 
-private def discardRest : Node → Option Nat
+def discardRest : Node → Option Nat
   | .node .free [_, rest] | .node (.drop _) [_, rest] => some rest
   | _ => none
 
@@ -506,6 +506,65 @@ def runPure (arena : Arena) (roots : List Roots) (visible limit : Nat) :
                   match roots[index]? with
                   | none => (.error (.missingDefinition root index), next)
                   | some definition => runPure arena roots visible limit depth next definition.valueRoot
+
+private def StepBounds (initial limit : Nat) (computed : Result) : Prop :=
+  initial < computed.2 ∧ (initial ≤ limit → computed.2 ≤ limit + 1) ∧
+    ∀ selected, computed.1 = .ok selected → computed.2 ≤ limit
+
+private theorem StepBounds.error (reason : Error) :
+    StepBounds initial limit (.error reason, initial + 1) := by
+  refine ⟨Nat.lt_succ_self _, Nat.succ_le_succ, ?_⟩
+  intro _ impossible
+  cases impossible
+
+private theorem StepBounds.prepend (available : initial + 1 ≤ limit)
+    (remaining : StepBounds (initial + 1) limit computed) : StepBounds initial limit computed :=
+  ⟨Nat.lt_trans (Nat.lt_succ_self _) remaining.1, fun _ => remaining.2.1 available, remaining.2.2⟩
+
+/-- Every request consumes a tick. Successful traversal stays within the
+limit. A request starting within budget can overspend by at most the
+rejecting tick, including on invalid references and hidden globals. -/
+theorem runPure_step_bounds (arena : Arena) (roots : List Roots) (visible limit depth initial root : Nat) :
+    let computed := runPure arena roots visible limit depth initial root
+    initial < computed.2 ∧ (initial ≤ limit → computed.2 ≤ limit + 1) ∧
+      ∀ selected, computed.1 = .ok selected → computed.2 ≤ limit := by
+  change StepBounds initial limit (runPure arena roots visible limit depth initial root)
+  induction depth generalizing initial root with
+  | zero =>
+      simp only [runPure, run]
+      split <;> exact StepBounds.error _
+  | succ depth ih =>
+      by_cases over : limit < initial + 1
+      · simp only [runPure, over, ite_true]
+        exact StepBounds.error _
+      have room := Nat.le_of_not_gt over
+      simp only [runPure, ite_eq_right over]
+      cases read : arena[root]? with
+      | none => exact StepBounds.error _
+      | some node =>
+          simp only
+          cases discard : discardRest node with
+          | some rest =>
+              simp only
+              exact (ih (initial := initial + 1) (root := rest)).prepend room
+          | none =>
+              simp only
+              cases kind : head node with
+              | atomic =>
+                  simp only
+                  exact ⟨Nat.lt_succ_self _, Nat.succ_le_succ, fun _ _ => room⟩
+              | outside => exact StepBounds.error _
+              | alias index =>
+                  simp only
+                  by_cases hidden : visible ≤ index
+                  · simp only [hidden, ite_true]
+                    exact StepBounds.error _
+                  simp only [ite_eq_right hidden]
+                  cases lookup : roots[index]? with
+                  | none => exact StepBounds.error _
+                  | some definition =>
+                      simp only
+                      exact (ih (initial := initial + 1) (root := definition.valueRoot)).prepend room
 
 private theorem discard_shape (found : discardRest node = some rest) :
     ∃ op owner, node = .node op [owner, rest] ∧ (op = .free ∨ ∃ family, op = .drop family) := by
@@ -550,6 +609,37 @@ private theorem discarded (kind : op = .free ∨ ∃ family, op = .drop family)
     obtain ⟨_, value, converted⟩ := view
     exact value.convert converted
 
+/-- A pure Free or Drop node selects the represented continuation. Its
+expanded input reduces to that continuation at the original ghost type. -/
+theorem discard_target (source : Represents arena root term) (read : arena[root]? = some node)
+    (skip : discardRest node = some rest) :
+    ∃ tail, Represents arena rest tail ∧
+      Environment.RawValue.Forward env (EnvironmentDelta.expand env term) (EnvironmentDelta.expand env tail) ∧
+      (∀ {ctx type}, Environment.LoanTyping.HasType env [] ctx true (EnvironmentDelta.expand env term) type →
+        Environment.LoanTyping.HasType env [] ctx true (EnvironmentDelta.expand env tail) type) := by
+  obtain ⟨op, owner, rfl, kind⟩ := discard_shape skip
+  obtain ⟨first, second, rfl, _, tail⟩ := represented_pair source read
+  rw [expanded_pair]
+  obtain ⟨change, preserved⟩ :=
+    discarded (env := env) kind (EnvironmentDelta.expand env first) (EnvironmentDelta.expand env second)
+  exact ⟨second, tail, change, preserved⟩
+
+/-- A checked raw alias and the raw row it selects have the same transparent
+expansion. The row remains usable even when its body is a composite term. -/
+theorem alias_target (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (read : arena[root]? = some node) (kind : head node = .alias index)
+    (lookup : roots[index]? = some definition) :
+    ∃ body, Represents arena definition.valueRoot body ∧
+      EnvironmentDelta.expand env term = EnvironmentDelta.expand env body := by
+  rw [alias_node kind] at read
+  have same := source.unique (Represents.node read rfl .nil)
+  subst term
+  obtain ⟨raw, atRaw, rawRep⟩ := represented_at aligned lookup
+  obtain ⟨expanded, found, expansion, _⟩ := raw_expansion_at history atRaw
+  exact ⟨raw.value, rawRep.2, (EnvironmentDelta.expand_global found).trans
+    (EnvironmentDelta.expansion_eq_expand expansion).symm⟩
+
 private theorem runPure_expansion (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env)
     (source : Represents arena root term)
@@ -574,12 +664,8 @@ private theorem runPure_expansion (aligned : RepresentsDefinitions arena roots d
           cases skip : discardRest node with
           | some rest =>
               simp only [skip] at computed
-              obtain ⟨op, owner, rfl, kind⟩ := discard_shape skip
-              obtain ⟨first, second, rfl, _, tail⟩ := represented_pair source read
+              obtain ⟨_, tail, discard, preserved⟩ := discard_target (env := env) source read skip
               obtain ⟨output, atom, represented, reduced, preserves, charged, budget⟩ := ih tail computed
-              rw [expanded_pair]
-              obtain ⟨discard, preserved⟩ :=
-                discarded (env := env) kind (EnvironmentDelta.expand env first) (EnvironmentDelta.expand env second)
               exact ⟨output, atom, represented, discard.trans reduced,
                 fun typed => preserves (preserved typed), by omega, budget⟩
           | none =>
@@ -603,14 +689,10 @@ private theorem runPure_expansion (aligned : RepresentsDefinitions arena roots d
                   | none => simp [lookup] at computed
                   | some definition =>
                       rw [lookup] at computed
-                      rw [alias_node kind] at read
-                      have same := source.unique (Represents.node read rfl .nil)
-                      subst term
-                      obtain ⟨raw, atRaw, rawRep⟩ := represented_at aligned lookup
-                      obtain ⟨expanded, found, expansion, _⟩ := raw_expansion_at history atRaw
-                      rw [EnvironmentDelta.expand_global found, ← EnvironmentDelta.expansion_eq_expand expansion]
+                      obtain ⟨_, body, same⟩ := alias_target aligned history source read kind lookup
+                      rw [same]
                       obtain ⟨output, atom, represented, reduced, preserves, charged, budget⟩ :=
-                        ih rawRep.2 computed
+                        ih body computed
                       exact ⟨output, atom, represented, reduced, preserves, by omega, budget⟩
 
 /-- Following actual arena rows and the authentic declaration history gives a
@@ -631,12 +713,20 @@ theorem runPure_refines (aligned : RepresentsDefinitions arena roots definitions
 
 /-- The graph path also supplies conversion before a typing derivation is
 available, as in the native normalization of constructor annotations. -/
+theorem runPure_expanded_conversion (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (computed : runPure arena roots visible limit depth initial root = (.ok selected, counter)) :
+    ∃ output, Represents arena selected output ∧
+      Environment.RawValue.Forward env (EnvironmentDelta.expand env term) output := by
+  obtain ⟨output, _, represented, reduced, _, _, _⟩ :=
+    runPure_expansion aligned history source computed
+  exact ⟨output, represented, reduced⟩
+
 theorem runPure_conversion (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env) (source : Represents arena root term)
     (computed : runPure arena roots visible limit depth initial root = (.ok selected, counter)) :
     ∃ output, Represents arena selected output ∧ Environment.RawValue.Forward env term output := by
-  obtain ⟨output, _, represented, reduced, _, _, _⟩ :=
-    runPure_expansion aligned history source computed
+  obtain ⟨output, represented, reduced⟩ := runPure_expanded_conversion aligned history source computed
   have delta : Environment.RawValue.Forward env term (EnvironmentDelta.expand env term) :=
     .old (.old (.old (EnvironmentDelta.expand_forward env term)))
   exact ⟨output, represented, delta.trans reduced⟩

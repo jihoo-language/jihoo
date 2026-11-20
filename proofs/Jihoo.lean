@@ -1185,3 +1185,5 @@ import Jihoo.NativeLoanPureUniverse
 import Jihoo.NativeBindingMachineMutableArrayFrames
 import Jihoo.NativeCorePureStructuralNormal
 import Jihoo.NativeCoreZeroLoopNormal
+import Jihoo.NativeBindingMachineMutableArrayCall
+import Jihoo.NativeLoanPureProofObservation
