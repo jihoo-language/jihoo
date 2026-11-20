@@ -1244,7 +1244,7 @@ fn dependent_lend_callbacks() {
     assert(budget-remaining_ticks(&outside) == 1, "a code borrow with no active readers uses only its entry tick")
 }
 
-fn parametric_data_motive_domain() {
+fn parametric_data_motive_domain(proof: bool) {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let two = c.add(core.Term.Natural(2), span).unwrap()
@@ -1266,10 +1266,10 @@ fn parametric_data_motive_domain() {
     bound.push(outer)
     bound.push(current)
     let domain = c.add(core.Term.Ind(0, bound), span).unwrap()
-    let signed = c.add(core.Term.I64, span).unwrap()
-    let receiver = c.add(core.Term.Lam(false, domain, signed), span).unwrap()
+    let output = c.add(if proof { core.Term.Eq(two, two) } else { core.Term.I64 }, span).unwrap()
+    let receiver = c.add(core.Term.Lam(false, domain, output), span).unwrap()
     let motive = c.add(core.Term.Lam(false, word, receiver), span).unwrap()
-    let arm = c.add(core.Term.Integer(6), span).unwrap()
+    let arm = c.add(if proof { core.Term.Refl(two) } else { core.Term.Integer(6) }, span).unwrap()
     var branches = Vec(u32).new()
     branches.push(arm)
     let eliminate = c.add(core.Term.Elim(0, motive, branches, subject), span).unwrap()
@@ -1287,11 +1287,16 @@ fn parametric_data_motive_domain() {
         if c.term(row-2) == core.Term.Var(1) && c.term(row-1) == core.Term.Var(0) &&
             c.term(row) == core.Term.Ind(0, refs) {
             checks += 1
-            assert(row == 24, "the motive compares the two freshly allocated index references")
+            if !proof { assert(row == 24, "the motive compares the two freshly allocated index references") }
         }
     }
     assert(checks == 1, "the motive domain binds only the new index")
-    assert(start == 16 && done == 33 && c.node_count() == 34, "the data inference graph retains the original motive")
+    if !proof {
+        assert(start == 16 && done == 33 && c.node_count() == 34, "the data inference graph retains the original motive")
+    }
+    let normal = c.normal(done, core.DEPTH).unwrap()
+    assert(c.term(normal) == if proof { core.Term.Eq(two, two) } else { core.Term.I64 },
+        "the selected elimination sort preserves the declared motive result")
 }
 
 fn main() -> i32 {
@@ -1320,7 +1325,8 @@ fn main() -> i32 {
     proposition_motive_telescope()
     proposition_case_telescope()
     proposition_elimination_inference()
-    parametric_data_motive_domain()
+    parametric_data_motive_domain(false)
+    parametric_data_motive_domain(true)
     dependent_constructor_inference()
     boxed_drop_inference()
     declaration_annotation_inference()

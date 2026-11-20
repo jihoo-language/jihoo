@@ -4264,3 +4264,23 @@ The fixtures cover ordinary arguments, accepted word-indexed families,
 invalid kinds, and invalid buffer results with their distinct budgets.
 The focused build passed 429 jobs and the three new declarations use
 standard Lean axioms.
+
+### Aggregate check through runtime argument policy
+
+At `0f4e1b2`, 1,171 Lake jobs and the generated fixtures passed. The audit
+covered 10,731 declarations, with 528 axiom-free and only standard Lean
+axioms elsewhere. The native suite passed 89 fixtures and 31 extra cases.
+Mixed checking passed 69 source fixtures and 55 exact-byte checks. The
+type-family suite passed all eight positive and nine rejection cases.
+Peak sampled process-tree RSS was 4,876.6 MiB.
+
+### Data elimination motive validation
+
+The checker reads the nonparameter word binders and compares the
+original motive domain to the family applied to the shifted parameters
+and new index variables. The final normalized sort selects data or
+proposition mode. Both native modes return the expected result at the
+original motive, and the Lean fixture checks their common eighteen-tick
+motive phase. An erased index is rejected before the expected family
+domain is built. The focused build passed 432 jobs and the four new
+audited declarations use standard Lean axioms.

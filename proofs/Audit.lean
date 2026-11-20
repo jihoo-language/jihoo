@@ -10739,3 +10739,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy.policy_preserves_distinct_checking_schedules
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.telescope_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveInference.data_and_proposition_motives_share_domain_schedule
