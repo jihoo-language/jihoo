@@ -48,6 +48,10 @@ private theorem RecursiveRep.frame (represented : RecursiveRep before roots fiel
   | nil => exact .nil
   | cons head _ ih => exact .cons (head.frame kept) ih
 
+theorem SignatureRep.frame (represented : SignatureRep before roots signature) (kept : Prefix before after) :
+    SignatureRep after roots signature :=
+  ⟨represented.fields.frame kept,represented.recursive.frame kept,represented.result.frame kept⟩
+
 private theorem RecursiveRep.length_eq (represented : RecursiveRep arena roots fields) : roots.length = fields.length := by
   induction represented with
   | nil => rfl

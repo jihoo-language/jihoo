@@ -4152,3 +4152,14 @@ Lean and the native kernel agree on 99 ticks for a data accumulator and
 196 for a proposition accumulator whose callback proves the successor
 fiber. The focused build passed 441 jobs and the eleven new audited
 declarations use standard Lean axioms. The branch has a standalone driver.
+
+### Proposition branches and checked constructor signatures
+
+An observed telescope and the signature in the mixed checking history
+agree on erasure, recursive positions and all field and index conversions
+when they normalize the same written constructor. The proof works after
+the family prefix has been extended. The branch checker visits each
+written case at the native generated type and derives typing against the
+corresponding signature in the checked table. The focused build passed
+338 jobs. One of the eight new audited declarations is axiom-free and
+the others use only standard Lean axioms.

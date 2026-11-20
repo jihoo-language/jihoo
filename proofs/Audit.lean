@@ -10695,3 +10695,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLoopExamples.loop_checks_data_and_successor_proof
+#print axioms Jihoo.NativeKernel.NativeCorePropCaseType.SignatureRep.frame
+#print axioms Jihoo.NativeKernel.Environment.SignatureConversion.prop_case
+#print axioms Jihoo.NativeKernel.Environment.expand_prop_case_type
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureAuthentication.checked_telescope
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureAuthentication.from_history
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.table_frame
+#print axioms Jihoo.NativeKernel.NativeCoreGhostPropCases.run_refines
