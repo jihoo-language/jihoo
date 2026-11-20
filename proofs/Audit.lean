@@ -10466,6 +10466,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithData_sound
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_erased_lambda_infers
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_impredicative_product_infers
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_strict_decision_infers
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.false_decision_keeps_operand_rows
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FamilyIota.case_scrutinee_context
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.constantMotive_sound
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.changeScrutinee

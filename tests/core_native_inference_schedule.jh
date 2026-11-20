@@ -84,10 +84,44 @@ fn impredicative_product() {
     assert_spent(&c, "product inference used 13 ticks")
 }
 
+fn decision_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    c.add(core.Term.Lt(one, two), span).unwrap()
+    let valid = c.add(core.Term.Decide(one, two), span).unwrap()
+    c.add(core.Term.Decide(two, one), span).unwrap()
+    let prefix = c.add(core.Term.Integer(0), span).unwrap()
+    c.add(core.Term.Strict(prefix, valid), span).unwrap()
+    c
+}
+
+fn decision_inference() {
+    var good = decision_fixture()
+    spend(&good, 999987)
+    let inferred = good.infer(6, [], true, 16).unwrap()
+    assert(inferred == 11 && good.node_count() == 12, "strict decision result position")
+    assert(good.term(7) == core.Term.I64, "the Strict prefix is inferred first")
+    for i in 8..11 { assert(good.term(i as u32) == core.Term.U64, "decision operand types") }
+    assert(good.term(inferred) == core.Term.Lt(0, 1), "decision returns the original operands")
+    assert_spent(&good, "strict decision inference used 13 ticks")
+
+    var bad = decision_fixture()
+    spend(&bad, 999989)
+    assert(match bad.infer(4, [], true, 16) {
+        Err(e) => e.msg == "core: decide-lt needs a true closed inequality", _ => false
+    }, "descending inequality rejected")
+    assert(bad.node_count() == 10, "the failed decision preserves its operand types")
+    for i in 7..10 { assert(bad.term(i as u32) == core.Term.U64, "rejected decision operand types") }
+    assert_spent(&bad, "rejected decision used 11 ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
     impredicative_product()
-    println("Native Core.infer matched primitive, lambda and Pi graph traces and checking costs")
+    decision_inference()
+    println("Native Core.infer matched primitive, binder and decision graph traces and checking costs")
     0
 }

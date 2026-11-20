@@ -134,13 +134,37 @@ private def requireOperands (infer : Infer) (normal : Visit) (limit depth expect
           (requireOperands infer normal limit depth expected checked rest).next fun after comparisons =>
             ⟨after, .ok (type.compared ++ pair :: comparisons)⟩
 
-/-- Native primitive branches synthesize the expected operand type, check
-operands at child depth, then append the raw result type. -/
+/-- Native primitive branches synthesize the expected type and check each
+operand at child depth. -/
+private def checkFixed (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (operand : Op) (args : List Nat) : Outcome (List (Nat × Nat)) :=
+  (append state operand []).next fun emitted expected =>
+    requireOperands infer normal limit depth expected emitted args
+
 private def inferFixed (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (operand : Op) (args : List Nat) (output : Op) (refs : List Nat) : Outcome Inferred :=
-  (append state operand []).next fun emitted expected =>
-    (requireOperands infer normal limit depth expected emitted args).next fun checked comparisons =>
-      (append checked output refs).next fun after root => ⟨after, .ok ⟨root, comparisons⟩⟩
+  (checkFixed infer normal limit depth state operand args).next fun checked comparisons =>
+    (append checked output refs).next fun after root => ⟨after, .ok ⟨root, comparisons⟩⟩
+
+private def finishDecide (normal : Visit) (state : State) (root first second : Nat) : Outcome Nat :=
+  (normal state first).next fun afterFirst left =>
+    (normal afterFirst second).next fun afterSecond right =>
+      match afterSecond.arena[left]?, afterSecond.arena[right]? with
+      | some (.node (.natural a) []), some (.node (.natural b) []) =>
+          if a < 2^64 ∧ b < 2^64 ∧ a < b then append afterSecond .lt [first, second]
+          else discard afterSecond root
+      | _, _ => discard afterSecond root
+
+private def inferDecide (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (root first second : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [first, second]).next fun checked comparisons =>
+    (finishDecide normal checked root first second).next fun after result =>
+      ⟨after, .ok ⟨result, comparisons⟩⟩
+
+private def inferStrict (infer : Infer) (state : State) (effect result : Nat) : Outcome Inferred :=
+  (infer state effect).next fun afterEffect first =>
+    (infer afterEffect result).next fun afterResult second =>
+      ⟨afterResult, .ok ⟨second.typeRoot, first.compared ++ second.compared⟩⟩
 
 /-- Post-tick App inference in ghost mode. Every recursive call here uses
 the same child depth. The inferred codomain is returned immediately. -/
@@ -199,6 +223,11 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node (.arith _) [a, b]) =>
             inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               .i64 [a, b] .i64 []
+        | some (.node .decide [a, b]) =>
+            inferDecide (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              root a b
+        | some (.node .strict [a, b]) =>
+            inferStrict (runWithData normal roots visible limit isData depth ctx) entered a b
         | some (.node (.pi erased) [a, b]) =>
             inferBinding (runWithData normal roots visible limit isData depth ctx)
               (runWithData normal roots visible limit isData depth (⟨a, erased⟩ :: ctx))
@@ -273,16 +302,54 @@ private theorem requireOperands_progress
       intro pair _ checkedRoom
       exact (ih checkedRoom).next (fun _ => Progress.atState _ _)
 
+private theorem checkFixed_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, state.steps ≤ limit → Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (checkFixed infer normal limit depth state operand args) := by
+  apply next_progress (append_progress _ _ _) room
+  intro expected _ emittedRoom
+  exact requireOperands_progress infers normalizes emittedRoom
+
 private theorem inferFixed_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, state.steps ≤ limit → Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
     Progress limit state (inferFixed infer normal limit depth state operand args output refs) := by
-  apply next_progress (append_progress _ _ _) room
-  intro expected _ emittedRoom
-  apply next_progress (requireOperands_progress infers normalizes emittedRoom) emittedRoom
+  apply next_progress (checkFixed_progress infers normalizes room) room
   intro comparisons _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem finishDecide_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (finishDecide normal state root first second) := by
+  unfold finishDecide
+  apply (normalizes _ _).next
+  intro left
+  apply (normalizes _ _).next
+  intro right
+  split
+  · split
+    · exact append_progress _ _ _
+    · exact Progress.atState _ _
+  · exact Progress.atState _ _
+
+private theorem inferDecide_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferDecide infer normal limit depth state root first second) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro comparisons _ _
+  exact (finishDecide_progress normalizes).next (fun _ => Progress.atState _ _)
+
+private theorem inferStrict_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferStrict infer state effect result) := by
+  apply next_progress (infers _ _ room) room
+  intro type _ effectRoom
+  exact (infers _ _ effectRoom).next (fun _ => Progress.atState _ _)
 
 private theorem inferBinder_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -388,6 +455,8 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
       all_goals first
         | exact inferFixed_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
+        | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferStrict_progress (fun _ _ room => ih room) within
         | exact inferBinding_progress (fun _ _ room => ih room) (fun _ _ room => ih room)
             (normalProgress depth) within
         | exact inferApp_progress (fun _ _ room => ih room)
@@ -764,6 +833,28 @@ private theorem requireOperands_refines
           · exact typed.convert conversion
           · exact restTyped operand previous
 
+private theorem checkFixed_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (operands : RepresentsList state.arena args terms) (operandArity : operand.arity = 0)
+    (success : (checkFixed infer normal limit depth state operand args).result = .ok comparisons)
+    (ambient : Prefix (checkFixed infer normal limit depth state operand args).state.arena final)
+    (retained : ∀ pair ∈ comparisons, PairRetained final pair) :
+    let after := (checkFixed infer normal limit depth state operand args).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∀ term ∈ terms, LoanTyping.HasType env [] ctx true (expand env term) (expand env (.node operand [])) := by
+  unfold checkFixed at success ambient ⊢
+  obtain ⟨expected, emittedOk, emittedNext⟩ := Outcome.next_success success
+  rw [emittedNext] at success ambient ⊢
+  obtain ⟨emittedKept, emittedBack, expectedRep⟩ := append_refines .nil operandArity.symm emittedOk
+  have emittedRoom := (append_progress state operand []).accepted room expected emittedOk
+  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := requireOperands_refines normalSound normalProgress childSound
+    childProgress (onBase.trans emittedKept) emittedRoom (operands.frame emittedKept) expectedRep success ambient retained
+  exact ⟨emittedKept.trans checkedKept, checkedBack ∘ emittedBack, typedOperands⟩
+
 private theorem inferFixed_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
@@ -779,24 +870,111 @@ private theorem inferFixed_refines
       LoanTyping.HasType env [] ctx true (expand env source) (expand env (.node output resultTerms))) :
     Refines env state.arena ctx source (inferFixed infer normal limit depth state operand args output refs) answer := by
   unfold inferFixed at success ambient ⊢
-  obtain ⟨expected, emittedOk, emittedNext⟩ := Outcome.next_success success
-  rw [emittedNext] at success ambient ⊢
   obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
   rw [checkedNext] at success ambient ⊢
   obtain ⟨root, resultOk, resultNext⟩ := Outcome.next_success success
   rw [resultNext] at success ambient ⊢
   simp only [Except.ok.injEq] at success
   subst answer
-  obtain ⟨emittedKept, emittedBack, expectedRep⟩ := append_refines .nil operandArity.symm emittedOk
-  have emittedRoom := (append_progress state operand []).accepted room expected emittedOk
-  let checks := requireOperands infer normal limit depth expected (append state operand []).state args
+  let checks := checkFixed infer normal limit depth state operand args
   have resultProgress := append_progress (limit := limit) checks.state output refs
-  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := requireOperands_refines normalSound normalProgress childSound
-    childProgress (onBase.trans emittedKept) emittedRoom (operands.frame emittedKept) expectedRep checkedOk
+  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := checkFixed_refines normalSound normalProgress childSound
+    childProgress onBase room operands operandArity checkedOk
     (resultProgress.kept.trans ambient) retained
-  have throughChecks := emittedKept.trans checkedKept
-  obtain ⟨resultKept, resultBack, outputRep⟩ := append_refines (resultRefs.frame throughChecks) resultArity resultOk
-  exact ⟨throughChecks.trans resultKept, resultBack ∘ checkedBack ∘ emittedBack, _, outputRep, typing typedOperands⟩
+  obtain ⟨resultKept, resultBack, outputRep⟩ := append_refines (resultRefs.frame checkedKept) resultArity resultOk
+  exact ⟨checkedKept.trans resultKept, resultBack ∘ checkedBack, _, outputRep, typing typedOperands⟩
+
+private theorem finishDecide_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (firstRep : Represents state.arena first a) (secondRep : Represents state.arena second b)
+    (firstTyped : LoanTyping.HasType env [] ctx true (expand env a) .u64)
+    (secondTyped : LoanTyping.HasType env [] ctx true (expand env b) .u64)
+    (success : (finishDecide normal state root first second).result = .ok selected) :
+    let after := (finishDecide normal state root first second).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧ Represents after selected (.lt a b) ∧
+      LoanTyping.HasType env [] ctx true (expand env (.decide a b)) (expand env (.lt a b)) := by
+  unfold finishDecide at success ⊢
+  obtain ⟨left, leftOk, leftNext⟩ := Outcome.next_success success
+  rw [leftNext] at success ⊢
+  obtain ⟨leftKept, leftBack, leftValue, leftRep, leftChange⟩ := normalSound onBase firstRep leftOk
+  obtain ⟨right, rightOk, rightNext⟩ := Outcome.next_success success
+  rw [rightNext] at success ⊢
+  obtain ⟨rightKept, rightBack, rightValue, rightRep, rightChange⟩ :=
+    normalSound (onBase.trans leftKept) (secondRep.frame leftKept) rightOk
+  split at success
+  · rename_i m n leftRead rightRead
+    split at success
+    · rename_i ordered
+      simp only [ite_eq_left ordered]
+      have kept := leftKept.trans rightKept
+      have leftShape := (leftRep.frame rightKept).unique (Represents.node leftRead rfl .nil)
+      have rightShape := rightRep.unique (Represents.node rightRead rfl .nil)
+      have leftConversion : LoanTyping.Conversion.Conv env (expand env a) (.natural m) := by
+        simpa only [leftShape, Term.natural, expand, expandArgs] using leftChange.converted
+      have rightConversion : LoanTyping.Conversion.Conv env (expand env b) (.natural n) := by
+        simpa only [rightShape, Term.natural, expand, expandArgs] using rightChange.converted
+      obtain ⟨appended, appendBack, resultRep⟩ := append_refines
+        (.cons (firstRep.frame kept) (.cons (secondRep.frame kept) .nil)) rfl success
+      refine ⟨kept.trans appended, appendBack ∘ rightBack ∘ leftBack, resultRep, ?_⟩
+      simp only [Term.decide, Term.lt, expand, expandArgs]
+      exact .decideConverted firstTyped secondTyped leftConversion rightConversion ordered.1 ordered.2.1 ordered.2.2
+    · simp [discard] at success
+  · simp [discard] at success
+
+private theorem inferDecide_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (firstRep : Represents state.arena first a) (secondRep : Represents state.arena second b)
+    (success : (inferDecide infer normal limit depth state root first second).result = .ok answer)
+    (ambient : Prefix (inferDecide infer normal limit depth state root first second).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.decide a b) (inferDecide infer normal limit depth state root first second) answer := by
+  unfold inferDecide at success ambient ⊢
+  obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
+  rw [checkedNext] at success ambient ⊢
+  obtain ⟨selected, selectedOk, selectedNext⟩ := Outcome.next_success success
+  rw [selectedNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := checkFixed infer normal limit depth state .u64 [first, second]
+  have decision := finishDecide_progress (state := checked.state) (root := root) (first := first) (second := second) normalProgress
+  obtain ⟨kept, back, typed⟩ := checkFixed_refines normalSound normalProgress childSound childProgress onBase room
+    (.cons firstRep (.cons secondRep .nil)) rfl checkedOk (decision.kept.trans ambient) retained
+  simp only [expand, expandArgs] at typed
+  obtain ⟨finished, finishBack, resultRep, resultTyped⟩ := finishDecide_refines normalSound (onBase.trans kept)
+    (firstRep.frame kept) (secondRep.frame kept) (typed _ List.mem_cons_self)
+    (typed _ (List.mem_cons_of_mem _ List.mem_cons_self)) selectedOk
+  exact ⟨kept.trans finished, finishBack ∘ back, _, resultRep, resultTyped⟩
+
+private theorem inferStrict_refines
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (effectRep : Represents state.arena effect first) (valueRep : Represents state.arena value second)
+    (success : (inferStrict infer state effect value).result = .ok answer)
+    (ambient : Prefix (inferStrict infer state effect value).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.strict first second) (inferStrict infer state effect value) answer := by
+  unfold inferStrict at success ambient ⊢
+  obtain ⟨effectType, effectOk, effectNext⟩ := Outcome.next_success success
+  rw [effectNext] at success ambient ⊢
+  obtain ⟨valueType, valueOk, valueNext⟩ := Outcome.next_success success
+  rw [valueNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  have effectProgress := childProgress state effect room
+  have effectRoom := effectProgress.accepted room effectType effectOk
+  have valueProgress := childProgress (infer state effect).state value effectRoom
+  obtain ⟨_, effectBack, _, _, effectTyped⟩ := childSound onBase room effectRep effectOk
+    (valueProgress.kept.trans ambient) (fun pair found => retained pair (List.mem_append_left _ found))
+  obtain ⟨kept, valueBack, result, resultRep, valueTyped⟩ := childSound (onBase.trans effectProgress.kept) effectRoom
+    (valueRep.frame effectProgress.kept) valueOk ambient (fun pair found => retained pair (List.mem_append_right _ found))
+  refine ⟨effectProgress.kept.trans kept, valueBack ∘ effectBack, result, resultRep, ?_⟩
+  simp only [Term.strict, expand, expandArgs]
+  exact .strict effectTyped valueTyped
 
 /-- A successful application returns the captured Pi body instantiated with
 the original graph operand. The proof exposes a real function type and
@@ -1057,6 +1235,23 @@ theorem runWithData_sound {normal : NormalAt}
                 have left := typed _ List.mem_cons_self
                 have right := typed _ (List.mem_cons_of_mem _ List.mem_cons_self)
                 first | exact .eq left right | exact .lt left right | exact .uadd left right | exact .arith left right
+          case decide | strict =>
+            have length : refs.length = 2 := arity
+            rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨_, _⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons first rest =>
+              cases rest with
+              | cons second tail =>
+                cases tail
+                dsimp only at success ambient ⊢
+                first
+                | exact inferDecide_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                    (normalSound depth) (normalProgress depth) sameContext
+                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    onBase within first second success ambient retained
+                | exact inferStrict_refines (state := {state with steps := state.steps + 1}) sameContext
+                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    onBase within first second success ambient retained
           case pi | lam =>
             rename_i erased
             have length : refs.length = 2 := arity
@@ -1362,6 +1557,28 @@ theorem admitted_impredicative_product_infers :
         .node .u64 [], .node .prop [], .node .prop []], 13⟩, .ok ⟨10, [(7, 6), (8, 6)]⟩⟩ := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
+
+private def decisionSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨2, 6⟩]
+  families := []
+  arena := #[.node (.natural 1) [], .node (.natural 2) [], .node .lt [0, 1],
+    .node .decide [0, 1], .node .decide [1, 0], .node (.integer 0) [], .node .strict [5, 3]]
+
+/-- Strict checks the prefix first and returns the original inequality type
+of the checked second term after Decide validates the numerical ordering. -/
+theorem admitted_strict_decision_infers :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot decisionSnapshot) = true ∧
+    run decisionSnapshot.definitions 0 13 16 [] ⟨decisionSnapshot.arena, 0⟩ 6 =
+      ⟨⟨decisionSnapshot.arena ++ #[.node .i64 [], .node .u64 [], .node .u64 [],
+        .node .u64 [], .node .lt [0, 1]], 13⟩, .ok ⟨11, [(9, 8), (10, 8)]⟩⟩ := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+/-- Numeric rejection follows both type checks and preserves their rows. -/
+theorem false_decision_keeps_operand_rows :
+    run decisionSnapshot.definitions 0 11 16 [] ⟨decisionSnapshot.arena, 0⟩ 4 =
+      ⟨⟨decisionSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 []], 11⟩,
+        .error (.outsideFragment 4)⟩ := by cbv
 
 end Examples
 
