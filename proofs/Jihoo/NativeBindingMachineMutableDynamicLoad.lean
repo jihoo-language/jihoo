@@ -53,7 +53,7 @@ private theorem variable_load_steps (state : State) (evaluating : state.control 
     Option.map_none,returnAction,resumeBuffer,loaded,applyValue,enter,restoredContinuation,Option.map_some]
   rfl
 
-private theorem load_retained_closing (wf : UnifiedProgram.EnvWellFormed env)
+theorem load_retained_closing (wf : UnifiedProgram.EnvWellFormed env)
     (closing : LoanTyping.Ghost.Substitution env code.context [] meanings)
     (typed : LoanTyping.HasType env loans code.context false
       (.load owner index evidence (.lam false first (.lam false again body))) localType)

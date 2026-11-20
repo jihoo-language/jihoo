@@ -22,7 +22,7 @@ def Projection.op : Projection → Op
 def Projection.term (projection : Projection) (operand : Term) : Term :=
   .node projection.op [operand]
 
-private def projectionOf : Op → Option Projection
+def projectionOf : Op → Option Projection
   | .witness => some .witness
   | .proof => some .proof
   | _ => none
@@ -30,16 +30,16 @@ private def projectionOf : Op → Option Projection
 private theorem projectionOf_op (projection : Projection) : projectionOf projection.op = some projection := by
   cases projection <;> rfl
 
-private def packFields : Node → Option (Nat × Nat)
+def packFields : Node → Option (Nat × Nat)
   | .node .pack [_, value, evidence] => some (value, evidence)
   | _ => none
 
-private def select (projection : Projection) (value evidence : Nat) : Nat :=
+def select (projection : Projection) (value evidence : Nat) : Nat :=
   match projection with
   | .witness => value
   | .proof => evidence
 
-private def special : Projection → Node → Bool
+def special : Projection → Node → Bool
   | _, .node .strict [_, _] => true
   | .witness, .node .ifLt [_, _, _, _] | .witness, .node .ifEq [_, _, _, _] => true
   | _, _ => false
@@ -107,9 +107,10 @@ private theorem rowExists (represented : Represents arena index term) : ∃ node
   cases represented with
   | var read | node read => exact ⟨_, read⟩
 
-private theorem pack_selection (read : arena[index]? = some row)
+theorem pack_selection_computes (read : arena[index]? = some row)
     (represented : Represents arena index term) (parts : packFields row = some (value, evidence)) :
-    Result env (projection.term term) arena (select projection value evidence) := by
+    ∃ result, Represents arena (select projection value evidence) result ∧
+      ACU.Computes (projection.term term) result := by
   cases represented with
   | var found =>
       rw [found, Option.some.injEq] at read
@@ -135,8 +136,14 @@ private theorem pack_selection (read : arena[index]? = some row)
                         simp only [packFields, Option.some.injEq, Prod.mk.injEq] at parts
                         obtain ⟨rfl, rfl⟩ := parts
                         cases projection with
-                        | witness => exact ⟨_, witness, .old (.acu (.compute (.witnessPack _ _ _)))⟩
-                        | proof => exact ⟨_, proof, .old (.acu (.compute (.proofPack _ _ _)))⟩
+                        | witness => exact ⟨_, witness, .witnessPack _ _ _⟩
+                        | proof => exact ⟨_, proof, .proofPack _ _ _⟩
+
+private theorem pack_selection (read : arena[index]? = some row)
+    (represented : Represents arena index term) (parts : packFields row = some (value, evidence)) :
+    Result env (projection.term term) arena (select projection value evidence) := by
+  obtain ⟨result, selected, step⟩ := pack_selection_computes (projection := projection) read represented parts
+  exact ⟨result, selected, .old (.acu (.compute step))⟩
 
 private theorem neutral_refines (read : arena[root]? = some (.node projection.op [before]))
     (represented : Represents arena child term) :

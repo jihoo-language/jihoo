@@ -102,7 +102,7 @@ theorem OwnerDemandWorld.total_initial (term : Term) (receipt : Jihoo.Quantity.C
   intro index object stored
   cases stored
 
-private theorem named_reader_steps (state : State) (evaluating : state.control = .evaluate code)
+theorem named_reader_steps (state : State) (evaluating : state.control = .evaluate code)
     (shape : code.term = .lend (.var owner) (.lam false domain readBody) continuation)
     (stored : code.values[owner]? = some (some (.owner object)))
     (live : state.heap.metadata.heap.live object = true) :

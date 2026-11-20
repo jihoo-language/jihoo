@@ -29,7 +29,7 @@ private theorem variable_projection (checked : projectRaw fuel env loans ctx (.v
 private theorem owner_lambda_projection
     (checked : projectRaw fuel env loans ctx (.lam false again body) = some control) :
     ∃ innerFuel ownerMode receipt,
-      ResourceModes.Resolved env loans ctx false again ownerMode ∧
+      fuel = innerFuel+1 ∧ ResourceModes.Resolved env loans ctx false again ownerMode ∧
       projectRaw innerFuel env loans (⟨again,false⟩ :: ctx) body = some receipt ∧
       control = .closure (.scope ownerMode (functionTail body receipt)) := by
   cases fuel with
@@ -41,18 +41,18 @@ private theorem owner_lambda_projection
       · contradiction
       · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
         obtain ⟨receipt,projected,same⟩ := Option.bind_eq_some_iff.mp checked
-        exact ⟨innerFuel,mode,receipt,ResourceModes.resolve_sound resolved,projected,(Option.some.inj same).symm⟩
+        exact ⟨innerFuel,mode,receipt,rfl,ResourceModes.resolve_sound resolved,projected,(Option.some.inj same).symm⟩
 
 private theorem scalar_lambda_projection
     (checked : projectRaw fuel env loans ctx (.lam false first body) = some control) :
     ∃ innerFuel mode receipt,
-      projectRaw innerFuel env loans (⟨first,false⟩ :: ctx) body = some receipt ∧
+      fuel = innerFuel+1 ∧ projectRaw innerFuel env loans (⟨first,false⟩ :: ctx) body = some receipt ∧
       control = .closure (.scope mode (functionTail body receipt)) := by
   cases fuel with
   | zero => cases checked
   | succ innerFuel =>
       obtain ⟨mode,receipt,projection⟩ := projectRaw_lambda_body checked
-      exact ⟨innerFuel,mode,receipt,projection⟩
+      exact ⟨innerFuel,mode,receipt,rfl,projection⟩
 
 private theorem known_scope_valid (mode : BinderMode)
     (valid : LocalScopes (.scope mode (.scope .linear entered))) :
@@ -74,6 +74,84 @@ private theorem known_scope_valid (mode : BinderMode)
       have owner : entered.demand 0 = some 1 := valid.1
       simp [Control.demand,owner,bind,Option.bind,Nat.add_assoc]
 
+/-- The original named Load receipt retains the checked index query and
+exactly two opened callback scopes. A later leading function remains closed. -/
+theorem projectRaw_named_load_scopes
+    (checked : projectRaw fuel env loans ctx
+      (.load (.var owner) offset evidence (.lam false first (.lam false again body))) = some control) :
+    ∃ bodyFuel indexReceipt firstMode ownerMode rawReceipt,
+      fuel = bodyFuel+3 ∧
+      projectRaw (bodyFuel+2) env loans ctx offset = some indexReceipt ∧
+      ResourceModes.Resolved env loans (⟨first,false⟩ :: ctx) false again ownerMode ∧
+      projectRaw bodyFuel env loans (⟨again,false⟩ :: ⟨first,false⟩ :: ctx) body = some rawReceipt ∧
+      control = .seq (.seq (.use owner) (.seq indexReceipt .pure))
+        (.once (.scope firstMode (.scope ownerMode (reclose (functionTail body rawReceipt))))) := by
+  cases fuel with
+  | zero => cases checked
+  | succ fuel =>
+      change (do
+        let operands ← fields (projectRaw fuel env loans ctx)
+          [.var owner,offset,evidence,.lam false first (.lam false again body)] [0,1]
+        let callback ← fetch (projectRaw fuel env loans ctx)
+          [.var owner,offset,evidence,.lam false first (.lam false again body)] 3
+        some (.seq operands (.once (caseBody 2 callback)))) = some control at checked
+      obtain ⟨operands,checkedOperands,checked⟩ := Option.bind_eq_some_iff.mp checked
+      obtain ⟨callback,checkedCallback,same⟩ := Option.bind_eq_some_iff.mp checked
+      simp only [fields,fetch,List.getElem?_cons_zero,List.getElem?_cons_succ,
+        Option.bind_some] at checkedOperands
+      obtain ⟨ownerControl,ownerChecked,rest⟩ := Option.bind_eq_some_iff.mp checkedOperands
+      obtain ⟨offsetControl,offsetChecked,tail⟩ := Option.bind_eq_some_iff.mp rest
+      obtain ⟨offsetPart,indexChecked,offsetTail⟩ := Option.bind_eq_some_iff.mp offsetChecked
+      have offsetShape : offsetControl = .seq offsetPart .pure := (Option.some.inj offsetTail).symm
+      rw [variable_projection ownerChecked,offsetShape] at tail
+      change some (.seq (.use owner) (.seq offsetPart .pure)) = some operands at tail
+      cases tail
+      have outer : projectRaw fuel env loans ctx (.lam false first (.lam false again body)) = some callback :=
+        checkedCallback
+      obtain ⟨innerFuel,firstMode,inner,rfl,innerProjected,rfl⟩ := scalar_lambda_projection outer
+      obtain ⟨bodyFuel,ownerMode,bodyReceipt,rfl,resolved,bodyProjected,rfl⟩ := owner_lambda_projection innerProjected
+      refine ⟨bodyFuel,offsetPart,firstMode,ownerMode,bodyReceipt,rfl,indexChecked,resolved,bodyProjected,?_⟩
+      rw [← Option.some.inj same]
+      rfl
+
+/-- A variable Load's two opened scopes debit the old owner, transfer a
+single unit to the returned slot, and shift the untouched capture demands. -/
+theorem LoadDemand.of_scopes
+    (shape : control = .seq (.seq (.use owner) (.seq (.use offset) .pure))
+      (.once (.scope firstMode (.scope .linear entered))))
+    (one : control.demand owner = some 1) : LoadDemand control entered owner offset := by
+  have scopes : LocalScopes (.scope firstMode (.scope .linear entered)) := by
+    rw [shape] at one
+    exact (NativeQuantity.demand_localScopes _ one).2
+  have owns : entered.demand 0 = some 1 := by
+    cases firstMode
+    · exact scopes.2.1
+    · exact scopes.2.1
+    · exact scopes.1
+    · exact scopes.1
+  have demand (query : Nat) :
+      control.demand query = (entered.demand (query+2)).map
+        (fun remaining => (if owner = query then 1 else 0) +
+          (if offset = query then 1 else 0) + remaining) := by
+    rw [shape]
+    change (some ((if owner = query then 1 else 0) + ((if offset = query then 1 else 0) + 0))).bind
+      (fun consumed => ((Control.scope firstMode (.scope .linear entered)).demand query).bind
+        (fun remaining => some (consumed + remaining))) = _
+    rw [known_scope_valid firstMode scopes]
+    cases remaining : entered.demand (query+2) <;> simp [Option.bind]
+  have oldOwner : entered.demand (owner+2) = some 0 := by
+    rw [demand] at one
+    cases remains : entered.demand (owner+2) with
+    | none => simp [remains] at one
+    | some remaining =>
+        simp only [remains,Option.map_some,ite_true,Option.some.injEq] at one
+        have zero : remaining = 0 := by omega
+        simp [zero]
+  refine ⟨owns,oldOwner,?_⟩
+  intro query notOwner notOffset
+  rw [demand]
+  cases remaining : entered.demand (query+2) <;> simp [Ne.symm notOwner,Ne.symm notOffset]
+
 /-- Exact source quantity transfer for the original checked variable Load.
 The older source owner slot survives in the callback context with zero
 demand. The two introduced binders shift all other captures uniformly. -/
@@ -85,70 +163,10 @@ theorem projectRaw_variable_load_demand (admissible : EnvironmentDelta.Admissibl
     ∃ bodyFuel rawReceipt,
       projectRaw bodyFuel env loans (⟨again,false⟩ :: ⟨first,false⟩ :: ctx) body = some rawReceipt ∧
       LoadDemand control (reclose (functionTail body rawReceipt)) owner offset := by
-  cases fuel with
-  | zero => cases checked
-  | succ fuel =>
-      change (do
-        let operands ← fields (projectRaw fuel env loans ctx)
-          [.var owner,.var offset,evidence,.lam false first (.lam false again body)] [0,1]
-        let callback ← fetch (projectRaw fuel env loans ctx)
-          [.var owner,.var offset,evidence,.lam false first (.lam false again body)] 3
-        some (.seq operands (.once (caseBody 2 callback)))) = some control at checked
-      obtain ⟨operands,checkedOperands,checked⟩ := Option.bind_eq_some_iff.mp checked
-      obtain ⟨callback,checkedCallback,same⟩ := Option.bind_eq_some_iff.mp checked
-      simp only [fields,fetch,List.getElem?_cons_zero,List.getElem?_cons_succ,
-        Option.bind_some] at checkedOperands
-      obtain ⟨ownerControl,ownerChecked,rest⟩ := Option.bind_eq_some_iff.mp checkedOperands
-      obtain ⟨offsetControl,offsetChecked,tail⟩ := Option.bind_eq_some_iff.mp rest
-      obtain ⟨offsetPart,indexChecked,offsetTail⟩ := Option.bind_eq_some_iff.mp offsetChecked
-      have offsetShape : offsetControl = .seq (.use offset) .pure := by
-        rw [variable_projection indexChecked] at offsetTail
-        exact (Option.some.inj offsetTail).symm
-      rw [variable_projection ownerChecked,offsetShape] at tail
-      change some (.seq (.use owner) (.seq (.use offset) .pure)) = some operands at tail
-      cases tail
-      have outer : projectRaw fuel env loans ctx (.lam false first (.lam false again body)) = some callback :=
-        checkedCallback
-      obtain ⟨innerFuel,firstMode,inner,innerProjected,rfl⟩ := scalar_lambda_projection outer
-      obtain ⟨bodyFuel,ownerMode,bodyReceipt,resolved,bodyProjected,rfl⟩ := owner_lambda_projection innerProjected
-      have isLinear := resolved.convertible_buffer_linear admissible ownerType
-      subst ownerMode
-      let entered := reclose (functionTail body bodyReceipt)
-      have shape : control = .seq (.seq (.use owner) (.seq (.use offset) .pure))
-          (.once (.scope firstMode (.scope .linear entered))) := by
-        rw [← Option.some.inj same]
-        rfl
-      have scopes : LocalScopes (.scope firstMode (.scope .linear entered)) := by
-        rw [shape] at one
-        exact (NativeQuantity.demand_localScopes _ one).2
-      have owns : entered.demand 0 = some 1 := by
-        cases firstMode
-        · exact scopes.2.1
-        · exact scopes.2.1
-        · exact scopes.1
-        · exact scopes.1
-      have demand (query : Nat) :
-          control.demand query = (entered.demand (query+2)).map
-            (fun remaining => (if owner = query then 1 else 0) +
-              (if offset = query then 1 else 0) + remaining) := by
-        rw [shape]
-        change (some ((if owner = query then 1 else 0) + ((if offset = query then 1 else 0) + 0))).bind
-          (fun consumed => ((Control.scope firstMode (.scope .linear entered)).demand query).bind
-            (fun remaining => some (consumed + remaining))) = _
-        rw [known_scope_valid firstMode scopes]
-        cases remaining : entered.demand (query+2) <;> simp [Option.bind]
-      have oldOwner : entered.demand (owner+2) = some 0 := by
-        rw [demand] at one
-        cases remains : entered.demand (owner+2) with
-        | none => simp [remains] at one
-        | some remaining =>
-            simp only [remains,Option.map_some,ite_true,Option.some.injEq] at one
-            have zero : remaining = 0 := by omega
-            simp [zero]
-      refine ⟨bodyFuel,bodyReceipt,bodyProjected,owns,oldOwner,?_⟩
-      intro query notOwner notOffset
-      rw [demand]
-      cases remaining : entered.demand (query+2) <;> simp [Ne.symm notOwner,Ne.symm notOffset]
+  obtain ⟨bodyFuel,indexReceipt,firstMode,ownerMode,bodyReceipt,_,indexChecked,resolved,projected,shape⟩ :=
+    projectRaw_named_load_scopes checked
+  rw [variable_projection indexChecked,resolved.convertible_buffer_linear admissible ownerType] at shape
+  exact ⟨bodyFuel,bodyReceipt,projected,LoadDemand.of_scopes shape one⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity
 

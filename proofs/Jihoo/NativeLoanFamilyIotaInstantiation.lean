@@ -72,7 +72,7 @@ theorem fieldSubstitution_selected {j : Nat} (selected : values[j]? = some value
       rw [index]
       exact ih selected
 
-private theorem transformDataFields_length (fields : List (Bool × Term)) (σ : Nat → Term) (position : Nat) :
+theorem transformDataFields_length (fields : List (Bool × Term)) (σ : Nat → Term) (position : Nat) :
     (transformDataFields σ position fields).length = fields.length := by
   induction fields generalizing position with
   | nil => rfl

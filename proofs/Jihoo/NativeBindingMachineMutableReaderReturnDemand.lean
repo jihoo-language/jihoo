@@ -2,6 +2,7 @@ import Jihoo.NativeBindingMachineMutableDemandSequence
 import Jihoo.NativeBindingMachineMutableNumeric
 import Jihoo.NativeBindingMachineReferenceIndex
 import Jihoo.NativeBindingMachineScalarReaderShape
+import Jihoo.NativeBindingMachineVariableHandoff
 
 /-! A named reader can read the current indexed cell and restore the
 original continuation. The same resource receipt accounts for the
@@ -9,7 +10,7 @@ physical owner before the loan and in the canonical restored context. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open Jihoo.Quantity NativeQuantity CodeKinds
 
-private theorem demand_under_checked_scope (valid : LocalScopes (.scope mode receipt)) (index : Nat) :
+theorem demand_under_checked_scope (valid : LocalScopes (.scope mode receipt)) (index : Nat) :
     (Jihoo.Quantity.Control.scope mode receipt).demand index = receipt.demand (index+1) := by
   cases mode with
   | linear =>
@@ -105,28 +106,27 @@ private theorem named_index_complete_steps (state : State) (evaluating : state.c
     List.getElem?_cons_zero,restoredContinuation]
   rfl
 
-private theorem typed_canonical_scalar_restore
+/-- Enter the canonical scalar binding at the original Lend type using the
+literal observed by reader execution and the retained continuation typing. -/
+theorem typed_canonical_integer_restore
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (typed : LoanClosingTyped env loans false code meanings type)
     (context : ValueContext env code meanings)
     (shape : code.term = .lend (.var owner) (.lam false domain readerBody)
       (.lam false first (.lam false again body)))
-    (readerShape : LoanTyping.ScalarReadShape readerBody)
-    (readerTyped : LoanTyping.HasType env (Loans.enter code.context.length owner loans) code.context false
-      (Lending.read (.var owner) readerBody) first)
+    (argument : LoanTyping.HasType env [] [] true (.integer number) (first.subst meanings))
     (binder : LoanTyping.Binder env loans code.context false first sort)
     (bodyTyped : LoanTyping.HasType env loans (⟨first,false⟩ :: code.context) false
       (body.subst (single ((Term.var owner).rename Nat.succ))) returnType)
     (stored : code.values[owner]? = some (some (.owner object)))
-    (bounded : ValueReduction.signed64 number) (resultOrigin : Term) :
+    (resultOrigin : Term) :
     let next := canonicalContinuation code owner first body resultOrigin (.integer number)
     let extended := consValues (.integer number) meanings
     LoanClosingTyped env loans false next extended type ∧ ValueContext env next extended := by
   rw [LoanTyping.ResourceQuantity.restore_body_is_alias] at bodyTyped
   let normalized := body.rename (Jihoo.Quantity.openOwner (owner+1))
-  have firstKind := (readerShape.read (.var owner)).result_conversion history.wellFormed readerTyped
-  have closedFirst : LoanTyping.Conversion.Conv env .i64 (first.subst meanings) := by
-    simpa only [Term.subst,substArgs] using firstKind.substitution meanings history.wellFormed.closed
+  have closedFirst : LoanTyping.Conversion.Conv env .i64 (first.subst meanings) := argument.principalView
+  have bounded := argument.integer_bound
   have closureTyped : LoanClosingTyped env loans false (code.child (.lam false first normalized)) meanings
       (.pi false .i64 (returnType.subst (liftSubOne meanings))) := by
     refine ⟨context.closing,.pi false first returnType,.lam binder bodyTyped,?_⟩
@@ -138,8 +138,7 @@ private theorem typed_canonical_scalar_restore
     closureTyped bounded resultOrigin
   have closedSource := typed.closed history
   simp only [shape,Term.subst,substArgs,Op.binders,liftSub] at closedSource
-  have finished := LoanTyping.actual_scalar_shape_finish history.wellFormed closedSource
-    (readerShape.substitution (liftSubOne meanings)) bounded
+  have finished := LoanTyping.actual_explicit_value_finish history.wellFormed closedSource argument
   let actual := restoredContinuation code first again body ((Term.var owner).subst code.origins)
     resultOrigin object (.integer number)
   let allMeanings := consValues ((Term.var owner).subst meanings) (consValues (.integer number) meanings)
@@ -243,8 +242,14 @@ theorem reachable_named_index_reader_restore_demand (term : Term) (fuel : Nat)
     exact (demand_under_checked_scope scopeValid alias).symm.trans unused
   have bounded : ValueReduction.signed64 number :=
     decode_integer_bound ((initial_run_numbers term fuel).cells object offset)
-  obtain ⟨nextTyped,nextContext⟩ := typed_canonical_scalar_restore history typed context shape .index
-    readerTyped binder bodyTyped stored bounded readerCode.origin
+  have shapeIsIndex : LoanTyping.ScalarReadShape reader := .index
+  have readLocal := (shapeIsIndex.read (.var owner)).result_conversion history.wellFormed readerTyped
+  have readConverted : LoanTyping.Conversion.Conv env .i64 (first.subst meanings) := by
+    simpa only [Term.subst,substArgs] using readLocal.substitution meanings history.wellFormed.closed
+  have argument : LoanTyping.HasType env [] [] true (.integer number) (first.subst meanings) :=
+    (LoanTyping.HasType.integer bounded.1 bounded.2).convert readConverted
+  obtain ⟨nextTyped,nextContext⟩ := typed_canonical_integer_restore history typed context shape
+    argument binder bodyTyped stored readerCode.origin
   have nextSizes := (reachable_run_owner_sizes term fuel 15 sizes).enter_integer first
     (body.rename (Jihoo.Quantity.openOwner (owner+1))) readerCode.origin number
   have nextSlots := slots.enter entered false first (body.rename (Jihoo.Quantity.openOwner (owner+1)))

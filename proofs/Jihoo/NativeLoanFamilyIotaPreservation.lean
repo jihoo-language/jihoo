@@ -59,4 +59,61 @@ theorem contract_preserves (history : ScopedProgram.History definitions declarat
     HasType env [] ctx true result type :=
   Root.preserves history (contract_sound accepted) typed
 
+private theorem checked_prop_branch_count (checked : Cases env [] ctx motive signatures cases) :
+    cases.length = signatures.length := by
+  induction signatures generalizing cases with
+  | nil => cases checked; rfl
+  | cons signature signatures ih =>
+      cases checked with
+      | cons _ rest => exact congrArg Nat.succ (ih rest)
+
+/-- Actual Prop or data Elim typing on a constructor guarantees contraction,
+including the complete branch and recursive-field layout. -/
+theorem contract_elim_from_typing (history : ScopedProgram.History definitions declarations env)
+    (typed : HasType env [] ctx true
+      (elimTerm family motive cases (.node (.con family constructor values.length) values)) type) :
+    ∃ result, contract env (elimTerm family motive cases (.node (.con family constructor values.length) values)) =
+      some result ∧ HasType env [] ctx true result type := by
+  obtain ⟨entry, motive', _, _, indices, _, layout, found, inputs⟩ := elim_inputs typed
+  obtain ⟨rfl, last⟩ := List.append_inj' (List.cons.inj layout).2 (by simp)
+  obtain rfl := (List.cons.inj last).1
+  obtain ⟨scrutinee, count⟩ :
+      HasType env [] ctx true (.node (.con family constructor values.length) values)
+        (.node (.ind family entry.declaration.arity) indices) ∧ cases.length = entry.signatures.length := by
+    rcases inputs with ⟨_, _, branches, scrutinee, _⟩ | ⟨_, _, _, _, _, scrutinee, generated, branches, _⟩
+    · exact ⟨scrutinee, checked_prop_branch_count branches⟩
+    · exact ⟨scrutinee, checked_generated_branch_count generated branches⟩
+  obtain ⟨signature, branch, sig, fields, selected⟩ := checked_constructor_selection history found scrutinee count
+  have root : Root env (elimTerm family motive cases (.node (.con family constructor values.length) values))
+      (elimBody entry signature family motive branch cases values) := .elim found sig selected count fields
+  exact ⟨_, root.complete, Root.preserves history root typed⟩
+
+/-- Checked View typing supplies the exact field borrowing plan and the
+constructor layout. This works with and without recursive hypotheses. -/
+theorem contract_view_from_typing (history : ScopedProgram.History definitions declarations env)
+    (typed : HasType env [] ctx true
+      (viewTerm recursion family motive cases (.borrow (.node (.con family constructor values.length) values))) type) :
+    ∃ result, contract env (viewTerm recursion family motive cases
+      (.borrow (.node (.con family constructor values.length) values))) = some result ∧
+      HasType env [] ctx true result type := by
+  obtain ⟨entry, _, _, _, _, _, _, _, layout, found, _, boxed, _, _, scrutinee, _, generated, branches, _⟩ :=
+    view_inputs typed
+  obtain ⟨rfl, last⟩ := List.append_inj' (List.cons.inj layout).2 (by simp)
+  obtain rfl := (List.cons.inj last).1
+  obtain ⟨_, owner, _⟩ := scrutinee.principalView
+  have count := checked_generated_branch_count generated branches
+  obtain ⟨signature, branch, sig, fields, selected⟩ := checked_constructor_selection history found owner count
+  have parameters := (signature_metadata history found sig).2.2.1
+  obtain ⟨_, _, generatedBranch⟩ := viewCaseTypes_get generated sig
+  obtain ⟨plans, planned⟩ : ∃ plans, viewPlan env family (signature.fields.drop entry.declaration.params) = some plans := by
+    unfold viewCaseType at generatedBranch
+    split at generatedBranch
+    · contradiction
+    · exact ⟨_, (Option.bind_eq_some_iff.mp generatedBranch).choose_spec.1⟩
+  have root : Root env (viewTerm recursion family motive cases
+      (.borrow (.node (.con family constructor values.length) values)))
+      (viewBody recursion family entry.declaration.params motive branch cases values plans) :=
+    .view found boxed sig selected count fields parameters planned
+  exact ⟨_, root.complete, Root.preserves history root typed⟩
+
 end Jihoo.NativeKernel.Environment.LoanTyping.FamilyIota

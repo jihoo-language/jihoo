@@ -1,22 +1,20 @@
 # Active whole-kernel verification work
 
-The whole-kernel verification work has resumed. Verified checkpoints are
-committed and pushed as the work progresses. The completion obligations below
-remain open.
+The full dependent-kernel verification goal is active. This record tracks
+checked increments and the obligations still needed for kernel-wide claims.
 
 ## Handoff on 2026-11-20
 
-The current handoff is on `codex/kernel-pure-and-array`. Issue #218 was closed
-by PR #219. Version 0.7.0 is gated on the complete verification obligations
-below. The branch contains checked advances in arithmetic consistency,
-ghost preservation, runtime ownership and graph refinement.
+The preceding handoff was on `codex/kernel-pure-and-array`, merged by PR #220.
+Issue #218 was closed by PR #219. Work continues from `main` at `c092595`.
+Version 0.7.0 is gated on the complete verification obligations below.
 
 | Remaining obligation | Starting point |
 | --- | --- |
-| General consistency and typed normalization | `NativeLoanGlobalProofNormalization.lean` derives a sufficient fuel bound from a syntax certificate for checked arithmetic proofs, including prior globals and U64 beta. Extend the proof beyond that certificate to arbitrary universe levels, families, elimination and proofs of false propositions. |
-| Whole-language preservation | `NativeCorePureComputationNormal.lean` derives `GhostTransform` from successful recursive structural, beta and Transport graph walks and retains the exact admitted type. Extend the typed relation and its reentry rules to the remaining operations, including computations involving families and effects. |
-| Ownership, borrowing and continuations | `NativeBindingMachineMutableCanonicalFreeDemand.lean` reaches the typed tail after a named direct-Index reader closes and either lexical alias releases the physical owner. Lift the resource and lease invariants across arbitrary reader bodies, nested frames and dependent calls. |
-| Production refinement | `NativeCoreTransformExact.lean` and the graph normalizers give exact-order Lean models for the covered operations. Relate the production Jihoo source to these models and cover complete runtime/pure normalization, inference and mixed admission. |
+| General consistency and typed normalization | `NativeLoanUniverseFamilyReplay.lean` connects checked recursive family replay to dependent proposition codes under written universe binders and at actual type-code arguments. General dependent telescopes and arbitrary checked ghost derivations still need the fundamental theorem. |
+| Whole-language preservation | `NativeCoreBinderTraversal.lean` covers typed Pi, Lam, beta, neutral application and Strict-function reentry. `NativeCoreConditionalApplication.lean` covers distribution through a neutral conditional function. Connect specialized Lend, general View shapes, further dependent positions and the remaining effect rules. |
+| Ownership, borrowing and continuations | `NativeBindingMachineMutableComputedStore.lean` connects a computed Store through a checked Buffer call to Load and Free. `NativeBindingMachineMutableComputedBorrow.lean` derives the actual short-lived reference, computed read, restored callback and Free. General execution across arbitrary closures, indices and dependent runtime forms remains open. |
+| Production refinement | `NativeCoreNestedAliases.lean` proves recursive transparent global dispatch through the shared computation driver at the actual earlier prefix, including beneath binders and after substitution. Connect it to the remaining typed value and family paths and prove whole-program implementation refinement for normalization, comparison, inference and mixed admission. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -167,9 +165,9 @@ The remaining core obligations include:
   physical owner-size/loan contexts construct Borrow and literal/dynamic Index
   steps without alias-key equality. These remain explicit local associations,
   not an all-control or all-value lifetime fundamental theorem.
-- The aggregate proof check currently audits 9,156 declarations. The mixed
-  native regression suite passes 67 source fixtures and 53 exact-byte checks.
-  These counts are validation evidence, not a whole-kernel soundness claim.
+- An earlier checkpoint audited 9,156 declarations and passed 67 mixed native
+  source fixtures and 53 exact-byte checks. Later counts appear with their
+  checked increments below.
 
 ## Next semantic work
 
@@ -190,6 +188,11 @@ binders, noninjective alias rebasing, reader entry/body and captured IfLt
 else entry without requiring every runtime alias to share a lexical key.
 Source-to-reader lifetime association must additionally identify which reader
 survives closing; same-object reader existence alone is insufficient.
+Indexed execution now preserves reader-entry capture bounds in both active
+and suspended frames. The canonical variable return uses those bounds and
+the original Lend typing to exclude the retired token from the resumed state.
+Derive the corresponding value and resource interpretation for computed
+reader results.
 Connect captured source code/origin stores and
 actual runtime values to the complete Loan64/resource mixed history. The
 local reader, structural erasure and numeric value/heap components are
@@ -203,8 +206,8 @@ current explicit local source/slot/size entry premises. The runtime bound
 check alone does not discharge those obligations.
 Retain computed callees, erased arguments and exact dependent result origins;
 do not replace binding execution with generally invalid CODE beta substitution.
-The current heap is uniform-fill/read-only `SizedBufferHeap`; Store and general
-data layouts require an appropriate runtime heap interpretation as well.
+The indexed heap tracks writes to individual Buffer cells. The common runtime
+interpretation needs to cover their contents and general data layouts.
 
 ## Working procedure
 
@@ -2520,3 +2523,601 @@ enters the checked tail with its original type and complete owner demand.
 
 The aggregate check passed 1,042 Lake jobs, 9,751 declaration audits, and
 all generated fixture comparisons in 11.11 seconds with the warm cache.
+
+### Reader provenance and non-escape with indexed buffers
+
+Every reachable indexed machine state bounds its retained reference tokens by
+the current lease counter. This includes nested closure captures, suspended
+buffer operands, and the ordinary frames saved with those operands. A reader
+also retains its entry-time bound for its own continuation and every enclosing
+frame. The bound survives suspension and resumption of stack segments.
+
+For a canonical variable return, the original Lend judgment supplies the
+Outlived policy and the typed value context selects the actual result. Two
+transitions return that value and close its reader. The closing token is
+absent from the resulting control, active frames, and suspended frames. The
+indexed cells and other leases are preserved. The heap lifecycle keeps an
+expired lease closed in every later execution suffix.
+
+The closed regression exercises a reader that returns a local variable inside
+a Store value operand while its enclosing reader is suspended. Extending the
+result to computed reader bodies requires deriving the same value and resource
+interpretation from arbitrary typed execution.
+
+The aggregate check passed 1,047 Lake jobs, 9,770 declaration audits, and all
+generated fixture comparisons under the project resource guard.
+
+### Conditional normalization, computed readers, and unsigned rounds
+
+The pure graph walk for IfLt and IfEq normalizes the operands in order. A
+known comparison visits only its selected arm. The true path appends actual
+Decide or Refl evidence, then shares the counter across substitution and
+recursive reentry. The unchanged arm, evidence append before budget failure,
+and an admitted equality declaration are checked by executable fixtures.
+
+The global proof normalizer now derives sufficient fuel for both comparison
+outcomes with bounded literal or scalar-slot operands. The selected source
+arm retains its original type after substituting the original Decide or Refl
+term. A checked global exercises below, equal and above inputs, including a
+Transport that uses the inserted equality.
+
+A named reader can compute a signed expression from the actual indexed
+cell. Its original Lend judgment supplies the literal Index and operand
+bounds. The indexed machine's fitting result is typed at the original reader
+annotation, closes exactly its own lease, and excludes the retired token from
+the entire retained state. On overflow the real machine stops with its lease
+active. Checked examples exercise an updated cell and the overflow path.
+
+The unsigned sum cancellation loop now follows the production scan order,
+matches multiset occurrences through live identity, preserves denominator
+traps, and shares the checking counter over up to 64 rounds. Completed rounds
+produce a linked retained-syntax trace and exact residual value equations.
+The tested two-round trace succeeds at ten ticks and rejects on the same
+tenth visit with a budget of nine.
+
+The aggregate check passed 1,049 Lake jobs, 9,788 declaration audits, and all
+generated fixture comparisons under the project resource guard.
+
+### Recursive branch and refinement walks, arithmetic trees, and sum emission
+
+The pure graph normalizer now reenters the same driver for comparisons after
+beta substitution and under ordinary structural nodes. It also normalizes a
+refinement-producing expression before taking its Witness or Proof field.
+Successful walks retain the original admitted type, old arena prefix, and
+backward references. The byte-admitted examples expose a comparison and a
+Pack after beta and verify the reused field reference and exact visit counts.
+
+The checked global proof observer derives both an operand value and sufficient
+fuel for bounded affine comparisons. An older erased bound can justify a
+nonzero addition to a scalar slot. Substituting the original Decide or Refl
+keeps the requested dependent type. The checked example derives `x + 1 < 5`
+from `x < 4` and returns evidence retaining the addition.
+
+The indexed machine executes arbitrary signed arithmetic trees of checked
+buffer reads and literals in left-to-right order. The original Lend typing
+supplies the index bounds and result type. Success closes the reader with the
+whole-state token exclusion. The first overflow retains its fault stack and
+lease and skips the remaining operands.
+
+After operand normalization, the UAdd model composes both collections, the
+cancellation rounds, canonical emission, and the original-order Strict
+wrappers. Every successful output retains the original checked type in ghost
+mode and preserves the arena prefix. A wide runtime constant appends UAdd of
+the original normalized operands before canonical sorting. The matching ghost
+case emits a shared literal tree.
+
+The aggregate check passed 1,052 Lake jobs, 9,804 declaration audits, and all
+generated fixture comparisons under the project resource guard.
+
+### Transparent alias entry, computed owner handoff, and dependent codes
+
+The recursive pure graph walk now preserves typing in both raw syntax and its
+transparent interpretation. Exact byte admission supplies typing for a branch
+that skips a global in its unselected arm. A visible chain of initial aliases
+enters composite beta and conditional reduction with the original clock and
+type, while a reference before visibility rejects on its own tick.
+
+After computed reader evaluation, the original checked continuation restores
+both bindings, the canonical dependent type, the value/size/loan contexts,
+and one exclusive owner unit. An immediate Free through the returned slot or
+an older retained alias consumes that same unit, enters the checked tail,
+and leaves every alias of the released object at zero demand.
+
+An admitted symbolic `(x - y) + y` demonstrates a production equation absent
+from RawValue conversion. A checked affine cancellation relation preserves
+the original type and every satisfying natural valuation. With U64-bounded
+numerators it also derives conversion after the actual typed closing. This
+identifies the additional open equation that production refinement needs.
+
+The finite universe interpretation reconstructs recognized dependent Pi codes
+over native classifiers, including code-level application and Type32 values.
+The exact mixed byte checker supplies the stored annotation. The interpreted
+code of a mixed universe prefix ending in Lt(0,0) has an empty carrier. General
+proof consistency still needs the fundamental theorem for proof inhabitants.
+
+The aggregate check passed 1,056 Lake jobs, 9,838 declaration audits, and all
+generated fixture comparisons under the project resource guard.
+
+### Checked quantified proofs, production cancellation, and rejecting visits
+
+Actual expanded ghost typing now constructs semantic inhabitants for the
+recognized proof grammar under mixed universe binders. It covers affine
+proofs, typed universe-code application, erased arguments validated by the
+checker, and authenticated earlier globals. At the exact mixed snapshot
+boundary, no admitted declaration in this grammar proves a mixed universe
+prefix ending in Lt(0,0).
+
+The checked affine cancellation relation now connects to an exact successful
+Core.sum graph run. For `(x - y[p]) + Strict(t, y)` with the shared
+denominator reference, seven ticks produce `Strict(t, x)` using the original
+prefix reference. Source admission supplies the erased bound. The result
+retains the exact type and arithmetic truth under all satisfying valuations.
+
+Every graph transform and covered pure normalization visit preserves the
+existing arena prefix, including on rejection. From an in-budget start,
+success stays within the limit and a failing traversal uses at most the one
+additional rejecting tick. This includes work shared by alias visits,
+evidence appends, substitution, and normalization reentry.
+
+The native mixed correspondence suite passed 69 source fixtures and 55
+exact-byte checks. The pure checker accepted the original extended-ghost
+snapshot bytes.
+
+Guarded reader execution now uses CODE-typed captured U64 slots and derives
+the selected bound from the actual comparison. The resulting erased Lt
+hypothesis authorizes the selected indexed read. After close, both original
+continuation bindings, their dependent type, and the exclusive owner receipt
+are recovered. The checked fixture skips the first captured offset and reads
+the second before releasing the original owner.
+
+The aggregate check passed 1,059 Lake jobs, 9,861 declaration audits, and all
+generated fixture comparisons under the project resource guard.
+
+### Constructor elimination, retained owned calls, and erased implication
+
+The checked constructor derivation now proves the exact field count. A
+remaining Pi cannot convert to the terminal Ind, and an extra argument
+cannot open that Ind as a Pi. Generated branch types and the branch typing
+proof determine the case vector's length. These facts give executable
+contraction at the original type for known-constructor Case, Prop and data
+Elim, and recursive or one-level borrowed View. Checked View branch
+generation also supplies the exact field borrowing plan.
+
+The graph Case path normalizes the motive, cases and scrutinee in native
+order, skips the leading parameters, and appends the selected arm's
+application spine. The same clock continues into reentry. A byte-admitted
+regression exposes the constructor by beta, retains the requested converted
+Buffer index, and checks the emitted spine on reentry exhaustion. The
+neutral Case and Strict scrutinee paths still need graph refinement.
+
+An actual checked retained closure call transfers a named Buffer from its
+source slot to the parameter at the original dependent type. The original
+resource projection separates argument use from the body receipt. The
+body retains the value and size context, outer loan authority, and the
+unique unit of owner demand, with old aliases at zero. A mixed-checker
+regression reads a previously written cell after nested call entry and frees
+the original object.
+
+The semantic proof grammar now supports erased affine implication in mixed
+universe contexts. Typed application uses the actual guarded premise, while
+an unsatisfiable premise supplies an empty semantic argument domain. The
+admitted-byte exclusion for mixed-quantified Lt(0,0) holds for the expanded
+grammar. Arbitrary checked ghost derivations still need the fundamental
+theorem.
+
+The aggregate check passed 1,063 Lake jobs, 9,897 declaration audits, and all
+generated fixture comparisons under the project resource guard. The next
+graph obligations include neutral Case, the Strict scrutinee's reentry and
+the ordered recursive hypotheses of Elim.
+
+### Neutral and strict Case, supported family proof replay, and owned returns
+
+The pure Case entry preserves the original dependent type when the
+scrutinee remains neutral. It keeps the original row when the normalized
+references match, and appends a replacement when a child changes. The
+checked neutral regression exercises both paths, including beta exposing
+the open scrutinee.
+
+The post-operand Strict path appends the inner Case, normalizes it with
+the shared counter, and appends the original prefix around the result.
+Inversion of the outer typed Case gives the same generated arms at the
+inner scrutinee. The changed motive application is related by RawValue
+conversion, which preserves the independently formed requested type in
+PureTyping. Checked reentry retains the prefix around the contracted
+constructor result. The budget regression retains the emitted inner
+Case on rejection. The enclosing recursive driver still needs to
+dispatch the retained Strict operand and establish runtime effect
+preservation.
+
+Known-constructor Elim emits the ordinary field applications after
+skipping fixed data parameters, then emits each recursive hypothesis and
+its application in signature order. Checked history supplies the actual
+signature, case and field counts, and dependent result type. Capacity
+failure retains exactly the rows that fit and consumes no ticks before
+reentry. The recursive regression verifies the full emitted spine and
+its type. A leaf regression verifies reentry at the shared clock. The
+recursive normalization driver still needs to visit the emitted Elim
+hypotheses.
+
+Checked constructor-headed Case and Elim now feed the finite semantic
+replay for proposition codes. Actual mixed history supplies the family
+metadata, and head beta uses the checked branch argument. The checked
+regression eliminates an indexed proposition twice recursively under
+Type31. The exact-byte exclusion for mixed-quantified Lt(0,0) extends to
+this grammar. A fundamental theorem for arbitrary proof derivations and
+native proposition-family carriers remains open.
+
+A checked Buffer variable returns its live physical allocation and exact
+dependent size. The use receipt proves the active reader is absent and
+retires other aliases. A saved closure binds that returned value with
+its checked body receipt and preserves the instantiated dependent
+codomain. The mixed regression returns the only allocation into a saved
+call, reads the earlier write, and frees it. General computed callees
+still need reconstruction of the capture and body receipts.
+
+The aggregate check passed 1,067 Lake jobs, 9,934 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Recursive Elim, indexed proposition carriers, and checked computed callees
+
+The recursive pure driver now visits Elim operands and its emitted
+application spine in native order with one arena and counter. The same
+visitor normalizes the induction hypotheses, including through beta and
+under existing structural nodes. Successful runs give native Loan64
+preservation for the raw term and its transparent expansion. An exact
+admitted snapshot visits two recursive eliminations and returns the
+original base proof at the converted declaration type. Rejecting the
+first reentry visit keeps the complete outer spine.
+
+The indexed proposition model uses the actual native constructor table
+to interpret unary U64 indices. Its least carrier covers nullary,
+scalar, and single erased recursive fields with supported affine
+indices. Source typing recovers the instantiated recursive field type
+and the result conversion. The mixed-checked even family has an
+inhabitant at 2, and the induction invariant excludes 1 in this carrier.
+General telescopes, elimination over these carriers, and the fundamental
+theorem for all checked proofs remain open.
+
+Borrowed View walks the raw constructor telescope, skips its fixed
+parameters, and visits the remaining domains with the shared counter.
+When those visits produce the checked canonical fields, their native
+flags agree with the independent plan. The append phase gives each
+recursive hypothesis a fresh Borrow and keeps the original result type
+through reentry. The boxed recursive regression verifies ten emitted
+rows. A checked scalar fixture executes the original constructor Pi,
+appends one application, and returns the original word at step 11.
+Deriving canonical domain visits directly from general mixed history and
+normalizing recursive View hypotheses remain open.
+
+The original application projection supplies the ordered receipts for
+an effectful Strict callee and its Buffer argument. The actual saved
+argument frame retains the checked closure body and zero demand for
+captured owners. The regression frees a temporary while finding the
+callee, then reads the original written Buffer and releases it.
+Preserving capture and argument liveness through arbitrary callee
+effects remains open.
+
+The aggregate check passed 1,072 Lake jobs, 9,979 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Joint Case and Elim reentry, Strict decisions, and separated callee effects
+
+Case joins Elim and the ordinary pure operations in the same recursive
+walker. With a constructor scrutinee, checked typing supplies each
+signature lookup and count needed to build the native arm's application
+spine. The exact-byte regression normalizes a neutral Case under a
+lambda, substitutes the constructor, and reduces the new Case to the
+original Buffer with its converted declaration type. Step exhaustion
+at reentry preserves the just-appended Case.
+
+Pure Strict root normalization classifies the already normalized prefix.
+It drops a lambda value or a nontrapping prefix, and keeps other prefixes
+with their refreshed result. Successful visits preserve the exact Loan64
+type. The regression keeps an allocation prefix when its result changes by
+beta and discards a lambda whose body contains an allocation. The
+post-operand movement of Strict out of Case now reenters the joint family
+walker. Arbitrary nested Strict contexts still need a typing bridge for
+the extended conversion.
+
+The View shape proof obtains each field conversion and erasure flag from
+the checked constructor telescope. Confluence identifies rigid live
+domain results with the stored fields. The exact mixed fixture uses a
+global alias to a beta redex in the raw domain and shares the clock from
+that domain visit through the final branch application. General
+non-rigid canonicalization and recursive View reentry remain open.
+
+Realization of an indexed proposition carrier produces a closed native
+constructor and its exact dependent type. Prop Elim uses actual checked
+case types, and finite replay derives the type of its selected branch.
+The semantic theorem supports affine motives depending on the family
+index and retains the syntax-only replay condition for interpreting the
+result. The checked Even at 2 fixture uses the motive `0 < n + 1`,
+which has different instances at the recursive and result indices.
+Interpreting arbitrary proof derivations and recursive evidence under
+all proof constructors remains open.
+
+The original checked application splits callee and pending argument
+demands at the level of physical Buffer identities. A finite chain of
+checked named releases excludes all owners still demanded by the
+argument. The actual Free events prove these owners live on entry to the
+saved closure, with the original types and receipts. The mixed fixture
+releases two other Buffers before reading the pending argument.
+Deriving this exclusion for arbitrary checked effects remains open.
+
+The aggregate check passed 1,077 Lake jobs, 10,031 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Recursive View and borrowed operands, iteration roots, and arithmetic induction
+
+The joint pure walker now handles Borrow and Deref cancellation and
+known-owner View. It visits the original constructor telescope, validates
+the live flags against the checked signature, and reenters the same
+walker for each generated recursive hypothesis. All shape and spine
+visits share the budget. The bounded representation check succeeds on
+the original constructor roots after append-only extension of an admitted
+snapshot. Rigid-domain shape alignment is supplied by the existing
+checked-telescope proof. The exact-byte recursive View fixture emits two
+spines and returns the leaf word to the enclosing equality in 80 steps.
+View through a Strict owner and arbitrary shape normalization remain open.
+
+The Fold and Loop root walk visits the count then the initializer, returns
+the initializer at zero, and otherwise visits the motive for Loop and the
+body. Changed nonzero rows keep the original type. Loop's budget fixture
+identifies the first rejected motive visit. Nested iteration and runtime
+lowering remain open.
+
+The indexed arithmetic observer replays recursive family evidence beneath
+LtAdd, LtCancel, LtLe and the other supported proof nodes. It preserves
+the original operands and their type. The checked Even at 4 fixture uses
+two generated induction hypotheses to derive `4 < 5`. The semantic
+result still needs a successful bounded replay into the supported
+arithmetic grammar.
+
+The checked Store followed by Free takes nine real machine steps. From
+the original source type and resource receipt, it derives the exact cell
+write, released owner and retained continuation type. A physically
+separated sibling receipt keeps all demanded cells, sizes and loans.
+A mixed regression writes and releases one capture while the pending
+argument reads its original value. Arbitrary indices and general
+effectful prefixes still need the runtime fundamental theorem.
+
+The aggregate check passed 1,081 Lake jobs, 10,074 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Early Lend and Drop, typed Take reentry, and branching inductive proofs
+
+The joint pure walker can dispatch a rule before visiting its operands.
+Drop enters the continuation directly. The exact-byte regression leaves a
+Strict owner unvisited and charges a rejecting tick at the continuation when
+the budget is exhausted. Lend appends the borrow and the three applications
+in native order. Its raw reentry theorem covers explicit callback shapes and
+preserves the graph prefix and forward equation. The joint type-preserving
+walk uses the generic rule when both literal and transparently expanded
+callbacks are nonspecialized. The admitted quantified regression executes
+that path in 27 ticks. A checked explicit example reaches the independently
+typed specialized finish through the same four appends and recursive visitor.
+General typed preservation for the explicit native reentry remains open.
+
+The pure Take root visits the packed value first. A known Give emits two
+applications before reentry. A neutral Take then visits its continuation
+and applies normal row reuse. The mixed-checked owned regression returns
+the original allocation at the converted dependent Buffer type in 61
+ticks. Its budget regression keeps both emitted rows. A rigid-head lemma
+shows why the typed operational rule supplies preservation for this path
+under the current conversion equations.
+
+A native indexed proposition can now have any finite number of erased
+recursive fields after a leading U64 scalar. Each field has its own unary
+affine predecessor expression. The original checked arguments recover
+their native types and carrier evidence, and reification rebuilds the
+typed constructor for the actual eliminator. The mixed regression at
+`P(2)` uses induction hypotheses at distinct indices 0 and 1 as two
+operands of LtLe. General index arity and arbitrary dependent telescopes
+remain open.
+
+The checked Store-to-Free path evaluates a captured U64 index and a
+signed expression over actual captured scalars. The source-typed
+Decide-shaped evidence provides the physical bound. After the write and
+release it recovers the original continuation type and resource receipt.
+Under physical separation, every cell of the sibling Buffer is retained
+along with its owner, length and loan receipts. The closed regression
+writes 46 at a dynamic index and reads the original 7 from the other
+Buffer. The theorem uses successful numeric interpretation and
+separation of sibling demand.
+
+The aggregate check passed 1,085 Lake jobs, 10,129 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Joint iteration, vector-indexed induction, and captured Load
+
+The ordered Fold and Loop visits now share the recursive budget and arena
+with family elimination, View, Drop and generic Lend. The child walker
+retains counted iterations in ordinary contexts and reuses the original
+row when the operands are unchanged. The typed root takes the zero branch
+after normalizing the count and initializer. It recovers the original
+Loan64 type for both raw and transparently expanded terms. A mixed-checked
+fixture rebuilds a Loop nested under Eq after visiting a Drop initializer
+in 18 ticks. Its zero Fold returns the initializer in four ticks without
+visiting the body. Rigid-head lemmas exhibit signed zero-iteration results
+outside the current raw conversion equations.
+
+Array and Buffer formation preserve the original universe through their
+typed U64 length visit. Both formations reduce a zero Loop length to 2
+in four ticks in the same admitted snapshot, and unchanged literal
+lengths reuse the original graph rows. Other dependent contexts still
+need a compatible conversion or preservation rule.
+
+The indexed proposition carrier now ties every index vector to the
+authenticated family's arity. Each erased recursive field has its own
+vector of affine expressions over the leading U64 scalar. Carrier
+extraction reads the original Arguments derivation and reification
+rebuilds the native constructor and its checked Elim. The two-index
+fixture admits witnesses at `P(0,1)` and `P(1,2)`, then observes the
+eliminator using both induction hypotheses to prove the motive of
+`P(2,3)`. General dependent index expressions and ghost derivations
+remain open.
+
+The captured Load derives the physical owner, liveness, and exclusive
+demand from the complete projected source world. It evaluates the named
+owner and index, reads the exact cell, and transports the original type,
+callback receipt, loans, and total ownership interpretation through the
+two native callback bindings. A following Free releases that owner and
+preserves the remaining world. The accepted Store–Load–Free regression
+writes and reads 46 at the same indexed cell and then releases the
+allocation. The general handoff theorem uses a canonical alias view and
+closed Decide-shaped evidence.
+
+Signed normalization now verifies the native bounded fold after recursive
+operand visits. A beta-produced operand yields either a literal product
+of 42 or a rebuilt addition with overflowing operands, with the original
+I64 typing in both paths. The checked literal-array fixture retains a
+typed Index in the native walk. The independently proved abstract array
+equation selects 7 from those normalized operands.
+
+The aggregate check passed 1,090 Lake jobs, 10,184 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Recursive typed value contexts, computed Load, and scalar-prefix induction
+
+The shared operand traversal now preserves any relation proved by its
+single-operand visitor. The typed value traversal uses this result for
+arbitrarily nested Strict and signed arithmetic, as well as Array, Buffer,
+Eq, Lt, Elements and Refine. It extracts the actual operand premises of
+each constructor, preserving the exact type of the raw and expanded
+source. Elements keeps its declared cardinality. The ordinary joint
+family walker still handles the covered dependent positions that require
+conversion. A checked Elements fixture reduces a product nested around
+Strict and two signed sums to 42 in 11 ticks. If the budget runs out on
+the next element, the committed arithmetic rows remain. A checked
+Buffer length keeps the overflowing Strict prefix and drops a zero Loop
+to its initializer in eight ticks.
+
+The native pure Free branch selects its continuation before any owner
+visit. The retained Load branch visits buffer, index, evidence and
+callback in order, then reuses or rebuilds the typed row. In an admitted
+program the direct Load and Load reached through Free select the same
+typed result with 22 and 23 ticks respectively. The shared callback uses
+a boxed constructor and pure Drop, and the rejecting tick confirms that
+the first evidence visit precedes the callback. The Free step is tracked
+by its immediate value equation and independently typed child change.
+
+The runtime Load index can now be an arbitrary tree of literals,
+captured U64 values and checked additions, provided its unsigned
+evaluation succeeds. The numeric derivation gives the actual machine
+trace, zero additional Buffer demand, and a conversion for the index.
+The original closed Decide-shaped evidence yields the physical bound.
+The callback and immediate Free preserve the remaining loan and demand
+world. The admitted example reads the stored 46 at computed index 2,
+then frees the same allocation.
+
+For vector-indexed propositions, the actual checked Arguments
+derivation now peels any finite prefix of ordinary U64 scalars. Closed
+affine arguments are substituted simultaneously into the recursive
+fields and result, and reification rebuilds the native constructor.
+An admitted example passes both 1 and the original addition 2+3. Its two
+recursive fields are `P(1,2)` and `P(5,6)`, and the checked Elim uses both
+induction hypotheses to prove `6 < 7` at `P(6,7)`. General dependent
+telescope interpretation remains open.
+
+The aggregate check passed 1,095 Lake jobs, 10,245 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Dependent binders, transparent aliases, and computed Store–Load–Free
+
+The recursive value visitor now enters Pi and Lam bodies under the exact
+original binder. A raw conversion for the normalized annotation gives
+the context conversion for the rebuilt body. Applications normalize the
+function with the typed visitor and the operand with the raw visitor.
+The operand conversion instantiates the original dependent codomain.
+The shared beta branch substitutes actual graph references and reenters
+the same visitor. A normalized Strict function appends and visits the
+inner application, then puts the original effect back around its result.
+Exact-byte admission covers a dependent application whose result type
+still contains the original argument redex, an overflowing Strict
+function, and a Pi whose domain and body both change. Their native
+schedules take 22, 32, and 15 ticks respectively. The rejecting application
+visit keeps the substituted body in the arena. Conditional callees and
+wider dependent operand conversions need further rules.
+
+The initial global dispatch records each arena reference and earlier
+definition index. Admitted alias chains strictly descend the definition
+table, consume one tick and one depth level per alias, and pass the
+terminal reference to the chosen visitor. Its expanded typing theorem
+uses actual checked global entries. The three-alias arithmetic fixture
+returns `42 : I64` in eight ticks and tests visibility, depth and budget
+failures. The binder visitor also runs through the same alias dispatch.
+Its admitted endpoint fixture enters the dependent application in 23
+ticks, including one alias tick. Aliases inside later subterms still need
+recursive dispatch in those visitors.
+
+The runtime Store path evaluates nested U64 addition and signed
+arithmetic under the actual pending frames. Its original erased
+comparison yields the physical index bound. The returned owner enters
+the actual saved checked Buffer lambda. The same interpreted index and
+erased proof are transported under that binder for Load, which reads
+exactly the cell just written. Free releases the same owner, and the
+dependent tail type, untouched cells, remaining owner demand and both
+loan invariants follow through the original resource receipts. The
+handoff uses successful scalar evaluations, closed Decide-shaped
+evidence, and the initial complete runtime world.
+
+The proposition carrier now follows an arbitrary interleaving of U64
+scalars and erased self-recursive fields in the original Arguments
+derivation. It grounds recursive vectors using only previously checked
+scalar slots, even when another proof binder occurs between scalars.
+The admitted scalar/proof/scalar/proof example checks its original
+constructor and replays the actual Elim using both recursive hypotheses
+to prove `7 < 8`.
+
+The aggregate check passed 1,100 Lake jobs, 10,298 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.
+
+### Recursive global dispatch, universe replay, and computed borrowed Index
+
+The recursive pure graph driver separates execution from the relation
+used to interpret its endpoints. Its expanded normalization relation
+interprets exact checked stored definitions and is closed under the existing
+computation and ordinary-node rules. An authenticated initial arena remains
+a prefix through operand visits, true-arm opening, substitution and beta
+reentry. A nested global follows the actual raw value reference of the
+earlier definition while preserving transparent expansion. The admitted
+application visits globals in its callee, lambda annotation, conditional
+discriminant and argument. An invisible callee alias rejects before the
+argument visit. The wider typed value and family visitors still need this
+recursive dispatch at their own dependent boundaries.
+
+The neutral conditional application rule shifts the true-arm argument
+under the evidence binder, appends both applications in order, appends the
+rebuilt conditional, and reenters at child depth. A typed derivation
+reconstructs the original dependent codomain by instantiation under the
+evidence binder. A mixed program and a rejecting-budget fixture check the
+same native schedule and its committed graph rows.
+
+The universe-family replay theorem interprets supported dependent
+proposition codes from the real typing of a reified recursive family
+elimination. It opens written universe binders, substitutes checked type
+codes, and interprets compositional arithmetic proof terms with recursive
+hypotheses. The admitted example uses its hypothesis in LtAdd beneath
+Type0 and applies the resulting proof to U64. Unsupported proof syntax
+and general universe-family semantics remain open.
+
+The runtime borrowing proof follows an authentic named Lend through
+its pending Index with a fresh leased reference and a successful U64
+index expression over older captures. The original erased comparison
+supplies the bound and the actual heap supplies the cell content. The
+reference is closed before the restored callback, whose source typing
+and resource receipts preserve the remaining loans and ownership through
+Free. The admitted regression writes 46, reads 46 at computed index 2,
+closes the loan and frees the same Buffer.
+
+The aggregate check passed 1,104 Lake jobs, 10,346 distinct declaration
+audits, and all generated fixture comparisons under the project resource
+guard. The audit found only Lean's three standard axioms.

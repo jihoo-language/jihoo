@@ -6,7 +6,7 @@ into the actual two-slot continuation and its single-owner source view. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open CodeKinds
 
-private theorem restored_contexts
+theorem restored_contexts
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (context : ValueContext env code meanings) (sizes : OwnerSizes env heap code meanings)
     (ownerTyped : LoanTyping.HasType env loans code.context false (.var owner) (.buffer size))
@@ -104,7 +104,7 @@ private theorem canonical_contexts (code : Code) (first again body origin : Term
   · intro index binding queried selected stored
     simpa only [shift_subst_consValues] using sizes (index+1) _ queried (shifted index binding selected) stored
 
-private theorem load_coverage
+theorem load_coverage
     (coverage : LoanCoverage code loans stack) (entered : Loans.Entered code.context.length loans)
     (absent : ¬ ObjectReader object stack) (first again body origin : Term) (number : Int) :
     LoanCoverage (restoredContinuation code first again body origin (.integer number) object (.integer number))

@@ -122,6 +122,112 @@ def substitute (limit depth : Nat) (state : State) (body value : Nat) : Outcome 
 def rewrite (limit depth : Nat) (state : State) (body target value : Nat) : Outcome Nat :=
   run limit depth state body (.replace (.rewrite target) value) 0
 
+/-- Every transform outcome keeps the arena prefix. A successful transform
+stays within budget, while a rejecting tick may use one additional unit. -/
+structure Progress (limit : Nat) (start : State) (outcome : Outcome α) : Prop where
+  kept : Prefix start.arena outcome.state.arena
+  monotone : start.steps ≤ outcome.state.steps
+  bounded : start.steps ≤ limit → outcome.state.steps ≤ limit + 1
+  accepted : start.steps ≤ limit → ∀ value, outcome.result = .ok value → outcome.state.steps ≤ limit
+
+private theorem Progress.atState (state : State) (result : Except Error α) :
+    Progress limit state ⟨state, result⟩ :=
+  ⟨.refl _, Nat.le_refl _, fun budget => Nat.le_trans budget (Nat.le_succ _), fun budget _ _ => budget⟩
+
+private theorem Progress.next {after : State → α → Outcome β} {result : Outcome α}
+    (prior : Progress limit start result)
+    (following : ∀ ref, result.result = .ok ref → Progress limit result.state (after result.state ref)) :
+    Progress limit start (result.next after) := by
+  cases observed : result.result with
+  | error reason =>
+      simp only [Outcome.next, observed]
+      exact ⟨prior.kept, prior.monotone, prior.bounded, fun _ _ accepted => by cases accepted⟩
+  | ok ref =>
+      have later := following ref observed
+      simp only [Outcome.next, observed]
+      exact ⟨prior.kept.trans later.kept, Nat.le_trans prior.monotone later.monotone,
+        fun budget => later.bounded (prior.accepted budget ref observed),
+        fun budget value accepted => later.accepted (prior.accepted budget ref observed) value accepted⟩
+
+private theorem Progress.afterTick (later : Progress limit {start with steps := start.steps + 1} outcome)
+    (room : start.steps + 1 ≤ limit) : Progress limit start outcome :=
+  ⟨later.kept, Nat.le_trans (Nat.le_succ _) later.monotone, fun _ => later.bounded room,
+    fun _ => later.accepted room⟩
+
+private theorem tick_failure_progress (start : State) (reason : NativeCoreIdentical.Error) :
+    Progress limit start (tickFailure start.arena (start.steps + 1) reason) :=
+  ⟨.refl _, Nat.le_succ _, fun budget => Nat.succ_le_succ budget, fun _ _ accepted => by cases accepted⟩
+
+private theorem finish_progress (state : State) (root : Nat) (before after : Node) :
+    Progress limit state (finish state root before after) := by
+  by_cases unchanged : before = after
+  · simp only [finish, unchanged, ite_true]
+    exact Progress.atState _ _
+  · cases added : NativeCoreGraph.addNode state.arena after with
+    | error reason =>
+        simp only [finish, unchanged, ite_false, added]
+        exact Progress.atState _ _
+    | ok result =>
+        obtain ⟨extended, selected⟩ := result
+        simp only [finish, unchanged, ite_false, added]
+        exact ⟨(NativeCoreGraph.addNode_commits added).1, Nat.le_refl _,
+          fun budget => Nat.le_trans budget (Nat.le_succ _), fun budget _ _ => budget⟩
+
+private theorem shiftVariable_progress (state : State) (root index cutoff : Nat) (delta : Int) :
+    Progress limit state (shiftVariable state root index cutoff delta) := by
+  simp only [shiftVariable]
+  split <;> try split <;> try split
+  all_goals first | exact Progress.atState _ _ | exact finish_progress _ _ _ _
+
+private theorem children_progress (ready : ∀ state ref inner, Progress limit state (visit state ref inner))
+    (refs : List Nat) (offset : Nat) (state : State) :
+    Progress limit state (children visit mode op binders refs offset state) := by
+  induction refs generalizing offset state with
+  | nil => exact Progress.atState _ _
+  | cons ref refs ih =>
+      simp only [children]
+      split
+      · exact Progress.atState _ _
+      · exact (ready _ _ _).next (fun _ _ => (ih _ _).next (fun _ _ => Progress.atState _ _))
+
+theorem run_progress (limit depth : Nat) (state : State) (root : Nat) (mode : Mode) (binders : Nat) :
+    Progress limit state (run limit depth state root mode binders) := by
+  induction depth generalizing state root mode binders with
+  | zero =>
+      by_cases within : limit < state.steps + 1 <;>
+        simp [run, NativeCoreUnsignedCancellation.tick, within, tick_failure_progress]
+  | succ depth ih =>
+      by_cases excess : limit < state.steps + 1
+      · simp only [run, NativeCoreUnsignedCancellation.tick, excess, ite_true]
+        exact tick_failure_progress _ _
+      · by_cases missing : state.arena.size ≤ root
+        · simp [run, NativeCoreUnsignedCancellation.tick, excess, missing, tick_failure_progress]
+        · have room : state.steps + 1 ≤ limit := Nat.le_of_not_gt excess
+          have normal : NativeCoreUnsignedCancellation.tick state.arena limit (depth + 1) state.steps root =
+              (.ok (), state.steps + 1) := by simp [NativeCoreUnsignedCancellation.tick, excess, missing]
+          simp only [run, normal]
+          cases lookup : state.arena[root]? with
+          | none => simpa only [lookup] using (tick_failure_progress (limit := limit) state (.invalidReference root))
+          | some node =>
+              try simp only [lookup]
+              apply Progress.afterTick _ room
+              cases node with
+              | var index =>
+                  cases mode with
+                  | shift delta => exact shiftVariable_progress _ _ _ _ _
+                  | replace policy value =>
+                      simp only
+                      split
+                      · exact ih _ _ _ _
+                      · exact finish_progress _ _ _ _
+              | node op refs =>
+                  exact (children_progress (fun state child inner => ih state child mode inner) refs 0 _).next
+                    (fun _ _ => finish_progress _ _ _ _)
+
+theorem substitute_progress (limit depth : Nat) (state : State) (body value : Nat) :
+    Progress limit state (substitute limit depth state body value) :=
+  run_progress limit depth state body (.replace .substitute value) 0
+
 mutual
   /-- Every source occurrence is visited, and each replacement match also
   visits every occurrence in the argument being shifted. -/

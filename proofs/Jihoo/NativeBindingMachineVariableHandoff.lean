@@ -10,7 +10,7 @@ Canonical CODE typing retains the ORIGINAL Lend result type. General resource
 and converse physical-loan coverage for an owned result are not claimed. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping
 
-private theorem actual_explicit_value_finish
+theorem actual_explicit_value_finish
     (wf : UnifiedProgram.EnvWellFormed env)
     (typed : HasType env [] [] true
       (.lend owner (.lam false domain readerBody) (.lam false first (.lam false again body))) type)
@@ -34,7 +34,7 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine
 open CodeKinds
 variable {control : Jihoo.Quantity.Control}
 
-private theorem bind_variable_context (context : ValueContext env code meanings)
+theorem bind_variable_context (context : ValueContext env code meanings)
     (sizes : OwnerSizes env heap code meanings)
     (argument : LoanTyping.HasType env [] [] true source (domain.subst meanings))
     (kind : ValueKind env value (domain.subst meanings))

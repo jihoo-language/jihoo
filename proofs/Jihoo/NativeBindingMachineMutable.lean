@@ -372,7 +372,7 @@ theorem run_invariant (fuel : Nat) (invariant : Invariant state) : Invariant (ru
 theorem initial_run_invariant (term : Term) (fuel : Nat) : Invariant (run fuel (initial term)).state :=
   run_invariant fuel ⟨SizedBufferHeap.empty_valid,ReaderInventory.empty⟩
 
-private theorem literal_store_steps (state : State) (evaluating : state.control = .evaluate code)
+theorem literal_store_steps (state : State) (evaluating : state.control = .evaluate code)
     (shape : code.term = .store (.var owner) (.natural offset) (.integer value) evidence)
     (stored : code.values[owner]? = some (some (.owner object)))
     (offsetWidth : offset < 2^64) (valueWidth : ValueReduction.signed64 value)

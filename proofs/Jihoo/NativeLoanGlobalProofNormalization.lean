@@ -1,15 +1,17 @@
 import Jihoo.NativeLoanOpenProofNormalization
+import Jihoo.NativeLoanComparisonWord
 import Jihoo.NativeLoanPureGlobalObservation
 
 /-! Typed arithmetic proof normalization follows prior transparent
-definitions at the head and in scalar application. Call typing follows the
-actual stored derivations in the mixed prefix. -/
+definitions at the head and in scalar application, and selects bounded
+scalar comparison branches. Call typing follows the actual stored
+derivations in the mixed prefix. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.GlobalProofNormalization
 
 open PureHypothesisObservation (Entry ScalarSlot context)
 open WideHypothesisObservation (Satisfies closing)
 open OpenProofNormalization (TransportEvidence)
-open NativeKernel.Conversion (treeSize)
+open AffineSum (Expr)
 open Semantics.PureArithmetic (Recognized UniversalTruth)
 
 private def global (index : Nat) : Term := .node (.global index) []
@@ -117,6 +119,16 @@ theorem application_preserves {sort : SortTag} (history : PureMixedAdmission.His
   exact .convert (bodyTyped.ghostInstantiate history.wellFormed (.natural word)) formed
     ((aligned.substitution (single (.natural value)) history.wellFormed.admissible).trans resultConverted)
 
+private def comparisonFallback? (env : Environment) : Term → Option Term
+  | .ifLt (.natural _) (.natural _) _ _ | .ifEq (.natural _) (.natural _) _ _ => none
+  | term => OpenProofNormalization.normalize? env 1 term
+
+private theorem comparisonFallback_sound (typed : PureTyping.HasType env ctx term type)
+    (wf : UnifiedProgram.EnvWellFormed env) (ran : comparisonFallback? env term = some residual) :
+    PureTyping.HasType env ctx residual type ∧ Recognized env residual := by
+  fun_cases comparisonFallback? env term <;> simp only [comparisonFallback?] at ran
+  all_goals first | contradiction | exact OpenProofNormalization.normalize?_sound wf typed ran
+
 def run? (env : Environment) : Nat → Term → Option Term
   | 0, _ => none
   | fuel + 1, .node (.global index) [] => do
@@ -132,6 +144,10 @@ def run? (env : Environment) : Nat → Term → Option Term
   | fuel + 1, .transport _ equality proof => do
       let _ ← ProofTransportObservation.exposeRefl? equality
       run? env fuel proof
+  | fuel + 1, term@(.ifLt _ _ _ _) | fuel + 1, term@(.ifEq _ _ _ _) =>
+      match ComparisonWord.select? (fuel + 1) term with
+      | some branch => run? env fuel branch
+      | none => comparisonFallback? env term
   | _ + 1, term => OpenProofNormalization.normalize? env 1 term
 
 theorem run?_sound {sort : SortTag} (history : PureMixedAdmission.History definitions familyDeclarations env)
@@ -158,57 +174,79 @@ theorem run?_sound {sort : SortTag} (history : PureMixedAdmission.History defini
   · rename_i ih
     obtain ⟨_, exposed, replayed⟩ := Option.bind_eq_some_iff.mp ran
     exact ih ((PureProofObservation.Step.transport exposed).preserves history.wellFormed typed) formed replayed
+  · rename_i selected ih
+    exact ih ((PureProofObservation.Step.comparison (ComparisonWord.select?_sound selected)).preserves
+      history.wellFormed typed) formed ran
+  · exact comparisonFallback_sound typed history.wellFormed ran
+  · rename_i selected ih
+    exact ih ((PureProofObservation.Step.comparison (ComparisonWord.select?_sound selected)).preserves
+      history.wellFormed typed) formed ran
+  · exact comparisonFallback_sound typed history.wellFormed ran
   · exact OpenProofNormalization.normalize?_sound history.wellFormed typed ran
 
-private theorem run_embeds_open (opened : OpenProofNormalization.normalize? env small term = some residual)
-    (enough : small ≤ fuel) : run? env fuel term = some residual := by
-  fun_induction OpenProofNormalization.normalize? env small term generalizing fuel
-  · contradiction
-  · rename_i ih
-    cases fuel with
-    | zero => omega
-    | succ fuel =>
-        rw [run?]
-        exact ih opened (by omega)
-  · rename_i ih
-    cases fuel with
-    | zero => omega
-    | succ fuel =>
-        rw [run?]
-        exact ih opened (by omega)
-  · rename_i ih
-    cases fuel with
-    | zero => omega
-    | succ fuel =>
-        obtain ⟨_, exposed, replayed⟩ := Option.bind_eq_some_iff.mp opened
-        rw [run?, exposed]
-        exact ih replayed (by omega)
-  · rename_i input notStrict notFree notTransport ready
-    cases fuel with
-    | zero => omega
-    | succ fuel =>
-        have old : OpenProofNormalization.normalize? env 1 input = some residual := by
-          rw [OpenProofNormalization.normalize?]
-          · simpa [ready] using opened
-          · exact notStrict
-          · exact notFree
-          · exact notTransport
-        rw [run?]
-        · exact old
-        · intro index shape
-          subst input
-          simp [Semantics.PureArithmetic.recognizes, ProofObservation.supported] at ready
-          change false = true at ready
-          cases ready
-        · intro function value shape
-          subst input
-          simp [Semantics.PureArithmetic.recognizes, ProofObservation.supported] at ready
-          change false = true at ready
-          cases ready
-        · exact notStrict
-        · exact notFree
-        · exact notTransport
-  · contradiction
+private theorem run_arithmetic (tree : OpenProofNormalization.ArithmeticTree entries term) (words : Nat → Nat) (fuel : Nat) :
+    run? env (fuel + 1) (term.subst (closing entries words)) = some (term.subst (closing entries words)) := by
+  have supported := (ProofObservation.supported_iff _).mpr (tree.closedSupported words)
+  have ready : Semantics.PureArithmetic.recognizes env 0 0 1 (term.subst (closing entries words)) = true := by
+    simp [Semantics.PureArithmetic.recognizes, supported]
+  cases tree with
+  | assume slot =>
+      clear supported
+      simp only [Term.subst] at ready ⊢
+      induction slot generalizing words with
+      | @here left right _ =>
+          let witness := WideHypothesisObservation.lessWitness
+            (left.eval (fun index => words (index + 1))) (right.eval (fun index => words (index + 1)))
+          change run? env (fuel + 1) witness = some witness
+          change Semantics.PureArithmetic.recognizes env 0 0 1 witness = true at ready
+          simpa [witness, WideHypothesisObservation.lessWitness, run?, OpenProofNormalization.normalize?] using ready
+      | there _ ih => exact ih (fun index => words (index + 1)) ready
+  | decide | zeroLe | ltAdd | ltCancel | ltLe | absurd =>
+      simp only [Term.decide, Term.zeroLe, Term.ltAdd, Term.ltCancel, Term.ltLe, Term.absurd,
+        Term.subst, substArgs, Op.binders, liftSub] at ready ⊢
+      simp [run?, OpenProofNormalization.normalize?, ready]
+
+private theorem open_run_total (tree : OpenProofNormalization.Tree entries term) (words : Nat → Nat) :
+    ∃ needed result, ∀ fuel, needed ≤ fuel →
+      run? env fuel (term.subst (closing entries words)) = some result := by
+  induction tree with
+  | arithmetic tree =>
+      rename_i proof
+      refine ⟨1, proof.subst (closing entries words), fun fuel enough => ?_⟩
+      cases fuel with
+      | zero => omega
+      | succ fuel => exact run_arithmetic tree words fuel
+  | reflexive proof =>
+      obtain ⟨expr, aligned⟩ := proof.closed words
+      have recognized : Semantics.PureArithmetic.recognizes env 0 0 1 (.refl expr.toTerm) = true := by
+        change (ProofObservation.supported (.refl expr.toTerm) || (AffineSum.parse expr.toTerm).isSome) = true
+        simp [AffineSum.parse_toTerm]
+      refine ⟨1, .refl expr.toTerm, fun fuel enough => ?_⟩
+      cases fuel with
+      | zero => omega
+      | succ fuel =>
+          rw [aligned]
+          simp only [Term.refl, run?, OpenProofNormalization.normalize?, ite_eq_left recognized]
+  | transport evidence _ ih =>
+      obtain ⟨_, exposed⟩ := evidence.exposes words
+      obtain ⟨needed, result, ran⟩ := ih
+      refine ⟨needed + 1, result, fun fuel enough => ?_⟩
+      cases fuel with
+      | zero => omega
+      | succ fuel =>
+          simpa [Term.transport, Term.subst, substArgs, Op.binders, liftSub, run?, exposed] using ran fuel (by omega)
+  | strict _ ih =>
+      obtain ⟨needed, result, ran⟩ := ih
+      refine ⟨needed + 1, result, fun fuel enough => ?_⟩
+      cases fuel with
+      | zero => omega
+      | succ fuel => simpa [Term.strict, Term.subst, substArgs, Op.binders, liftSub, run?] using ran fuel (by omega)
+  | free _ ih =>
+      obtain ⟨needed, result, ran⟩ := ih
+      refine ⟨needed + 1, result, fun fuel enough => ?_⟩
+      cases fuel with
+      | zero => omega
+      | succ fuel => simpa [Term.free, Term.subst, substArgs, Op.binders, liftSub, run?] using ran fuel (by omega)
 
 private def pushWord (first : Nat) (words : Nat → Nat) : Nat → Nat
   | 0 => first
@@ -258,6 +296,16 @@ private theorem single_scalar {body : Term} (scope : body.Scoped 1) (value : Nat
   subst index
   rfl
 
+private theorem compare_subst (branch evidence : Term) (values : Nat → Term) :
+    (branch.subst (liftSubOne values)).subst (single (evidence.subst values)) =
+      (branch.subst (single evidence)).subst values := by
+  rw [Term.subst_comp, Term.subst_comp]
+  congr 1
+  funext index
+  cases index with
+  | zero => simp only [liftSubOne, single, Term.subst]
+  | succ index => simp only [liftSubOne, Term.shift_subst_single, single, Term.subst]
+
 private theorem Callable.closed_lambda_body (wf : UnifiedProgram.EnvWellFormed env)
     (call : Callable env term erased body) (closed : term.Scoped 0) :
     body.Scoped 1 := by
@@ -281,6 +329,12 @@ inductive Tree (env : Environment) : List Entry → Term → Prop where
   | free : Tree env entries term → Tree env entries (.free owner term)
   | transport : TransportEvidence entries evidence → Tree env entries term →
       Tree env entries (.transport predicate evidence term)
+  | less : ComparisonWord.Operand entries leftCap left → ComparisonWord.Operand entries rightCap right →
+      Tree env entries (yes.subst (single (.decide left.toTerm right.toTerm))) → Tree env entries no →
+      Tree env entries (.ifLt left.toTerm right.toTerm yes no)
+  | equal : ComparisonWord.Operand entries leftCap left → ComparisonWord.Operand entries rightCap right →
+      Tree env entries (yes.subst (single (.refl left.toTerm))) → Tree env entries no →
+      Tree env entries (.ifEq left.toTerm right.toTerm yes no)
 
 private theorem closed_global_word (index : Nat) (values : Nat → Term) : (global index).subst values = global index :=
   by simp [global, Term.subst, substArgs]
@@ -293,9 +347,7 @@ theorem Tree.run_total (wf : UnifiedProgram.EnvWellFormed env) (source : Tree en
       run? env fuel (term.subst (closing entries words)) = some result := by
   induction source generalizing words with
   | @terminal entries proof tree =>
-      let size := treeSize (proof.subst (closing entries words))
-      obtain ⟨result, ran⟩ := tree.normalization_total (env := env) words (Nat.lt_succ_self size)
-      exact ⟨size + 1, result, fun _ enough => run_embeds_open ran enough⟩
+      exact open_run_total tree words
   | delta found _ ih =>
       obtain ⟨needed, result, terminates⟩ := ih (Satisfies.empty (words := fun _ => 0))
       have closedDecl := (wf.globals _ _ found).2.1
@@ -364,6 +416,68 @@ theorem Tree.run_total (wf : UnifiedProgram.EnvWellFormed env) (source : Tree en
       | succ fuel =>
           simpa [Term.transport, Term.subst, substArgs, Op.binders, liftSub, run?, exposed]
             using terminates fuel (by omega)
+  | @less entries _ left _ right no yes leftWord rightWord _ _ yesIH noIH =>
+      obtain ⟨leftDepth, _, leftRan⟩ := leftWord.run_total valuation
+      obtain ⟨rightDepth, _, rightRan⟩ := rightWord.run_total valuation
+      have choose (fuel : Nat) (leftFuel : leftDepth ≤ fuel + 1) (rightFuel : rightDepth ≤ fuel + 1) :
+          run? env (fuel + 1) ((Term.ifLt left.toTerm right.toTerm yes no).subst (closing entries words)) =
+            run? env fuel (if left.eval words < right.eval words then
+              (yes.subst (single (.decide left.toTerm right.toTerm))).subst (closing entries words)
+              else no.subst (closing entries words)) := by
+        simp only [Term.ifLt, Term.subst, substArgs, Op.binders, liftSub]
+        rw [run?, ComparisonWord.select?, leftRan _ leftFuel, rightRan _ rightFuel]
+        simp only [bind, Option.bind, pure]
+        split
+        · have ready := compare_subst yes (.decide left.toTerm right.toTerm) (closing entries words)
+          simpa only [Term.decide, Term.subst, substArgs, Op.binders, liftSub] using
+            congrArg (run? env fuel) ready
+        · rfl
+      by_cases ordered : left.eval words < right.eval words
+      · obtain ⟨needed, result, terminates⟩ := yesIH valuation
+        refine ⟨max (max leftDepth rightDepth) (needed + 1), result, fun fuel enough => ?_⟩
+        cases fuel with
+        | zero => omega
+        | succ fuel =>
+            rw [choose _ (by omega) (by omega), ite_eq_left ordered]
+            exact terminates fuel (by omega)
+      · obtain ⟨needed, result, terminates⟩ := noIH valuation
+        refine ⟨max (max leftDepth rightDepth) (needed + 1), result, fun fuel enough => ?_⟩
+        cases fuel with
+        | zero => omega
+        | succ fuel =>
+            rw [choose _ (by omega) (by omega), ite_eq_right ordered]
+            exact terminates fuel (by omega)
+  | @equal entries _ left _ right no yes leftWord rightWord _ _ yesIH noIH =>
+      obtain ⟨leftDepth, _, leftRan⟩ := leftWord.run_total valuation
+      obtain ⟨rightDepth, _, rightRan⟩ := rightWord.run_total valuation
+      have choose (fuel : Nat) (leftFuel : leftDepth ≤ fuel + 1) (rightFuel : rightDepth ≤ fuel + 1) :
+          run? env (fuel + 1) ((Term.ifEq left.toTerm right.toTerm yes no).subst (closing entries words)) =
+            run? env fuel (if left.eval words = right.eval words then
+              (yes.subst (single (.refl left.toTerm))).subst (closing entries words)
+              else no.subst (closing entries words)) := by
+        simp only [Term.ifEq, Term.subst, substArgs, Op.binders, liftSub]
+        rw [run?, ComparisonWord.select?, leftRan _ leftFuel, rightRan _ rightFuel]
+        simp only [bind, Option.bind, pure]
+        split
+        · have ready := compare_subst yes (.refl left.toTerm) (closing entries words)
+          simpa only [Term.refl, Term.subst, substArgs, Op.binders, liftSub] using
+            congrArg (run? env fuel) ready
+        · rfl
+      by_cases same : left.eval words = right.eval words
+      · obtain ⟨needed, result, terminates⟩ := yesIH valuation
+        refine ⟨max (max leftDepth rightDepth) (needed + 1), result, fun fuel enough => ?_⟩
+        cases fuel with
+        | zero => omega
+        | succ fuel =>
+            rw [choose _ (by omega) (by omega), ite_eq_left same]
+            exact terminates fuel (by omega)
+      · obtain ⟨needed, result, terminates⟩ := noIH valuation
+        refine ⟨max (max leftDepth rightDepth) (needed + 1), result, fun fuel enough => ?_⟩
+        cases fuel with
+        | zero => omega
+        | succ fuel =>
+            rw [choose _ (by omega) (by omega), ite_eq_right same]
+            exact terminates fuel (by omega)
 
 /-- Actual local typing and the authentic mixed history produce a typed
 finite result. Its exact requested annotation is closed with the source. -/
@@ -453,5 +567,91 @@ theorem checked_prior_global_application :
     checked_normalization history (Satisfies.empty (words := fun _ => 0)) appliedTree checked
   exact ⟨admitted, by cbv,
     by simpa only [show requested.subst (closing [] (fun _ => 0)) = requested by cbv] using truth⟩
+
+private def comparisonType : Term := .lt (.natural 0) (.natural 1)
+private def comparisonProof : Term := .decide (.natural 0) (.natural 1)
+private def comparisonFallback : Term := .ltAdd (.natural 0) (.natural 1) (.natural 0) comparisonProof
+private def comparisonMotive : Term := .lam false .u64 comparisonType
+private def compared : Expr := .add (.var 0) (.literal 0)
+private def threshold : Expr := .add (.literal 1) (.literal 2)
+private def comparisonBody : Term := .ifLt compared.toTerm threshold.toTerm
+  (.strict (.var 0) comparisonProof)
+  (.ifEq compared.toTerm (.natural 3) (.transport comparisonMotive (.var 0) comparisonProof) comparisonFallback)
+private def comparisonDeclaration : GlobalDeclaration :=
+  ⟨.pi false .u64 comparisonType, .lam false .u64 comparisonBody⟩
+private def comparisonWorld : Environment := ⟨#[comparisonDeclaration], #[]⟩
+private def comparisonCall (input : Nat) : Term := .app (global 0) (.natural input)
+
+private theorem comparisonTree (bound : input < 2^64) : Tree comparisonWorld [] (comparisonCall input) := by
+  refine .globalCall (.delta rfl .lambda) (.literal bound) ?_
+  have operand : ComparisonWord.Operand [.scalar false] (2^64 - 1 + 0) compared :=
+    .add (.slot .here) (.literal (by decide)) (by decide)
+  have limit : ComparisonWord.Operand [.scalar false] (1 + 2) threshold :=
+    .add (.literal (by decide)) (.literal (by decide)) (by decide)
+  refine .less operand limit ?_ ?_
+  · simp only [Term.strict, comparisonProof, Term.decide, Term.natural, Term.subst,
+      substArgs, Op.binders, liftSub, single]
+    exact .strict (.terminal (.arithmetic .decide))
+  · refine .equal (right := .literal 3) operand (.literal (by decide)) ?_ ?_
+    · simp only [Term.transport, comparisonMotive, comparisonType, comparisonProof,
+        Term.lam, Term.u64, Term.lt, Term.decide, Term.natural, Term.subst, substArgs, Op.binders, liftSub, single]
+      exact .transport (.reflexive (.refl (.add (.var .here) (.literal (by decide)))))
+        (.terminal (.arithmetic .decide))
+    · exact .terminal (.arithmetic (.ltAdd (.literal (by decide)) (.literal (by decide)) (.literal (by decide)) .decide))
+
+/-- An authenticated callable compares its original bound scalar. Inputs
+below, equal to, and above the limit select the respective checked proofs.
+The equal branch eliminates a Transport using the equality it just proved. -/
+theorem checked_prior_global_comparisons :
+    PureMixedAdmission.checkProgram ⟨32, 32, 32, 8192⟩ [comparisonDeclaration] [] = some comparisonWorld ∧
+    run? comparisonWorld 8 (comparisonCall 2) = some comparisonProof ∧
+    run? comparisonWorld 8 (comparisonCall 3) = some comparisonProof ∧
+    run? comparisonWorld 8 (comparisonCall 4) = some comparisonFallback ∧
+    UniversalTruth comparisonWorld comparisonType := by
+  have admitted : PureMixedAdmission.checkProgram ⟨32, 32, 32, 8192⟩ [comparisonDeclaration] [] =
+      some comparisonWorld := by cbv
+  have checked : PureTyping.Checker.check? comparisonWorld limits.typingFuel limits.conversionFuel limits.budget []
+      (comparisonCall 3) comparisonType = some .prop := by cbv
+  have history := PureMixedAdmission.checkProgram_sound admitted
+  obtain ⟨_, _, _, _, truth⟩ := checked_normalization history (Satisfies.empty (words := fun _ => 0))
+    (comparisonTree (input := 3) (by decide)) checked
+  exact ⟨admitted, by cbv, by cbv, by cbv,
+    by simpa only [show comparisonType.subst (closing [] (fun _ => 0)) = comparisonType by cbv] using truth⟩
+
+private def hypothesisEntries : List Entry := [.less (.var 0) (.literal 4), .scalar false]
+private def hypothesisWords : Nat → Nat
+  | 1 => 2
+  | _ => 0
+
+private theorem hypothesisValuation : Satisfies hypothesisEntries hypothesisWords :=
+  .less (.var .here) (.literal (by decide)) (by decide) (.scalar (by decide) .empty)
+
+private def increment : Expr := .add (.var 1) (.literal 1)
+private def hypothesisType : Term := .lt increment.toTerm (.natural 5)
+private def hypothesisTerm : Term := .ifLt increment.toTerm (.natural 5) (.var 0)
+  (.ltAdd (.var 1) (.natural 4) (.natural 1) (.var 0))
+
+private theorem hypothesisTree : Tree .empty hypothesisEntries hypothesisTerm := by
+  have operand : ComparisonWord.Operand hypothesisEntries (3 + 1) increment :=
+    .add (.cappedSlot (.assume .here) (by decide)) (.literal (by decide)) (by decide)
+  refine .less (right := .literal 5) operand (.literal (by decide)) ?_ ?_
+  · simp only [Term.subst, single]
+    exact .terminal (.arithmetic .decide)
+  · exact .terminal (.arithmetic (.ltAdd (.var (.there .here))
+      (.literal (by decide)) (.literal (by decide)) (.assume .here)))
+
+/-- The erased source hypothesis supplies the cap for a positive addition
+to an otherwise arbitrary U64 slot. The selected proof keeps the original
+addition expression as an operand of Decide. -/
+theorem checked_hypothesis_capped_comparison :
+    run? .empty 4 (hypothesisTerm.subst (closing hypothesisEntries hypothesisWords)) =
+      some (.decide (.uadd (.natural 2) (.natural 1)) (.natural 5)) ∧
+    UniversalTruth .empty (hypothesisType.subst (closing hypothesisEntries hypothesisWords)) := by
+  have history := PureMixedAdmission.checkProgram_sound
+    (show PureMixedAdmission.checkProgram ⟨32, 32, 32, 8192⟩ [] [] = some .empty by cbv)
+  have checked : PureTyping.Checker.check? .empty limits.typingFuel limits.conversionFuel limits.budget
+      (context hypothesisEntries) hypothesisTerm hypothesisType = some .prop := by cbv
+  obtain ⟨_, _, _, _, truth⟩ := checked_normalization history hypothesisValuation hypothesisTree checked
+  exact ⟨by cbv,truth⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.GlobalProofNormalization
