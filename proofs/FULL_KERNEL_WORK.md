@@ -3491,6 +3491,16 @@ agree on the nine-tick successful paths and on the array prefix at tick 6.
 The focused build passed 427 jobs and its four-declaration audit used only
 standard Lean axioms.
 
+### Metered store and release inference
+
+`Store` exposes the checked buffer length, checks its index and signed value
+in order, and builds the original dependent inequality before visiting the
+proof. `Free` checks the owned operand and returns the original checked tail
+type. Lean and the rebuilt compiler agree on the retained inequality at
+tick 21 and on the successful 40-tick store and 44-tick release paths.
+The focused build passed 427 jobs and the three-declaration audit used only
+standard Lean axioms.
+
 ### Ghost inference of an impossible case
 
 `Absurd` checks the requested type's sort, exposes the evidence's original

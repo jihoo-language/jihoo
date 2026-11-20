@@ -10564,3 +10564,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_checked_refinement_closure_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.RefinementWord.representation_unique
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_refinement_closure_witness_returns
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_buffer_operations_infer_original_lengths
