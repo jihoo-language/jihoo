@@ -10656,3 +10656,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.loop_refines
 #print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.open_telescope_rows_and_cost
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples.recursive_owner_return_schedule
+#print axioms Jihoo.NativeKernel.NativeCoreGhostTakeInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostTakeInference.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostTakeExamples.take_checks_original_binders_and_result

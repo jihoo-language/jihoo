@@ -890,6 +890,42 @@ fn iteration_callback_types() {
     assert(proof.normal(3, core.DEPTH).is_err(), "Loop's three shifts use three ticks")
 }
 
+fn taking_fixture() -> core.Core {
+    var c = owner_return_fixture()
+    let span = diag.Span.nowhere()
+    let inner = c.add(core.Term.Lam(false, 2, 5), span).unwrap()
+    let outer = c.add(core.Term.Lam(false, 1, inner), span).unwrap()
+    c.add(core.Term.Take(7, outer), span).unwrap()
+    let subject = c.add(core.Term.Var(0), span).unwrap()
+    let allocation = c.add(core.Term.Alloc(subject, 5), span).unwrap()
+    let escaping_inner = c.add(core.Term.Lam(false, 2, allocation), span).unwrap()
+    let escaping_outer = c.add(core.Term.Lam(false, 1, escaping_inner), span).unwrap()
+    c.add(core.Term.Take(7, escaping_outer), span).unwrap()
+    let erased_inner = c.add(core.Term.Lam(true, 2, 5), span).unwrap()
+    let erased_outer = c.add(core.Term.Lam(false, 1, erased_inner), span).unwrap()
+    c.add(core.Term.Take(7, erased_outer), span).unwrap()
+    c
+}
+
+fn take_continuation_inference() {
+    var subject = taking_fixture()
+    spend(&subject, 999905)
+    let result = subject.infer(16, [], true, 32).unwrap()
+    assert(result == 44 && subject.node_count() == 47 && subject.term(result) == core.Term.I64,
+        "Take keeps the original caller's signed type")
+    assert_spent(&subject, "Take checks the original continuation and body in ninety-five ticks")
+
+    var escaping = taking_fixture()
+    assert(match escaping.infer(21, [], true, 32) {
+        Err(e) => e.msg == "core: take's type depends on neither the owner nor its result", _ => false
+    }, "a result type cannot retain the callback's result binder")
+
+    var erased = taking_fixture()
+    assert(match erased.infer(24, [], true, 32) {
+        Err(e) => e.msg == "core: take's result is erased as it was given", _ => false
+    }, "Take's callback cannot erase a relevant result")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -920,6 +956,7 @@ fn main() -> i32 {
     code_local_inference()
     code_word_definition()
     owner_return_inference()
+    take_continuation_inference()
     iteration_callback_types()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0

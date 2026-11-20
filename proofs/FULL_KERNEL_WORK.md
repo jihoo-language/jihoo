@@ -4055,3 +4055,17 @@ inside any supported recursive branch. The recursive fixtures reproduce
 the complete previously measured native schedules and the rejected
 borrowed-result case. The focused build passed 436 jobs and the audits of
 the soundness theorem and the new fixture use only standard Lean axioms.
+
+### Checking Take's written continuation and result scope
+
+The metered `Take` branch exposes the subject's owner-return type and
+checks both written lambda annotations and the original erasure flag before
+inferring the callback. The second annotation is compared with the shifted
+motive applied to the bound owner. After normalization, the successful
+result lowers through both callback bindings and types at the caller scope.
+
+The native and Lean checks agree on 95 ticks, the selected result row, and
+the graph length. Both reject a callback whose result type retains the local
+word and a callback that changes erasure. The focused build passed 440 jobs
+and the three new declarations use only standard Lean axioms. The branch is
+available separately from the recursive dispatch.
