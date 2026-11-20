@@ -10,7 +10,8 @@ namespace Jihoo.NativeKernel.NativeCorePureStructuralNormal
 open NativeArena NativeProgramWire
 open Environment.LoanTyping.MixedProgram (History)
 open NativeCoreGlobalNormal (Atomic atomicOp runPure runPure_conversion runPure_expanded_atom
-  runPure_step_bounds head discardRest discard_target alias_target checked_definition_at)
+  runPure_step_bounds head discardRest discard_target discard_target_fully_retained alias_target checked_definition_at)
+open NativeCoreCompare (FullyRetained children_kept_of_length)
 open NativeKernel.Conversion (ListRel treeDepth treeSize)
 
 /-- A pure normalization branch that rebuilds its constructor directly from
@@ -416,6 +417,16 @@ private theorem atom_dimensions (atom : Atomic term) : treeSize term = 1 ∧ tre
   | var => simp [treeSize, treeDepth]
   | node op args => cases args <;> simp_all [Atomic, treeSize, treeDepth]
 
+private theorem atom_fully_retained (atom : Atomic term) : FullyRetained term := by
+  cases term with
+  | var index => exact .var index
+  | node op args =>
+      cases args with
+      | cons => contradiction
+      | nil =>
+          cases op <;> simp [Atomic, atomicOp] at atom
+          all_goals exact .node (by intro impossible; cases impossible) rfl rfl (by simp)
+
 private theorem child_depths_le {terms : List Term} (bounded : ∀ child ∈ terms, treeDepth child ≤ depth)
     (seed : initial ≤ depth) : (terms.map treeDepth).foldl max initial ≤ depth := by
   induction terms generalizing initial with
@@ -434,22 +445,27 @@ private abbrev TermResult (env : Environment) (source : Term) (depth initial : N
     (arena : Arena) (spent selected : Nat) : Prop :=
   ∃ result, Normal result ∧ Represents arena selected result ∧
     treeDepth result ≤ depth ∧ initial + treeSize result ≤ spent ∧
-    Environment.RawValue.Forward env (EnvironmentDelta.expand env source) result
+    Environment.RawValue.Forward env (EnvironmentDelta.expand env source) result ∧
+    (FullyRetained (EnvironmentDelta.expand env source) → FullyRetained result)
 
 private abbrev ChildrenResult (env : Environment) (inputs : List Term) (arity depth initial : Nat)
     (arena : Arena) (spent : Nat) (selected : List Nat) : Prop :=
   ∃ outputs, (∀ child ∈ outputs, Normal child ∧ treeDepth child ≤ depth) ∧
     RepresentsList arena selected outputs ∧ selected.length = arity ∧ initial + (outputs.map treeSize).sum ≤ spent ∧
-    ListRel (Environment.RawValue.Forward env) (inputs.map (EnvironmentDelta.expand env)) outputs
+    ListRel (Environment.RawValue.Forward env) (inputs.map (EnvironmentDelta.expand env)) outputs ∧
+    ((∀ child ∈ inputs, FullyRetained (EnvironmentDelta.expand env child)) →
+      ∀ child ∈ outputs, FullyRetained child)
 
 private theorem Refines.prepend (rest : Refines arena computed (TermResult env tail depth (initial + 1)))
     (first : Environment.RawValue.Forward env (EnvironmentDelta.expand env source)
-      (EnvironmentDelta.expand env tail)) :
+      (EnvironmentDelta.expand env tail))
+    (retains : FullyRetained (EnvironmentDelta.expand env source) →
+      FullyRetained (EnvironmentDelta.expand env tail)) :
     Refines arena computed (TermResult env source (depth + 1) initial) := by
   refine ⟨rest.kept, rest.backward, ?_⟩
   intro selected found
-  obtain ⟨result, normal, represented, height, work, changed⟩ := rest.success selected found
-  exact ⟨result, normal, represented, by omega, by omega, first.trans changed⟩
+  obtain ⟨result, normal, represented, height, work, changed, fully⟩ := rest.success selected found
+  exact ⟨result, normal, represented, by omega, by omega, first.trans changed, fun h => fully (retains h)⟩
 
 private theorem failure_refines (kept : Prefix arena current) (backward : Backward arena → Backward current) :
     Refines arena (⟨current, .error reason, spent⟩ : Outcome α) valid :=
@@ -485,7 +501,8 @@ private theorem leaf_refines (aligned : RepresentsDefinitions arena roots defini
         | succ depth => omega
       have charged := (runPure_step_bounds arena roots visible limit depth steps root).1
       rw [ran] at charged
-      exact ⟨term, .atom atom, represented, by rwa [height], by rw [size]; exact charged, changed⟩
+      exact ⟨term, .atom atom, represented, by rwa [height], by rw [size]; exact charged,
+        changed, fun _ => atom_fully_retained atom⟩
 
 private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena roots definitions)
     (source : RepresentsList arena refs inputs)
@@ -498,7 +515,7 @@ private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena ro
       refine ⟨Prefix.refl _, id, ?_⟩
       intro selected found
       cases found
-      exact ⟨[], by simp, .nil, rfl, by simp [nestedChildren], .nil⟩
+      exact ⟨[], by simp, .nil, rfl, by simp [nestedChildren], .nil, by simp⟩
   | cons root rest ih =>
       cases source with
       | cons head tail =>
@@ -519,17 +536,21 @@ private theorem nestedChildren_refines (aligned : RepresentsDefinitions arena ro
               | ok children =>
                   simp only [suffix, Except.map, Except.ok.injEq] at found
                   subst selected
-                  obtain ⟨out, normal, represented, height, work, converted⟩ := first.success child choice
-                  obtain ⟨outputs, allNormal, representedLater, lengths, laterWork, conversions⟩ :=
+                  obtain ⟨out, normal, represented, height, work, converted, firstFull⟩ := first.success child choice
+                  obtain ⟨outputs, allNormal, representedLater, lengths, laterWork, conversions, restFull⟩ :=
                     later.success children suffix
                   refine ⟨out :: outputs, ?_, .cons (represented.frame later.kept) representedLater,
-                    congrArg Nat.succ lengths, ?_, .cons converted conversions⟩
+                    congrArg Nat.succ lengths, ?_, .cons converted conversions, ?_⟩
                   · intro term occurrence
                     rcases List.mem_cons.mp occurrence with rfl | occurrence
                     · exact ⟨normal, height⟩
                     · exact allNormal term occurrence
                   · simp only [List.map_cons, List.sum_cons]
                     omega
+                  · intro retained term occurrence
+                    rcases List.mem_cons.mp occurrence with rfl | occurrence
+                    · exact firstFull (retained _ List.mem_cons_self)
+                    · exact restFull (fun term member => retained term (List.mem_cons_of_mem _ member)) term occurrence
 
 private theorem finishNested_refines (read : arena[root]? = some (.node op before))
     (arity : before.length = op.arity)
@@ -548,14 +569,15 @@ private theorem finishNested_refines (read : arena[root]? = some (.node op befor
           exact failure_refines normalized.kept normalized.backward
       | ok row =>
           obtain ⟨extended, selected⟩ := row
-          obtain ⟨outputs, allNormal, represented, length, used, changed⟩ := normalized.success refs childResult
+          obtain ⟨outputs, allNormal, represented, length, used, changed, fully⟩ :=
+            normalized.success refs childResult
           obtain ⟨kept, result, backward, _⟩ :=
             finish_refines (normalized.kept.lookup read) represented (length.trans arity) appended
           simp only [finishNested, childResult, appended]
           refine ⟨normalized.kept.trans kept, fun h => backward (normalized.backward h), ?_⟩
           intro index found
           cases found
-          refine ⟨_, .node supported (fun child member => (allNormal child member).1), result, ?_, ?_, ?_⟩
+          refine ⟨_, .node supported (fun child member => (allNormal child member).1), result, ?_, ?_, ?_, ?_⟩
           · have bounded := child_depths_le (fun child member => (allNormal child member).2)
                 (Nat.zero_le depth)
             simp only [treeDepth]
@@ -563,6 +585,15 @@ private theorem finishNested_refines (read : arena[root]? = some (.node op befor
           · simpa only [treeSize, ← Nat.add_assoc] using used
           · rw [EnvironmentDelta.expand_ordinary ordinary, EnvironmentDelta.expandArgs_map]
             exact .node op changed
+          · intro source
+            rw [EnvironmentDelta.expand_ordinary ordinary, EnvironmentDelta.expandArgs_map] at source
+            cases source with
+            | node notStrict allKept sourceArity sourceChildren =>
+                have outputArity := (NativeCoreIdentical.represented_length represented).symm.trans (length.trans arity)
+                refine .node notStrict (children_kept_of_length (sourceArity.trans outputArity.symm) allKept)
+                  outputArity (fully ?_)
+                intro term member
+                exact sourceChildren _ (List.mem_map.mpr ⟨term, member, rfl⟩)
 
 private theorem structural_ordinary (supported : structural op = true) : GlobalEnvironment.ordinary op = true := by
   cases op <;> simp_all [structural, GlobalEnvironment.ordinary]
@@ -590,6 +621,7 @@ private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roo
                 obtain ⟨_, represented, change, _⟩ :=
                   discard_target (env := env) (.node read arity children) read skip
                 exact (ih aligned represented).prepend change
+                  (discard_target_fully_retained (.node read arity children) read skip represented)
             | none =>
                 cases kind : head (.node op refs) with
                 | atomic | outside =>
@@ -610,7 +642,7 @@ private theorem runNested_refines_aux (aligned : RepresentsDefinitions arena roo
                             ite_eq_right hidden, lookup]
                           obtain ⟨_, represented, same⟩ :=
                             alias_target aligned history (.node read arity children) read kind lookup
-                          exact (ih aligned represented).prepend (by rw [same]; exact .refl)
+                          exact (ih aligned represented).prepend (by rw [same]; exact .refl) (by rw [same]; exact id)
 
 /-- Arbitrarily nested supported structural nodes preserve arena prefixes and
 backward references, even on error. A successful reference represents a pure
@@ -625,7 +657,7 @@ theorem runNested_refines (aligned : RepresentsDefinitions arena roots definitio
     (initial := initial) aligned history source
   refine ⟨proof.kept, proof.backward, ?_⟩
   intro selected found
-  obtain ⟨normalized, _, represented, _, _, changed⟩ := proof.success selected found
+  obtain ⟨normalized, _, represented, _, _, changed, _⟩ := proof.success selected found
   have expanded : Environment.RawValue.Forward env term (EnvironmentDelta.expand env term) :=
     .old (.old (.old (EnvironmentDelta.expand_forward env term)))
   exact ⟨normalized, represented, expanded.trans changed⟩
@@ -640,8 +672,23 @@ theorem runNested_normal_form (aligned : RepresentsDefinitions arena roots defin
       treeDepth normalized ≤ depth ∧ initial + treeSize normalized ≤ computed.steps := by
   have proof := runNested_refines_aux (visible := visible) (limit := limit) (depth := depth)
     (initial := initial) aligned history source
-  obtain ⟨normalized, normal, represented, height, work, _⟩ := proof.success selected success
+  obtain ⟨normalized, normal, represented, height, work, _, _⟩ := proof.success selected success
   exact ⟨normalized, normal, represented, height, work⟩
+
+/-- Successful normalization preserves full retention of the expanded input.
+The property is tied to the represented result at the actual returned ref. -/
+theorem runNested_result_fully_retained (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env) (source : Represents arena root term)
+    (retained : FullyRetained (EnvironmentDelta.expand env term))
+    (success : (runNested roots visible limit depth arena initial root).result = .ok selected)
+    (result : Represents (runNested roots visible limit depth arena initial root).arena selected output) :
+    FullyRetained output := by
+  have proof := runNested_refines_aux (visible := visible) (limit := limit) (depth := depth)
+    (initial := initial) aligned history source
+  obtain ⟨_, _, represented, _, _, _, outputRetained⟩ := proof.success selected success
+  have same := represented.unique result
+  rw [← same]
+  exact outputRetained retained
 
 private theorem depth_positive (term : Term) : 1 ≤ treeDepth term := by
   cases term <;> simp only [treeDepth] <;> omega

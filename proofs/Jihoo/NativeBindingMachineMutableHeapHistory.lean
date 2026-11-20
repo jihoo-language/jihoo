@@ -167,4 +167,114 @@ theorem reachable_run_released_owner (term : Term) (prefixFuel suffixFuel : Nat)
   obtain ⟨beforeLimit,dead⟩ := HeapLeases.dead_steps old released (SizedBufferHeap.steps_project steps)
   exact ⟨beforeLimit,dead,(SizedBufferHeap.lengths_preserved old steps).2⟩
 
+private theorem step_owner_live_iff (old : object < before.heap.nextObject)
+    (step : SizedBufferHeap.Step before event after) :
+    after.heap.live object = true ↔ before.heap.live object = true ∧ event ≠ .free object := by
+  cases step with
+  | alloc => simp [SizedBufferHeap.allocate,HeapLeases.put,Nat.ne_of_lt old]
+  | free =>
+      simp only [SizedBufferHeap.release,HeapLeases.put]
+      split
+      · rename_i same
+        simp [same]
+      · rename_i other
+        simp [Ne.symm other]
+  | beginLease => simp [SizedBufferHeap.lend]
+  | close => simp [SizedBufferHeap.close]
+  | read => simp
+
+private theorem lifecycle_owner_live_iff (old : object < before.heap.nextObject)
+    (steps : SizedBufferHeap.Steps before events after) :
+    after.heap.live object = true ↔ before.heap.live object = true ∧ .free object ∉ events := by
+  revert old
+  induction steps with
+  | nil => simp
+  | cons step _ ih =>
+      intro old
+      rw [ih (SizedBufferHeap.length_preserved old step).1,step_owner_live_iff old step]
+      simp only [List.mem_cons,not_or]
+      constructor
+      · rintro ⟨⟨initial,notStep⟩,notTail⟩
+        exact ⟨initial,Ne.symm notStep,notTail⟩
+      · rintro ⟨initial,notStep,notTail⟩
+        exact ⟨⟨initial,Ne.symm notStep⟩,notTail⟩
+
+/-- An earlier allocation is live exactly when it was live at the first
+snapshot and has no release event in the actual intervening execution. -/
+theorem reachable_run_owner_live_iff (term : Term) (prefixFuel suffixFuel : Nat)
+    (old : object < (run prefixFuel (initial term)).state.heap.metadata.heap.nextObject) :
+    let before := (run prefixFuel (initial term)).state
+    let suffix := run suffixFuel before
+    suffix.state.heap.metadata.heap.live object = true ↔
+      before.heap.metadata.heap.live object = true ∧ .free object ∉ suffix.events.filterMap Event.lifecycle? :=
+  lifecycle_owner_live_iff old (run_lifecycle (initial_run_invariant term prefixFuel).1 suffixFuel)
+
+private theorem literal_store_released_steps (state : State) (evaluating : state.control = .evaluate actual)
+    (shape : actual.term = .store (.var owner) (.natural offset) (.integer value) evidence)
+    (stored : actual.values[owner]? = some (some (.owner object)))
+    (offsetWidth : offset < 2^64) (valueWidth : ValueReduction.signed64 value)
+    (dead : state.heap.metadata.heap.live object = false) :
+    run 7 state = ⟨⟨state.heap,.fault .deadOwner,[],
+      (.value object offset,state.stack) :: state.pending⟩,[],7⟩ := by
+  have noWrite : state.heap.store object offset (encodeInteger value) = none := by
+    unfold SizedBufferHeap.IndexedState.store
+    exact ite_eq_right (by intro guard; rw [dead] at guard; cases guard.1)
+  simp only [run,step,evaluating,shape,evaluateAction,Code.child,stored,executeLegacy,execute,
+    Option.map_none,returnAction,resumeBuffer,offsetWidth,valueWidth,ite_true,noWrite,ownedAccessFailure,dead]
+  rfl
+
+/-- For a real Store reached from a previously live owner world, the actual
+release history selects the outcome. Its sizes and reader inventory are
+recovered from execution. A released owner reaches the dead-owner fault,
+while a retained owner performs the exact write at the original Buffer type. -/
+theorem reachable_typed_literal_store_history (term : Term) (prefixFuel suffixFuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run suffixFuel (run prefixFuel (initial term)).state).state.control = .evaluate actual)
+    (view : CanonicalView actual source indices)
+    (typed : LoanClosingTyped env loans false source meanings type)
+    (sizes : OwnerSizes env (run prefixFuel (initial term)).state.heap.metadata source meanings)
+    (shape : actual.term = .store (.var owner) (.natural offset) (.integer value)
+      (.decide (.natural offset) (.natural count)))
+    (stored : actual.values[owner]? = some (some (.owner object)))
+    (previousLive : (run prefixFuel (initial term)).state.heap.metadata.heap.live object = true)
+    (coverage : LoanCoverage source loans (run suffixFuel (run prefixFuel (initial term)).state).state.activeStack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+2) env loans source.context source.term = some resource)
+    (budget : LoanTyping.ResourceQuantity.LoanBudget source.context.length loans resource) :
+    let suffix := run suffixFuel (run prefixFuel (initial term)).state
+    let state := suffix.state
+    if .free object ∈ suffix.events.filterMap Event.lifecycle? then
+      run 7 state = ⟨⟨state.heap,.fault .deadOwner,[],(.value object offset,state.stack) :: state.pending⟩,[],7⟩
+    else
+      ∃ heap,
+        run 7 state = ⟨⟨heap,.returned (.owner object),state.stack,state.pending⟩,
+          [.store object offset (encodeInteger value)],7⟩ ∧
+        heap.metadata = state.heap.metadata ∧ heap.metadata.length object = count ∧
+        LoanTyping.Conversion.Conv env (.buffer (.natural count)) type ∧
+        decodeInteger (heap.cell object offset) = value ∧
+        ∀ token index, heap.read token index = state.heap.read token index := by
+  let suffix := run suffixFuel (run prefixFuel (initial term)).state
+  let state := suffix.state
+  change (if .free object ∈ suffix.events.filterMap Event.lifecycle? then _ else _)
+  have initial := initial_run_invariant term prefixFuel
+  have old := initial.1.allocated object previousLive
+  have liveness := reachable_run_owner_live_iff term prefixFuel suffixFuel old
+  by_cases released : .free object ∈ suffix.events.filterMap Event.lifecycle?
+  · rw [ite_eq_left released]
+    have dead : state.heap.metadata.heap.live object = false := by
+      cases current : state.heap.metadata.heap.live object with
+      | false => rfl
+      | true => exact False.elim ((liveness.mp current).2 released)
+    have sourceShape : source.term = .store (.var (indices owner)) (.natural offset) (.integer value)
+        (.decide (.natural offset) (.natural count)) := by
+      rw [← view.termEq,shape]
+      simp only [Term.rename,renameArgs,Op.binders,liftRenaming]
+    obtain ⟨_,_,sourceTyped,_⟩ := typed
+    rw [sourceShape] at sourceTyped
+    obtain ⟨_,_,offsetTyped,valueTyped,_,_⟩ := sourceTyped.store_inputs
+    exact literal_store_released_steps state evaluating shape stored offsetTyped.natural_bound valueTyped.integer_bound dead
+  · rw [ite_eq_right released]
+    have live : state.heap.metadata.heap.live object = true := liveness.mpr ⟨previousLive,released⟩
+    exact typed_literal_store state history (run_invariant suffixFuel initial) evaluating view typed
+      (reachable_run_owner_sizes term prefixFuel suffixFuel sizes) shape stored live coverage checked budget
+
 end Jihoo.NativeKernel.Environment.BindingMachine.Mutable

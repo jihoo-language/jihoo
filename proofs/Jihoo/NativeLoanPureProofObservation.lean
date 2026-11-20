@@ -1,4 +1,5 @@
 import Jihoo.NativeLoanPureArithmetic
+import Jihoo.NativeLoanProofComparison
 import Jihoo.NativeLoanProofTransportObservation
 
 /-! Observe closed or open ghost evidence using a bounded, typing-preserving
@@ -24,6 +25,7 @@ inductive Step (env : Environment) : Context → Term → Term → Prop where
       Step env ctx (.app function argument) (.app function result)
   | loop : RawLend.Conv env count (.natural n) → n < 2^64 →
       Step env ctx (.loop count motive initial body) (ProofLoop.unroll n initial body n)
+  | comparison : ProofComparison.Step env term result → Step env ctx term result
   | evidence {visit : Context → Term → Option Term} :
       (∀ {localCtx input output}, visit localCtx input = some output → Step env localCtx input output) →
       ProofTreeObservation.mapEvidence? (visit ctx) term = some result → Step env ctx term result
@@ -63,6 +65,7 @@ private theorem Step.native_preserves (step : Step env ctx term result)
       exact (HasType.app (functionTyped.ghost []) (ih argumentTyped) (Or.inl rfl)).convert
         ((raw_operand_conversion wf aligned _).trans converted)
   | loop count bound => exact ProofLoop.unroll_typed wf typed count bound
+  | comparison selected => exact selected.preserves wf typed
   | evidence _ mapped ih =>
       exact ProofTreeObservation.mapEvidence_preserves _ (fun source ran => ih ran source) typed mapped
 
@@ -76,11 +79,13 @@ theorem Step.preserves (step : Step env ctx term result) (wf : UnifiedProgram.En
   | pi binder body _ =>
       cases step with
       | stay => exact .pi binder body
+      | comparison selected => cases selected
       | evidence _ mapped => contradiction
   | lam binder formed body ih =>
       cases step with
       | stay => exact .lam binder formed body
       | lambda inner => exact .lam binder formed (ih inner)
+      | comparison selected => cases selected
       | evidence _ mapped => contradiction
   | app callee formed argument ih =>
       cases step with
@@ -95,6 +100,7 @@ theorem Step.preserves (step : Step env ctx term result) (wf : UnifiedProgram.En
       | operand inner aligned =>
           exact .convert (.app callee formed (inner.native_preserves wf argument))
             (PureTyping.application_result_formed wf formed argument) (.old (raw_operand_conversion wf aligned _))
+      | comparison selected => cases selected
       | evidence _ mapped => contradiction
 
 private def select (env : Environment) (typingFuel : Nat) (visit : Context → Term → Option Term)
@@ -213,18 +219,21 @@ private inductive Positions where
   | heads
   | operands
   | proofs
+  | comparisons
 
 private def step? (env : Environment) (limits : Limits) (positions : Positions) : Nat → Context → Term → Option Term
   | 0, _, _ => none
   | depth + 1, ctx, term =>
       let visit := step? env limits positions depth
-      let head := select env limits.typingFuel visit ctx term
-      let argument := (selectOperand env limits visit ctx term).orElse (fun _ => head)
+      let head (_ : Unit) := select env limits.typingFuel visit ctx term
+      let argument (_ : Unit) := (selectOperand env limits visit ctx term).orElse head
+      let proof (_ : Unit) := (selectLoop env limits term).orElse (fun _ => selectEvidence visit ctx term)
       match positions with
-      | .heads => head
-      | .operands => argument
-      | .proofs => argument.orElse
-          (fun _ => (selectLoop env limits term).orElse (fun _ => selectEvidence visit ctx term))
+      | .heads => head ()
+      | .operands => argument ()
+      | .proofs => (argument ()).orElse proof
+      | .comparisons => (argument ()).orElse
+          (fun _ => (ProofComparison.select? env limits.budget limits.conversionFuel term).orElse proof)
 
 private theorem step?_sound (stepped : step? env limits positions depth ctx term = some result) :
     Step env ctx term result := by
@@ -237,15 +246,17 @@ private theorem step?_sound (stepped : step? env limits positions depth ctx term
       have argument (selected : (selectOperand env limits visit ctx term).orElse
           (fun _ => select env limits.typingFuel visit ctx term) = some result) : Step env ctx term result :=
         (orElse_result selected).elim (selectOperand_sound (fun found => ih found)) head
+      have proof (selected : (selectLoop env limits term).orElse
+          (fun _ => selectEvidence visit ctx term) = some result) : Step env ctx term result :=
+        (orElse_result selected).elim selectLoop_sound (selectEvidence_sound (fun found => ih found))
       cases positions with
       | heads => exact head stepped
       | operands => exact argument stepped
-      | proofs =>
+      | proofs => exact (orElse_result stepped).elim argument proof
+      | comparisons =>
           rcases orElse_result stepped with selected | selected
           · exact argument selected
-          · rcases orElse_result selected with loop | evidence
-            · exact selectLoop_sound loop
-            · exact selectEvidence_sound (fun found => ih found) evidence
+          · exact (orElse_result selected).elim (fun comparison => .comparison (ProofComparison.select?_sound comparison)) proof
 
 private def observePositions? (env : Environment) (limits : Limits) (ctx : Context) (positions : Positions) :
     Nat → Term → Option Term
@@ -272,19 +283,22 @@ private theorem observePositions?_sound (wf : UnifiedProgram.EnvWellFormed env)
       · obtain ⟨next, stepped, checked⟩ := Option.bind_eq_some_iff.mp observed
         exact ih ((step?_sound stepped).preserves wf typed) checked
 
-/-- Keep successful head and operand observations. The final replay can also
-unroll computed finite proof induction and descend into arithmetic evidence. -/
+/-- The previous successful paths keep their result. The final replay can
+also select a computed comparison branch. -/
 def observe? (env : Environment) (limits : Limits) (ctx : Context) (fuel : Nat) (term : Term) : Option Term :=
   (observePositions? env limits ctx .heads fuel term).orElse
     (fun _ => (observePositions? env limits ctx .operands fuel term).orElse
-      (fun _ => observePositions? env limits ctx .proofs fuel term))
+      (fun _ => (observePositions? env limits ctx .proofs fuel term).orElse
+        (fun _ => observePositions? env limits ctx .comparisons fuel term)))
 
 theorem observe?_sound (wf : UnifiedProgram.EnvWellFormed env) (typed : PureTyping.HasType env ctx term type)
     (observed : observe? env limits ctx fuel term = some result) :
     PureTyping.HasType env ctx result type ∧ Recognized env result := by
   rcases orElse_result observed with head | replay
   · exact observePositions?_sound wf typed head
-  · exact (orElse_result replay).elim (observePositions?_sound wf typed) (observePositions?_sound wf typed)
+  · rcases orElse_result replay with operands | proofs
+    · exact observePositions?_sound wf typed operands
+    · exact (orElse_result proofs).elim (observePositions?_sound wf typed) (observePositions?_sound wf typed)
 
 theorem checked_arithmetic_truth (wf : UnifiedProgram.EnvWellFormed env)
     (checked : PureTyping.Checker.check? env limits.typingFuel limits.conversionFuel limits.budget [] term type = some sort)
@@ -381,5 +395,41 @@ theorem checked_nested_induction :
       some inductionResidual := by cbv
   obtain ⟨typed, recognized⟩ := observe?_sound history.wellFormed (history.global_value_and_reference found).1 observed
   exact ⟨by cbv, observed, Semantics.PureArithmetic.recognized_fundamental history.wellFormed typed recognized⟩
+
+private def comparisonMotive : Term :=
+  .lam false .u64 (.lt (.uadd (.var 1) (.natural 0)) (.uadd (.var 1) (.natural 1)))
+private def comparisonEquality : Term := .ifEq (.natural 0) (.natural 0) (.var 0) (.refl (.natural 0))
+private def comparisonFunction : Term :=
+  .lam false .u64 (.ifLt (.uadd (.var 0) (.natural 0)) (.uadd (.var 0) (.natural 1)) (.var 0)
+    (.transport comparisonMotive comparisonEquality
+      (.ltAdd (.natural 0) (.natural 1) (.var 0) proof)))
+private def comparisonInput : Term := .app comparisonFunction (.natural 3)
+private def comparisonAnnotation : Term :=
+  .lt (.free (.alloc (.natural 1) (.integer 0)) (.natural 3)) (.natural 4)
+private def comparisonResidual : Term := .decide (.uadd (.natural 3) (.natural 0)) (.uadd (.natural 3) (.natural 1))
+
+/-- An actual beta step supplies the original operands of the comparison.
+The true branch uses its erased source evidence while keeping the dependent type. -/
+theorem checked_dependent_comparison :
+    observePositions? .empty limits [] .proofs 16 comparisonInput = none ∧
+    observe? .empty limits [] 16 comparisonInput = some comparisonResidual ∧
+      UniversalTruth .empty comparisonAnnotation := by
+  have checked : PureTyping.Checker.check? .empty limits.typingFuel limits.conversionFuel limits.budget []
+      comparisonInput comparisonAnnotation = some .prop := by cbv
+  have observed : observe? .empty limits [] 16 comparisonInput = some comparisonResidual := by cbv
+  exact ⟨by cbv, observed, checked_arithmetic_truth UnifiedProgram.EnvWellFormed.empty checked observed⟩
+
+private def equalityLeft : Term := .uadd (.natural 1) (.natural 1)
+private def equalityInput : Term := .ifEq equalityLeft (.natural 2) (.var 0) (.refl (.natural 2))
+private def equalityAnnotation : Term := .eq (.free (.alloc (.natural 1) (.integer 0)) (.natural 2)) (.natural 2)
+
+/-- Reflexivity from the computed true branch retains the left operand's
+source syntax, and the requested equality still includes the Free annotation. -/
+theorem checked_computed_equality_comparison :
+    observe? .empty limits [] 12 equalityInput = some (.refl equalityLeft) ∧ UniversalTruth .empty equalityAnnotation := by
+  have checked : PureTyping.Checker.check? .empty limits.typingFuel limits.conversionFuel limits.budget []
+      equalityInput equalityAnnotation = some .prop := by cbv
+  have observed : observe? .empty limits [] 12 equalityInput = some (.refl equalityLeft) := by cbv
+  exact ⟨observed, checked_arithmetic_truth UnifiedProgram.EnvWellFormed.empty checked observed⟩
 
 end Jihoo.NativeKernel.Environment.LoanTyping.PureProofObservation

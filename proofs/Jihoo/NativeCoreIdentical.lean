@@ -242,7 +242,8 @@ private theorem afterTrue_matches {P Q : Prop}
           simp only [afterTrue] at computed
           simpa only [accepted, true_and] using nextSpec counter result steps computed
 
-private theorem represented_length (children : RepresentsList arena refs terms) :
+/-- A represented list contains one source subtree per graph reference. -/
+theorem represented_length (children : RepresentsList arena refs terms) :
     refs.length = terms.length := by
   induction children using RepresentsList.rec (motive_1 := fun _ _ _ => True) with
   | var | node => trivial
@@ -362,6 +363,14 @@ theorem runArena_refines (left : Represents arena a first) (right : Represents a
   intro _ _ represented
   obtain ⟨node, read, matched⟩ := arena_view_matches represented
   exact ⟨nodeView node, by simp [read], matched⟩
+
+/-- Identity of two fully retained trees is equality of the entire terms. -/
+theorem runArena_reflects_fully_retained (left : Represents arena a first) (right : Represents arena b second)
+    (leftKept : FullyRetained first) (rightKept : FullyRetained second)
+    (computed : runArena arena limit depth initial a b = (.ok result, steps)) :
+    result = true ↔ first = second :=
+  (runArena_refines left right computed).trans
+    ⟨project_injective_of_fully_retained leftKept rightKept, congrArg project⟩
 
 /-- Every completed call on a represented version-6 pair returns exactly
 structural identity after Strict and proof-slot projection. -/

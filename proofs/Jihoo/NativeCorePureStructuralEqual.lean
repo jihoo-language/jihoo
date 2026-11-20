@@ -7,7 +7,8 @@ namespace Jihoo.NativeKernel.NativeCorePureStructuralEqual
 
 open NativeArena NativeProgramWire
 open Environment.LoanTyping.MixedProgram (History)
-open NativeCorePureStructuralNormal (runNested runNested_refines runNested_cost frameDefinitions)
+open NativeCorePureStructuralNormal (runNested runNested_refines runNested_cost frameDefinitions runNested_result_fully_retained)
+open NativeCoreCompare (FullyRetained project project_injective_of_fully_retained)
 
 inductive Error where
   | left (reason : NativeCorePureStructuralNormal.Error)
@@ -38,7 +39,15 @@ def Agrees (env : Environment) (arena : Arena) (first second : Term) (same : Boo
   ∃ left right firstNormal secondNormal,
     Represents arena left firstNormal ∧ Represents arena right secondNormal ∧
     Environment.RawValue.Forward env first firstNormal ∧ Environment.RawValue.Forward env second secondNormal ∧
-    (same = true ↔ NativeCoreCompare.project firstNormal = NativeCoreCompare.project secondNormal)
+    (same = true ↔ project firstNormal = project secondNormal)
+
+private def RetainedAgreement (env : Environment) (arena : Arena) (first second : Term) (same : Bool) : Prop :=
+  ∃ left right firstNormal secondNormal,
+    Represents arena left firstNormal ∧ Represents arena right secondNormal ∧
+    Environment.RawValue.Forward env first firstNormal ∧ Environment.RawValue.Forward env second secondNormal ∧
+    (FullyRetained (EnvironmentDelta.expand env first) → FullyRetained firstNormal) ∧
+    (FullyRetained (EnvironmentDelta.expand env second) → FullyRetained secondNormal) ∧
+    (same = true ↔ project firstNormal = project secondNormal)
 
 /-- Arena growth is charged to the shared counter. Starting within budget,
 equality can overspend by only the rejecting tick. A completed comparison
@@ -88,14 +97,12 @@ theorem run_cost (within : initial ≤ limit) :
             · cases completed
             · exact compared.2.2 _ rfl
 
-/-- Normalization and identity share the appended rows. Every completed
-comparison decides the equality of the normalized retained shapes. -/
-theorem run_refines (aligned : RepresentsDefinitions arena roots definitions)
+private theorem run_refines_retained (aligned : RepresentsDefinitions arena roots definitions)
     (history : History definitions families env)
     (left : Represents arena a first) (right : Represents arena b second) :
     let computed := run arena roots visible limit depth initial a b
     Prefix arena computed.arena ∧ (Backward arena → Backward computed.arena) ∧
-      ∀ same, computed.result = .ok same → Agrees env computed.arena first second same := by
+      ∀ same, computed.result = .ok same → RetainedAgreement env computed.arena first second same := by
   have leftSound := runNested_refines (visible := visible) (limit := limit) (depth := depth)
     (initial := initial) aligned history left
   rcases leftState : runNested roots visible limit depth arena initial a with ⟨afterLeft, firstResult, leftSteps⟩
@@ -133,8 +140,33 @@ theorem run_refines (aligned : RepresentsDefinitions arena roots definitions)
               obtain ⟨firstNormal, firstRep, firstForward⟩ := leftReduced firstRoot rfl
               obtain ⟨secondNormal, secondRep, secondForward⟩ := rightReduced secondRoot rfl
               have firstFinal := firstRep.frame rightPrefix
+              have firstKept (kept : FullyRetained (EnvironmentDelta.expand env first)) : FullyRetained firstNormal :=
+                runNested_result_fully_retained (visible := visible) (limit := limit) (depth := depth)
+                  (initial := initial) aligned history left kept
+                  (by rw [leftState]) (by rw [leftState]; exact firstRep)
+              have secondKept (kept : FullyRetained (EnvironmentDelta.expand env second)) : FullyRetained secondNormal :=
+                runNested_result_fully_retained (visible := visible) (limit := limit) (depth := depth)
+                  (initial := leftSteps) (frameDefinitions aligned leftPrefix) history
+                  (right.frame leftPrefix) kept (by rw [rightState]) (by rw [rightState]; exact secondRep)
               exact ⟨firstRoot, secondRoot, firstNormal, secondNormal, firstFinal, secondRep,
-                firstForward, secondForward, NativeCoreIdentical.runArena_refines firstFinal secondRep identified⟩
+                firstForward, secondForward, firstKept, secondKept,
+                NativeCoreIdentical.runArena_refines firstFinal secondRep identified⟩
+
+/-- Normalization and identity share the appended rows. Every completed
+comparison decides the equality of the normalized retained shapes. -/
+theorem run_refines (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env)
+    (left : Represents arena a first) (right : Represents arena b second) :
+    let computed := run arena roots visible limit depth initial a b
+    Prefix arena computed.arena ∧ (Backward arena → Backward computed.arena) ∧
+      ∀ same, computed.result = .ok same → Agrees env computed.arena first second same := by
+  obtain ⟨kept, backward, compared⟩ := run_refines_retained (visible := visible) (limit := limit)
+    (depth := depth) (initial := initial) aligned history left right
+  refine ⟨kept, backward, ?_⟩
+  intro same success
+  obtain ⟨a, b, firstNormal, secondNormal, leftRep, rightRep, leftStep, rightStep, _, _, equal⟩ :=
+    compared same success
+  exact ⟨a, b, firstNormal, secondNormal, leftRep, rightRep, leftStep, rightStep, equal⟩
 
 /-- The byte admission supplies both the unchanged checked definition table
 and the backward-reference invariant of the original input. -/
@@ -152,6 +184,22 @@ theorem run_checkBytes_refines
   obtain ⟨kept, backward, compared⟩ := run_refines (visible := visible) (limit := limit)
     (depth := depth) (initial := initial) aligned history left right
   exact ⟨definitions, _, env, history, kept, backward valid, compared⟩
+
+/-- An accepted comparison reflects RawValue conversion for fully retained
+expanded inputs. Both actual normalized results preserve that property. -/
+theorem run_converts_fully_retained (aligned : RepresentsDefinitions arena roots definitions)
+    (history : History definitions families env)
+    (left : Represents arena a first) (right : Represents arena b second)
+    (leftKept : FullyRetained (EnvironmentDelta.expand env first))
+    (rightKept : FullyRetained (EnvironmentDelta.expand env second))
+    (equal : (run arena roots visible limit depth initial a b).result = .ok true) :
+    Environment.RawValue.Conv env first second := by
+  have compared := (run_refines_retained (visible := visible) (limit := limit) (depth := depth)
+    (initial := initial) aligned history left right).2.2 true equal
+  obtain ⟨_, _, _, _, _, _, forwardLeft, forwardRight, keepLeft, keepRight, matched⟩ := compared
+  have same := project_injective_of_fully_retained (keepLeft leftKept) (keepRight rightKept) (matched.mp rfl)
+  rw [same] at forwardLeft
+  exact forwardLeft.toConv.trans forwardRight.toConv.symm
 
 /-- The left normalization appends an equality row. The final identity reads
 that row and its two children. The append survives a comparison limit error. -/

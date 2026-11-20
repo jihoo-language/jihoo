@@ -248,6 +248,121 @@ private theorem project_node (op : Op) (args : List Term) :
     project (.node op args) = ((syntaxView op args).map project).finish := by
   rw [project, projectArgs_map, syntaxView_map]
 
+private def tagForRank (order : Nat) : Nat :=
+  ((List.range 54).find? fun candidate => wireRank candidate == order).getD order
+
+private theorem tagForRank_schema (op : Op) : tagForRank (rank op) = NativeSchema.tag op := by
+  cases op <;> rfl
+
+private def payloadForArity (tag arity : Nat) (fields : List Int) : List Nat :=
+  match tag, fields with
+  | 48, [.ofNat value] => [0, value]
+  | 48, [.negSucc value] => [1, value + 1]
+  | 11, fields | 12, fields => fields.map Int.toNat ++ [arity]
+  | 13, fields | 40, fields | 43, fields => fields.map Int.toNat ++ [arity - 2]
+  | 49, _ => [arity]
+  | _, fields => fields.map Int.toNat
+
+private theorem payloadForArity_schema (op : Op) :
+    payloadForArity (NativeSchema.tag op) op.arity (payload op) = NativeSchema.payload op := by
+  cases op
+  all_goals first | rfl | skip
+  case arith operation => cases operation <;> rfl
+  case back erased => cases erased <;> rfl
+  case give erased => cases erased <;> rfl
+  case view recursive family count => cases recursive <;> rfl
+  case pi erased => cases erased <;> rfl
+  case lam erased => cases erased <;> rfl
+  case integer value => cases value <;> rfl
+
+/-- The comparison header and full child arity determine the constructor.
+For vector constructors, the arity recovers the length omitted by the
+comparison payload. -/
+theorem header_injective (same : (rank first, payload first) = (rank second, payload second))
+    (arity : first.arity = second.arity) : first = second := by
+  have tags : NativeSchema.tag first = NativeSchema.tag second := by
+    simpa only [tagForRank_schema] using congrArg (fun header : Header => tagForRank header.1) same
+  have fields : NativeSchema.payload first = NativeSchema.payload second := by
+    rw [← payloadForArity_schema first, ← payloadForArity_schema second, tags, arity, (Prod.mk.inj same).2]
+  apply Option.some.inj
+  rw [← NativeSchema.ofCode_payload first, ← NativeSchema.ofCode_payload second, tags, fields]
+
+/-- A tree on which identity retains every constructor and every child. -/
+inductive FullyRetained : Term → Prop where
+  | var (index : Nat) : FullyRetained (.var index)
+  | node (ordinary : op ≠ .strict) (kept : conversionChildren op args = args)
+      (arity : args.length = op.arity) (children : ∀ child ∈ args, FullyRetained child) :
+      FullyRetained (.node op args)
+
+private theorem take_kept_of_length {before after : List Term} (length : before.length = after.length)
+    (kept : before.take 2 = before) : after.take 2 = after := by
+  apply List.take_of_length_le
+  rw [← length, ← kept]
+  exact List.length_take_le _ _
+
+/-- Retention selects positions by constructor and child count. Replacing
+the children without changing their count preserves full retention. -/
+theorem children_kept_of_length {before after : List Term}
+    (length : before.length = after.length) (kept : conversionChildren op before = before) :
+    conversionChildren op after = after := by
+  cases op <;> try rfl
+  case usub => exact take_kept_of_length length kept
+  case pack => exact take_kept_of_length length kept
+  case give erased => cases erased <;> first | rfl | exact take_kept_of_length length kept
+
+private theorem retained_node (ordinary : op ≠ .strict) (kept : conversionChildren op args = args) :
+    project (.node op args) = .node (rank op, payload op) (args.map project) := by
+  rw [project_node]
+  simp only [syntaxView, ite_eq_right ordinary, kept, View.map, View.finish]
+
+private theorem rank_positive (op : Op) : rank op ≠ 0 := by
+  cases op <;> simp [rank]
+
+private theorem project_children_injective {inputs outputs : List Term}
+    (mapped : inputs.map project = outputs.map project)
+    (right : ∀ child ∈ outputs, FullyRetained child)
+    (use : ∀ child ∈ inputs, ∀ other, FullyRetained other → project child = project other → child = other) :
+    inputs = outputs := by
+  induction inputs generalizing outputs with
+  | nil => cases outputs <;> simp_all
+  | cons child rest ih =>
+      cases outputs with
+      | nil => simp at mapped
+      | cons other later =>
+          simp only [List.map_cons, List.cons.injEq] at mapped
+          have head := use child List.mem_cons_self other (right other List.mem_cons_self) mapped.1
+          have tail := ih mapped.2 (fun term member => right term (List.mem_cons_of_mem _ member))
+            (fun term member => use term (List.mem_cons_of_mem _ member))
+          rw [head, tail]
+
+/-- Equality of the retained shapes reflects equality of the entire source
+trees when the comparison retained every field. -/
+theorem project_injective_of_fully_retained (left : FullyRetained first) (right : FullyRetained second)
+    (matched : project first = project second) : first = second := by
+  induction left generalizing second with
+  | var index =>
+      cases right with
+      | var other =>
+          simp only [project, Shape.node.injEq, Prod.mk.injEq, List.cons.injEq] at matched
+          have same : index = other := by omega
+          rw [same]
+      | @node op args ordinary kept _ _ =>
+          rw [project, retained_node ordinary kept] at matched
+          exact False.elim (rank_positive op ((Prod.mk.inj (Shape.node.inj matched).1).1.symm))
+  | @node op inputs ordinary kept arity _ ih =>
+      cases right with
+      | var index =>
+          rw [retained_node ordinary kept, project] at matched
+          exact False.elim (rank_positive op (Prod.mk.inj (Shape.node.inj matched).1).1)
+      | @node other outputs otherOrdinary otherKept otherArity otherChildren =>
+          rw [retained_node ordinary kept, retained_node otherOrdinary otherKept] at matched
+          obtain ⟨header, children⟩ := Shape.node.inj matched
+          have same := project_children_injective children otherChildren
+            (fun child member _ fully same => ih child member fully same)
+          have sameArity : op.arity = other.arity := arity.symm.trans
+            ((congrArg List.length same).trans otherArity)
+          rw [header_injective header sameArity, same]
+
 def compareHeader (left right : Header) : Ordering :=
   (compare left.1 right.1).then (compare left.2 right.2)
 

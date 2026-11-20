@@ -76,6 +76,34 @@ private theorem computation_view (typed : HasType env loans ctx mode term type) 
   case dataElim => split <;> trivial
   case convert _ converted ih => exact ih.convert converted
 
+/-- The selected true arm receives the typed comparison of the original
+operands. Its evidence binder keeps the exact source proposition. -/
+theorem computed_ifLt_true_preserves (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : HasType env loans ctx mode (.ifLt a b yes no) type)
+    (leftNormalized : Conversion.Conv env a (.natural m)) (rightNormalized : Conversion.Conv env b (.natural n))
+    (leftBound : m < 2^64) (rightBound : n < 2^64) (ordered : m < n) :
+    HasType env [] ctx true (yes.subst (single (.decide a b))) type := by
+  obtain ⟨_, left, right, yesTyped, _, converted⟩ := computation_view typed
+  have evidence : HasType env [] ctx true (.decide a b) (.lt a b) :=
+    .decideConverted left right leftNormalized rightNormalized leftBound rightBound ordered
+  have instantiated := yesTyped.ghostInstantiate wf evidence
+  rw [Term.shift_subst_single] at instantiated
+  exact instantiated.convert converted
+
+/-- Equal numeral observations make reflexivity inhabit the original
+comparison, even when the two operands use different source syntax. -/
+theorem computed_ifEq_true_preserves (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : HasType env loans ctx mode (.ifEq a b yes no) type)
+    (leftNormalized : Conversion.Conv env a (.natural n)) (rightNormalized : Conversion.Conv env b (.natural n)) :
+    HasType env [] ctx true (yes.subst (single (.refl a))) type := by
+  obtain ⟨_, left, _, yesTyped, _, converted⟩ := computation_view typed
+  have operands := leftNormalized.trans rightNormalized.symm
+  have evidence : HasType env [] ctx true (.refl a) (.eq a b) :=
+    (HasType.refl left).convert (.node .eq (.cons (.refl _) (.cons operands .nil)))
+  have instantiated := yesTyped.ghostInstantiate wf evidence
+  rw [Term.shift_subst_single] at instantiated
+  exact instantiated.convert converted
+
 /-- All ordinary ACU computation roots, including evidence instantiation,
 preserve the independently derived original Loan64 type. -/
 theorem compute_ghost_preservation (wf : UnifiedProgram.EnvWellFormed env)

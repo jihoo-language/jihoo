@@ -624,6 +624,21 @@ theorem discard_target (source : Represents arena root term) (read : arena[root]
     discarded (env := env) kind (EnvironmentDelta.expand env first) (EnvironmentDelta.expand env second)
   exact ⟨second, tail, change, preserved⟩
 
+/-- Selecting the continuation of a fully retained Free or Drop preserves
+full retention after transparent expansion. -/
+theorem discard_target_fully_retained (source : Represents arena root term) (read : arena[root]? = some node)
+    (skip : discardRest node = some rest) (tail : Represents arena rest result)
+    (retained : NativeCoreCompare.FullyRetained (EnvironmentDelta.expand env term)) :
+    NativeCoreCompare.FullyRetained (EnvironmentDelta.expand env result) := by
+  obtain ⟨op, owner, rfl, _⟩ := discard_shape skip
+  obtain ⟨first, second, rfl, _, representedTail⟩ := represented_pair source read
+  have same := representedTail.unique tail
+  subst result
+  rw [expanded_pair] at retained
+  cases retained with
+  | node _ _ _ children =>
+      exact children _ (List.mem_cons_of_mem _ List.mem_cons_self)
+
 /-- A checked raw alias and the raw row it selects have the same transparent
 expansion. The row remains usable even when its body is a composite term. -/
 theorem alias_target (aligned : RepresentsDefinitions arena roots definitions)

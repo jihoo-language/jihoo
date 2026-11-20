@@ -1190,3 +1190,5 @@ import Jihoo.NativeLoanPureProofObservation
 import Jihoo.NativeBindingMachineMutableHeapHistory
 import Jihoo.NativeCorePureStructuralEqual
 import Jihoo.NativeCoreSignedNormal
+import Jihoo.NativeCoreRefinementNormal
+import Jihoo.NativeLoanProofComparison

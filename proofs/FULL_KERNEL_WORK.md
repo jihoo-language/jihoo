@@ -2281,3 +2281,35 @@ termination argument remain open.
 
 The aggregate check passed 1,009 Lake jobs, 9,573 declaration audits, and
 all generated fixture comparisons in 39.78 seconds with the warm cache.
+
+### Comparison reflection and typed observation of computed branches
+
+The comparison header and child arity recover the complete constructor,
+including vector-length fields. For expanded inputs whose entire trees
+are retained by comparison, structural normalization preserves full
+retention. Successful live equality on this fragment therefore yields a
+RawValue conversion of the original nodes. Equality of discarded evidence
+remains a separate typed proof obligation.
+
+The graph normalization models for Witness and Proof first normalize the
+refinement structurally. They return the appropriate Pack reference with
+the native step counter and model the different neutral append behavior.
+Exact mixed admission supplies the declaration history for the RawValue
+reduction and graph preservation theorem.
+
+Actual Free events characterize liveness of an earlier allocated owner
+through a reachable Mutable suffix. The typed literal Store theorem now
+derives its current size world and reader inventory from that suffix,
+using an earlier captured owner world and liveness. The resulting run
+either writes the selected cell at its original Buffer type or faults on
+the released owner without changing the heap.
+
+Bounded ghost observation can select either branch of computed IfLt and
+IfEq with U64 numeral operands. A true branch receives a proof at the
+original operand terms, and replay preserves the exact requested type.
+The mixed checker examples combine this with dependent beta and verify
+true equality for distinct operand expressions.
+
+The aggregate check passed 1,011 Lake jobs, 9,592 declaration audits, and
+all generated fixture comparisons. Rebuilding the affected dependencies
+and checking the aggregate took 78 seconds.
