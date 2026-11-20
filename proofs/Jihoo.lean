@@ -1213,3 +1213,8 @@ import Jihoo.NativeCoreTransformExact
 import Jihoo.NativeLoanOpenProofNormalization
 import Jihoo.NativeBindingMachineMutableOwnerDemand
 import Jihoo.NativeBindingMachineMutableLoadOwnerDemand
+import Jihoo.NativeBindingMachineMutableDemandSequence
+import Jihoo.NativeBindingMachineMutableDemandTotality
+import Jihoo.NativeCoreBetaNormal
+import Jihoo.NativeCoreTrapAnalysis
+import Jihoo.NativeCoreReadAnalysis

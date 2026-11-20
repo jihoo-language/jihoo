@@ -2438,3 +2438,29 @@ operations retain the original dependent continuation typing.
 The aggregate check passed 1,032 Lake jobs, 9,702 declaration audits, and
 all generated fixture comparisons in 70.92 seconds while rebuilding the
 affected dependencies.
+
+### Compound beta, evaluation analysis, and named reader entry
+
+Pure application normalization now composes the exact graph substitution
+with operand and result normalization for a represented lambda body of
+any shape supported by the successful walks. With structurally normal
+operands the substituted body remains in the same fragment, and the exact
+declared dependent type and cost follow from the original typing and the
+native visit accounting.
+
+Core.may_trap and Core.reads have live-arena and syntax models with
+matching results at every depth. The graph walk terminates along the
+backward application spine. The models preserve erased Pack and Give
+positions, the runtime variable-call guard, and the distinction between
+View motives returning functions and those reading scalar results.
+
+A complete owner demand receipt can be split for sequential execution.
+Each positive physical owner unit belongs to only one side, even through
+retained aliases. Named reader entry uses this demand world to derive live
+ownership and opens the actual fresh lease and token. Its specialized
+reader retains the original ghost type and zero owner demand for the
+borrowed slot. Demand totality on the physical owner slots also carries
+through the existing Free and Load handoffs.
+
+The aggregate check passed 1,037 Lake jobs, 9,720 declaration audits, and
+all generated fixture comparisons in 9.34 seconds with the warm cache.
