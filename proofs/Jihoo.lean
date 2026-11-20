@@ -1314,5 +1314,6 @@ import Jihoo.NativeCoreGhostConstructorFields
 import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreGhostConstructorExamples
 import Jihoo.NativeCoreGhostDeclarationAnnotations
+import Jihoo.NativeCoreGhostDefinitionChecking
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

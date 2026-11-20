@@ -3943,3 +3943,16 @@ original caller's type. The first application substitutes the owner into
 the evidence fiber. The second uses evidence at that instantiated fiber.
 The typing conclusion uses the genuine checked `Take`/`Give` preservation
 rule. The focused build and the new theorem's axiom audit passed.
+
+### Checking a proof declaration at its original annotation
+
+When the annotation's inferred sort selects evidence mode, the declaration
+checker infers the original body and compares its inferred type with the
+original annotation. Successful checking derives both formation and ghost
+body typing at that annotation. The graph and meter run continuously from
+annotation inference to the last identity visit.
+
+The Lean and native fixtures spend exactly 24 ticks. With 23 allowed,
+the final comparison fails with the same committed graph prefix. The native
+fixture also exercises `Core.extend`. The focused build passed 435 jobs and
+the three new audited declarations use only standard Lean axioms.

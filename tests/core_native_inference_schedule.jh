@@ -720,6 +720,26 @@ fn declaration_annotation_inference() {
     program.check().unwrap()
 }
 
+fn ghost_definition_body_checking() {
+    var proof = annotated_fixture()
+    spend(&proof, 999976)
+    let kind = proof.infer(1, [], true, core.DEPTH).unwrap()
+    let exposed = proof.normal(kind, core.DEPTH).unwrap()
+    assert(proof.term(exposed) == core.Term.Prop, "the proof declaration uses ghost mode")
+    proof.require(2, 1, [], true, core.DEPTH).unwrap()
+    assert_spent(&proof, "the proof declaration shares twenty-four ticks across annotation and body")
+
+    var short = annotated_fixture()
+    spend(&short, 999977)
+    let kind = short.infer(1, [], true, core.DEPTH).unwrap()
+    short.normal(kind, core.DEPTH).unwrap()
+    assert(short.require(2, 1, [], true, core.DEPTH).is_err(),
+        "the final comparison consumes the remaining declaration step")
+
+    var program = annotated_fixture()
+    program.extend().unwrap()
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -745,6 +765,7 @@ fn main() -> i32 {
     family_index_inference()
     dependent_constructor_inference()
     declaration_annotation_inference()
+    ghost_definition_body_checking()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }
