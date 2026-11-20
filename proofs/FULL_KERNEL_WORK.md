@@ -3912,3 +3912,12 @@ nested calls as well as for the outer expression.
 The recursive fixture reproduces the native graph and all 54 ticks from
 the initial state. The focused build passed 434 jobs and the four new
 audited declarations use only standard Lean axioms.
+
+### Enclosing readers across argument evaluation
+
+Actual mutable call entry preserves the exact token-to-owner lease map of
+all enclosing reader frames. Relevant arguments may execute heap operations
+and open and close their own temporary readers. The resulting invariant and
+heap lifecycle trace come from the same argument run and identify the
+original reader inventory at the entered body. The focused build passed
+414 jobs. The new theorem uses `propext` and `Quot.sound`.
