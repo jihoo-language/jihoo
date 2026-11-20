@@ -1320,5 +1320,6 @@ import Jihoo.NativeCoreGhostDefinitionChecking
 import Jihoo.NativeCoreGhostBackMotive
 import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostOwnerReturnExamples
+import Jihoo.NativeCoreIterationTelescope
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

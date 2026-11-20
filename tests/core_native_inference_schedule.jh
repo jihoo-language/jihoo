@@ -854,6 +854,42 @@ fn owner_return_inference() {
     }, "Back rejects a borrowed result even in ghost inference")
 }
 
+fn iteration_type_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let count = c.add(core.Term.Var(0), span).unwrap()
+    c.add(core.Term.Buffer(count), span).unwrap()
+    c.add(core.Term.Var(1), span).unwrap()
+    c.add(core.Term.Natural(0), span).unwrap()
+    c
+}
+
+fn iteration_callback_types() {
+    let span = diag.Span.nowhere()
+    var fold = iteration_type_fixture()
+    for _ in 0..999995 { fold.normal(3, core.DEPTH).unwrap() }
+    let folded = fold.fold_body_type(0, 1, span, 16).unwrap()
+    assert(folded == 14 && fold.node_count() == 15 && fold.term(7) == core.Term.Lt(5, 6) &&
+        fold.term(6) == core.Term.Var(1) && fold.term(8) == core.Term.Var(2) &&
+        fold.term(10) == core.Term.Var(3) && fold.term(9) == core.Term.Buffer(8) &&
+        fold.term(11) == core.Term.Buffer(10) && fold.term(12) == core.Term.Pi(false, 9, 11) &&
+        fold.term(13) == core.Term.Pi(true, 7, 12) && fold.term(14) == core.Term.Pi(false, 4, 13),
+        "Fold shifts the written count, accumulator domain and accumulator result")
+    assert(fold.normal(3, core.DEPTH).is_err(), "Fold's three shifts use five ticks")
+
+    var proof = iteration_type_fixture()
+    for _ in 0..999997 { proof.normal(3, core.DEPTH).unwrap() }
+    let iterated = proof.loop_body_type(0, 2, true, span, 16).unwrap()
+    assert(iterated == 18 && proof.node_count() == 19 && proof.term(10) == core.Term.Lt(5, 9) &&
+        proof.term(9) == core.Term.Var(1) && proof.term(11) == core.Term.Var(3) &&
+        proof.term(14) == core.Term.Var(4) && proof.term(12) == core.Term.App(11, 6) &&
+        proof.term(13) == core.Term.UAdd(7, 8) && proof.term(15) == core.Term.App(14, 13) &&
+        proof.term(16) == core.Term.Pi(true, 12, 15) && proof.term(17) == core.Term.Pi(true, 10, 16) &&
+        proof.term(18) == core.Term.Pi(false, 4, 17),
+        "Loop's accumulator type specializes the motive at the current and next index")
+    assert(proof.normal(3, core.DEPTH).is_err(), "Loop's three shifts use three ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -884,6 +920,7 @@ fn main() -> i32 {
     code_local_inference()
     code_word_definition()
     owner_return_inference()
+    iteration_callback_types()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

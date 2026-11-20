@@ -10650,3 +10650,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturns.runGive_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples.owner_return_motive_and_result_schedule
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.raw_normalization_preserves_realization
+#print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.fold_progress
+#print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.loop_progress
+#print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.fold_refines
+#print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.loop_refines
+#print axioms Jihoo.NativeKernel.NativeCoreIterationTelescope.open_telescope_rows_and_cost

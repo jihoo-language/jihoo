@@ -4023,3 +4023,16 @@ every related valuation. The theorem identifies the actual selected arena
 row, transports source typing to that residual and proves realization
 equivalence in the same dependent type. The focused build and the new
 theorem's standard-axiom audit passed.
+
+### Native Fold and Loop callback telescopes
+
+The graph builders for both iteration forms use the original count below
+the index binder. `Fold` weakens the same open accumulator type by two
+binders for its domain and three for its result. `Loop` instead applies
+the correctly weakened motive at the current and next index. Its proof
+flag determines accumulator erasure. The output graph represents the
+specified three-binder type and retains all existing rows.
+
+Open native and Lean fixtures agree on the callback edges and five ticks
+for `Fold` and three for `Loop`. The focused build passed 329 jobs and all
+five new declarations use standard Lean axioms.
