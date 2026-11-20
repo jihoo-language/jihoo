@@ -280,6 +280,42 @@ fn transport_evidence_exhaustion() {
     assert(c.term(18) == core.Term.App(predicate, seven), "transport requires the original source fiber")
 }
 
+fn offset_proof_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let bound = c.add(core.Term.Decide(zero, one), span).unwrap()
+    c.add(core.Term.LtAdd(zero, one, two, bound), span).unwrap()
+    let left = c.add(core.Term.UAdd(zero, two), span).unwrap()
+    let right = c.add(core.Term.UAdd(one, two), span).unwrap()
+    c.add(core.Term.Lt(left, right), span).unwrap()
+    c
+}
+
+fn offset_proof_inference() {
+    var limited = offset_proof_fixture()
+    spend(&limited, 999987)
+    assert(match limited.infer(4, [], true, 16) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "offset proof exhausts the budget entering the original evidence")
+    assert(limited.node_count() == 16, "both offset bounds survive exhaustion")
+    assert(limited.term(12) == core.Term.UAdd(0, 2) && limited.term(13) == core.Term.UAdd(1, 2),
+        "both sums keep the original offset")
+    assert(limited.term(14) == core.Term.Lt(0, 1) && limited.term(15) == core.Term.Lt(12, 13),
+        "both propositions are present")
+
+    var added = offset_proof_fixture()
+    let inferred = added.infer(4, [], true, 16).unwrap()
+    assert(inferred == 15 && added.term(inferred) == core.Term.Lt(12, 13), "LtAdd returns the shifted inequality")
+
+    var cancelled = offset_proof_fixture()
+    let cancel = cancelled.add(core.Term.LtCancel(0, 1, 2, 4), diag.Span.nowhere()).unwrap()
+    let original = cancelled.infer(cancel, [], true, 16).unwrap()
+    assert(cancelled.term(original) == core.Term.Lt(0, 1), "LtCancel returns the original inequality")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -293,6 +329,7 @@ fn main() -> i32 {
     proof_irrelevance_under_type_family()
     refinement_projection()
     transport_evidence_exhaustion()
+    offset_proof_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

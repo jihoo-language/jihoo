@@ -3445,6 +3445,18 @@ The admitted example skips an overflowing erased operand, closes the inner
 lambda, and returns the relevant input `11`. The focused build passed 407
 jobs. The three audited declarations use only standard Lean axioms.
 
+### Inequality inference with a shared offset
+
+The metered ghost checker builds both sums and both inequalities before
+checking the original proof. `LtAdd` returns the shifted inequality and
+`LtCancel` returns the original. The source derivation uses the Loan64
+arithmetic evidence rule corresponding to the native operator.
+
+Lean and the rebuilt compiler agree on exhaustion at tick 14 with both
+inequality nodes retained. The native regression also checks both successful
+directions. The focused build passed 329 jobs and the 34-declaration audit
+used only standard Lean axioms.
+
 ### Proof irrelevance in dependent type comparison
 
 Two closed Type1 annotations apply the same bound type family to

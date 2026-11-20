@@ -199,6 +199,21 @@ private def inferSubtract (infer : Infer) (normal : Visit) (limit depth : Nat) (
       (append afterProof .u64 []).next fun after result =>
         ⟨after, .ok ⟨result, comparisons ++ proofComparisons⟩⟩
 
+private def offsetBounds (state : State) (left right delta : Nat) : Outcome (Nat × Nat) :=
+  (append state .uadd [left, delta]).next fun afterLeft shiftedLeft =>
+    (append afterLeft .uadd [right, delta]).next fun afterRight shiftedRight =>
+      (append afterRight .lt [left, right]).next fun afterPlain plain =>
+        (append afterPlain .lt [shiftedLeft, shiftedRight]).next fun afterShift shifted =>
+          ⟨afterShift, .ok (plain, shifted)⟩
+
+private def inferOffsetProof (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (forward : Bool) (left right delta proof : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [left, right, delta]).next fun checked operands =>
+    (offsetBounds checked left right delta).next fun assembled bounds =>
+      (requireOperands infer normal limit depth (if forward then bounds.1 else bounds.2) assembled [proof]).next
+        fun after compared =>
+          ⟨after, .ok ⟨if forward then bounds.2 else bounds.1, operands ++ compared⟩⟩
+
 
 private def conditionOp (equality : Bool) : Op := if equality then .eq else .lt
 
@@ -339,6 +354,12 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .usub [a, b, proof]) =>
             inferSubtract (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               a b proof
+        | some (.node .ltAdd [a, b, delta, proof]) =>
+            inferOffsetProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              true a b delta proof
+        | some (.node .ltCancel [a, b, delta, proof]) =>
+            inferOffsetProof (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              false a b delta proof
 
         | some (.node .ifEq [a, b, yes, no]) =>
             inferConditional (runWithData normal roots visible limit isData depth ctx)
@@ -521,6 +542,24 @@ private theorem inferSubtract_progress
   apply next_progress (checkSubtract_progress infers normalizes operandsRoom) operandsRoom
   intro proofComparisons _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem offsetBounds_progress (state : State) (left right delta : Nat) :
+    Progress limit state (offsetBounds state left right delta) :=
+  (append_progress _ _ _).next (fun _ => (append_progress _ _ _).next (fun _ =>
+    (append_progress _ _ _).next (fun _ => (append_progress _ _ _).next (fun _ => Progress.atState _ _))))
+
+private theorem inferOffsetProof_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferOffsetProof infer normal limit depth state forward left right delta proof) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro operands _ operandRoom
+  apply next_progress (offsetBounds_progress _ _ _ _) operandRoom
+  intro bounds _ boundRoom
+  apply next_progress (requireOperands_progress infers (fun state root _ => normalizes state root) boundRoom) boundRoom
+  intro compared _ _
+  exact Progress.atState _ _
 
 
 private theorem finishConditional_progress
@@ -733,13 +772,14 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
       · split
         · exact (append_progress _ _ _).map plain
         · exact Progress.atState _ _
-      all_goals first
+      all_goals with_reducible first
         | exact inferFixed_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
         | exact inferZeroLe_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferSubtract_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferOffsetProof_progress (fun _ _ room => ih room) (normalProgress depth) within
 
         | exact inferConditional_progress (fun _ _ room => ih room) (fun _ _ _ room => ih room)
             (normalProgress depth) within
@@ -751,7 +791,8 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
             (normalProgress depth) within
         | exact inferApp_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
-        | exact Progress.atState _ _
+        | simpa only [discard] using (Progress.atState (limit := limit) entered
+            (.error (.outsideFragment root) : Except NativeCorePureComputationNormal.Error Inferred))
 
 theorem runWith_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
@@ -1408,6 +1449,97 @@ private theorem inferSubtract_refines
   exact .usub (typedOperands _ List.mem_cons_self)
     (typedOperands _ (List.mem_cons_of_mem _ List.mem_cons_self)) typedProof
 
+
+private theorem offsetBounds_refines
+    (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
+    (deltaRep : Represents state.arena delta d)
+    (success : (offsetBounds state left right delta).result = .ok bounds) :
+    let after := (offsetBounds state left right delta).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      Represents after bounds.1 (.lt a b) ∧ Represents after bounds.2 (.lt (.uadd a d) (.uadd b d)) := by
+  unfold offsetBounds at success ⊢
+  obtain ⟨shiftedLeft, leftOk, leftNext⟩ := Outcome.next_success success
+  rw [leftNext] at success ⊢
+  obtain ⟨shiftedRight, rightOk, rightNext⟩ := Outcome.next_success success
+  rw [rightNext] at success ⊢
+  obtain ⟨plain, plainOk, plainNext⟩ := Outcome.next_success success
+  rw [plainNext] at success ⊢
+  obtain ⟨shifted, shiftedOk, shiftedNext⟩ := Outcome.next_success success
+  rw [shiftedNext] at success ⊢
+  simp only [Except.ok.injEq] at success
+  subst bounds
+  obtain ⟨leftKept, leftBack, firstSum⟩ := append_refines (.cons leftRep (.cons deltaRep .nil)) rfl leftOk
+  obtain ⟨rightKept, rightBack, secondSum⟩ := append_refines
+    (.cons (rightRep.frame leftKept) (.cons (deltaRep.frame leftKept) .nil)) rfl rightOk
+  have added := leftKept.trans rightKept
+  obtain ⟨plainKept, plainBack, plainRep⟩ := append_refines
+    (.cons (leftRep.frame added) (.cons (rightRep.frame added) .nil)) rfl plainOk
+  obtain ⟨shiftedKept, shiftedBack, shiftedRep⟩ := append_refines
+    (.cons (firstSum.frame (rightKept.trans plainKept)) (.cons (secondSum.frame plainKept) .nil)) rfl shiftedOk
+  exact ⟨added.trans (plainKept.trans shiftedKept), shiftedBack ∘ plainBack ∘ rightBack ∘ leftBack,
+    plainRep.frame shiftedKept, shiftedRep⟩
+
+private theorem inferOffsetProof_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
+    (deltaRep : Represents state.arena delta d) (proofRep : Represents state.arena proof p)
+    (success : (inferOffsetProof infer normal limit depth state forward left right delta proof).result = .ok answer)
+    (ambient : Prefix (inferOffsetProof infer normal limit depth state forward left right delta proof).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (if forward then .ltAdd a b d p else .ltCancel a b d p)
+      (inferOffsetProof infer normal limit depth state forward left right delta proof) answer := by
+  unfold inferOffsetProof at success ambient ⊢
+  obtain ⟨operands, operandsOk, operandsNext⟩ := Outcome.next_success success
+  rw [operandsNext] at success ambient ⊢
+  obtain ⟨bounds, boundsOk, boundsNext⟩ := Outcome.next_success success
+  rw [boundsNext] at success ambient ⊢
+  obtain ⟨proofPairs, proofOk, proofNext⟩ := Outcome.next_success success
+  rw [proofNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := checkFixed infer normal limit depth state .u64 [left, right, delta]
+  let assembled := offsetBounds checked.state left right delta
+  have checkedProgress := checkFixed_progress (operand := .u64) (args := [left, right, delta]) (depth := depth)
+    childProgress (fun state root _ => normalProgress state root) room
+  have checkedRoom := checkedProgress.accepted room operands operandsOk
+  have boundsProgress := offsetBounds_progress (limit := limit) checked.state left right delta
+  have boundsRoom := boundsProgress.accepted checkedRoom bounds boundsOk
+  have proofProgress := requireOperands_progress (state := assembled.state)
+    (expected := if forward then bounds.1 else bounds.2) (args := [proof]) (depth := depth)
+    childProgress (fun state ref _ => normalProgress state ref) boundsRoom
+  obtain ⟨checkedKept, checkedBack, typed⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    onBase room (.cons leftRep (.cons rightRep (.cons deltaRep .nil))) rfl operandsOk
+    (boundsProgress.kept.trans (proofProgress.kept.trans ambient))
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨boundsKept, boundsBack, plainRep, shiftedRep⟩ := offsetBounds_refines
+    (leftRep.frame checkedKept) (rightRep.frame checkedKept) (deltaRep.frame checkedKept) boundsOk
+  have given : Represents assembled.state.arena (if forward then bounds.1 else bounds.2)
+      (if forward then .lt a b else .lt (.uadd a d) (.uadd b d)) := by
+    cases forward
+    · exact shiftedRep
+    · exact plainRep
+  have throughBounds := checkedKept.trans boundsKept
+  obtain ⟨proofKept, proofBack, typedProof⟩ := requireOperands_refines normalSound normalProgress childSound
+    childProgress (onBase.trans throughBounds) boundsRoom (.cons (proofRep.frame throughBounds) .nil) given
+    proofOk ambient (fun pair member => retained pair (List.mem_append_right _ member))
+  have evidence := typedProof p List.mem_cons_self
+  simp only [expand, expandArgs] at typed
+  have first := typed a List.mem_cons_self
+  have second := typed b (List.mem_cons_of_mem _ List.mem_cons_self)
+  have offset := typed d (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+  cases forward
+  · refine ⟨throughBounds.trans proofKept, proofBack ∘ boundsBack ∘ checkedBack, _, plainRep.frame proofKept, ?_⟩
+    simp only [Bool.false_eq_true, ite_false, Term.lt, Term.uadd, expand, expandArgs] at evidence
+    simp only [Bool.false_eq_true, ite_false, Term.ltCancel, Term.lt, expand, expandArgs]
+    exact .ltCancel first second offset evidence
+  · refine ⟨throughBounds.trans proofKept, proofBack ∘ boundsBack ∘ checkedBack, _, shiftedRep.frame proofKept, ?_⟩
+    simp only [ite_true, Term.lt, expand, expandArgs] at evidence
+    simp only [ite_true, Term.ltAdd, Term.lt, Term.uadd, expand, expandArgs]
+    exact .ltAdd first second offset evidence
 
 private theorem finishConditional_refines
     (wf : UnifiedProgram.EnvWellFormed env)
@@ -2151,6 +2283,23 @@ theorem runWithData_sound {normal : NormalAt}
                 | exact inferStrict_refines (state := {state with steps := state.steps + 1}) sameContext
                     (fun _ _ budget => runWithData_progress normalProgress budget)
                     onBase within first second success ambient retained
+          case ltAdd | ltCancel =>
+            have length : refs.length = 4 := arity
+            rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨delta, _ | ⟨proof, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons leftRep rest =>
+              cases rest with
+              | cons rightRep rest =>
+                cases rest with
+                | cons deltaRep rest =>
+                  cases rest with
+                  | cons proofRep tail =>
+                    cases tail
+                    dsimp only at success ambient ⊢
+                    exact inferOffsetProof_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                      (normalSound depth) (normalProgress depth) sameContext
+                      (fun _ _ budget => runWithData_progress normalProgress budget)
+                      onBase within leftRep rightRep deltaRep proofRep success ambient retained
           case ifLt | ifEq =>
             have length : refs.length = 4 := arity
             rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨yes, _ | ⟨no, _ | ⟨_, _⟩⟩⟩⟩⟩ <;> simp at length
@@ -2614,6 +2763,25 @@ theorem admitted_transport_limit_keeps_source_fiber :
         .node (.universe 0) [], .node .u64 [], .node .prop [], .node (.pi false) [0, 13],
         .node .u64 [], .node .u64 [], .node .eq [4, 4], .node .app [3, 4]], 33⟩,
         .error (.tick (.stepLimit 5))⟩ := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def offsetSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨7, 4⟩]
+  families := []
+  arena := #[.node (.natural 0) [], .node (.natural 1) [], .node (.natural 2) [],
+    .node .decide [0, 1], .node .ltAdd [0, 1, 2, 3], .node .uadd [0, 2],
+    .node .uadd [1, 2], .node .lt [5, 6]]
+
+/-- Both propositions are committed before the proof is visited. A
+successful derivation then returns the shifted root without rebuilding it. -/
+theorem admitted_offset_proof_keeps_both_bounds :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot offsetSnapshot) = true ∧
+    run offsetSnapshot.definitions 0 13 16 [] ⟨offsetSnapshot.arena, 0⟩ 4 =
+      ⟨⟨offsetSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 [], .node .u64 [],
+        .node .uadd [0, 2], .node .uadd [1, 2], .node .lt [0, 1], .node .lt [12, 13]], 14⟩,
+        .error (.tick (.stepLimit 3))⟩ ∧
+    (run offsetSnapshot.definitions 0 64 16 [] ⟨offsetSnapshot.arena, 0⟩ 4).result.map Inferred.typeRoot = .ok 15 := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 

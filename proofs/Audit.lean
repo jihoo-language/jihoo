@@ -10529,3 +10529,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_literal_packs_have_same_meaning
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_body_zero_demand
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_erased_telescope_recloses_inner_lambda
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_offset_proof_keeps_both_bounds
