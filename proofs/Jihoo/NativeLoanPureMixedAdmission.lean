@@ -3,7 +3,8 @@ import Jihoo.NativeLoanEnvironmentExtension
 
 /-! Ordered mixed admission using the original family, raw CODE, and quantity
 checkers. The ghost fallback types the fully expanded body, using the checked
-types of earlier definitions for aliases and dependent applications. -/
+types of earlier definitions for aliases and dependent applications, including
+under lambda binders. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.PureMixedAdmission
 
 open UnifiedProgram
@@ -55,27 +56,34 @@ def SlotTyping (env : Environment) : Prop :=
     ∃ sort : SortTag, HasType env [] [] true declaration.type sort.term ∧
       PureTyping.HasType env [] declaration.value declaration.type
 
-private def inferStep (fuel : Nat) (env : Environment) (recur : Term → Term → Option Term) :
-    Term → Term → Option Term
-  | .node (.global index) [], expanded => do
+private def inferStep (fuel : Nat) (env : Environment) (recur : Context → Term → Term → Option Term) :
+    Context → Term → Term → Option Term
+  | _, .node (.global index) [], expanded => do
     let declaration ← env.globals[index]?
     if declaration.value == expanded then some declaration.type else none
-  | .app sourceFunction _, .app function argument => do
-    let .pi erased domain result ← recur sourceFunction function | none
-    let _ ← Checker.sort fuel env [] [⟨domain, erased⟩] result
-    if Checker.check fuel env [] [] true argument domain = true ∧
+  | ctx, .lam _ _ sourceBody, .lam erased domain body => do
+    let _ ← Checker.binder fuel env [] ctx erased domain
+    let opened := ⟨domain, erased⟩ :: ctx
+    let result ← recur opened sourceBody body
+    let _ ← Checker.sort fuel env [] opened result
+    some (.pi erased domain result)
+  | ctx, .app sourceFunction _, .app function argument => do
+    let .pi erased domain result ← recur ctx sourceFunction function | none
+    let _ ← Checker.sort fuel env [] (⟨domain, erased⟩ :: ctx) result
+    if Checker.check fuel env [] ctx true argument domain = true ∧
         Conversion.substitutionSafe result argument = true then
       some (result.subst (single argument))
     else none
-  | _, _ => none
+  | _, _, _ => none
 
 private theorem inferStep_sound
+    (wellFormed : EnvWellFormed env)
     (prior : SlotTyping env)
-    (recursiveSound : ∀ {source expanded type}, recur source expanded = some type →
-      PureTyping.HasType env [] expanded type)
-    (checked : inferStep fuel env recur source expanded = some type) :
-    PureTyping.HasType env [] expanded type := by
-  fun_cases inferStep fuel env recur source expanded
+    (recursiveSound : ∀ {ctx source expanded type}, recur ctx source expanded = some type →
+      PureTyping.HasType env ctx expanded type)
+    (checked : inferStep fuel env recur ctx source expanded = some type) :
+    PureTyping.HasType env ctx expanded type := by
+  fun_cases inferStep fuel env recur ctx source expanded
   · simp only [inferStep] at checked
     obtain ⟨declaration, found, checked⟩ := Option.bind_eq_some_iff.mp checked
     split at checked
@@ -84,8 +92,17 @@ private theorem inferStep_sound
       cases checked
       rw [← aligned]
       obtain ⟨_, _, typed⟩ := prior _ declaration found
-      exact typed
+      have substitution : Ghost.Substitution env [] ctx Term.var := by
+        intro index binding absent
+        simp [lookup] at absent
+      simpa only [Term.subst_id] using typed.ghostSubstitution wellFormed substitution
     · contradiction
+  · simp only [inferStep] at checked
+    obtain ⟨domainSort, bound, checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨result, inferred, checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨resultSort, formed, checked⟩ := Option.bind_eq_some_iff.mp checked
+    cases checked
+    exact .lam (Checker.binder_sound bound) (Checker.sort_sound formed) (recursiveSound inferred)
   · simp only [inferStep] at checked
     obtain ⟨functionType, inferred, checked⟩ := Option.bind_eq_some_iff.mp checked
     split at checked
@@ -98,28 +115,36 @@ private theorem inferStep_sound
     · contradiction
   · simp [inferStep, *] at checked
 
-/-- Read a prior ghost's exact checked type only when its stored value is
-actually the expanded term. A dependent application uses that type to check
-the expanded argument and independently form its result. -/
-def inferExpandedGhost (fuel : Nat) (env : Environment) : Nat → Term → Term → Option Term
-  | 0, _, _ => none
-  | depth + 1, source, expanded =>
-    (inferStep fuel env (inferExpandedGhost fuel env depth) source expanded).orElse
-      (fun _ => Checker.infer fuel env [] [] true expanded)
+private def inferExpandedGhostIn (fuel : Nat) (env : Environment) : Nat → Context → Term → Term → Option Term
+  | 0, _, _, _ => none
+  | depth + 1, ctx, source, expanded =>
+    (inferStep fuel env (inferExpandedGhostIn fuel env depth) ctx source expanded).orElse
+      (fun _ => Checker.infer fuel env [] ctx true expanded)
 
-theorem inferExpandedGhost_sound (prior : SlotTyping env)
-    (checked : inferExpandedGhost fuel env depth source expanded = some type) :
-    PureTyping.HasType env [] expanded type := by
-  induction depth generalizing source expanded type with
-  | zero => simp [inferExpandedGhost] at checked
+private theorem inferExpandedGhostIn_sound (wellFormed : EnvWellFormed env) (prior : SlotTyping env)
+    (checked : inferExpandedGhostIn fuel env depth ctx source expanded = some type) :
+    PureTyping.HasType env ctx expanded type := by
+  induction depth generalizing ctx source expanded type with
+  | zero => simp [inferExpandedGhostIn] at checked
   | succ depth ih =>
-    simp only [inferExpandedGhost] at checked
-    cases step : inferStep fuel env (inferExpandedGhost fuel env depth) source expanded with
+    simp only [inferExpandedGhostIn] at checked
+    cases step : inferStep fuel env (inferExpandedGhostIn fuel env depth) ctx source expanded with
     | none => exact .native (Checker.infer_sound (by simpa only [step, Option.orElse_none] using checked))
     | some result =>
       simp only [step, Option.orElse_some, Option.some.injEq] at checked
       subst result
-      exact inferStep_sound prior (fun ran => ih ran) step
+      exact inferStep_sound wellFormed prior (fun ran => ih ran) step
+
+/-- Read a prior ghost's exact checked type only when its stored value is
+actually the expanded term. Under lambda binders, local variables and
+dependent applications retain the newly extended context. -/
+def inferExpandedGhost (fuel : Nat) (env : Environment) (depth : Nat) (source expanded : Term) : Option Term :=
+  inferExpandedGhostIn fuel env depth [] source expanded
+
+theorem inferExpandedGhost_sound (wellFormed : EnvWellFormed env) (prior : SlotTyping env)
+    (checked : inferExpandedGhost fuel env depth source expanded = some type) :
+    PureTyping.HasType env [] expanded type :=
+  inferExpandedGhostIn_sound wellFormed prior checked
 
 structure ExpandedValid (env : Environment) (declaration : GlobalDeclaration) : Prop where
   typing : ∃ sort : SortTag, HasType env [] [] true declaration.type sort.term ∧
@@ -153,7 +178,7 @@ private def checkGhost (limits : Limits) (env : Environment)
         then some () else none) : Option Unit).isSome
   else false
 
-private theorem checkGhost_sound (prior : SlotTyping env)
+private theorem checkGhost_sound (wellFormed : EnvWellFormed env) (prior : SlotTyping env)
     (accepted : checkGhost limits env source expanded = true) : ExpandedValid env expanded := by
   unfold checkGhost at accepted
   split at accepted
@@ -168,7 +193,7 @@ private theorem checkGhost_sound (prior : SlotTyping env)
       · rename_i converted
         have ghost : Definitions.bodyMode sort = true := by simpa using mode
         refine ⟨⟨sort, Checker.sort_sound formed,
-          .convert (inferExpandedGhost_sound prior inferred) (Checker.sort_sound formed)
+          .convert (inferExpandedGhost_sound wellFormed prior inferred) (Checker.sort_sound formed)
             (PureTyping.Checker.equal_sound converted), ?_⟩, ?_, ?_⟩
         · intro code
           rw [ghost] at code
@@ -192,7 +217,7 @@ def checkDeclaration (limits : Limits) (env : Environment) (source : GlobalDecla
   if MixedProgram.checkExpanded limits.typingFuel limits.quantityFuel env expanded ||
      checkGhost limits env source expanded then some expanded else none
 
-theorem checkDeclaration_sound (prior : SlotTyping env)
+theorem checkDeclaration_sound (wellFormed : EnvWellFormed env) (prior : SlotTyping env)
     (accepted : checkDeclaration limits env source = some expanded) : DeclarationChecked env source expanded := by
   unfold checkDeclaration at accepted
   obtain ⟨type, typeExpanded, accepted⟩ := Option.bind_eq_some_iff.mp accepted
@@ -204,7 +229,7 @@ theorem checkDeclaration_sound (prior : SlotTyping env)
     refine ⟨GlobalEnvironment.expand_sound typeExpanded, GlobalEnvironment.expand_sound valueExpanded, ?_⟩
     rcases Bool.or_eq_true_iff.mp checked with raw | pure
     · exact .ofRaw (MixedProgram.checkExpanded_sound raw)
-    · exact checkGhost_sound prior pure
+    · exact checkGhost_sound wellFormed prior pure
   · contradiction
 
 theorem checkDeclaration_accepts_raw
@@ -322,7 +347,7 @@ theorem checkEvents_sound (history : History definitions familyDeclarations env)
       obtain ⟨expanded, checked, rest⟩ := Option.bind_eq_some_iff.mp accepted
       simpa only [FamilyEnvironment.eventDefinitions, FamilyEnvironment.eventFamilies,
         List.append_assoc, List.singleton_append] using
-        ih (.definition history (checkDeclaration_sound history.slotTyping checked)) rest
+        ih (.definition history (checkDeclaration_sound history.wellFormed history.slotTyping checked)) rest
     | family source =>
       obtain ⟨entry, checked, rest⟩ := Option.bind_eq_some_iff.mp accepted
       simpa only [FamilyEnvironment.eventDefinitions, FamilyEnvironment.eventFamilies,
@@ -391,6 +416,31 @@ principal type in the raw checker. -/
 theorem dependent_alias_keeps_stored_type :
     inferExpandedGhost 32 ⟨#[freeDefinition, freeDefinition], #[]⟩ 32 appliedDefinition.value
       (.app PureFreeBoundary.body (.natural 0)) = some appliedDefinition.type := by
+  cbv
+
+private def localReflexivity : Term := .eq (.var 0) (.var 0)
+
+private def proofArgumentDefinition : GlobalDeclaration :=
+  ⟨.pi false .u64 (.pi true localReflexivity (.eq (.var 1) (.var 1))),
+    .lam false .u64 (.lam true (.eq (.free PureFreeBoundary.owner (.var 0)) (.var 0)) (.refl (.var 1)))⟩
+
+private def localArgumentDefinition (argument : Term) : GlobalDeclaration :=
+  ⟨.pi false .u64 localReflexivity,
+    .lam false .u64 (.app (.app (.node (.global 0) []) (.var 0)) (.refl argument))⟩
+
+/-- The outer lambda passes its variable and proof to the earlier ghost.
+The stored domain accepts the proof. Inference on the expanded callee
+checks the proof against the body annotation and rejects it. -/
+theorem checks_prior_ghost_under_lambda :
+    let source := localArgumentDefinition (.var 0)
+    let env : Environment := ⟨#[proofArgumentDefinition], #[]⟩
+    Checker.infer 32 env [] [] true
+      (.lam false .u64 (.app (.app proofArgumentDefinition.value (.var 0)) (.refl (.var 0)))) = none ∧
+    (checkProgram fixtureLimits [proofArgumentDefinition, source] []).isSome = true := by
+  constructor <;> cbv
+
+theorem rejects_wrong_local_ghost_argument :
+    checkProgram fixtureLimits [proofArgumentDefinition, localArgumentDefinition (.natural 0)] [] = none := by
   cbv
 
 end Jihoo.NativeKernel.Environment.LoanTyping.PureMixedAdmission

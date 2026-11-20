@@ -97,7 +97,8 @@ private theorem foldl_max_lower (xs : List Nat) (initial : Nat) : initial ≤ xs
   | nil => exact Nat.le_refl _
   | cons head rest ih => exact Nat.le_trans (Nat.le_max_left _ _) (ih _)
 
-private theorem treeDepth_member (child : Term) (children : List Term) (member : child ∈ children)
+/-- The maximum depth of the children bounds each member. -/
+theorem treeDepth_member (child : Term) (children : List Term) (member : child ∈ children)
     (initial : Nat) : NativeKernel.Conversion.treeDepth child ≤
       (children.map NativeKernel.Conversion.treeDepth).foldl max initial := by
   induction children generalizing initial with

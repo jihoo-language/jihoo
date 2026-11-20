@@ -248,6 +248,121 @@ private theorem project_node (op : Op) (args : List Term) :
     project (.node op args) = ((syntaxView op args).map project).finish := by
   rw [project, projectArgs_map, syntaxView_map]
 
+private def tagForRank (order : Nat) : Nat :=
+  ((List.range 54).find? fun candidate => wireRank candidate == order).getD order
+
+private theorem tagForRank_schema (op : Op) : tagForRank (rank op) = NativeSchema.tag op := by
+  cases op <;> rfl
+
+private def payloadForArity (tag arity : Nat) (fields : List Int) : List Nat :=
+  match tag, fields with
+  | 48, [.ofNat value] => [0, value]
+  | 48, [.negSucc value] => [1, value + 1]
+  | 11, fields | 12, fields => fields.map Int.toNat ++ [arity]
+  | 13, fields | 40, fields | 43, fields => fields.map Int.toNat ++ [arity - 2]
+  | 49, _ => [arity]
+  | _, fields => fields.map Int.toNat
+
+private theorem payloadForArity_schema (op : Op) :
+    payloadForArity (NativeSchema.tag op) op.arity (payload op) = NativeSchema.payload op := by
+  cases op
+  all_goals first | rfl | skip
+  case arith operation => cases operation <;> rfl
+  case back erased => cases erased <;> rfl
+  case give erased => cases erased <;> rfl
+  case view recursive family count => cases recursive <;> rfl
+  case pi erased => cases erased <;> rfl
+  case lam erased => cases erased <;> rfl
+  case integer value => cases value <;> rfl
+
+/-- The comparison header and full child arity determine the constructor.
+For vector constructors, the arity recovers the length omitted by the
+comparison payload. -/
+theorem header_injective (same : (rank first, payload first) = (rank second, payload second))
+    (arity : first.arity = second.arity) : first = second := by
+  have tags : NativeSchema.tag first = NativeSchema.tag second := by
+    simpa only [tagForRank_schema] using congrArg (fun header : Header => tagForRank header.1) same
+  have fields : NativeSchema.payload first = NativeSchema.payload second := by
+    rw [← payloadForArity_schema first, ← payloadForArity_schema second, tags, arity, (Prod.mk.inj same).2]
+  apply Option.some.inj
+  rw [← NativeSchema.ofCode_payload first, ← NativeSchema.ofCode_payload second, tags, fields]
+
+/-- A tree on which identity retains every constructor and every child. -/
+inductive FullyRetained : Term → Prop where
+  | var (index : Nat) : FullyRetained (.var index)
+  | node (ordinary : op ≠ .strict) (kept : conversionChildren op args = args)
+      (arity : args.length = op.arity) (children : ∀ child ∈ args, FullyRetained child) :
+      FullyRetained (.node op args)
+
+private theorem take_kept_of_length {before after : List Term} (length : before.length = after.length)
+    (kept : before.take 2 = before) : after.take 2 = after := by
+  apply List.take_of_length_le
+  rw [← length, ← kept]
+  exact List.length_take_le _ _
+
+/-- Retention selects positions by constructor and child count. Replacing
+the children without changing their count preserves full retention. -/
+theorem children_kept_of_length {before after : List Term}
+    (length : before.length = after.length) (kept : conversionChildren op before = before) :
+    conversionChildren op after = after := by
+  cases op <;> try rfl
+  case usub => exact take_kept_of_length length kept
+  case pack => exact take_kept_of_length length kept
+  case give erased => cases erased <;> first | rfl | exact take_kept_of_length length kept
+
+private theorem retained_node (ordinary : op ≠ .strict) (kept : conversionChildren op args = args) :
+    project (.node op args) = .node (rank op, payload op) (args.map project) := by
+  rw [project_node]
+  simp only [syntaxView, ite_eq_right ordinary, kept, View.map, View.finish]
+
+private theorem rank_positive (op : Op) : rank op ≠ 0 := by
+  cases op <;> simp [rank]
+
+private theorem project_children_injective {inputs outputs : List Term}
+    (mapped : inputs.map project = outputs.map project)
+    (right : ∀ child ∈ outputs, FullyRetained child)
+    (use : ∀ child ∈ inputs, ∀ other, FullyRetained other → project child = project other → child = other) :
+    inputs = outputs := by
+  induction inputs generalizing outputs with
+  | nil => cases outputs <;> simp_all
+  | cons child rest ih =>
+      cases outputs with
+      | nil => simp at mapped
+      | cons other later =>
+          simp only [List.map_cons, List.cons.injEq] at mapped
+          have head := use child List.mem_cons_self other (right other List.mem_cons_self) mapped.1
+          have tail := ih mapped.2 (fun term member => right term (List.mem_cons_of_mem _ member))
+            (fun term member => use term (List.mem_cons_of_mem _ member))
+          rw [head, tail]
+
+/-- Equality of the retained shapes reflects equality of the entire source
+trees when the comparison retained every field. -/
+theorem project_injective_of_fully_retained (left : FullyRetained first) (right : FullyRetained second)
+    (matched : project first = project second) : first = second := by
+  induction left generalizing second with
+  | var index =>
+      cases right with
+      | var other =>
+          simp only [project, Shape.node.injEq, Prod.mk.injEq, List.cons.injEq] at matched
+          have same : index = other := by omega
+          rw [same]
+      | @node op args ordinary kept _ _ =>
+          rw [project, retained_node ordinary kept] at matched
+          exact False.elim (rank_positive op ((Prod.mk.inj (Shape.node.inj matched).1).1.symm))
+  | @node op inputs ordinary kept arity _ ih =>
+      cases right with
+      | var index =>
+          rw [retained_node ordinary kept, project] at matched
+          exact False.elim (rank_positive op (Prod.mk.inj (Shape.node.inj matched).1).1)
+      | @node other outputs otherOrdinary otherKept otherArity otherChildren =>
+          rw [retained_node ordinary kept, retained_node otherOrdinary otherKept] at matched
+          obtain ⟨header, children⟩ := Shape.node.inj matched
+          have same := project_children_injective children otherChildren
+            (fun child member _ fully same => ih child member fully same)
+          have sameArity : op.arity = other.arity := arity.symm.trans
+            ((congrArg List.length same).trans otherArity)
+          rw [header_injective header sameArity, same]
+
 def compareHeader (left right : Header) : Ordering :=
   (compare left.1 right.1).then (compare left.2 right.2)
 
@@ -294,25 +409,31 @@ private def compareRefs (step : Nat → Nat → Nat → Option (Ordering × Nat)
       | .eq => compareRefs step remaining xs ys
       | other => some (other, remaining)
 
-/-- Direct graph comparison. Each call consumes one tick; a recursive strict
-descent or child call uses one less depth. Like Core.compare, a shared root
-can return immediately after the tick, and children are compared in order. -/
-def compareGraph (words : List NodeWords) : Nat → Nat → Nat → Nat → Option (Ordering × Nat)
+/-- Each call consumes one tick. A shared root can return immediately after
+the tick, and each recursive child or Strict descent uses one less depth. -/
+private def compareViews (read : Nat → Option (View Nat)) : Nat → Nat → Nat → Nat → Option (Ordering × Nat)
   | 0, _, _, _ => none
   | _ + 1, 0, _, _ => none
   | depth + 1, work + 1, a, b => do
-      let left ← words[a]?
+      let left ← read a
       if a = b then some (.eq, work) else
-        match wireView left with
-        | .strict result => compareGraph words depth work result b
+        match left with
+        | .strict result => compareViews read depth work result b
         | .plain x xs => do
-            let right ← words[b]?
-            match wireView right with
-            | .strict result => compareGraph words depth work a result
+            let right ← read b
+            match right with
+            | .strict result => compareViews read depth work a result
             | .plain y ys =>
                 match compareHeader x y with
-                | .eq => compareRefs (compareGraph words depth) work xs ys
+                | .eq => compareRefs (compareViews read depth) work xs ys
                 | other => some (other, work)
+
+def compareGraph (words : List NodeWords) : Nat → Nat → Nat → Nat → Option (Ordering × Nat) :=
+  compareViews (fun ref => words[ref]?.map wireView)
+
+/-- Compare live rows, including atoms appended earlier in normalization. -/
+def compareArena (arena : Arena) : Nat → Nat → Nat → Nat → Option (Ordering × Nat) :=
+  compareViews (fun ref => arena[ref]?.map nodeView)
 
 private theorem represented_take (count : Nat) (children : RepresentsList arena refs terms) :
     RepresentsList arena (refs.take count) (terms.take count) := by
@@ -370,23 +491,50 @@ private theorem mapM_read {index : Nat} {words : List NodeWords} {nodes : List N
           exact ⟨word, rfl, head⟩
       | succ index => exact ih tail read
 
+/-- Every represented node supplies the comparison view of its actual arena
+row, including the ordered children retained by conversion. -/
+theorem arena_view_matches (represented : Represents arena root term) :
+    ∃ node, arena[root]? = some node ∧ ViewMatches arena (nodeView node) term := by
+  cases represented with
+  | var read => exact ⟨_, read, [], .nil, by simp [project]⟩
+  | node read _ children => exact ⟨_, read, syntaxView_matches _ children⟩
+
+/-- Decoded rows and their original snapshot words supply the same
+comparison lookup at every reference, including missing rows. -/
+theorem comparison_rows_agree {words : List NodeWords} {nodes : List Node}
+    (aligned : words.mapM NodeWords.toNode = some nodes) :
+    words.map wireView = nodes.map nodeView := by
+  induction words generalizing nodes with
+  | nil =>
+      simp at aligned
+      subst nodes
+      rfl
+  | cons word words ih =>
+      simp only [List.mapM_cons] at aligned
+      obtain ⟨first, decoded, aligned⟩ := Option.bind_eq_some_iff.mp aligned
+      obtain ⟨later, rest, aligned⟩ := Option.bind_eq_some_iff.mp aligned
+      cases aligned
+      simp only [List.map_cons, wireView_refines decoded, ih rest]
+
+theorem compareArena_agrees_wire (aligned : words.mapM NodeWords.toNode = some arena.toList) :
+    compareArena arena depth work a b = compareGraph words depth work a b := by
+  have views := comparison_rows_agree aligned
+  have reads : (fun ref : Nat => arena[ref]?.map nodeView) = fun ref => words[ref]?.map wireView := by
+    funext ref
+    have corresponding := congrArg (fun rows : List (View Nat) => rows[ref]?) views
+    simpa using corresponding.symm
+  unfold compareArena compareGraph
+  rw [reads]
+
 /-- An observed row at a represented root is related to the same projected
 subtree or to the exact ordered list of retained child terms. -/
 theorem wire_matches {words : List NodeWords} {arena : Arena}
     (aligned : words.mapM NodeWords.toNode = some arena.toList)
     (represented : Represents arena root term) :
     ∃ word, words[root]? = some word ∧ ViewMatches arena (wireView word) term := by
-  cases represented with
-  | var read =>
-      obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
-      refine ⟨word, found, ?_⟩
-      rw [wireView_refines decoded]
-      exact ⟨[], .nil, by simp [project]⟩
-  | node read _ children =>
-      obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
-      refine ⟨word, found, ?_⟩
-      rw [wireView_refines decoded]
-      exact syntaxView_matches _ children
+  obtain ⟨node, read, matched⟩ := arena_view_matches represented
+  obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
+  exact ⟨word, found, by rw [wireView_refines decoded]; exact matched⟩
 
 private theorem compareRefs_sound {step : Nat → Nat → Nat → Option (Ordering × Nat)}
     (stepSound : ∀ work a b first second result remaining,
@@ -413,19 +561,20 @@ private theorem compareRefs_sound {step : Nat → Nat → Nat → Option (Orderi
           | eq => exact ih rightRest computed
           | gt => cases computed; rfl
 
-private theorem compareGraph_sound_core
-    (aligned : words.mapM NodeWords.toNode = some arena.toList)
+private theorem compareViews_sound {read : Nat → Option (View Nat)}
+    (observes : ∀ {root term}, Represents arena root term →
+      ∃ observed, read root = some observed ∧ ViewMatches arena observed term)
     (left : Represents arena a first) (right : Represents arena b second)
-    (computed : compareGraph words depth work a b = some (result, remaining)) :
+    (computed : compareViews read depth work a b = some (result, remaining)) :
     result = compareShape (project first) (project second) := by
   induction depth generalizing work a b first second result remaining with
-  | zero => simp [compareGraph] at computed
+  | zero => simp [compareViews] at computed
   | succ depth ih =>
       cases work with
-      | zero => simp [compareGraph] at computed
+      | zero => simp [compareViews] at computed
       | succ work =>
-          obtain ⟨leftWord, atLeft, leftView⟩ := wire_matches aligned left
-          simp only [compareGraph, atLeft, Bind.bind, Option.bind] at computed
+          obtain ⟨leftObserved, atLeft, leftView⟩ := observes left
+          simp only [compareViews, atLeft, Bind.bind, Option.bind] at computed
           by_cases same : a = b
           · subst b
             simp only [ite_true, Option.some.injEq, Prod.mk.injEq] at computed
@@ -433,25 +582,21 @@ private theorem compareGraph_sound_core
             subst second
             exact computed.1.symm.trans ((compareShape_eq _ _).mpr rfl).symm
           · rw [ite_eq_right same] at computed
-            cases shapeLeft : wireView leftWord with
+            cases leftObserved with
             | strict next =>
-                rw [shapeLeft] at leftView computed
                 obtain ⟨child, childRep, eq⟩ := leftView
                 rw [eq]
                 exact ih childRep right computed
             | plain x xs =>
-                rw [shapeLeft] at leftView computed
                 obtain ⟨childrenLeft, kidsLeft, eqLeft⟩ := leftView
-                obtain ⟨rightWord, atRight, rightView⟩ := wire_matches aligned right
+                obtain ⟨rightObserved, atRight, rightView⟩ := observes right
                 simp only [atRight] at computed
-                cases shapeRight : wireView rightWord with
+                cases rightObserved with
                 | strict next =>
-                    rw [shapeRight] at rightView computed
                     obtain ⟨child, childRep, eq⟩ := rightView
                     rw [eq]
                     exact ih left childRep computed
                 | plain y ys =>
-                    rw [shapeRight] at rightView computed
                     obtain ⟨childrenRight, kidsRight, eqRight⟩ := rightView
                     rw [eqLeft, eqRight, compareShape]
                     dsimp only at computed
@@ -459,6 +604,16 @@ private theorem compareGraph_sound_core
                     · cases computed; rfl
                     · exact compareRefs_sound (fun _ _ _ _ _ _ _ => ih) kidsLeft kidsRight computed
                     · cases computed; rfl
+
+/-- On represented live terms the sorted ordering uses the same projection
+as identity, with the exact simulated comparison budget. -/
+theorem compareArena_refines (left : Represents arena a first) (right : Represents arena b second)
+    (computed : compareArena arena depth work a b = some (result, remaining)) :
+    result = compareShape (project first) (project second) := by
+  apply compareViews_sound _ left right computed
+  intro _ _ represented
+  obtain ⟨node, read, matched⟩ := arena_view_matches represented
+  exact ⟨nodeView node, by simp [read], matched⟩
 
 /-- Successful direct graph comparison agrees with the independent tree
 projection throughout the decoded version-6 arena. -/
@@ -474,7 +629,8 @@ theorem compareGraph_refines (fits : ∀ word ∈ words, word.fits)
   | some nodes =>
       simp only [aligned, Option.map_some, Option.some.injEq, Prod.mk.injEq] at parsed
       obtain ⟨rfl, rfl⟩ := parsed
-      exact compareGraph_sound_core (by simpa using aligned) left right computed
+      rw [← compareArena_agrees_wire (by simpa using aligned)] at computed
+      exact compareArena_refines left right computed
 
 theorem compareGraph_zero_iff (fits : ∀ word ∈ words, word.fits)
     (parsed : NativeFamilyWire.parseSnapshot (encodeObservedProgram definitions families words ++ tail) =

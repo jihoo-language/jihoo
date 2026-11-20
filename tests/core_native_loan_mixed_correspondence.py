@@ -74,6 +74,9 @@ CASES.update({
         '(def inherited (pi x U64 (Eq (free (alloc 1 (int 0)) x) x)) freed_eq)\n'
         '(data Bit (Off Bit) (On (pi x U64 Bit)))\n'
         '(def applied (Eq (free (alloc 1 (int 0)) 0) 0) (app inherited 0))\n'
+        '(def prior (pi x U64 (pi0 p (Eq x x) (Eq x x))) '
+        '(lam x U64 (lam0 p (Eq (free (alloc 1 (int 0)) x) x) (refl x))))\n'
+        '(def nested (pi y U64 (Eq y y)) (lam y U64 (app (app prior y) (refl y))))\n'
         '(def scalar I64 (int 7))', True, False),
 })
 

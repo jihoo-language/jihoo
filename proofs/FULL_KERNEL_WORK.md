@@ -4,6 +4,28 @@ The whole-kernel verification work has resumed. Verified checkpoints are
 committed and pushed as the work progresses. The completion obligations below
 remain open.
 
+## Handoff on 2026-11-20
+
+The current handoff is on `codex/kernel-pure-and-array`. Issue #218 was closed
+by PR #219. Version 0.7.0 is gated on the complete verification obligations
+below. The branch contains checked advances in arithmetic consistency,
+ghost preservation, runtime ownership and graph refinement.
+
+| Remaining obligation | Starting point |
+| --- | --- |
+| General consistency and typed normalization | `NativeLoanGlobalProofNormalization.lean` derives a sufficient fuel bound from a syntax certificate for checked arithmetic proofs, including prior globals and U64 beta. Extend the proof beyond that certificate to arbitrary universe levels, families, elimination and proofs of false propositions. |
+| Whole-language preservation | `NativeCorePureComputationNormal.lean` derives `GhostTransform` from successful recursive structural, beta and Transport graph walks and retains the exact admitted type. Extend the typed relation and its reentry rules to the remaining operations, including computations involving families and effects. |
+| Ownership, borrowing and continuations | `NativeBindingMachineMutableCanonicalFreeDemand.lean` reaches the typed tail after a named direct-Index reader closes and either lexical alias releases the physical owner. Lift the resource and lease invariants across arbitrary reader bodies, nested frames and dependent calls. |
+| Production refinement | `NativeCoreTransformExact.lean` and the graph normalizers give exact-order Lean models for the covered operations. Relate the production Jihoo source to these models and cover complete runtime/pure normalization, inference and mixed admission. |
+
+Run the aggregate proof check from the checkout with the declared resource
+limits. It checks Lake compilation, the exact axiom audit, and the generated
+fixtures.
+
+```sh
+nix develop -L .#proofs -c scripts/proof-limits.sh bash proofs/check.sh
+```
+
 ## Completion obligations
 
 Retain the original specified-rule goal in `docs/internals/roadmap.md` and
@@ -194,10 +216,20 @@ The subsequent explicit user pause request overrides that instruction: finish
 the current checked checkpoint, commit and push it, then pause the active goal.
 Do not begin another proof task until the user resumes work.
 
-Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
-workstation path is `/home/user/jihoo` and the active continuation branch is
-`codex/alias-reborrow-verification`. The earlier verification branch was merged
-into main. Preserve existing edits and never force-push.
+The user resumed full-kernel work on 2026-11-20 and explicitly requested
+continuation until they ask to stop. The active goal records the complete
+proof obligations and the conditional 0.7.0 release. Continue checked
+increments on the verification branch.
+
+The user requested a handoff on 2026-11-20 to continue the remaining work
+later. The final checked increment and the handoff above record the current
+state.
+
+Use the checkout of `https://github.com/jihoolang/jihoo` at
+`/home/user/jihoo`. Work resumed on 2026-11-20 on
+`codex/kernel-pure-and-array`, following the merge of
+`codex/alias-reborrow-verification` into main. Preserve existing edits and never
+force-push.
 Read `AGENTS.md` and the source theorems before changing them. Continue useful
 work without asking again for already authorized commits, pushes or memory
 configuration. The user explicitly permits choosing memory ceilings to avoid
@@ -2135,3 +2167,356 @@ generated fixture comparison under the resource wrapper. Only `propext`,
 correspondence passed 69 source fixtures and 55 raw exact-byte checks. The
 suite also passed the pure admission check of the same 1,101 native bytes
 that the raw checker rejected.
+
+## 2026-11-20 kernel verification checkpoint
+
+The mixed pure checker carries the actual local context into ghost lambdas.
+It reuses the checked type of an earlier global under the binder, then checks
+dependent application arguments in that context. The regression exercises a
+stored proof function with a Free expression in its binder annotation and a
+later lambda that applies the function to a local reflexivity proof.
+The native mixed regression passes 69 source cases and 55 exact-byte checks.
+The expanded checker also accepts the same 2,133-byte native snapshot.
+
+The extended ghost judgment has unique result types up to RawValue conversion.
+The finite polymorphic model reconstructs inhabitants from checked expanded
+ghost typing in its recognized grammar. It also proves that the executable
+checker rejects a function returning an arbitrary abstract type at each of the
+32 supported universe levels, within that grammar.
+
+The allocation-free graph path for pure Free and Drop follows their
+continuations through interleaved transparent global references. Exact-byte
+admission supplies the original declaration type, and a successful path to an
+atomic node preserves that type and produces a forward conversion witness.
+Structural normalization now composes the path across all children of a
+supported parent. It shares the checking budget, reuses unchanged parents,
+and appends at most one node while preserving backward references. The same
+conversion theorem applies to exact admitted snapshot bytes.
+The recursive version handles arbitrary nesting of supported structural
+parents over atomic, Free, Drop, and alias leaves. It threads each child's
+extended arena through the next child. A later failing child preserves earlier
+appends and backward references. The shared-child example checks two distinct
+appends and the exact arena retained when the second traversal exhausts fuel.
+
+The zero-count Fold and dependent Loop graph paths visit the count and
+initializer in native order and return the normalized initializer at the
+exact original type. The count may follow transparent aliases to zero,
+and the initializer may follow the allocation-free pure path. Exact
+mixed admission provides the original declaration typing. The native
+preservation command accepts both the existing empty-iteration fixture and
+a variant whose count is a transparent global.
+
+The binding machine now derives variable-array indexing from reachable slots
+and supported closed arithmetic evidence. Its array frames retain the
+original source expression and the progress through its element list. At an
+integer child return, the checked source supplies the next child's type or the
+original array result type, using the concrete accumulated values.
+
+The aggregate check passed 1,004 Lake jobs, 9,533 declaration audits, and all
+generated fixture comparisons. The axiom audit accepts only the standard
+Lean axioms `propext`, `Quot.sound`, and `Classical.choice`.
+The focused Nix graph-certificate build now includes the pure mixed
+admission module imported by the version-6 validator. Both system
+derivations evaluated, and the native mixed regression passed again after
+building the validator's imports.
+
+General consistency, contextual preservation across the rest of the
+language, the source-to-runtime ownership invariant, and refinement of the
+production compiler remain open.
+
+### Composite delta normalization, array call entry, and proof observation
+
+The recursive graph normalizer now reenters structural normalization after
+transparent global lookup and the pure Free and Drop continuations. A
+successful run retains its forward reduction under the authentic mixed
+history. Arena growth is bounded by charged visits. A run entering within
+budget can exceed the limit only by the final rejecting tick.
+
+An actual final array element return can resume an argument frame and enter
+its saved closure. The two-transition theorem derives the dependent result
+typing and the value context from the constructed array and the original
+source typing. Captured source typing remains a premise. Relating the
+saved argument origin to the constructed array remains an open obligation.
+
+Bounded observation now works directly on extended ghost derivations and
+the stored bodies of exact-byte mixed admission. Typed beta, reflexive
+Transport, Strict, and Free preserve the original result type. Contextual
+steps cover lambda bodies and application callees. Recognized arithmetic
+residuals give truth for the original accepted type and rule out a false
+closed numeral inequality when observation succeeds. General termination
+and coverage of all source proof terms remain open.
+
+The aggregate check passed 1,006 Lake jobs, 9,546 declaration audits, and
+all generated fixture comparisons. With the existing Lake cache, the
+resource-limited aggregate check took 13.48 seconds.
+
+### Normal forms, array calls, and dependent proof operands
+
+A successful recursive graph normalization in the supported fragment
+produces a represented normal form. Its depth and unfolded tree size are
+bounded by the original depth and charged visits. Rerunning from the result
+reference with the same starting counter and limits returns the same arena
+and reference, charging at most the original work. Each occurrence of a
+shared child still consumes its own visit. Exact-byte mixed admission
+supplies the original body representation for a stored definition.
+
+The typed array call and variable index paths now compose from a reachable
+final array element return. Seven actual transitions enter the saved closure,
+select its captured unsigned index, and return the integer with the original
+dependent type. The bounds follow from the captured value and the supported
+closed arithmetic evidence. The source typing and captured value context
+remain explicit premises.
+
+The bounded ghost proof observer can reduce a dependent application operand
+when the executable Loan64 conversion relates it to the original operand.
+It reconstructs the original instantiated codomain and retains prior
+successful observation paths. The checked example uses a computed argument
+and an annotation that requires Free conversion.
+
+The aggregate check passed 1,006 Lake jobs, 9,554 declaration audits, and
+all generated fixture comparisons. The cached, resource-limited run took
+11.33 seconds.
+
+### Live arena equality, signed normal forms, and mutable heap history
+
+Pure structural equality now carries the arena produced by the left
+normalization into the right normalization and then reads both returned
+references with the shared identity evaluator. The live evaluator agrees
+with aligned version-6 words, including failures and the step counter.
+Successful comparison decides equality of the normalized retained shapes.
+The shared limit bounds both normalizations and the final identity call,
+and every appended row is charged to a visit.
+
+Signed arithmetic normalization visits nested operands left to right and
+passes exact I64 words through the widened fold. It retains overflow as an
+arithmetic node. Represented results preserve the original Loan64 ghost
+type, including when exact-byte admission supplies that type. In this
+fragment the nonarithmetic leaf paths end in atoms.
+
+Actual Mutable transitions project to the exact allocation and lease
+history of their metadata, including when evaluation fails. This supplies
+the history needed to transport captured Buffer lengths across arbitrary
+reachable Store and Load suffixes and to show released owner IDs stay dead.
+Indexed reads, writes, and activation leave this metadata unchanged.
+
+Bounded ghost proof observation now replays computed proof loops and
+nested arithmetic evidence through the actual stored derivations. The
+mixed admission example replays a checked two-step dependent induction at
+its original annotation. The general logical interpretation and
+termination argument remain open.
+
+The aggregate check passed 1,009 Lake jobs, 9,573 declaration audits, and
+all generated fixture comparisons in 39.78 seconds with the warm cache.
+
+### Comparison reflection and typed observation of computed branches
+
+The comparison header and child arity recover the complete constructor,
+including vector-length fields. For expanded inputs whose entire trees
+are retained by comparison, structural normalization preserves full
+retention. Successful live equality on this fragment therefore yields a
+RawValue conversion of the original nodes. Equality of discarded evidence
+remains a separate typed proof obligation.
+
+The graph normalization models for Witness and Proof first normalize the
+refinement structurally. They return the appropriate Pack reference with
+the native step counter and model the different neutral append behavior.
+Exact mixed admission supplies the declaration history for the RawValue
+reduction and graph preservation theorem.
+
+Actual Free events characterize liveness of an earlier allocated owner
+through a reachable Mutable suffix. The typed literal Store theorem now
+derives its current size world and reader inventory from that suffix,
+using an earlier captured owner world and liveness. The resulting run
+either writes the selected cell at its original Buffer type or faults on
+the released owner without changing the heap.
+
+Bounded ghost observation can select either branch of computed IfLt and
+IfEq with U64 numeral operands. A true branch receives a proof at the
+original operand terms, and replay preserves the exact requested type.
+The mixed checker examples combine this with dependent beta and verify
+true equality for distinct operand expressions.
+
+The aggregate check passed 1,011 Lake jobs, 9,592 declaration audits, and
+all generated fixture comparisons. Rebuilding the affected dependencies
+and checking the aggregate took 78 seconds.
+
+### Checked comparison evidence, transparent globals, and mutable roundtrip
+
+For checked USub, Pack, and erased Give roots, the typing derivations
+recover the proposition and typing of the evidence skipped by Core.identical.
+A successful live comparison identifies the same proposition on both sides
+when both retained operands are fully retained. The result supplies the
+typing premise for a future irrelevance rule without inserting an untyped
+equation into RawValue conversion.
+
+An admitted transparent global can be unfolded in any local context at an
+independently formed requested type using its original derivation and closed
+weakening. Bounded expansion followed by structural replay retains residual
+typing and supports arithmetic observation from the original source with
+global references. The checked example uses a transparent call under a
+binder at a type that requires Free conversion.
+
+Pure graph normalization now handles nested Borrow and Deref. Either order
+of cancellation returns the original inner reference. Neutral results
+preserve an existing row or append one when the operand changes. For a
+structurally normal payload, exact-byte admission also supplies the original
+ghost typing at the cancellation result.
+
+The actual mutable evaluator now has a checked execution theorem for a closed
+Alloc, Store, Load, and Free program with arbitrary admitted literal lengths,
+offsets, fill values, and replacements. Given a representable allocation
+size, checking supplies the numeric premise for each step. The 23 transitions
+write and read the same cell, release the original owner, and return the
+integer at the exact original result type.
+
+The aggregate check passed 1,015 Lake jobs, 9,610 declaration audits, and
+all generated fixture comparisons in 9.27 seconds with the warm cache.
+
+### Unsigned collection, cancellation, and wide constants
+
+Live unsigned collection follows the addition children in evaluation order.
+It records Strict prefixes and charges each occurrence of shared nodes.
+An independent syntax trace accounts for both output vectors, every literal
+update and the exact counter difference. The production budget implies that
+the actual U128 accumulator contains the mathematical total.
+
+Cancellation copies the pool, scans with live identity and charges every
+entry shifted after a match. Completed calls agree with ordered first-match
+removal on represented comparison shapes. Success accounts for one
+occurrence per request and preserves the mathematical remainder for any
+valuation on those shapes.
+
+The wide-constant emitter now appends to the arena in native order, shares
+equal halves and preserves the old prefix even when an append fails. The
+represented result preserves the collected value, has the U64 ghost type,
+and its unfolded depth is at most 21 for a collection from zero within the
+production step budget.
+
+The aggregate check passed 1,018 Lake jobs, 9,626 declaration audits, and
+all generated fixture comparisons in 13.16 seconds with the warm cache.
+
+### Canonical ordering, source assumptions, and typed continuation entry
+
+The live and serialized structural orders share a comparison traversal.
+Canonical sorting spends one tick per variable insertion comparison and uses
+the live structural order for ghost nonvariables. It preserves the input
+order of runtime nonvariables. The sorted references represent a permutation
+of the original atoms. Canonical graph emission folds the ordered references
+from the left, preserves the earlier arena, and produces a U64 term from
+U64 atoms. An oversized runtime constant returns the native fallback signal
+before sorting or appending.
+
+An actual ghost checker derivation in a mixed local context can now be
+closed with typed substitutions constructed from a U64 valuation and
+true erased Lt and Eq assumptions. The wide variant handles affine
+expressions whose operands exceed U64 by constructing Loan64 evidence
+from mathematical arithmetic. Successful proof observation derives truth
+at the original instantiated proposition.
+
+Pure variable-body applications use the native identity shift and binder
+decrement. The graph result is reached by raw reduction of the original
+admitted term. The original ghost type is recovered in the identity case
+with structurally normal operands, and the model tracks the traversal
+counter across the application.
+
+The executable mixed checker supplies the typed entry of an arbitrary
+explicit two-binder Load callback after 19 actual allocation, store, read,
+and activation steps. Its captured scalar has the written value and the
+restored owner has its original live physical Buffer and size. The checked
+resource projection supplies the one-unit owner budget. For an admitted
+callback whose body starts by freeing that owner, 22 actual steps reach the
+remaining body with dependent typing and no residual demand for the
+released slot. Full control-stack preservation continues beyond this entry.
+
+The aggregate check passed 1,026 Lake jobs, 9,666 declaration audits, and
+all generated fixture comparisons in 9.20 seconds with the warm cache.
+
+### Binder transformations, typed sums, and physical owner demand
+
+The live graph transformation now covers all 54 constructors for signed
+shift, binder-removing substitution, and rewrite without binder removal.
+Successful runs give the independent capture-avoiding tree meaning while
+preserving earlier rows and backward references. Visit accounting charges
+each source occurrence and each shifted replacement occurrence. A worked
+failure retains the earlier child's committed append.
+
+The two operand collections of Core.sum share depth, clock, atom pool,
+and the widened accumulator. Ghost sum construction preserves the exact
+original checked type and raw conversion when the collected pool has no
+root subtraction to cancel. It returns the sorted, canonically emitted
+result after reattaching every Strict prefix in the native wrapping order.
+The remaining cancellation rounds require a typed symbolic subtraction
+equation and the complete guarded branch.
+
+The open arithmetic proof fragment now derives finite successful replay
+from an actual typing derivation and the source grammar. It supports nested
+erased assumptions and arbitrary head chains of Strict, Free, and reflexive
+Transport. Its normalization gives the original proposition's arithmetic
+truth and rules out closed Lt(0,0) derivations in that grammar.
+
+Positive demand in the retained owner context entails a single live
+physical owner with no other demanded alias. Free derives liveness from
+this world and preserves the remaining world. An actual variable Load
+transfers the single unit to the restored binding, leaves older aliases of
+that owner at zero demand, and preserves unrelated live owner units. Both
+operations retain the original dependent continuation typing.
+
+The aggregate check passed 1,032 Lake jobs, 9,702 declaration audits, and
+all generated fixture comparisons in 70.92 seconds while rebuilding the
+affected dependencies.
+
+### Compound beta, evaluation analysis, and named reader entry
+
+Pure application normalization now composes the exact graph substitution
+with operand and result normalization for a represented lambda body of
+any shape supported by the successful walks. With structurally normal
+operands the substituted body remains in the same fragment, and the exact
+declared dependent type and cost follow from the original typing and the
+native visit accounting.
+
+Core.may_trap and Core.reads have live-arena and syntax models with
+matching results at every depth. The graph walk terminates along the
+backward application spine. The models preserve erased Pack and Give
+positions, the runtime variable-call guard, and the distinction between
+View motives returning functions and those reading scalar results.
+
+A complete owner demand receipt can be split for sequential execution.
+Each positive physical owner unit belongs to only one side, even through
+retained aliases. Named reader entry uses this demand world to derive live
+ownership and opens the actual fresh lease and token. Its specialized
+reader retains the original ghost type and zero owner demand for the
+borrowed slot. Demand totality on the physical owner slots also carries
+through the existing Free and Load handoffs.
+
+The aggregate check passed 1,037 Lake jobs, 9,720 declaration audits, and
+all generated fixture comparisons in 9.34 seconds with the warm cache.
+
+### Final checked increment
+
+The recursive pure graph model now handles structural nodes, beta and
+Transport together. It preserves the original Loan64 type of definitions
+admitted from exact version-6 bytes, with no need for their operands to
+start in normal form. One example reduces a nested call to reflexivity
+under an erased binder and completes Transport after 22 ticks.
+
+Arithmetic proof replay now follows prior transparent definitions and
+beta at U64 binders with a derived sufficient fuel threshold. All larger
+fuel bounds produce the same typed residual in the supported grammar.
+The example checks a prior source alias through actual mixed admission.
+
+Guarded USub cancellation preserves the source type, original residual
+references and mathematical subtraction value in every interpretation of
+the retained comparison shapes. It reattaches potentially trapping
+operands and has a typed neutral fallback retaining the proof reference.
+This covers the subtraction branch after operand normalization. The
+separate cancellation rounds for UAdd and general typed conversion for
+symbolic subtraction remain open.
+
+The named direct-Index reader path now derives the read, the exact lease
+close, the restored bindings and the continuation owner world from the
+original entry. The composed 18-step path releases the owner through
+either its returned slot or its older alias, preserves outer leases, and
+enters the checked tail with its original type and complete owner demand.
+
+The aggregate check passed 1,042 Lake jobs, 9,751 declaration audits, and
+all generated fixture comparisons in 11.11 seconds with the warm cache.

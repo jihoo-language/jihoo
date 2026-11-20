@@ -7,7 +7,7 @@ Each rebuilt term preserves the original Loan64 type. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ProofTreeObservation
 open NativeKernel.Conversion (treeSize)
 
-private def mapEvidence? (visit : Term → Option Term) : Term → Option Term
+def mapEvidence? (visit : Term → Option Term) : Term → Option Term
   | .ltAdd a b c proof => (visit proof).map (.ltAdd a b c)
   | .ltCancel a b c proof => (visit proof).map (.ltCancel a b c)
   | .ltLe a b c lower upper => do
@@ -22,15 +22,17 @@ private def mapEvidence? (visit : Term → Option Term) : Term → Option Term
   | .absurd target proof => (visit proof).map (.absurd target)
   | _ => none
 
-private theorem mapEvidence_preserves (visit : Term → Option Term)
+/-- Evidence positions request exact types from the original typing rule. A
+visitor may use the current local context when checking a replacement. -/
+theorem mapEvidence_preserves (visit : Context → Term → Option Term)
     (visitSound : ∀ {ctx input type result}, HasType env [] ctx true input type →
-      visit input = some result → HasType env [] ctx true result type)
-    (typed : HasType env loans ctx mode term type) (mapped : mapEvidence? visit term = some result) :
+      visit ctx input = some result → HasType env [] ctx true result type)
+    (typed : HasType env loans ctx mode term type) (mapped : mapEvidence? (visit ctx) term = some result) :
     HasType env [] ctx true result type := by
   revert result
   apply HasType.rec (t := typed)
     (motive_1 := fun _ _ _ _ _ _ => True)
-    (motive_2 := fun _ ctx _ term type _ => ∀ result, mapEvidence? visit term = some result →
+    (motive_2 := fun _ ctx _ term type _ => ∀ result, mapEvidence? (visit ctx) term = some result →
       HasType env [] ctx true result type)
     (motive_3 := fun _ _ _ _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ => True)
@@ -119,7 +121,8 @@ theorem observe?_sound (history : MixedProgram.History definitions familyDeclara
       split at ranEvidence
       · cases ranEvidence
         exact typedRoot
-      · exact mapEvidence_preserves _ (fun typed observed => (ih typed observed).1) typedRoot ranEvidence
+      · exact mapEvidence_preserves (fun _ => observe? env budget countFuel reductionFuel fuel)
+          (fun typed observed => (ih typed observed).1) typedRoot ranEvidence
     split at observed
     · rename_i within
       cases observed
