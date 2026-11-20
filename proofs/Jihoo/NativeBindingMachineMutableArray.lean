@@ -1,4 +1,7 @@
 import Jihoo.NativeBindingMachineMutableNumeric
+import Jihoo.NativeBindingMachineMutableAlignment
+import Jihoo.NativeLoanArithmeticProofConsistency
+import Jihoo.NativeLoanTypeUniqueness
 
 /-! Indexed Array consumes its actual retained immutable elements. Source
 index evidence supplies the bound and array typing fixes the physical length. -/
@@ -161,6 +164,95 @@ theorem reachable_typed_array_index (term : Term) (fuel : Nat)
   exact ⟨length,within,_,selected,literal_array_index_steps _ evaluating shape stored limits.1 selected,
     (LoanTyping.HasType.integer width.1 width.2).convert requested⟩
 
+private theorem array_kind_shape (admissible : EnvironmentDelta.Admissible env)
+    (kind : ValueKind env value (.array size)) :
+    ∃ elements, value = .array elements ∧
+      LoanTyping.Conversion.Conv env (.natural elements.length) size := by
+  cases value with
+  | array elements => exact ⟨elements,rfl,kind.array_injective admissible⟩
+  | natural | integer =>
+      exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
+  | owner | reference =>
+      obtain ⟨_,kind⟩ := kind
+      exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
+  | closure =>
+      obtain ⟨_,_,kind⟩ := kind
+      exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h) kind admissible)
+  | typeCode =>
+      obtain ⟨sort,kind⟩ := kind
+      cases sort <;> exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl
+        (by intro h; cases h) kind admissible)
+
+/-- For the array rule, actual reachability supplies both retained slots. The
+closing interpretation of the erased evidence proves the physical bound and the
+selected value retains the original result type. -/
+theorem reachable_typed_variable_array_index (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run fuel (initial term)).state.control = .evaluate code)
+    (typed : LoanClosingTyped env loans false code meanings type)
+    (context : ValueContext env code meanings)
+    (shape : code.term = .index (.var arraySlot) (.var indexSlot) evidence)
+    (arrayOperand : LoanTyping.HasType env loans code.context false (.var arraySlot) (.array count))
+    (supported : Semantics.LoanArithmetic.Supported (evidence.subst meanings)) :
+    let state := (run fuel (initial term)).state
+    ∃ elements offset value,
+      code.values[arraySlot]? = some (some (.array elements)) ∧
+      code.values[indexSlot]? = some (some (.natural offset)) ∧
+      meanings indexSlot = .natural offset ∧ offset < elements.length ∧
+      elements[offset]? = some value ∧
+      run 5 state = ⟨⟨state.heap,.returned (.integer value),state.stack,state.pending⟩,[],5⟩ ∧
+      LoanTyping.HasType env [] [] false (.integer value) type := by
+  have wf := history.wellFormed
+  have aligned := initial_run_code_aligned term fuel SizedBufferHeap.empty evaluating
+  obtain ⟨closing,_,original,converted⟩ := typed
+  rw [shape] at original
+  obtain ⟨size,indexed,indexOperand,bound⟩ := original.index_inputs
+  have arrayTyped : LoanClosingTyped env loans false (code.child (.var arraySlot)) meanings
+      (.array (count.subst meanings)) := by
+    refine ⟨closing,_,arrayOperand,?_⟩
+    simpa only [Term.subst,substArgs,Op.binders,liftSub] using
+      (RawLend.Conv.refl (env := env) (.array (count.subst meanings)))
+  have indexTyped : LoanClosingTyped env loans false (code.child (.var indexSlot)) meanings .u64 := by
+    refine ⟨closing,_,indexOperand,?_⟩
+    simpa only [Term.subst,substArgs] using (RawLend.Conv.refl (env := env) .u64)
+  obtain ⟨arrayValue,arrayStored,arrayKind⟩ :=
+    (context.child _).variable_kind history arrayTyped (aligned.child _) rfl
+  obtain ⟨indexValue,indexStored,indexKind⟩ :=
+    (context.child _).variable_kind history indexTyped (aligned.child _) rfl
+  obtain ⟨elements,rfl,arrayLength⟩ := array_kind_shape wf.admissible arrayKind
+  obtain ⟨offset,rfl⟩ := indexKind.natural_shape wf.admissible
+  change code.values[arraySlot]? = some (some (.array elements)) at arrayStored
+  change code.values[indexSlot]? = some (some (.natural offset)) at indexStored
+  have indexMeaning := context.scalars.1 indexSlot offset indexStored
+  have closedLength : LoanTyping.Conversion.Conv env (.natural elements.length) (size.subst meanings) := by
+    rcases indexed with array | borrowed
+    · have lengths := (arrayOperand.unique wf array).array_injective wf.admissible
+      exact arrayLength.trans (lengths.substitution meanings wf.closed)
+    · exact False.elim (RawLend.Conv.full_rigid_disjoint rfl rfl (by intro h; cases h)
+        (arrayOperand.unique wf borrowed) wf.admissible)
+  have closedEvidence : LoanTyping.HasType env [] [] true (evidence.subst meanings)
+      (.lt (.natural offset) (.natural elements.length)) := by
+    have checked : LoanTyping.HasType env [] [] true (evidence.subst meanings)
+        (.lt (.natural offset) (size.subst meanings)) := by
+      simpa only [Term.subst,substArgs,Op.binders,liftSub,indexMeaning] using bound.ghostSubstitution wf closing
+    exact checked.convert (.node .lt (.cons (.refl _) (.cons closedLength.symm .nil)))
+  have truth := Semantics.LoanArithmetic.supported_truth wf closedEvidence supported
+  have within : offset < elements.length := truth.affine_less wf (.literal offset) (.literal elements.length)
+    (fun _ => 0)
+  have selected : elements[offset]? = some elements[offset] := List.getElem?_eq_some_iff.mpr ⟨within,rfl⟩
+  have numeric := (initial_run_numbers term fuel).legacy.2.1
+  change ControlNumbers _ at numeric
+  rw [evaluating] at numeric
+  have cells := (ValuesNumbers.valueAt (show CodeNumbers code from numeric) arrayStored).arrayBounds
+  have width := cells _ (List.mem_of_getElem? selected)
+  have requested : LoanTyping.Conversion.Conv env .i64 type := by
+    simpa only [Term.subst,substArgs] using (original.principalView.substitution meanings wf.closed).trans converted
+  refine ⟨elements,offset,_,arrayStored,indexStored,indexMeaning,within,selected,?_,
+    (LoanTyping.HasType.integer width.1 width.2).convert requested⟩
+  simp only [run,step,evaluating,shape,evaluateAction,Code.child,arrayStored,indexStored,executeLegacy,execute,
+    Option.map_none,returnAction,selected]
+  rfl
+
 namespace Examples
 
 set_option maxRecDepth 4096
@@ -188,6 +280,19 @@ theorem array_literal_effect_order : (run 50 (initial read_array)).events.filter
 theorem array_index_out_of_bounds :
     observe (run 8 (initial (.index (.elements 0 []) (.natural 0) (.natural 0)))) =
       .fault .indexBounds := by rfl
+
+private def read_array_variable : Term :=
+  .app (.app (.lam false (.array (.natural 2)) (.lam false .u64
+    (.ifLt (.var 0) (.natural 2) (.index (.var 2) (.var 1) (.var 0)) (.integer 0)))) elements)
+    (.free (.alloc (.natural 1) (.integer 33)) (.natural 1))
+
+theorem array_variable_index_admitted_and_returns :
+    LoanTyping.MixedProgram.checkDeclaration 64 64 .empty
+      ⟨.i64,read_array_variable⟩ = some ⟨.i64,read_array_variable⟩ ∧
+      observe (run 64 (initial read_array_variable)) = .integer (-6) := by
+  constructor
+  · cbv
+  · rfl
 
 end Examples
 

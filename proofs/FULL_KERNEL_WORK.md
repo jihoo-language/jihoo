@@ -194,10 +194,11 @@ The subsequent explicit user pause request overrides that instruction: finish
 the current checked checkpoint, commit and push it, then pause the active goal.
 Do not begin another proof task until the user resumes work.
 
-Use the current checkout of `https://github.com/jihoolang/jihoo`; the current
-workstation path is `/home/user/jihoo` and the active continuation branch is
-`codex/alias-reborrow-verification`. The earlier verification branch was merged
-into main. Preserve existing edits and never force-push.
+Use the checkout of `https://github.com/jihoolang/jihoo` at
+`/home/user/jihoo`. Work resumed on 2026-11-20 on
+`codex/kernel-pure-and-array`, following the merge of
+`codex/alias-reborrow-verification` into main. Preserve existing edits and never
+force-push.
 Read `AGENTS.md` and the source theorems before changing them. Continue useful
 work without asking again for already authorized commits, pushes or memory
 configuration. The user explicitly permits choosing memory ceilings to avoid
@@ -2135,3 +2136,42 @@ generated fixture comparison under the resource wrapper. Only `propext`,
 correspondence passed 69 source fixtures and 55 raw exact-byte checks. The
 suite also passed the pure admission check of the same 1,101 native bytes
 that the raw checker rejected.
+
+## 2026-11-20 kernel verification checkpoint
+
+The mixed pure checker carries the actual local context into ghost lambdas.
+It reuses the checked type of an earlier global under the binder, then checks
+dependent application arguments in that context. The regression exercises a
+stored proof function with a Free expression in its binder annotation and a
+later lambda that applies the function to a local reflexivity proof.
+The native mixed regression passes 69 source cases and 55 exact-byte checks.
+The expanded checker also accepts the same 2,133-byte native snapshot.
+
+The extended ghost judgment has unique result types up to RawValue conversion.
+The finite polymorphic model reconstructs inhabitants from checked expanded
+ghost typing in its recognized grammar. It also proves that the executable
+checker rejects a function returning an arbitrary abstract type at each of the
+32 supported universe levels, within that grammar.
+
+The allocation-free graph path for pure Free and Drop follows their
+continuations through interleaved transparent global references. Exact-byte
+admission supplies the original declaration type, and a successful path to an
+atomic node preserves that type and produces a forward conversion witness.
+Structural normalization now composes the path across all children of a
+supported parent. It shares the checking budget, reuses unchanged parents,
+and appends at most one node while preserving backward references. The same
+conversion theorem applies to exact admitted snapshot bytes.
+
+The binding machine now derives variable-array indexing from reachable slots
+and supported closed arithmetic evidence. Its array frames retain the
+original source expression and the progress through its element list. At an
+integer child return, the checked source supplies the next child's type or the
+original array result type, using the concrete accumulated values.
+
+The aggregate check passed 1,003 Lake jobs, 9,526 declaration audits, and all
+generated fixture comparisons. The axiom audit accepts only the standard
+Lean axioms `propext`, `Quot.sound`, and `Classical.choice`.
+
+General consistency, contextual preservation across the rest of the
+language, the source-to-runtime ownership invariant, and refinement of the
+production compiler remain open.

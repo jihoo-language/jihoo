@@ -1180,3 +1180,7 @@ import Jihoo.NativeLoanPureMixedAdmission
 import Jihoo.NativeLoanPureArithmetic
 import Jihoo.NativeCoreGlobalNormal
 import Jihoo.NativeBindingMachineMutableArray
+import Jihoo.NativeLoanPureTypeUniqueness
+import Jihoo.NativeLoanPureUniverse
+import Jihoo.NativeBindingMachineMutableArrayFrames
+import Jihoo.NativeCorePureStructuralNormal
