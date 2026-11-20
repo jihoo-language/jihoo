@@ -4347,3 +4347,16 @@ index. The theorem now converts the emitted graph type to the expected
 nonrecursive branch type from the checked family table. The focused
 build passed 336 jobs and the six audited additions use standard Lean
 axioms.
+
+### Runtime lambda checking and linear demand
+
+The code lambda checks its ghost annotation and visits the body in code
+mode under the same loan stack and the new binder. It then classifies the
+original annotation and demands one use for a relevant linear binder.
+The metered use scan relates the visited body to the source resource
+demand after all leading binders have been entered. The fixtures cover
+nonlinear words, absent buffer and owner-return uses, one buffer release,
+two buffer releases, and returning the owner pair once. Lean matches the
+native result rows and exact meter for the scalar and direct owner paths.
+The focused build passed 452 jobs and the fourteen audited declarations
+use standard Lean axioms.

@@ -1325,6 +1325,9 @@ import Jihoo.NativeCoreCodeKind
 import Jihoo.NativeCoreCodePlain
 import Jihoo.NativeCoreCodeArgumentPolicy
 import Jihoo.NativeCoreCodeApplication
+import Jihoo.NativeCoreCodeLinearity
+import Jihoo.NativeCoreCodeUses
+import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodeLeaseLookup
 import Jihoo.NativeCoreCodeBorrow
 import Jihoo.NativeCoreGhostBackMotive

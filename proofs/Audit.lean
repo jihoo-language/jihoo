@@ -10788,3 +10788,17 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.checked_opened_telescope
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.nonrecursive_case_matches
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.run_matches_checked_case
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLinearity.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLinearity.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLinearity.operational_linearity_meter
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.function_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.leadingLambdas_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.function_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeUses.function_tracks_shifted_slot
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.checkDemand_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.linear_body_demand
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.checked_scalar_and_owner_lambdas_match_native

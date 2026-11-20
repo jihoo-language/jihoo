@@ -854,6 +854,71 @@ fn owner_return_inference() {
     }, "Back rejects a borrowed result even in ghost inference")
 }
 
+fn linear_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let owner = c.add(core.Term.Buffer(two), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, owner, word), span).unwrap()
+    let returned = c.add(core.Term.Back(false, owner, motive), span).unwrap()
+    let value = c.add(core.Term.Integer(0), span).unwrap()
+    let same = c.add(core.Term.Var(0), span).unwrap()
+    let free = c.add(core.Term.Free(same, value), span).unwrap()
+    let twice = c.add(core.Term.Strict(free, free), span).unwrap()
+    c.add(core.Term.Lam(false, word, value), span).unwrap()
+    c.add(core.Term.Lam(false, owner, value), span).unwrap()
+    c.add(core.Term.Lam(false, returned, value), span).unwrap()
+    c.add(core.Term.Lam(false, owner, free), span).unwrap()
+    c.add(core.Term.Lam(false, owner, twice), span).unwrap()
+    c.add(core.Term.Lam(false,returned,same),span).unwrap()
+    c
+}
+
+fn runtime_lambda_linearity() {
+    var scalar = linear_fixture()
+    spend(&scalar, 999994)
+    let signed = scalar.infer(9, [], false, 32).unwrap()
+    assert(signed == 17 && scalar.node_count() == 18 && scalar.term(signed) == core.Term.Pi(false, 1, 16),
+        "a regular binder keeps the original domain")
+    assert_spent(&scalar, "an ordinary binder uses two classification visits after ghost inference");
+
+    var unused = linear_fixture()
+    spend(&unused, 999987)
+    assert(match unused.infer(10, [], false, 32) {
+        Err(e) => e.msg == "core: an owned value must be used: freed, moved or returned", _ => false
+    } && unused.node_count() == 19, "a relevant buffer rejected after a zero demand");
+    assert_spent(&unused, "buffer classification and its zero demand use five more visits");
+
+    var returned = linear_fixture()
+    spend(&returned, 999957)
+    assert(match returned.infer(11, [], false, 32) {
+        Err(e) => e.msg == "core: an owned value must be used: freed, moved or returned", _ => false
+    } && returned.node_count() == 25, "owner-return pairs also have linear demand");
+    assert_spent(&returned, "a Back annotation performs one normalization and a zero demand visit");
+
+    var freed = linear_fixture()
+    spend(&freed, 999979)
+    let fn_type = freed.infer(12, [], false, 32).unwrap()
+    assert(fn_type == 19 && freed.node_count() == 20 && freed.term(fn_type) == core.Term.Pi(false, 2, 18),
+        "freeing the owner once permits the code function");
+    assert_spent(&freed, "the Free body visits exactly three nodes for demand");
+
+    var duplicated = linear_fixture()
+    spend(&duplicated, 999967)
+    assert(match duplicated.infer(13, [], false, 32) {
+        Err(e) => e.msg == "core: an owned value is used more than once", _ => false
+    } && duplicated.node_count() == 20, "Strict visits both uses of the same original owner");
+    assert_spent(&duplicated, "the Strict body visits seven nodes for demand");
+
+    var identity = linear_fixture()
+    spend(&identity, 999950)
+    let identity_type = identity.infer(14, [], false, 32).unwrap()
+    assert(identity_type == 24 && identity.node_count() == 25 && identity.term(identity_type) == core.Term.Pi(false, 4, 4),
+        "returning one owner pair permits the code function");
+    assert_spent(&identity, "the successful Back binder uses eight more visits than ghost inference");
+}
+
 fn iteration_type_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1489,6 +1554,7 @@ fn main() -> i32 {
     dependent_lend_callbacks()
     code_word_definition()
     owner_return_inference()
+    runtime_lambda_linearity()
     take_continuation_inference()
     iteration_callback_types()
     fold_accumulator_inference()
