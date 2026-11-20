@@ -3854,3 +3854,24 @@ The Lean and native fixtures agree on the exact graph and five ticks for
 both Prop and Type0 results. The native test also rejects an unchecked
 family and checks arity before any graph append. The focused build passed
 428 jobs and the four new declarations use standard Lean axioms.
+
+### Earlier family tables and checked constructor field walks
+
+At any checked definition, filtering the final immutable signature table
+by declaration position gives exactly the family entries in its actual
+earlier mixed history. This includes families checked at that position and
+excludes families declared after the definition.
+
+The metered constructor field walk checks the actual inferred operand
+against the live Pi domain, substitutes the original graph argument into
+the codomain, and finishes at the normalized inductive result. It produces
+the complete Loan64 Arguments derivation at the starting telescope.
+Connecting that telescope to production constructor lookup and the initial
+signature shift is the next part of constructor inference.
+
+The original typing of an occurrence can now be recovered along any path of
+Pi and lambda domains or bodies, applications and retained Strict tails.
+With converted binder contexts, the two proof fields at aligned positions
+still inhabit the same formed dependent proposition when their retained
+operands are convertible. The focused build passed 436 jobs and the six new
+declarations use only standard Lean axioms.

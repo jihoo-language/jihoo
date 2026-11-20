@@ -1202,6 +1202,7 @@ import Jihoo.NativeCoreSignedNormal
 import Jihoo.NativeCoreRefinementNormal
 import Jihoo.NativeLoanProofComparison
 import Jihoo.NativeLoanComparisonEvidence
+import Jihoo.NativeLoanComparisonBinderPaths
 import Jihoo.NativeLoanPureGlobalObservation
 import Jihoo.NativeCoreReferenceNormal
 import Jihoo.NativeBindingMachineMutableClosedStoreLoad
@@ -1306,5 +1307,7 @@ import Jihoo.NativeLoanUniverseEqualityTransport
 import Jihoo.NativeBindingMachineMutableLoanedArithmetic
 import Jihoo.NativeBindingMachineMutableLoanedArithmeticProgress
 import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreVisibleFamilyPrefix
+import Jihoo.NativeCoreGhostConstructorFields
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

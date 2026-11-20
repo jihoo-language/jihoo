@@ -10602,3 +10602,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runVisits_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyShapes_sound
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_family_indices_use_fixed_depth
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Focus.checked_occurrence
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.focused_common_proposition
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.focused_common_proposition_converted
+#print axioms Jihoo.NativeKernel.ScopedProgram.History.global_prefix_visible_families
+#print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorFields.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorFields.run_refines
