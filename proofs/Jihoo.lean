@@ -1338,5 +1338,6 @@ import Jihoo.NativeCorePropSignatureAuthentication
 import Jihoo.NativeCoreGhostPropCases
 import Jihoo.NativeCoreGhostPropElimination
 import Jihoo.NativeCoreGhostPropEliminationExamples
+import Jihoo.NativeCoreDependentLendCallbacks
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

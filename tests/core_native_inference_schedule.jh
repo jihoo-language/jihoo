@@ -1187,6 +1187,53 @@ fn proposition_elimination_inference() {
     assert(budget-remaining_ticks(&wrong) == 1, "a missing branch uses only the entry tick")
 }
 
+fn dependent_lend_fixture() -> core.Core {
+    var c = core.Core.new()
+    let sp = diag.Span.nowhere()
+    let owner = c.add(core.Term.Var(0), sp).unwrap()
+    let one = c.add(core.Term.Natural(1), sp).unwrap()
+    let buffer = c.add(core.Term.Buffer(one), sp).unwrap()
+    let borrowed = c.add(core.Term.Ref(buffer), sp).unwrap()
+    let zero = c.add(core.Term.Natural(0), sp).unwrap()
+    let inside = c.add(core.Term.Decide(zero, one), sp).unwrap()
+    let access = c.add(core.Term.Index(owner, zero, inside), sp).unwrap()
+    let reader = c.add(core.Term.Lam(false, borrowed, access), sp).unwrap()
+    let signed = c.add(core.Term.I64, sp).unwrap()
+    let value = c.add(core.Term.Var(1), sp).unwrap()
+    let freed = c.add(core.Term.Free(owner, value), sp).unwrap()
+    let inner = c.add(core.Term.Lam(false, buffer, freed), sp).unwrap()
+    let continuation = c.add(core.Term.Lam(false, signed, inner), sp).unwrap()
+    c.add(core.Term.Lend(owner, reader, continuation), sp).unwrap()
+    c
+}
+
+fn dependent_lend_bindings() -> Vec(core.Binding) {
+    var rows = Vec(core.Binding).new()
+    rows.push(core.Binding { ty: 2, erased: false })
+    rows
+}
+
+fn dependent_lend_callbacks() {
+    var c = dependent_lend_fixture()
+    let scope = dependent_lend_bindings()
+    let result = c.infer(13, scope.as_slice(), true, 32).unwrap()
+    assert(c.term(result) == core.Term.I64, "lending returns the resumed signed result")
+    assert(c.term(14) == core.Term.Ref(2) && c.term(15) == core.Term.Borrow(0) &&
+        c.term(16) == core.Term.Index(15, 4, 5) && c.term(17) == core.Term.Var(1) &&
+        c.term(18) == core.Term.Var(0) && c.term(19) == core.Term.Free(17, 18) &&
+        c.term(20) == core.Term.Lam(false, 8, 19), "specialized callbacks refer to the original owner")
+    var baseline = dependent_lend_fixture()
+    let budget = remaining_ticks(&baseline)
+    var complete = dependent_lend_fixture()
+    spend(&complete, budget-19)
+    assert(!complete.infer(13, scope.as_slice(), true, 32).is_ok() && complete.node_count() == 21,
+        "the callbacks are ready when the first binder inspection reaches the budget")
+    var short = dependent_lend_fixture()
+    spend(&short, budget-18)
+    assert(!short.infer(13, scope.as_slice(), true, 32).is_ok() && short.node_count() == 18,
+        "one fewer checking tick leaves the final callback unbuilt")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1221,6 +1268,7 @@ fn main() -> i32 {
     scalar_code_inference()
     scalar_code_declaration()
     loop_motive_inference()
+    dependent_lend_callbacks()
     code_word_definition()
     owner_return_inference()
     take_continuation_inference()

@@ -4192,3 +4192,14 @@ root. It uses the visible family layout for the callback effect scan. The
 data and proposition fixtures retain their earlier native schedules and
 result rows after recursive dispatch. The focused build passed 441 jobs.
 The recursive soundness theorem and the new fixture use standard Lean axioms.
+
+### Dependent Lend callback specialization
+
+The native graph scanner selects a variable owner and three relevant
+lambda binders. It substitutes the borrow of that owner into the reader
+and shifts the same owner beneath the result binder before substituting
+it into the continuation. The Lean proof relates both built expressions
+to the capture-avoiding source substitutions. The native fixture agrees
+on every appended callback row. It also distinguishes the last complete
+callback state from the state obtained with one fewer checking tick.
+The focused build and the five new audited declarations passed.
