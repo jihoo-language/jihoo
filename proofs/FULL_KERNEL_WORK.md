@@ -3419,3 +3419,17 @@ also matches the Pack failure at tick 29 with the required dependent
 application already present. The admitted Lean example for Proof keeps
 the original global subject. The focused build passed 329 jobs and a
 32-declaration axiom audit.
+
+### Dependent entry into a saved erased closure
+
+The indexed machine keeps the closure's original body and capture context.
+Its erased argument supplies a checked ghost substitution from the caller's
+context and occupies no runtime slot. The actual entry step has the
+instantiated dependent result type and preserves the captured ownership
+demands and active loan associations. The resource checker supplies the
+erased body scope for a single leading lambda.
+
+The admitted regression places overflowing arithmetic inside the erased
+evidence. The machine enters the body directly, returns 7 and emits only
+the closure activation. The focused build passed 407 jobs and the four
+new theorems use only standard Lean axioms.

@@ -1,4 +1,5 @@
 import Jihoo.NativeBindingMachineMutableOwnedResult
+import Jihoo.NativeBindingMachineMutableReaderReturnDemand
 import Jihoo.NativeBindingMachineReaderResume
 
 /-! The original resource projection of a reusable CODE closure authenticates
@@ -21,6 +22,24 @@ theorem projectRaw_buffer_closure_origin (admissible : EnvironmentDelta.Admissib
   · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
     obtain ⟨bodyReceipt,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
     have linear := (ResourceModes.resolve_sound resolved).convertible_buffer_linear admissible (.refl _)
+    subst mode
+    refine ⟨bodyReceipt,bodyProjected,?_⟩
+    simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using (Option.some.inj same).symm
+
+/-- A single erased lambda's resource receipt contains the original projected
+body and its erased scope. Evidence does not consume a runtime slot. -/
+theorem projectRaw_erased_closure_origin
+    (singleBody : lambdaHead body = false)
+    (checked : projectRaw (fuel+1) env loans ctx (.lam true domain body) = some closureReceipt) :
+    ∃ bodyReceipt, projectRaw fuel env loans (⟨domain,true⟩ :: ctx) body = some bodyReceipt ∧
+      closureReceipt = .closure (.scope .erased bodyReceipt) := by
+  simp only [projectRaw,Op.arity,List.length_cons,List.length_nil,Nat.reduceAdd,
+    bne_self_eq_false,Bool.false_eq_true,↓reduceIte] at checked
+  split at checked
+  · contradiction
+  · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨bodyReceipt,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
+    have erased : mode = .erased := by cases ResourceModes.resolve_sound resolved; rfl
     subst mode
     refine ⟨bodyReceipt,bodyProjected,?_⟩
     simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using (Option.some.inj same).symm
@@ -277,7 +296,115 @@ theorem saved_checked_buffer_closure_entry (state : State)
   exact saved_closure_owned_result_entry state history functionTyped context sizes slots coverage entered argument returned
     stackShape created.bodyProjected created.scopeValid budget world total (fun alias stored => created.captureZero alias object stored)
 
+private theorem erased_value_context
+    (context : ValueContext env capture meanings)
+    (closed : LoanTyping.Ghost.Substitution env (⟨domain,true⟩ :: capture.context) [] (consValues source meanings))
+    (body origin : Term) :
+    ValueContext env (enter true domain body capture.context capture.origins capture.values origin none)
+      (consValues source meanings) := by
+  refine ⟨closed,⟨?_,?_⟩,?_⟩
+  · intro index value stored
+    cases index with
+    | zero => cases stored
+    | succ index => exact context.scalars.1 index value stored
+  · intro index value stored
+    cases index with
+    | zero => cases stored
+    | succ index => exact context.scalars.2 index value stored
+  · intro index binding value selected stored
+    cases index with
+    | zero => cases stored
+    | succ index =>
+      obtain ⟨previous,found,same⟩ := Option.map_eq_some_iff.mp selected
+      subst binding
+      simpa only [shift_subst_consValues] using context.kinds index previous value found stored
+
+/-- The indexed machine applies the saved erased closure without running the
+pending argument. The checked ghost argument closes the original dependent
+result, while the original captured owners and active loans retain their
+receipts. The proof works with distinct caller and capture contexts. -/
+theorem saved_checked_erased_closure_entry (state : State) (capture argument : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (functionTyped : LoanClosingTyped env loans false (capture.child (.lam true domain body)) meanings
+      (.pi true inputType resultType))
+    (argumentTyped : LoanClosingTyped env argumentLoans true argument argumentMeanings inputType)
+    (context : ValueContext env capture meanings)
+    (slots : LoanSlots capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (coverage : LoanCoverage capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (entered : Loans.Entered capture.context.length loans)
+    (returned : state.control = .returned (.closure true domain body capture.context capture.origins capture.values))
+    (stackShape : state.stack = .function argument :: stack)
+    (singleBody : lambdaHead body = false)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans capture.context (.lam true domain body) =
+      some closureReceipt)
+    (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total capture closureReceipt) :
+    let source := argument.term.subst argumentMeanings
+    let next := enter true domain body capture.context capture.origins capture.values argument.origin none
+    let nextMeanings := consValues source meanings
+    step state = some (⟨state.heap,.evaluate next,stack,state.pending⟩,
+      some (.legacy (.activate true body argument.origin))) ∧
+    LoanClosingTyped env loans false next nextMeanings (resultType.subst (single source)) ∧
+    ValueContext env next nextMeanings ∧
+    LoanSlots next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    LoanCoverage next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    ∃ receipt, LoanTyping.ResourceQuantity.projectRaw fuel env loans next.context next.term = some receipt ∧
+      LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt ∧
+      OwnerDemandWorld state.heap.metadata next receipt ∧ OwnerDemandWorld.Total next receipt := by
+  let sourceFunction : Code := ⟨.lam true domain body,capture.context,meanings,capture.values⟩
+  let sourceArgument : Code := ⟨argument.term,argument.context,argumentMeanings,argument.values⟩
+  have sourceFunctionTyped : LoanSourceTyped env loans false sourceFunction (.pi true inputType resultType) :=
+    functionTyped
+  have sourceArgumentTyped : LoanSourceTyped env argumentLoans true sourceArgument inputType := argumentTyped
+  have opened := (enter_loan_source_typed history sourceFunctionTyped sourceArgumentTyped none).2
+  have doesNotOwn : ∀ object, (none : Option Value) ≠ some (.owner object) := by
+    intro object different
+    cases different
+  obtain ⟨receipt,bodyProjected,rfl⟩ :=
+    LoanTyping.ResourceQuantity.projectRaw_erased_closure_origin singleBody checked
+  have unused index object (stored : capture.values[index]? = some (some (.owner object))) :
+      (.scope .erased receipt : Jihoo.Quantity.Control).demand index = some 0 :=
+    captured_scope_zero (total index object stored).choose_spec
+  have scopedTotal : OwnerDemandWorld.Total capture (.scope .erased receipt) :=
+    fun index object stored => ⟨0,unused index object stored⟩
+  have scopedWorld : OwnerDemandWorld state.heap.metadata capture (.scope .erased receipt) := by
+    refine ⟨?_,?_⟩
+    · intro index object uses stored positive
+      rw [unused index object stored] at positive
+      cases positive
+    · intro index alias object uses different stored previous positive
+      exact unused alias object previous
+  have scopedBudget : LoanTyping.ResourceQuantity.LoanBudget capture.context.length loans (.scope .erased receipt) := by
+    intro index active
+    obtain ⟨object,stored,_⟩ := slots index active
+    exact unused index object stored
+  have world := scopedWorld.enter_nonowner_scope (erased := true) scopedTotal (show LocalScopes (.scope .erased receipt) from valid)
+    domain body argument.origin doesNotOwn
+  refine ⟨?_,opened,erased_value_context context opened.1 body argument.origin,
+    slots.enter entered true domain body argument.origin none,
+    coverage.enter_nonowner entered true domain body argument.origin none doesNotOwn,
+    receipt,bodyProjected,scopedBudget.scope entered,world⟩
+  simp only [step,returned,stackShape,returnAction,applyValue,executeLegacy,execute,Option.map_some]
+
 namespace Examples
+
+private def ignoredEvidence : Term :=
+  .strict (.arith .add (.integer 9223372036854775807) (.integer 1))
+    (.decide (.natural 0) (.natural 1))
+
+private def erasedCall : Term :=
+  .app (.lam true (.lt (.natural 0) (.natural 1)) (.integer 7)) ignoredEvidence
+
+/-- The original checker admits the application. Evaluating its erased
+evidence would overflow, but the only event is entry into the saved body. -/
+theorem checked_erased_call_skips_overflowing_evidence :
+    LoanTyping.MixedProgram.checkDeclaration 48 96 .empty ⟨.i64,erasedCall⟩ =
+      some ⟨.i64,erasedCall⟩ ∧
+    let result := run 12 (initial erasedCall)
+    observe result = .integer 7 ∧
+      result.events = [.legacy (.activate true (.integer 7) ignoredEvidence)] := by
+  refine ⟨?_,?_⟩
+  · cbv
+  · exact ⟨rfl,by cbv⟩
 
 private def effectfulComputedCallee : Term :=
   let buffer := Term.buffer (.natural 2)

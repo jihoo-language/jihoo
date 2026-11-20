@@ -10502,3 +10502,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_refinement_infers_universe
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.pack_limit_keeps_required_application
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_refinement_proof_keeps_original_subject
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_erased_closure_origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.enter_nonowner_scope
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_checked_erased_closure_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_erased_call_skips_overflowing_evidence

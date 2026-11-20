@@ -22,40 +22,49 @@ theorem demand_under_checked_scope (valid : LocalScopes (.scope mode receipt)) (
   | unrestricted => rfl
   | borrowed => rfl
 
-/-- Entering a scalar continuation under its actual checked scope shifts
-every owned capture, preserving both the unique physical unit and defined
-demand for unused owners. -/
-theorem OwnerDemandWorld.enter_integer_scope
+/-- Entering a checked scope with a slot that carries no owner preserves
+each captured allocation's unique demand, including demands of zero. -/
+theorem OwnerDemandWorld.enter_nonowner_scope
     (world : OwnerDemandWorld heap code (.scope mode receipt))
     (complete : OwnerDemandWorld.Total code (.scope mode receipt))
     (valid : LocalScopes (.scope mode receipt))
-    (domain body origin : Term) (integer : Int) :
-    let next := enter false domain body code.context code.origins code.values origin (some (.integer integer))
+    (domain body origin : Term) (nonowner : ∀ object, value ≠ some (.owner object)) :
+    let next := enter erased domain body code.context code.origins code.values origin value
     OwnerDemandWorld heap next receipt ∧ OwnerDemandWorld.Total next receipt := by
   dsimp only
   have demanded := demand_under_checked_scope valid
   refine ⟨⟨?_,?_⟩,?_⟩
   · intro index object uses stored positive
     cases index with
-    | zero => cases stored
+    | zero => exact False.elim (nonowner object (Option.some.inj stored))
     | succ index =>
         exact world.live_once index object uses stored ((demanded index).trans positive)
   · intro index alias object uses different stored aliased positive
     cases index with
-    | zero => cases stored
+    | zero => exact False.elim (nonowner object (Option.some.inj stored))
     | succ index =>
         cases alias with
-        | zero => cases aliased
+        | zero => exact False.elim (nonowner object (Option.some.inj aliased))
         | succ alias =>
             have notSame : index ≠ alias := fun same => different (congrArg Nat.succ same)
             exact (demanded alias).symm.trans
               (world.exclusive index alias object uses notSame stored aliased ((demanded index).trans positive))
   · intro index object stored
     cases index with
-    | zero => cases stored
+    | zero => exact False.elim (nonowner object (Option.some.inj stored))
     | succ index =>
         obtain ⟨uses,count⟩ := complete index object stored
         exact ⟨uses,(demanded index).symm.trans count⟩
+
+/-- Entering a scalar continuation shifts the captured ownership receipts. -/
+theorem OwnerDemandWorld.enter_integer_scope
+    (world : OwnerDemandWorld heap code (.scope mode receipt))
+    (complete : OwnerDemandWorld.Total code (.scope mode receipt))
+    (valid : LocalScopes (.scope mode receipt))
+    (domain body origin : Term) (integer : Int) :
+    let next := enter false domain body code.context code.origins code.values origin (some (.integer integer))
+    OwnerDemandWorld heap next receipt ∧ OwnerDemandWorld.Total next receipt :=
+  world.enter_nonowner_scope complete valid domain body origin (by intro _ different; cases different)
 
 private theorem reader_close_metadata (heap : SizedBufferHeap.State) (object : Nat) :
     let token := heap.heap.nextLease
