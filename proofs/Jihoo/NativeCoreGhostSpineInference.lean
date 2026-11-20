@@ -303,6 +303,23 @@ private def inferTransport (infer : Infer) (normal : Visit) (limit depth : Nat) 
                 ⟨after, .ok ⟨root, predicatePairs ++ inferred.compared ++ proofPairs⟩⟩
         | _ => discard exposed equality
 
+private def exposeImpossibleBound (normal : Visit) (state : State) (proof typeRoot : Nat) : Outcome Unit :=
+  (normal state typeRoot).next fun exposed inequality =>
+    match exposed.arena[inequality]? with
+    | some (.node .lt [_, upper]) =>
+      (normal exposed upper).next fun after top =>
+        match after.arena[top]? with
+        | some (.node (.natural 0) []) => ⟨after,.ok ()⟩
+        | _ => discard after proof
+    | _ => discard exposed proof
+
+private def inferAbsurd (infer : Infer) (normal : Visit) (state : State) (target proof : Nat) : Outcome Inferred :=
+  (infer state target).next fun formed targetType =>
+    (NativeCoreGhostSort.sort normal formed targetType.typeRoot).next fun afterSort _ =>
+      (infer afterSort proof).next fun inferred proofType =>
+        (exposeImpossibleBound normal inferred proof proofType.typeRoot).next fun after _ =>
+          ⟨after,.ok ⟨target,targetType.compared ++ proofType.compared⟩⟩
+
 /-- Post-tick App inference in ghost mode. Every recursive call here uses
 the same child depth. The inferred codomain is returned immediately. -/
 def inferApp (infer : Infer) (normal : Visit) (limit childDepth : Nat) (state : State)
@@ -395,6 +412,8 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .transport [predicate, equality, payload]) =>
             inferTransport (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               predicate equality payload
+        | some (.node .absurd [target, proof]) =>
+            inferAbsurd (runWithData normal roots visible limit isData depth ctx) (normal depth) entered target proof
         | some (.node .witness [subject]) =>
             inferRefinementProjection (runWithData normal roots visible limit isData depth ctx) (normal depth) entered false subject
         | some (.node .proof [subject]) =>
@@ -739,6 +758,30 @@ private theorem inferBinding_progress
   intro inferred _ _
   exact (finishBinding_progress normalizes).next (fun _ => Progress.atState _ _)
 
+private theorem exposeImpossibleBound_progress
+    (normalizes : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (exposeImpossibleBound normal state proof typeRoot) := by
+  apply (normalizes _ _).next
+  intro inequality
+  split
+  · apply (normalizes _ _).next
+    intro top
+    split <;> exact Progress.atState _ _
+  · exact Progress.atState _ _
+
+private theorem inferAbsurd_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferAbsurd infer normal state target proof) := by
+  apply next_progress (infers _ _ room) room
+  intro _ _ formedRoom
+  apply next_progress (NativeCoreGhostSort.sort_progress normalizes) formedRoom
+  intro _ _ sortRoom
+  apply next_progress (infers _ _ sortRoom) sortRoom
+  intro _ _ _
+  exact (exposeImpossibleBound_progress normalizes).next (fun _ => Progress.atState _ _)
+
 theorem inferApp_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, state.steps ≤ limit → Progress limit state (normal state root))
@@ -824,6 +867,7 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
         | exact inferRefine_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferPack_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferTransport_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferAbsurd_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferRefinementProjection_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferBinding_progress (fun _ _ room => ih room) (fun _ _ room => ih room)
             (normalProgress depth) within
@@ -2066,6 +2110,85 @@ private theorem inferTransport_refines
     simp only [Term.transport, expand, expandArgs]
     exact .transport typedPredicate typedEq typedProof
 
+private theorem exposeImpossibleBound_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (represented : Represents state.arena typeRoot type)
+    (success : (exposeImpossibleBound normal state proof typeRoot).result = .ok ()) :
+    let after := (exposeImpossibleBound normal state proof typeRoot).state.arena
+    ∃ left, Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.Conversion.Conv env (expand env type) (.lt (expand env left) (.natural 0)) := by
+  unfold exposeImpossibleBound at success ⊢
+  obtain ⟨inequality,exposedOk,exposedNext⟩ := Outcome.next_success success
+  rw [exposedNext] at success ⊢
+  split at success
+  case h_2 => simp [discard] at success
+  case h_1 left upper read =>
+    obtain ⟨top,upperOk,upperNext⟩ := Outcome.next_success success
+    rw [upperNext] at success ⊢
+    split at success
+    case h_2 => simp [discard] at success
+    case h_1 readZero =>
+      obtain ⟨kept,backward,residual,held,changed⟩ := normalSound onBase represented exposedOk
+      obtain ⟨a,b,shape,_,rightRep⟩ := binary_read held read
+      obtain ⟨upperKept,upperBack,_,topRep,upperChanged⟩ := normalSound (onBase.trans kept) rightRep upperOk
+      have zero : LoanTyping.Conversion.Conv env (expand env b) (.natural 0) := by
+        have written := topRep.unique (Represents.node readZero rfl .nil)
+        simpa only [written,Term.natural,expand,expandArgs] using upperChanged.converted
+      have inequality : LoanTyping.Conversion.Conv env (expand env type) (.lt (expand env a) (expand env b)) := by
+        simpa only [shape,Term.lt,expand,expandArgs] using changed.converted
+      exact ⟨a,kept.trans upperKept,upperBack ∘ backward,
+        inequality.trans (.node .lt (.cons (.refl _) (.cons zero .nil)))⟩
+
+private theorem inferAbsurd_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (targetRep : Represents state.arena target t) (proofRep : Represents state.arena proof p)
+    (success : (inferAbsurd infer normal state target proof).result = .ok answer)
+    (ambient : Prefix (inferAbsurd infer normal state target proof).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.absurd t p) (inferAbsurd infer normal state target proof) answer := by
+  unfold inferAbsurd at success ambient ⊢
+  obtain ⟨targetTy,targetOk,targetNext⟩ := Outcome.next_success success
+  rw [targetNext] at success ambient ⊢
+  obtain ⟨sort,sortOk,sortNext⟩ := Outcome.next_success success
+  rw [sortNext] at success ambient ⊢
+  obtain ⟨proofTy,proofOk,proofNext⟩ := Outcome.next_success success
+  rw [proofNext] at success ambient ⊢
+  obtain ⟨_,impossibleOk,impossibleNext⟩ := Outcome.next_success success
+  rw [impossibleNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let targetCheck := infer state target
+  let sortCheck := NativeCoreGhostSort.sort normal targetCheck.state targetTy.typeRoot
+  let proofCheck := infer sortCheck.state proof
+  have targetProgress := childProgress state target room
+  have targetRoom := targetProgress.accepted room targetTy targetOk
+  have sortProgress := NativeCoreGhostSort.sort_progress (state := targetCheck.state)
+    (typeRoot := targetTy.typeRoot) normalProgress
+  have sortRoom := sortProgress.accepted targetRoom sort sortOk
+  have proofProgress := childProgress sortCheck.state proof sortRoom
+  have boundProgress := exposeImpossibleBound_progress (state := proofCheck.state)
+    (proof := proof) (typeRoot := proofTy.typeRoot) normalProgress
+  have proofFinal := boundProgress.kept.trans ambient
+  obtain ⟨targetKept,targetBack,_,heldTarget,targetTyped⟩ := childSound onBase room targetRep targetOk
+    (sortProgress.kept.trans (proofProgress.kept.trans proofFinal))
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨sortKept,sortBack,targetSort⟩ := NativeCoreGhostSort.sort_refines normalSound
+    (onBase.trans targetKept) heldTarget sortOk
+  have throughSort := targetKept.trans sortKept
+  obtain ⟨proofKept,proofBack,_,heldProof,proofTyped⟩ := childSound (onBase.trans throughSort) sortRoom
+    (proofRep.frame throughSort) proofOk proofFinal (fun pair member => retained pair (List.mem_append_right _ member))
+  have throughProof := throughSort.trans proofKept
+  obtain ⟨_,boundKept,boundBack,impossible⟩ := exposeImpossibleBound_refines normalSound
+    (onBase.trans throughProof) heldProof impossibleOk
+  have kept := throughProof.trans boundKept
+  refine ⟨kept,boundBack ∘ proofBack ∘ sortBack ∘ targetBack,_,targetRep.frame kept,?_⟩
+  simp only [Term.absurd,expand,expandArgs]
+  exact .absurd (targetTyped.convert targetSort) (proofTyped.convert impossible) (Or.inl rfl)
+
 /-- A successful application returns the captured Pi body instantiated with
 the original graph operand. The proof exposes a real function type and
 reflects the accepted argument comparison under its retention evidence. -/
@@ -2397,6 +2520,19 @@ theorem runWithData_sound {normal : NormalAt}
                 have left := typed _ List.mem_cons_self
                 have right := typed _ (List.mem_cons_of_mem _ List.mem_cons_self)
                 first | exact .eq left right | exact .lt left right | exact .uadd left right | exact .arith left right
+          case absurd =>
+            have length : refs.length = 2 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons targetRep rest =>
+              cases rest with
+              | cons proofRep tail =>
+                cases tail
+                dsimp only at success ambient ⊢
+                exact inferAbsurd_refines (state := {state with steps := state.steps + 1})
+                  (normalSound depth) (normalProgress depth) sameContext
+                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  onBase within targetRep proofRep success ambient retained
           case decide | strict =>
             have length : refs.length = 2 := arity
             rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨_, _⟩⟩⟩ <;> simp at length
@@ -2953,6 +3089,22 @@ theorem admitted_transitive_proof_keeps_ordered_bounds :
     (let finished := run transitiveSnapshot.definitions 0 96 24 [] ⟨transitiveSnapshot.arena, 0⟩ 6
      finished.state.steps = 57 ∧ finished.state.arena.size = 27 ∧
        finished.result.map Inferred.typeRoot = .ok 26 ∧ finished.state.arena[26]? = some (.node .lt [0, 2])) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def absurdSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨6,5⟩]
+  families := []
+  arena := #[.node (.natural 0) [], .node .lt [0,0], .node .u64 [], .var 0,
+    .node .absurd [2,3], .node (.lam true) [1,4], .node (.pi true) [1,2]]
+
+/-- The closed function is admitted with an erased impossible hypothesis.
+Its body checks the target sort, then exposes and normalizes the inequality's
+upper endpoint. It returns the original target reference. -/
+theorem admitted_absurd_infers_original_target :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot absurdSnapshot) = true ∧
+    (let finished := run absurdSnapshot.definitions 0 24 24 [⟨1,true⟩] ⟨absurdSnapshot.arena,0⟩ 4
+     finished.state.steps = 11 ∧ finished.result.map Inferred.typeRoot = .ok 2) := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 

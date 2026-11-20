@@ -10551,3 +10551,4 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLiteralAddition.literalSum_matches_native
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_pack_replay_realizes
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.Examples.admitted_computed_pack_realizes
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_absurd_infers_original_target

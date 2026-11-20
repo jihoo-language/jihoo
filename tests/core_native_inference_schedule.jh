@@ -350,6 +350,21 @@ fn transitive_proof_inference() {
     assert_spent(&closed, "successful transitivity inference uses exactly 57 ticks")
 }
 
+fn absurd_inference() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let bound = c.add(core.Term.Lt(zero, zero), span).unwrap()
+    let target = c.add(core.Term.U64, span).unwrap()
+    let evidence = c.add(core.Term.Var(0), span).unwrap()
+    let impossible = c.add(core.Term.Absurd(target, evidence), span).unwrap()
+    let context = [core.Binding { ty: bound, erased: true }]
+    spend(&c, 999989)
+    assert(c.infer(impossible, context, true, 24).unwrap() == target,
+        "absurd returns the original target type")
+    assert_spent(&c, "absurd normalizes the upper endpoint after exposing Lt")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -365,6 +380,7 @@ fn main() -> i32 {
     transport_evidence_exhaustion()
     offset_proof_inference()
     transitive_proof_inference()
+    absurd_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

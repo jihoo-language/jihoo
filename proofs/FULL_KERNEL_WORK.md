@@ -3475,6 +3475,14 @@ ticks and place the final inequality at row 26 of a 27-row arena. The
 focused build passed 427 jobs and its nine-declaration audit used only
 standard Lean axioms.
 
+### Ghost inference of an impossible case
+
+`Absurd` checks the requested type's sort, exposes the evidence's original
+inequality and normalizes its upper endpoint to zero. It returns the written
+target reference. Lean and the rebuilt compiler agree on the 11-tick path
+under an erased impossible hypothesis. The focused inference build and
+three-declaration standard-axiom audit passed.
+
 ### Relevant closure entry with returned non-owner values
 
 The actual pending argument frame opens the saved closure at the dependent
