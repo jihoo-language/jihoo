@@ -10531,3 +10531,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_erased_telescope_recloses_inner_lambda
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_offset_proof_keeps_both_bounds
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_checked_nonowner_closure_entry
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.openHead_lambdas
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_app_origin
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.OpenedLambdas.close_source
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.project_app_binding_store
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.reflexivity_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.transport_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.unequal_words_unrealizable
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.checked_reflexive_residual_realizes

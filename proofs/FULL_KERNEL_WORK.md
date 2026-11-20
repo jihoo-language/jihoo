@@ -3481,6 +3481,27 @@ passed 69 source fixtures and 55 exact-byte checks, including pure mixed
 admission of the native snapshot. The proof guard reported a peak sampled
 tree RSS of 4,762.9 MiB for the combined run.
 
+### Closing the complete application telescope
+
+Loan-aware resource projection exposes the original application replay,
+the ordered runtime operand receipts and the receipt of the body after
+consuming the leading source lambdas. Each replayed argument closes the
+original dependent domain under the store built by the preceding arguments.
+The theorem retains the original CODE body derivation, the exact closed
+result at that boundary and the remaining application replay. It permits
+different caller and capture contexts and uses no CODE substitution rule.
+
+### Dependent semantics of equality transport
+
+The equality relation combines agreement of the represented natural values
+with raw conversion of the evidence to canonical Refl. Agreement transports
+the semantic payload between dependent proposition fibers, and the native
+Refl equation preserves its raw realization in the destination fiber.
+Original typing and a typed delta or contextual computation exposing Refl
+construct the equality realization for closed endpoints with known numeric
+meanings. The two modules passed their focused build and eight-declaration
+standard-axiom audit.
+
 ### Proof irrelevance in dependent type comparison
 
 Two closed Type1 annotations apply the same bound type family to
