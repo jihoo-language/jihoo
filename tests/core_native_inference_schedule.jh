@@ -640,6 +640,50 @@ fn family_index_inference() {
     assert(wrong.node_count() == 5, "an incorrect family arity appends no rows")
 }
 
+fn constructor_inference_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let number = c.add(core.Term.Natural(3), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let newest = c.add(core.Term.Var(0), span).unwrap()
+    let earlier = c.add(core.Term.Var(1), span).unwrap()
+    let proof_type = c.add(core.Term.Eq(newest, newest), span).unwrap()
+    var indexes = Vec(u32).new()
+    indexes.push(earlier)
+    let result = c.add(core.Term.Ind(0, indexes), span).unwrap()
+    let after_word = c.add(core.Term.Pi(true, proof_type, result), span).unwrap()
+    let signature = c.add(core.Term.Pi(false, word, after_word), span).unwrap()
+    let proof = c.add(core.Term.Refl(number), span).unwrap()
+    var fields = Vec(u32).new()
+    fields.push(number)
+    c.add(core.Term.Con(0, 0, fields.clone()), span).unwrap()
+    fields.push(proof)
+    c.add(core.Term.Con(0, 0, fields), span).unwrap()
+    c.push_family(core.Family { name: "ReflexiveAt".to_string(), data: false, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Intro".to_string(), ty: signature })
+    c.check().unwrap()
+    c
+}
+
+fn dependent_constructor_inference() {
+    var c = constructor_inference_fixture()
+    spend(&c, 999922)
+    let result = c.infer(10, [], true, 32).unwrap()
+    assert(result == 17 && c.node_count() == 22 && c.term(16) == core.Term.Eq(0, 0),
+        "constructor field replay instantiates its evidence at the original word")
+    var indexes = Vec(u32).new()
+    indexes.push(0)
+    assert(c.term(result) == core.Term.Ind(0, indexes),
+        "constructor inference retains its original family and exact index root")
+    assert_spent(&c, "dependent constructor inference uses 54 ticks beyond family checking")
+
+    var short = constructor_inference_fixture()
+    assert(match short.infer(9, [], true, 32) {
+        Err(e) => e.msg == "core: a constructor needs all of its fields", _ => false
+    }, "a partly supplied constructor does not produce a family type")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -663,6 +707,7 @@ fn main() -> i32 {
     load_callback_inference()
     reference_inference()
     family_index_inference()
+    dependent_constructor_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

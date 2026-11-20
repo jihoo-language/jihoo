@@ -1309,5 +1309,6 @@ import Jihoo.NativeBindingMachineMutableLoanedArithmeticProgress
 import Jihoo.NativeCoreGhostSpineInference
 import Jihoo.NativeCoreVisibleFamilyPrefix
 import Jihoo.NativeCoreGhostConstructorFields
+import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport

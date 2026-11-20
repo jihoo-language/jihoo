@@ -3875,3 +3875,18 @@ With converted binder contexts, the two proof fields at aligned positions
 still inhabit the same formed dependent proposition when their retained
 operands are convertible. The focused build passed 436 jobs and the six new
 declarations use only standard Lean axioms.
+
+### Authentic metered constructor signature and field checking
+
+The original version-6 family row and the mixed admission history now select
+the written constructor graph and its corresponding checked telescope. The
+checked field and index conversions relate the two telescopes in the actual
+earlier environment. The constructor inference branch shifts the written
+signature at the caller depth, checks its fields and derives the original
+family result. A successful dependent substitution keeps that family head.
+
+The native fixture and Lean branch agree at 54 ticks including the entry
+tick, with the same instantiated evidence type and final index root. Both
+reject the incomplete field list. The focused build passed 432 jobs and
+the nine new declarations use only standard Lean axioms. This branch is
+available separately from the recursive inference dispatch.
