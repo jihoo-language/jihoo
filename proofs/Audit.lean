@@ -10630,3 +10630,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDefinitionChecking.admitted_proof_body_uses_shared_meter
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.lifecycle_owner_live_iff
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.capture_demand_survives
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.transfers_owner_demand_from_start

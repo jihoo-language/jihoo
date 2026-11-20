@@ -3956,3 +3956,12 @@ The Lean and native fixtures spend exactly 24 ticks. With 23 allowed,
 the final comparison fails with the same committed graph prefix. The native
 fixture also exercises `Core.extend`. The focused build passed 435 jobs and
 the three new audited declarations use only standard Lean axioms.
+
+### Captured owner demand across the actual call trace
+
+At call entry, the capture store's earlier ownership world survives exactly
+when the actual argument trace releases none of its demanded allocations.
+This derives capture liveness for the entered telescope from its initial
+world and the release trace. New slots still require checked facts about
+their mode, liveness, exclusivity and retired aliases. The focused build
+passed 414 jobs and the three new declarations use standard Lean axioms.

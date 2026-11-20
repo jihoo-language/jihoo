@@ -6,6 +6,8 @@ arguments execute heap operations. The actual trace may contain temporary
 leases, and the exact inventory identifies the leases at the boundary. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 
+open Jihoo.Quantity NativeQuantity
+
 private theorem call_reader_frames (heap : SizedBufferHeap.IndexedState) (code caller : Code)
     (supplied : List Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     readerFrames (callState heap code caller supplied stack pending).activeStack =
@@ -53,5 +55,54 @@ theorem CallEntry.retains_enclosing_leases
   have retained := after.2
   rw [call_reader_frames] at available retained
   exact ⟨after,lifecycle,same_scope_leases available retained⟩
+
+/-- The actual argument trace preserves the captured owner world exactly
+when no demanded capture is released. Alias exclusivity and demand counts
+refer to the same capture slots before and after the argument run. -/
+theorem CallEntry.capture_demand_survives
+    (entry : CallEntry env loans caller stack pending code supplied opened heap fuel events slots finalHeap finalCode)
+    (initial : Invariant (callState heap code caller supplied stack pending))
+    (world : OwnerDemandWorld heap.metadata code receipt) :
+    OwnerDemandWorld finalHeap.metadata code receipt ↔
+      ∀ index object uses, code.values[index]? = some (some (Value.owner object)) →
+        receipt.demand index = some (uses+1) → .free object ∉ events.filterMap Event.lifecycle? := by
+  have heapSteps := (entry.retains_enclosing_leases initial).2.1
+  have traceFor {index object uses : Nat} (stored : code.values[index]? = some (some (Value.owner object)))
+      (demand : receipt.demand index = some (uses+1)) :
+      finalHeap.metadata.heap.live object = true ↔ .free object ∉ events.filterMap Event.lifecycle? := by
+    have live := (world.live_once index object uses stored demand).1
+    have old := initial.1.allocated object live
+    exact (lifecycle_owner_live_iff old heapSteps).trans ⟨fun past => past.2,fun kept => ⟨live,kept⟩⟩
+  constructor
+  · intro after index object uses stored demand
+    exact (traceFor stored demand).mp (after.live_once index object uses stored demand).1
+  · intro kept
+    refine ⟨?_,world.exclusive⟩
+    intro index object uses stored demand
+    exact ⟨(traceFor stored demand).mpr (kept index object uses stored demand),
+      (world.live_once index object uses stored demand).2⟩
+
+/-- Transfer demand from the capture store at the start of the actual
+call. The initial world and the release trace derive liveness of captures
+at entry. Newly bound owners still require their own checked slot facts. -/
+theorem CallEntry.transfers_owner_demand_from_start
+    (entry : CallEntry env loans caller stack pending code supplied opened heap fuel events slots finalHeap finalCode)
+    (initial : Invariant (callState heap code caller supplied stack pending))
+    (world : OwnerDemandWorld heap.metadata code (.scopes opened.modes body))
+    (total : OwnerDemandWorld.Total code (.scopes opened.modes body))
+    (valid : LocalScopes (.scopes opened.modes body))
+    (avoids : ∀ index object uses, code.values[index]? = some (some (Value.owner object)) →
+      (.scopes opened.modes body : Jihoo.Quantity.Control).demand index = some (uses+1) →
+        .free object ∉ events.filterMap Event.lifecycle?)
+    (installed : ∀ (position object : Nat), slots.reverse[position]? = some (some (Value.owner object)) →
+      opened.modes[opened.modes.length-position-1]? = some .linear ∧ finalHeap.metadata.heap.live object = true)
+    (different : ∀ (position alias object : Nat), slots.reverse[position]? = some (some (Value.owner object)) →
+      slots.reverse[alias]? = some (some (Value.owner object)) → position = alias)
+    (retired : ∀ (position index object : Nat), slots.reverse[position]? = some (some (Value.owner object)) →
+      code.values[index]? = some (some (Value.owner object)) →
+        (.scopes opened.modes body : Jihoo.Quantity.Control).demand index = some 0) :
+    OwnerDemandWorld finalHeap.metadata finalCode body ∧ OwnerDemandWorld.Total finalCode body :=
+  entry.transfers_owner_demand ((entry.capture_demand_survives initial world).mpr avoids)
+    total valid installed different retired
 
 end Jihoo.NativeKernel.Environment.BindingMachine.Mutable

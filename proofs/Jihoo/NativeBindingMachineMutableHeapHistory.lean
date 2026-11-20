@@ -183,7 +183,7 @@ private theorem step_owner_live_iff (old : object < before.heap.nextObject)
   | close => simp [SizedBufferHeap.close]
   | read => simp
 
-private theorem lifecycle_owner_live_iff (old : object < before.heap.nextObject)
+theorem lifecycle_owner_live_iff (old : object < before.heap.nextObject)
     (steps : SizedBufferHeap.Steps before events after) :
     after.heap.live object = true ↔ before.heap.live object = true ∧ .free object ∉ events := by
   revert old
