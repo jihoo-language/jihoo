@@ -10670,3 +10670,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.runWith_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeExamples.recursive_dispatch_checks_schedule
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFoldExamples.recursive_dispatch_checks_schedule
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.arguments_progress
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.arguments_refines
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedApplications.open_motive_applies_shifted_indices
+#print axioms Jihoo.NativeKernel.NativeCorePropCaseType.run_progress
+#print axioms Jihoo.NativeKernel.NativeCorePropCaseType.run_refines
+#print axioms Jihoo.NativeKernel.NativeCorePropCaseType.two_recursive_fields_keep_shifted_indices

@@ -986,6 +986,66 @@ fn proposition_motive_telescope() {
     assert_spent(&c, "building the proposition motive spends no checking ticks")
 }
 
+fn proposition_case_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let first = c.add(core.Term.Var(0), span).unwrap()
+    let second = c.add(core.Term.Var(1), span).unwrap()
+    let third = c.add(core.Term.Var(2), span).unwrap()
+    var base_indices = Vec(u32).new()
+    base_indices.push(zero)
+    let base = c.add(core.Term.Ind(0, base_indices), span).unwrap()
+    var recursive_first_indices = Vec(u32).new()
+    recursive_first_indices.push(first)
+    let recursive_first = c.add(core.Term.Ind(0, recursive_first_indices), span).unwrap()
+    var recursive_second_indices = Vec(u32).new()
+    recursive_second_indices.push(second)
+    let recursive_second = c.add(core.Term.Ind(0, recursive_second_indices), span).unwrap()
+    var result_indices = Vec(u32).new()
+    result_indices.push(third)
+    let result = c.add(core.Term.Ind(0, result_indices), span).unwrap()
+    let inner = c.add(core.Term.Pi(true, recursive_second, result), span).unwrap()
+    let recursive = c.add(core.Term.Pi(true, recursive_first, inner), span).unwrap()
+    let step = c.add(core.Term.Pi(false, word, recursive), span).unwrap()
+    c.push_family(core.Family { name: "Layered".to_string(), data: false, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: base })
+    c.push_constructor(0, core.Constructor { name: "Step".to_string(), ty: step })
+    c.check().unwrap()
+    c
+}
+
+fn remaining_ticks(inout c: core.Core) -> i64 {
+    var count = 0
+    while c.normal(0, core.DEPTH).is_ok() { count += 1 }
+    count
+}
+
+fn proposition_case_telescope() {
+    var baseline = proposition_case_fixture()
+    let budget = remaining_ticks(&baseline)
+    var sample = proposition_case_fixture()
+    let first = sample.node_count() as u32
+    let span = diag.Span.nowhere()
+    let result = sample.case_type(0, 1, 2, span, 16).unwrap()
+    assert(result == first+13 && sample.node_count() == first as i64+14, "recursive case graph size")
+    assert(sample.term(first) == core.Term.Var(5) && sample.term(first+1) == core.Term.Var(4) &&
+        sample.term(first+2) == core.Term.App(first, first+1) &&
+        sample.term(first+3) == core.Term.Var(4) && sample.term(first+4) == core.Term.Var(3) &&
+        sample.term(first+5) == core.Term.App(first+3, first+4) &&
+        sample.term(first+6) == core.Term.Pi(true, first+5, first+2) &&
+        sample.term(first+7) == core.Term.Var(3) && sample.term(first+8) == core.Term.Var(2) &&
+        sample.term(first+9) == core.Term.App(first+7, first+8) &&
+        sample.term(first+10) == core.Term.Pi(true, first+9, first+6) &&
+        sample.term(first+11) == core.Term.Pi(true, 7, first+10) &&
+        sample.term(first+12) == core.Term.Pi(true, 6, first+11) &&
+        sample.term(first+13) == core.Term.Pi(false, 1, first+12),
+        "case type preserves the field domains and each original index scope")
+    assert(budget-remaining_ticks(&sample) == 6, "the two hypotheses and result use six shift ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1010,6 +1070,7 @@ fn main() -> i32 {
     reference_inference()
     family_index_inference()
     proposition_motive_telescope()
+    proposition_case_telescope()
     dependent_constructor_inference()
     boxed_drop_inference()
     declaration_annotation_inference()

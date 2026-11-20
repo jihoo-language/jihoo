@@ -4120,3 +4120,13 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,846.1 MiB.
+
+### Proposition case telescope with recursive fields
+
+The graph builder shifts the motive and each index in its original scope,
+then inserts the induction hypotheses in reverse construction order. Its
+refinement theorem covers arbitrary represented constructor signatures.
+After `Core.check` registers the sample signature, the Lean fixture and
+native `Core.case_type` agree on all fourteen appended rows and six ticks
+for a constructor with two recursively typed fields. The focused build
+passed 330 jobs and the eight new declarations use standard Lean axioms.
