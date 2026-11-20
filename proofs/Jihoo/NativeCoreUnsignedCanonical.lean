@@ -137,6 +137,21 @@ theorem run_runtime_overflow (wide : 2^64 ≤ constant.toNat) :
     run true arena refs constant work = ⟨arena, .ok none, work⟩ := by
   simp [run, wide]
 
+theorem run_fallback (neutral : (run runtime arena refs constant work).result = .ok none) :
+    run runtime arena refs constant work = ⟨arena, .ok none, work⟩ := by
+  unfold run at neutral ⊢
+  split at neutral
+  · rename_i overflow
+    rw [ite_eq_left overflow]
+  · rename_i guard
+    cases sorted : NativeCoreUnsignedOrder.run runtime arena refs work with
+    | none => simp [sorted] at neutral
+    | some result =>
+        obtain ⟨order, remaining⟩ := result
+        simp only [sorted] at neutral
+        cases emitted : (emit arena constant.toNat order).result <;>
+          simp [emitted, Except.map, Except.mapError] at neutral
+
 /-- The result represents the canonical left fold of all original atom
 occurrences and the exact balanced constant. All previously represented
 references and backwardness survive the append sequence. -/

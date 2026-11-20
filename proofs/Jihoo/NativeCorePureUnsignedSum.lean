@@ -27,7 +27,7 @@ private def hasSubtraction (arena : Arena) (ref : Nat) : Bool :=
   | some (.node .usub _) => true
   | _ => false
 
-private def keepPrefixes (arena : Arena) (result : Nat) : List Nat → NativeCoreNaturalSum.Outcome
+def keepPrefixes (arena : Arena) (result : Nat) : List Nat → NativeCoreNaturalSum.Outcome
   | [] => ⟨arena, .ok result⟩
   | first :: rest =>
       match addNode arena (.node .strict [first, result]) with
@@ -69,20 +69,24 @@ private theorem wrap_refines (first : Represents arena x effect) (result : Repre
   · exact in_arena first
   · exact in_arena result
 
-private theorem keepPrefixes_refines
+def wrapPrefixes (result : Term) (prefixes : List Term) : Term :=
+  prefixes.foldl (fun value first => .strict first value) result
+
+theorem keepPrefixes_refines
     (effects : RepresentsList arena refs terms)
     (value : Represents arena root result)
     (typed : LoanTyping.HasType env [] ctx true result originalType)
     (prefixes : ∀ effect ∈ terms, ∃ type, LoanTyping.HasType env [] ctx true effect type)
     (built : (keepPrefixes arena root refs).result = .ok output) :
     let after := (keepPrefixes arena root refs).arena
-    ∃ term, Prefix arena after ∧ Represents after output term ∧ RawValue.Conv env result term ∧
+    let term := wrapPrefixes result terms
+    Prefix arena after ∧ Represents after output term ∧ RawValue.Conv env result term ∧
       LoanTyping.HasType env [] ctx true term originalType ∧ (Backward arena → Backward after) := by
   induction refs generalizing arena root result terms with
   | nil =>
       cases effects
       cases built
-      exact ⟨result, .refl _, value, .refl _, typed, fun before => before⟩
+      exact ⟨.refl _, value, .refl _, typed, fun before => before⟩
   | cons first refs ih =>
       cases effects with
       | cons head tail =>
@@ -94,10 +98,10 @@ private theorem keepPrefixes_refines
               simp only [added] at built ⊢
               obtain ⟨frame, represented, backward⟩ := wrap_refines head value added
               obtain ⟨_, firstTyped⟩ := prefixes _ List.mem_cons_self
-              obtain ⟨term, nextFrame, resultRep, converted, nextTyped, nextBackward⟩ :=
+              obtain ⟨nextFrame, resultRep, converted, nextTyped, nextBackward⟩ :=
                 ih (tail.frame frame) represented (.strict firstTyped typed)
                   (fun effect member => prefixes effect (List.mem_cons_of_mem _ member)) built
-              exact ⟨term, frame.trans nextFrame, resultRep, (RawValue.Conv.strict _ _).symm.trans converted,
+              exact ⟨frame.trans nextFrame, resultRep, (RawValue.Conv.strict _ _).symm.trans converted,
                 nextTyped, fun before => nextBackward (backward before)⟩
 
 /-- The completed ghost sum represents a term convertible to the original
@@ -140,9 +144,9 @@ theorem run_refines (left : Represents arena a first) (right : Represents arena 
                 | ok final =>
                     simp only [wrapped, Except.mapError, Except.ok.injEq] at completed
                     subst final
-                    obtain ⟨term, frame, resultRep, converted, finalTyped, backward⟩ :=
+                    obtain ⟨frame, resultRep, converted, finalTyped, backward⟩ :=
                       keepPrefixes_refines (effects.frame typed.frame) represented bareTyped prefixesTyped wrapped
-                    exact ⟨term, typed.frame.trans frame, resultRep, same.trans converted, finalTyped,
+                    exact ⟨_, typed.frame.trans frame, resultRep, same.trans converted, finalTyped,
                       fun before => backward (typed.backward before)⟩
 
 end Jihoo.NativeKernel.NativeCorePureUnsignedSum

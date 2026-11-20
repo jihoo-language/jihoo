@@ -1218,3 +1218,8 @@ import Jihoo.NativeBindingMachineMutableDemandTotality
 import Jihoo.NativeCoreBetaNormal
 import Jihoo.NativeCoreTrapAnalysis
 import Jihoo.NativeCoreReadAnalysis
+import Jihoo.NativeCoreUnsignedSubtract
+import Jihoo.NativeCorePureComputationNormal
+import Jihoo.NativeLoanGlobalProofNormalization
+import Jihoo.NativeBindingMachineMutableReaderReturnDemand
+import Jihoo.NativeBindingMachineMutableCanonicalFreeDemand

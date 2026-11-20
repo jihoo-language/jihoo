@@ -4,6 +4,28 @@ The whole-kernel verification work has resumed. Verified checkpoints are
 committed and pushed as the work progresses. The completion obligations below
 remain open.
 
+## Handoff on 2026-11-20
+
+The current handoff is on `codex/kernel-pure-and-array`. Issue #218 was closed
+by PR #219. Version 0.7.0 is gated on the complete verification obligations
+below. The branch contains checked advances in arithmetic consistency,
+ghost preservation, runtime ownership and graph refinement.
+
+| Remaining obligation | Starting point |
+| --- | --- |
+| General consistency and typed normalization | `NativeLoanGlobalProofNormalization.lean` derives a sufficient fuel bound from a syntax certificate for checked arithmetic proofs, including prior globals and U64 beta. Extend the proof beyond that certificate to arbitrary universe levels, families, elimination and proofs of false propositions. |
+| Whole-language preservation | `NativeCorePureComputationNormal.lean` derives `GhostTransform` from successful recursive structural, beta and Transport graph walks and retains the exact admitted type. Extend the typed relation and its reentry rules to the remaining operations, including computations involving families and effects. |
+| Ownership, borrowing and continuations | `NativeBindingMachineMutableCanonicalFreeDemand.lean` reaches the typed tail after a named direct-Index reader closes and either lexical alias releases the physical owner. Lift the resource and lease invariants across arbitrary reader bodies, nested frames and dependent calls. |
+| Production refinement | `NativeCoreTransformExact.lean` and the graph normalizers give exact-order Lean models for the covered operations. Relate the production Jihoo source to these models and cover complete runtime/pure normalization, inference and mixed admission. |
+
+Run the aggregate proof check from the checkout with the declared resource
+limits. It checks Lake compilation, the exact axiom audit, and the generated
+fixtures.
+
+```sh
+nix develop -L .#proofs -c scripts/proof-limits.sh bash proofs/check.sh
+```
+
 ## Completion obligations
 
 Retain the original specified-rule goal in `docs/internals/roadmap.md` and
@@ -198,6 +220,10 @@ The user resumed full-kernel work on 2026-11-20 and explicitly requested
 continuation until they ask to stop. The active goal records the complete
 proof obligations and the conditional 0.7.0 release. Continue checked
 increments on the verification branch.
+
+The user requested a handoff on 2026-11-20 to continue the remaining work
+later. The final checked increment and the handoff above record the current
+state.
 
 Use the checkout of `https://github.com/jihoolang/jihoo` at
 `/home/user/jihoo`. Work resumed on 2026-11-20 on
@@ -2464,3 +2490,33 @@ through the existing Free and Load handoffs.
 
 The aggregate check passed 1,037 Lake jobs, 9,720 declaration audits, and
 all generated fixture comparisons in 9.34 seconds with the warm cache.
+
+### Final checked increment
+
+The recursive pure graph model now handles structural nodes, beta and
+Transport together. It preserves the original Loan64 type of definitions
+admitted from exact version-6 bytes, with no need for their operands to
+start in normal form. One example reduces a nested call to reflexivity
+under an erased binder and completes Transport after 22 ticks.
+
+Arithmetic proof replay now follows prior transparent definitions and
+beta at U64 binders with a derived sufficient fuel threshold. All larger
+fuel bounds produce the same typed residual in the supported grammar.
+The example checks a prior source alias through actual mixed admission.
+
+Guarded USub cancellation preserves the source type, original residual
+references and mathematical subtraction value in every interpretation of
+the retained comparison shapes. It reattaches potentially trapping
+operands and has a typed neutral fallback retaining the proof reference.
+This covers the subtraction branch after operand normalization. The
+separate cancellation rounds for UAdd and general typed conversion for
+symbolic subtraction remain open.
+
+The named direct-Index reader path now derives the read, the exact lease
+close, the restored bindings and the continuation owner world from the
+original entry. The composed 18-step path releases the owner through
+either its returned slot or its older alias, preserves outer leases, and
+enters the checked tail with its original type and complete owner demand.
+
+The aggregate check passed 1,042 Lake jobs, 9,751 declaration audits, and
+all generated fixture comparisons in 11.11 seconds with the warm cache.

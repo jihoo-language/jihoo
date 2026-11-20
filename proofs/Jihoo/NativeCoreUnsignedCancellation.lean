@@ -275,6 +275,68 @@ theorem run_refines (pool : RepresentsList arena refs terms)
       simp only [copied] at ran
       exact removeItems_refines items pool ran
 
+private theorem removeFirst_sublist
+    (ran : removeFirst arena limit depth item initial pool = (.ok (some remainder), spent)) :
+    remainder.Sublist pool := by
+  induction pool generalizing initial remainder spent with
+  | nil => cases ran
+  | cons ref rest ih =>
+      unfold removeFirst at ran
+      rcases compared : runArena arena limit depth initial ref item with ⟨answer, next⟩
+      cases answer with
+      | error reason => simp [compared] at ran
+      | ok same =>
+          cases same
+          · rcases removed : removeFirst arena limit depth item next rest with ⟨answer, finish⟩
+            cases answer with
+            | error reason => simp [compared, removed, Except.map] at ran
+            | ok found =>
+                cases found with
+                | none => simp [compared, removed, Except.map] at ran
+                | some suffix =>
+                    simp only [compared, removed, Except.map, Option.map_some, Prod.mk.injEq,
+                      Except.ok.injEq, Option.some.injEq] at ran
+                    obtain ⟨rfl, rfl⟩ := ran
+                    exact .cons_cons _ (ih removed)
+          · rcases shifted : charge arena limit depth next rest with ⟨answer, finish⟩
+            cases answer with
+            | error reason => simp [compared, shifted, Except.map] at ran
+            | ok _ =>
+                simp only [compared, shifted, Except.map, Prod.mk.injEq, Except.ok.injEq, Option.some.injEq] at ran
+                obtain ⟨rfl, _⟩ := ran
+                exact .cons _ (.refl _)
+
+private theorem removeItems_sublist
+    (ran : removeItems arena limit depth items initial pool = (.ok (some remainder), spent)) :
+    remainder.Sublist pool := by
+  induction items generalizing initial pool with
+  | nil => cases ran; exact .refl _
+  | cons item rest ih =>
+      unfold removeItems at ran
+      rcases removed : removeFirst arena limit depth item initial pool with ⟨answer, next⟩
+      cases answer with
+      | error reason => simp [removed] at ran
+      | ok found =>
+          cases found with
+          | none => simp [removed] at ran
+          | some suffix =>
+              simp only [removed] at ran
+              exact (ih ran).trans (removeFirst_sublist removed)
+
+/-- Each surviving reference is an original occurrence in its original
+order. Equality of projected shapes cannot change a retained atom. -/
+theorem run_sublist
+    (ran : run arena limit depth initial pool items = (.ok (some remainder), spent)) :
+    remainder.Sublist pool := by
+  unfold run at ran
+  rcases copied : charge arena limit depth initial pool with ⟨answer, next⟩
+  cases answer with
+  | error reason => simp [copied] at ran
+  | ok done =>
+      cases done
+      simp only [copied] at ran
+      exact removeItems_sublist ran
+
 theorem RemoveFirst.perm (removed : RemoveFirst item pool (some remainder)) :
     (item :: remainder).Perm pool := by
   generalize output : some remainder = output at removed
