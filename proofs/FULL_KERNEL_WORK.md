@@ -4307,3 +4307,23 @@ a call with an erased argument. A relevant call rejects that erased
 argument after nine ticks. Unsaturated top-level function values still
 require the native ownership scan. The focused build passed 448 jobs
 and the four new audited declarations use standard Lean axioms.
+
+### Aggregate check through saturated runtime applications
+
+At `97fddda`, 1,176 Lake jobs and the generated fixtures passed. The
+audit covered 10,749 declarations, with 528 axiom-free and only standard
+Lean axioms elsewhere. The native suite passed 89 fixtures and 31 extra
+cases. Mixed checking passed 69 source fixtures and 55 exact-byte checks.
+The type-family suite passed all eight positive and nine rejection cases.
+Peak sampled process-tree RSS was 4,892.4 MiB.
+
+### Native nonrecursive data-case telescope
+
+The graph builder substitutes the actual parameters into the original
+constructor root and reads the remaining written binders and result
+indices. It shifts the motive and parameters under the field binders,
+then applies the motive to the nonparameter indices and the rebuilt
+constructor value. The indexed fixture matches all ten appended rows
+and eight ticks in Lean and native Core. A seven-tick budget retains the
+index application before rejecting. The focused build passed 333 jobs
+and the eighteen audited declarations use standard Lean axioms.

@@ -1046,6 +1046,61 @@ fn proposition_case_telescope() {
     assert(budget-remaining_ticks(&sample) == 6, "the two hypotheses and result use six shift ticks")
 }
 
+fn data_case_parameter_fixture() -> core.Core {
+    var c = core.Core.new()
+    let sp = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), sp).unwrap()
+    let word = c.add(core.Term.U64, sp).unwrap()
+    let current = c.add(core.Term.Var(0), sp).unwrap()
+    let parameter = c.add(core.Term.Var(1), sp).unwrap()
+    let signed = c.add(core.Term.I64, sp).unwrap()
+    var indices = Vec(u32).new()
+    indices.push(parameter)
+    indices.push(two)
+    let result = c.add(core.Term.Ind(0, indices), sp).unwrap()
+    let field = c.add(core.Term.Pi(false, signed, result), sp).unwrap()
+    let constructor = c.add(core.Term.Pi(true, word, field), sp).unwrap()
+    c.push_family(core.Family { name: "Flag".to_string(), data: true, params: 1, arity: 2,
+        constructors: Vec(core.Constructor).new(), globals: 0, span: sp })
+    c.push_constructor(0, core.Constructor { name: "AtTwo".to_string(), ty: constructor })
+    c.check().unwrap()
+    assert(c.term(current) == core.Term.Var(0), "original motive is open")
+    c
+}
+
+fn data_case_parameter_telescope() {
+    var baseline = data_case_parameter_fixture()
+    let budget = remaining_ticks(&baseline)
+    var sample = data_case_parameter_fixture()
+    let span = diag.Span.nowhere()
+    var arguments = Vec(u32).new()
+    arguments.push(2)
+    assert(sample.node_count() == 12, "checked source graph position")
+    let result = sample.data_case_type(0, 0, 2, arguments.as_slice(), span, 16).unwrap()
+    var indices = Vec(u32).new()
+    indices.push(12)
+    indices.push(0)
+    var fields = Vec(u32).new()
+    fields.push(17)
+    fields.push(18)
+    assert(result == 21 && sample.node_count() == 22 &&
+        sample.term(12) == core.Term.Var(1) && sample.term(13) == core.Term.Ind(0, indices) &&
+        sample.term(14) == core.Term.Pi(false, 4, 13) && sample.term(15) == core.Term.Var(1) &&
+        sample.term(16) == core.Term.App(15, 0) && sample.term(17) == core.Term.Var(1) &&
+        sample.term(18) == core.Term.Var(0) && sample.term(19) == core.Term.Con(0, 0, fields) &&
+        sample.term(20) == core.Term.App(16, 19) && sample.term(21) == core.Term.Pi(false, 4, 20),
+        "data case preserves the opened fields and applies the motive to the index and constructor")
+    assert(budget-remaining_ticks(&sample) == 8, "data case construction costs eight ticks")
+
+    var short = data_case_parameter_fixture()
+    spend(&short, budget-7)
+    assert(match short.data_case_type(0, 0, 2, arguments.as_slice(), span, 16) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "seven ticks cannot complete the case type")
+    assert(short.node_count() == 17 && short.term(16) == core.Term.App(15, 0),
+        "budget exhaustion retains the result-index application")
+}
+
 fn scalar_code_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1380,6 +1435,7 @@ fn main() -> i32 {
     family_index_inference()
     proposition_motive_telescope()
     proposition_case_telescope()
+    data_case_parameter_telescope()
     proposition_elimination_inference()
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)

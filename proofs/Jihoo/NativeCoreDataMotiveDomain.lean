@@ -11,7 +11,7 @@ open NativeCorePureComputationNormal (Outcome Progress)
 open NativeCoreShiftedApplications (shiftRoot shift_progress shift_refines)
 open NativeCoreCaseStrict (append append_progress append_refines)
 
-private def parameters (limit depth count : Nat) : List Nat → State → Outcome (List Nat)
+def parameters (limit depth count : Nat) : List Nat → State → Outcome (List Nat)
   | [],state => ⟨state,.ok []⟩
   | root :: rest,state =>
     (shiftRoot limit depth state root count).next fun shifted parameter =>
@@ -23,7 +23,7 @@ private def addVariable (state : State) (index : Nat) : Outcome Nat :=
   | .error reason => ⟨state,.error (.add reason)⟩
   | .ok (arena,root) => ⟨{state with arena},.ok root⟩
 
-private def variables : List Nat → State → Outcome (List Nat)
+def variables : List Nat → State → Outcome (List Nat)
   | [],state => ⟨state,.ok []⟩
   | index :: rest,state =>
     (addVariable state index).next fun added root =>
@@ -42,12 +42,12 @@ private theorem variable_progress : Progress limit state (addVariable state inde
   · rename_i arena root success
     exact Progress.uncharged (addNode_commits success).1 rfl
 
-private theorem parameters_progress : Progress limit state (parameters limit depth count params state) := by
+theorem parameters_progress : Progress limit state (parameters limit depth count params state) := by
   induction params generalizing state with
   | nil => exact Progress.atState _ _
   | cons _ _ ih => exact shift_progress.next (fun _ => ih.next (fun _ => Progress.atState _ _))
 
-private theorem variables_progress : Progress limit state (variables indices state) := by
+theorem variables_progress : Progress limit state (variables indices state) := by
   induction indices generalizing state with
   | nil => exact Progress.atState _ _
   | cons _ _ ih => exact variable_progress.next (fun _ => ih.next (fun _ => Progress.atState _ _))
@@ -56,7 +56,7 @@ theorem run_progress : Progress limit state (run limit depth state family count 
   unfold run
   exact parameters_progress.next (fun _ => variables_progress.next (fun _ => append_progress _ _ _))
 
-private theorem parameters_refines
+theorem parameters_refines
     (written : RepresentsList state.arena params args)
     (success : (parameters limit depth count params state).result = .ok selected) :
     let after := (parameters limit depth count params state).state.arena
@@ -93,7 +93,7 @@ private theorem variable_refines (success : (addVariable state index).result = .
     intro child member
     cases member
 
-private theorem variables_refines (success : (variables indices state).result = .ok selected) :
+theorem variables_refines (success : (variables indices state).result = .ok selected) :
     let after := (variables indices state).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       RepresentsList after selected (indices.map Term.var) := by
@@ -110,7 +110,7 @@ private theorem variables_refines (success : (variables indices state).result = 
     obtain ⟨restKept,restBack,restRep⟩ := ih restOk
     exact ⟨firstKept.trans restKept,restBack ∘ firstBack,.cons (firstRep.frame restKept) restRep⟩
 
-private theorem represented_append (first : RepresentsList arena refs xs) (second : RepresentsList arena roots ys) :
+theorem represented_append (first : RepresentsList arena refs xs) (second : RepresentsList arena roots ys) :
     RepresentsList arena (refs ++ roots) (xs ++ ys) := by
   induction first using RepresentsList.rec (motive_1 := fun _ _ _ => True) with
   | var | node => trivial

@@ -31,13 +31,13 @@ structure SignatureRep (arena : Arena) (roots : SignatureRoots) (signature : Sig
   recursive : RecursiveRep arena roots.recursive (recursiveFields signature.fields)
   result : RepresentsList arena roots.result signature.result
 
-private theorem FieldsRep.frame (represented : FieldsRep before roots fields) (kept : Prefix before after) :
+theorem FieldsRep.frame (represented : FieldsRep before roots fields) (kept : Prefix before after) :
     FieldsRep after roots fields := by
   induction represented with
   | nil => exact .nil
   | cons head _ ih => exact .cons (head.frame kept) ih
 
-private theorem FieldsRep.length_eq (represented : FieldsRep arena roots fields) : roots.length = fields.length := by
+theorem FieldsRep.length_eq (represented : FieldsRep arena roots fields) : roots.length = fields.length := by
   induction represented with
   | nil => rfl
   | cons _ _ ih => simpa only [List.length_cons] using congrArg Nat.succ ih
@@ -57,7 +57,7 @@ private theorem RecursiveRep.length_eq (represented : RecursiveRep arena roots f
   | nil => rfl
   | cons _ _ ih => simpa only [List.length_cons] using congrArg Nat.succ ih
 
-private def wrapFields : List (Bool × Nat) → State → Nat → Outcome Nat
+def wrapFields : List (Bool × Nat) → State → Nat → Outcome Nat
   | [], state, body => ⟨state,.ok body⟩
   | (erased,domain) :: rest, state, body =>
       (wrapFields rest state body).next fun after result => append after (.pi erased) [domain,result]
@@ -75,7 +75,7 @@ def run (limit depth : Nat) (state : State) (motive : Nat) (roots : SignatureRoo
     (hypotheses limit depth roots.fields.length motive roots.recursive 0 after result).next fun withProofs telescope =>
       wrapFields roots.fields withProofs telescope
 
-private theorem wrapFields_progress (fields : List (Bool × Nat)) (state : State) (body : Nat) :
+theorem wrapFields_progress (fields : List (Bool × Nat)) (state : State) (body : Nat) :
     Progress limit state (wrapFields fields state body) := by
   induction fields generalizing state body with
   | nil => exact Progress.atState _ _
@@ -95,7 +95,7 @@ theorem run_progress : Progress limit state (run limit depth state motive roots)
   NativeCoreShiftedApplications.run_progress.next
     (fun _ => (hypotheses_progress _ _ _ _).next (fun _ => wrapFields_progress _ _ _))
 
-private theorem wrapFields_refines (represented : FieldsRep state.arena roots fields)
+theorem wrapFields_refines (represented : FieldsRep state.arena roots fields)
     (bodyRep : Represents state.arena body written)
     (success : (wrapFields roots state body).result = .ok selected) :
     let after := (wrapFields roots state body).state.arena
