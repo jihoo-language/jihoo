@@ -3921,3 +3921,16 @@ and open and close their own temporary readers. The resulting invariant and
 heap lifecycle trace come from the same argument run and identify the
 original reader inventory at the entered body. The focused build passed
 414 jobs. The new theorem uses `propext` and `Quot.sound`.
+
+### Declaration annotations select the body checking mode
+
+The native-shaped annotation check infers the original graph root and
+normalizes its answer to a sort on the same meter. Exact mixed admission
+supplies the actual written annotation and its source expansion. Sort
+rigidity and typing uniqueness identify the mode with the one in the
+checked declaration history and recover the original body at that type.
+
+The native and Lean checks agree at ten ticks for an equality annotation
+selecting ghost mode and two for a word annotation selecting code mode.
+The focused build passed 434 jobs and the four new audited declarations
+use only standard Lean axioms.

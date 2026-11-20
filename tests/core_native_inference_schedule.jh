@@ -684,6 +684,42 @@ fn dependent_constructor_inference() {
     }, "a partly supplied constructor does not produce a family type")
 }
 
+fn annotated_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let equality = c.add(core.Term.Eq(zero, zero), span).unwrap()
+    let proof = c.add(core.Term.Refl(zero), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    c.push_definition(core.Definition { name: "evidence".to_string(), ty: equality, value: proof,
+        exported: false, span })
+    c.push_definition(core.Definition { name: "word".to_string(), ty: word, value: one,
+        exported: false, span })
+    c
+}
+
+fn declaration_annotation_inference() {
+    var evidence = annotated_fixture()
+    spend(&evidence, 999990)
+    let kind = evidence.infer(1, [], true, core.DEPTH).unwrap()
+    let exposed = evidence.normal(kind, core.DEPTH).unwrap()
+    assert(evidence.term(exposed) == core.Term.Prop,
+        "the proposition annotation selects ghost body checking")
+    assert_spent(&evidence, "the proposition annotation and its sort use ten ticks")
+
+    var word = annotated_fixture()
+    spend(&word, 999998)
+    let kind = word.infer(3, [], true, core.DEPTH).unwrap()
+    let exposed = word.normal(kind, core.DEPTH).unwrap()
+    assert(word.term(exposed) == core.Term.Universe(0),
+        "the word annotation selects code body checking")
+    assert_spent(&word, "the word annotation and its sort use two ticks")
+
+    var program = annotated_fixture()
+    program.check().unwrap()
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -708,6 +744,7 @@ fn main() -> i32 {
     reference_inference()
     family_index_inference()
     dependent_constructor_inference()
+    declaration_annotation_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

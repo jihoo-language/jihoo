@@ -10622,3 +10622,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithConstructors_sound
 #print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorInference.recursive_dispatch_checks_dependent_constructor
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.CallEntry.retains_enclosing_leases
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.checked_declaration_mode
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDeclarationAnnotations.admitted_annotations_select_body_mode
