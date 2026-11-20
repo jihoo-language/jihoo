@@ -3826,3 +3826,18 @@ The rebuilt compiler agrees with the Lean examples at 9 ticks for Ref, 12
 for Borrow, 16 for the borrowed buffer's Deref and 7 for a boxed family
 borrow and Deref. The flat family rejection adds no rows. The focused
 build passed 428 jobs and all six new declarations use standard Lean axioms.
+
+### Erased returned ownership and equality branch semantics
+
+The dependent Back relation now interprets an owner returned with erased
+evidence as a subtype of its original owner at Type0. The source candidate
+retains the actual Give constructor and evidence. The two original checked
+Give derivations reconstruct the common formed proposition, and either
+proof supplies the same semantic owner to a dependent family.
+
+IfEq now realizes the original dependent result in both branches. The
+true branch extends the valuation with the actual Refl term, which meets
+the canonical equality premise used by Transport. The false branch uses
+the original valuation. The result uses the literal rule after related
+operands fit a physical word. The focused build passed 390 jobs and the
+four new declarations use only standard Lean axioms.
