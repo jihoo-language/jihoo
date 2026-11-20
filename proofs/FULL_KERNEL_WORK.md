@@ -3500,3 +3500,15 @@ with the expanded inference schedule and indexed Strict regression.
 Mixed declaration checking also passed 69 source fixtures and 55
 exact-byte checks. The proof guard reported 4,783.9 MiB peak sampled
 RSS for the combined run.
+
+### Checked lambda creation retains the original capture
+
+For any accepted lambda projection, the checker exposes the resolved binder
+mode and the original body receipt, including a leading telescope. The
+indexed machine's actual closure creation keeps the capture, the original
+dependent body derivation and its closed Pi type. The checked closure
+receipt gives zero demand for each captured owner.
+
+The admitted higher-order example returns a closure with both source
+binders intact. The focused Lake build and the audit of the three new
+theorems passed.

@@ -8,6 +8,21 @@ Computing a callee through Strict retains that same closure receipt. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity
 open Jihoo.Quantity NativeQuantity ResourceModes
 
+/-- Recover the original closure body receipt and its resolved binder mode.
+The projected scope retains the whole leading lambda telescope. -/
+theorem projectRaw_closure_origin
+    (checked : projectRaw (fuel+1) env loans ctx (.lam erased domain body) = some closureReceipt) :
+    ∃ mode bodyReceipt, ResourceModes.Resolved env loans ctx erased domain mode ∧
+      projectRaw fuel env loans (⟨domain,erased⟩ :: ctx) body = some bodyReceipt ∧
+      closureReceipt = .closure (.scope mode (functionTail body bodyReceipt)) := by
+  simp only [projectRaw,Op.arity,List.length_cons,List.length_nil,Nat.reduceAdd,
+    bne_self_eq_false,Bool.false_eq_true,↓reduceIte] at checked
+  split at checked
+  · contradiction
+  · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
+    obtain ⟨bodyReceipt,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
+    exact ⟨mode,bodyReceipt,ResourceModes.resolve_sound resolved,bodyProjected,(Option.some.inj same).symm⟩
+
 /-- A checked Buffer lambda retains its original body projection under the
 linear parameter. A further leading lambda keeps its separate telescope rule. -/
 theorem projectRaw_buffer_closure_origin (admissible : EnvironmentDelta.Admissible env)
@@ -15,16 +30,10 @@ theorem projectRaw_buffer_closure_origin (admissible : EnvironmentDelta.Admissib
     (checked : projectRaw (fuel+1) env loans ctx (.lam false (.buffer count) body) = some closureReceipt) :
     ∃ bodyReceipt, projectRaw fuel env loans (⟨.buffer count,false⟩ :: ctx) body = some bodyReceipt ∧
       closureReceipt = .closure (.scope .linear bodyReceipt) := by
-  simp only [projectRaw,Op.arity,List.length_cons,List.length_nil,Nat.reduceAdd,
-    bne_self_eq_false,Bool.false_eq_true,↓reduceIte] at checked
-  split at checked
-  · contradiction
-  · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
-    obtain ⟨bodyReceipt,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
-    have linear := (ResourceModes.resolve_sound resolved).convertible_buffer_linear admissible (.refl _)
-    subst mode
-    refine ⟨bodyReceipt,bodyProjected,?_⟩
-    simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using (Option.some.inj same).symm
+  obtain ⟨mode,bodyReceipt,resolved,bodyProjected,same⟩ := projectRaw_closure_origin checked
+  have linear := resolved.convertible_buffer_linear admissible (.refl _)
+  subst mode
+  exact ⟨bodyReceipt,bodyProjected,by simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using same⟩
 
 /-- A single erased lambda's resource receipt contains the original projected
 body and its erased scope. Evidence does not consume a runtime slot. -/
@@ -33,16 +42,9 @@ theorem projectRaw_erased_closure_origin
     (checked : projectRaw (fuel+1) env loans ctx (.lam true domain body) = some closureReceipt) :
     ∃ bodyReceipt, projectRaw fuel env loans (⟨domain,true⟩ :: ctx) body = some bodyReceipt ∧
       closureReceipt = .closure (.scope .erased bodyReceipt) := by
-  simp only [projectRaw,Op.arity,List.length_cons,List.length_nil,Nat.reduceAdd,
-    bne_self_eq_false,Bool.false_eq_true,↓reduceIte] at checked
-  split at checked
-  · contradiction
-  · obtain ⟨mode,resolved,checked⟩ := Option.bind_eq_some_iff.mp checked
-    obtain ⟨bodyReceipt,bodyProjected,same⟩ := Option.bind_eq_some_iff.mp checked
-    have erased : mode = .erased := by cases ResourceModes.resolve_sound resolved; rfl
-    subst mode
-    refine ⟨bodyReceipt,bodyProjected,?_⟩
-    simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using (Option.some.inj same).symm
+  obtain ⟨mode,bodyReceipt,resolved,bodyProjected,same⟩ := projectRaw_closure_origin checked
+  cases resolved
+  exact ⟨bodyReceipt,bodyProjected,by simpa only [functionTail,singleBody,Bool.false_eq_true,↓reduceIte] using same⟩
 
 theorem strict_projection
     (checked : projectRaw (fuel+1) env loans ctx (.strict first later) = some receipt) :
@@ -119,6 +121,39 @@ private theorem captured_scope_zero (demanded : (Control.closure scope).demand i
   · rename_i zero
     exact zero ▸ observed
   · contradiction
+
+/-- Evaluating any checked lambda retains its original dependent body and
+the resource projection for the whole telescope. Owners already present in
+the capture have zero demand in that reusable scope. -/
+theorem checked_lambda_retains_capture (state : State) (code : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : state.control = .evaluate code) (shape : code.term = .lam erased domain body)
+    (typed : LoanClosingTyped env loans false code meanings requested)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans code.context code.term = some closureReceipt)
+    (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total code closureReceipt) :
+    let closure := Value.closure erased domain body code.context code.origins code.values
+    step state = some ({state with control := .returned closure}, none) ∧
+    ValueKind env closure requested ∧
+    ∃ mode bodyReceipt bodyType,
+      LoanTyping.ResourceModes.Resolved env loans code.context erased domain mode ∧
+      LoanTyping.HasType env loans (⟨domain,erased⟩ :: code.context) false body bodyType ∧
+      RawLend.Conv env (.pi erased (domain.subst meanings) (bodyType.subst (liftSubOne meanings))) requested ∧
+      LoanTyping.ResourceQuantity.projectRaw fuel env loans (⟨domain,erased⟩ :: code.context) body = some bodyReceipt ∧
+      closureReceipt = .closure (.scope mode (functionTail body bodyReceipt)) ∧
+      LocalScopes (.scope mode (functionTail body bodyReceipt)) ∧
+      ∀ index object, code.values[index]? = some (some (.owner object)) →
+        (Jihoo.Quantity.Control.scope mode (functionTail body bodyReceipt)).demand index = some 0 := by
+  obtain ⟨_,_,source,closed⟩ := typed
+  rw [shape] at source checked
+  obtain ⟨_,bodyType,_,bodyTyped,principal⟩ := source.lamView
+  have converted : RawLend.Conv env (.pi erased (domain.subst meanings) (bodyType.subst (liftSubOne meanings))) requested := by
+    have exactType := (principal.substitution meanings history.wellFormed.closed).trans closed
+    simpa only [Term.pi,Term.subst,substArgs,Op.binders,liftSub] using exactType
+  obtain ⟨mode,bodyReceipt,resolved,bodyProjected,rfl⟩ := LoanTyping.ResourceQuantity.projectRaw_closure_origin checked
+  refine ⟨?_,⟨_,_,converted⟩,mode,bodyReceipt,bodyType,resolved,bodyTyped,converted,bodyProjected,rfl,valid,?_⟩
+  · simp only [step,evaluating,shape,evaluateAction,executeLegacy,execute,Option.map_none]
+  · intro index object stored
+    exact captured_scope_zero (total index object stored).choose_spec
 
 /-- Original closure creation determines the body scope. Complete closure
 demand for the retained captures supplies the zero demand of each physical
@@ -386,6 +421,20 @@ theorem saved_checked_erased_closure_entry (state : State) (capture argument : C
   simp only [step,returned,stackShape,returnAction,applyValue,executeLegacy,execute,Option.map_some]
 
 namespace Examples
+
+private def callbackDomain : Term := .pi false .u64 .u64
+private def higherOrderBody : Term := .lam false .u64 (.app (.var 1) (.var 0))
+private def higherOrderClosure : Term := .lam false callbackDomain higherOrderBody
+
+/-- An admitted higher-order closure retains both original leading binders.
+The indexed machine observes the first lambda without opening either body. -/
+theorem checked_higher_order_closure_retains_telescope :
+    LoanTyping.MixedProgram.checkDeclaration 48 96 .empty
+      ⟨.pi false callbackDomain callbackDomain,higherOrderClosure⟩ =
+      some ⟨.pi false callbackDomain callbackDomain,higherOrderClosure⟩ ∧
+    (run 1 (initial higherOrderClosure)).state.control =
+      .returned (.closure false callbackDomain higherOrderBody [] Term.var []) := by
+  exact ⟨by cbv,rfl⟩
 
 private def ignoredEvidence : Term :=
   .strict (.arith .add (.integer 9223372036854775807) (.integer 1))

@@ -10516,3 +10516,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.packed_proofs_agree
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.refinement_witness_determines_value
 #print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.dependent_pack_fibers_agree
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.projectRaw_closure_origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_lambda_retains_capture
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_higher_order_closure_retains_telescope
