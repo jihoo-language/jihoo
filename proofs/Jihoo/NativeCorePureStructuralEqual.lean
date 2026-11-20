@@ -8,7 +8,8 @@ namespace Jihoo.NativeKernel.NativeCorePureStructuralEqual
 open NativeArena NativeProgramWire
 open Environment.LoanTyping.MixedProgram (History)
 open NativeCorePureStructuralNormal (runNested runNested_refines runNested_cost frameDefinitions runNested_result_fully_retained)
-open NativeCoreCompare (FullyRetained project project_injective_of_fully_retained)
+open NativeCoreCompare (FullyRetained project projectArgs project_injective_of_fully_retained)
+open NativeKernel.Conversion (ListRel)
 
 inductive Error where
   | left (reason : NativeCorePureStructuralNormal.Error)
@@ -200,6 +201,88 @@ theorem run_converts_fully_retained (aligned : RepresentsDefinitions arena roots
   have same := project_injective_of_fully_retained (keepLeft leftKept) (keepRight rightKept) (matched.mp rfl)
   rw [same] at forwardLeft
   exact forwardLeft.toConv.trans forwardRight.toConv.symm
+
+/-- Identity may discard Strict prefixes anywhere while retaining all the
+evidence fields in the part of the term it actually compares. -/
+inductive EvidenceRetained : Term → Prop where
+  | var (index : Nat) : EvidenceRetained (.var index)
+  | strict (effect : Term) : EvidenceRetained result → EvidenceRetained (.strict effect result)
+  | node (ordinary : op ≠ .strict) (kept : NativeCoreCompare.conversionChildren op args = args)
+      (arity : args.length = op.arity) (children : ∀ arg ∈ args, EvidenceRetained arg) :
+      EvidenceRetained (.node op args)
+
+private theorem retain_children (children : ∀ arg ∈ args, ∃ reduced,
+    Environment.RawValue.Forward env arg reduced ∧ FullyRetained reduced ∧ project reduced = project arg) :
+    ∃ reduced, ListRel (Environment.RawValue.Forward env) args reduced ∧ reduced.length = args.length ∧
+      (∀ arg ∈ reduced, FullyRetained arg) ∧ projectArgs reduced = projectArgs args := by
+  induction args with
+  | nil => exact ⟨[], .nil, rfl, by simp, rfl⟩
+  | cons arg args ih =>
+    obtain ⟨value, first, retained, same⟩ := children arg List.mem_cons_self
+    obtain ⟨rest, later, length, restRetained, restSame⟩ :=
+      ih (fun child member => children child (List.mem_cons_of_mem _ member))
+    refine ⟨value :: rest, .cons first later, by simp only [List.length_cons, length], ?_, ?_⟩
+    · intro term member
+      rcases List.mem_cons.mp member with rfl | tail
+      · exact retained
+      · exact restRetained term tail
+    · simp only [projectArgs, same, restSame]
+
+private theorem EvidenceRetained.reduces (evidence : EvidenceRetained term) :
+    ∃ reduced, Environment.RawValue.Forward env term reduced ∧ FullyRetained reduced ∧ project reduced = project term := by
+  induction evidence with
+  | var index => exact ⟨.var index, .refl, .var index, rfl⟩
+  | strict effect _ ih =>
+    obtain ⟨output, reduced, retained, same⟩ := ih
+    refine ⟨output, (Environment.RawValue.Forward.strict effect _).trans reduced, retained, same.trans ?_⟩
+    simp only [Term.strict, project, projectArgs, NativeCoreCompare.syntaxView, ite_true] <;> rfl
+  | @node op args ordinary kept arity _ ih =>
+    obtain ⟨reduced, related, length, retained, same⟩ := retain_children ih
+    have retainedFields := NativeCoreCompare.children_kept_of_length length.symm kept
+    refine ⟨.node op reduced, .node op related,
+      .node ordinary retainedFields (length.trans arity) retained, ?_⟩
+    rw [project, project, same]
+
+/-- Reflection uses the shaped Strict equation for discarded effects.
+Every retained constructor and evidence field remains structurally equal. -/
+theorem projected_identity_converts (left : EvidenceRetained first) (right : EvidenceRetained second)
+    (matched : project first = project second) : Environment.RawValue.Conv env first second := by
+  obtain ⟨firstNormal, leftSteps, leftKept, leftView⟩ := left.reduces (env := env)
+  obtain ⟨secondNormal, rightSteps, rightKept, rightView⟩ := right.reduces (env := env)
+  have same := project_injective_of_fully_retained leftKept rightKept (leftView.trans (matched.trans rightView.symm))
+  rw [same] at leftSteps
+  exact leftSteps.toConv.trans rightSteps.toConv.symm
+
+theorem successful_identity_converts (left : Represents arena a first) (right : Represents arena b second)
+    (leftKept : EvidenceRetained first) (rightKept : EvidenceRetained second)
+    (computed : NativeCoreIdentical.runArena arena limit depth initial a b = (.ok true, steps)) :
+    Environment.RawValue.Conv env first second :=
+  projected_identity_converts leftKept rightKept ((NativeCoreIdentical.runArena_refines left right computed).mp rfl)
+
+/-- A Strict prefix below an Eq constructor is ignored by actual graph
+identity. The two proposition terms remain related by pure conversion. -/
+theorem nested_strict_identity_example :
+    Environment.RawValue.Conv env (.eq (.strict (.integer 0) (.natural 7)) (.natural 7)) (.eq (.natural 7) (.natural 7)) := by
+  let arena : Arena := #[.node (.integer 0) [], .node (.natural 7) [], .node .strict [0, 1],
+    .node .eq [2, 1], .node .eq [1, 1]]
+  have first : Represents arena 3 (.eq (.strict (.integer 0) (.natural 7)) (.natural 7)) :=
+    decode_sound (fuel := 4) rfl
+  have second : Represents arena 4 (.eq (.natural 7) (.natural 7)) := decode_sound (fuel := 4) rfl
+  have checked : NativeCoreIdentical.runArena arena 4 4 0 3 4 = (.ok true, 4) := by cbv
+  have numeral : EvidenceRetained (.natural 7) := .node (by decide) rfl rfl (by simp)
+  apply successful_identity_converts first second ?_ ?_ checked
+  · refine .node (by decide) rfl rfl ?_
+    intro child member
+    have selected : child = .strict (.integer 0) (.natural 7) ∨ child = .natural 7 := by
+      simpa only [List.mem_cons, List.not_mem_nil, or_false] using member
+    rcases selected with rfl | rfl
+    · exact .strict _ numeral
+    · exact numeral
+  · refine .node (by decide) rfl rfl ?_
+    intro child member
+    have selected : child = .natural 7 := by simpa only [List.mem_cons, List.not_mem_nil, or_false, or_self] using member
+    subst child
+    exact numeral
 
 /-- The left normalization appends an equality row. The final identity reads
 that row and its two children. The append survives a comparison limit error. -/

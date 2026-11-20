@@ -10522,3 +10522,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.commute_pure_preserves
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.run_pure_refines
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.Examples.dependent_motive_keeps_written_annotation
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.projected_identity_converts
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.successful_identity_converts
+#print axioms Jihoo.NativeKernel.NativeCorePureStructuralEqual.nested_strict_identity_example

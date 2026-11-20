@@ -3526,3 +3526,13 @@ the scrutinized value. Lean derives the original written type after
 moving Strict. The native regression checks both eliminators and the
 retained overflow prefix. The focused build passed 326 jobs and the
 three new audited theorems use only standard Lean axioms.
+
+### Pure conversion for identity with nested Strict
+
+Graph identity can skip Strict effects at any retained position. When
+the compared portions retain all evidence fields, the shaped Strict
+equation relates each input to a fully retained tree. Structural identity
+of those trees yields pure conversion between the original inputs.
+The exact graph fixture compares two equality propositions in four ticks.
+The focused build passed 290 jobs and its three audited theorems use only
+standard Lean axioms.
