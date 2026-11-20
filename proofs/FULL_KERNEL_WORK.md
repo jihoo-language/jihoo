@@ -3446,3 +3446,16 @@ therefore needs typed proof irrelevance at ignored fields.
 
 The focused build passed 290 jobs. The separation theorem uses only the
 three standard Lean axioms.
+
+### Reader bounds after typed proof replay
+
+The same reader proof accepts arithmetic evidence reached by bounded
+Loan64 proof normalization in the actual mixed declaration history. Typed
+preservation gives the residual the original inequality. The index proof
+then uses that inequality and the physical allocation length to compute the
+word and construct the read.
+
+The nested reader fixture wraps its arithmetic bound in an erased beta
+redex. The focused build passed 423 jobs, including evidence replay and
+the same overflow prefix, and its 10-declaration audit used only standard
+Lean axioms.

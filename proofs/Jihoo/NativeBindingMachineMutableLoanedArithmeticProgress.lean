@@ -140,7 +140,7 @@ theorem checked_value_of_arithmetic_bound (operand : UnsignedOperand)
     (typed : LoanTyping.HasType env loans original.context false operand.term .u64)
     (context : ValueContext env original meanings) (aligned : CodeAligned original)
     (bound : LoanTyping.HasType env loans original.context true evidence (.lt operand.term count))
-    (supported : Semantics.LoanArithmetic.Supported (evidence.subst meanings))
+    (supported : LoanedArithmetic.ClosedEvidence env (evidence.subst meanings))
     (physical : LoanTyping.Conversion.Conv env (.natural length) (count.subst meanings))
     (lengthWidth : length < 2^64) :
     operand.sum meanings < length ∧ operand.value meanings = some (operand.sum meanings) := by
@@ -152,8 +152,7 @@ theorem checked_value_of_arithmetic_bound (operand : UnsignedOperand)
   have same : LoanTyping.Conversion.Conv env (operand.term.subst meanings) expression.toTerm := by
     rw [written]
     exact .refl _
-  have within := Semantics.LoanArithmetic.supported_affine_bound history.wellFormed expression
-    checked supported same physical.symm (fun _ => 0)
+  have within := supported.affine_bound history expression checked same physical.symm (fun _ => 0)
   rw [evaluated] at within
   have width := Nat.lt_trans within lengthWidth
   refine ⟨within, operand.checked_value history typed context aligned ?_⟩
@@ -199,7 +198,7 @@ private theorem read_replay_ready (reference : ReaderReference) (word : Unsigned
     (references : ReferenceSizes env heap.metadata original meanings)
     (stored : original.values[owner]? = some (some (.owner object)))
     (freshLease : heap.metadata.heap.lease fresh = some object)
-    (supported : Semantics.LoanArithmetic.Supported (evidence.subst meanings))
+    (supported : ClosedEvidence env (evidence.subst meanings))
     (ready : (.read reference word evidence : LoanedArithmetic).Ready env loans original.context) :
     ∃ observation, (.read reference word evidence : LoanedArithmetic).replay original heap fresh meanings =
       some observation := by
@@ -274,7 +273,7 @@ theorem checked_progress (tree : LoanedArithmetic)
     (stored : original.values[owner]? = some (some (.owner object)))
     (leased : heap.metadata.heap.lease fresh = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw depth env loans original.context (tree.specialized owner) = some receipt)
-    (evidence : tree.ArithmeticEvidence meanings) (ready : tree.Ready env loans original.context)
+    (evidence : tree.ArithmeticEvidence env meanings) (ready : tree.Ready env loans original.context)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
     let state : State := ⟨heap,.evaluate (entry.child tree.term),stack,pending⟩
@@ -355,7 +354,7 @@ theorem reachable_loaned_arithmetic_progress (program : Term) (fuel : Nat) (tree
     (slots : LoanSlots code loans (run fuel (initial program)).state.activeStack)
     (coverage : LoanCoverage code loans (run fuel (initial program)).state.activeStack)
     (entered : Loans.Entered code.context.length loans)
-    (evidence : tree.ArithmeticEvidence meanings)
+    (evidence : tree.ArithmeticEvidence env meanings)
     (ready : tree.Ready env (Loans.enter code.context.length owner loans) code.context)
     (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some receipt)
     (budget : LoanTyping.ResourceQuantity.LoanBudget code.context.length loans receipt)
@@ -443,10 +442,24 @@ theorem reachable_loaned_arithmetic_progress (program : Term) (fuel : Nat) (tree
 
 namespace Examples
 
+private def leftIndex : Term := .uadd (.natural 0) (.natural 1)
+private def bufferLength : Term := .uadd (.natural 1) (.natural 1)
+private def arithmeticBound : Term :=
+  .ltAdd (.natural 0) (.natural 1) (.natural 1) (.zeroLe (.natural 0))
+private def replayedBound : Term :=
+  .app (.lam true (.lt leftIndex bufferLength) (.var 0)) arithmeticBound
+
+/-- A beta-hidden reader guard replays to the actual supported proof. -/
+theorem beta_hidden_reader_bound_replays : LoanedArithmetic.ClosedEvidence .empty replayedBound := by
+  apply LoanedArithmetic.ClosedEvidence.replay (budget := 4096) (fuel := 32) (residual := arithmeticBound)
+  · cbv
+  · simp only [arithmeticBound, Semantics.LoanArithmetic.Supported]
+    exact ⟨⟨.literal 0,rfl⟩,⟨.literal 1,rfl⟩,⟨.literal 1,rfl⟩,⟨.literal 0,rfl⟩⟩
+
 private def nestedReaderOverflow : Term :=
   let buffer := Term.buffer (.natural 2)
   let index := UnsignedOperand.add (.literal 0) (.literal 1)
-  let bound := Term.ltAdd (.natural 0) (.natural 1) (.natural 1) (.zeroLe (.natural 0))
+  let bound := replayedBound
   let overflowing := LoanedArithmetic.arithmetic .add (.read .bound index bound) (.literal ((2^63 : Int)-1))
   let computation := LoanedArithmetic.arithmetic .add overflowing (.read (.captured 1) index bound)
   let release := Term.lam false .i64 (.lam false buffer (.free (.var 0) (.var 1)))

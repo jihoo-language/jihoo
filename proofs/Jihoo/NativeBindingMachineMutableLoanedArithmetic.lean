@@ -1,6 +1,6 @@
 import Jihoo.NativeBindingMachineMutableComputedBorrow
 import Jihoo.NativeBindingMachineReferenceSizes
-import Jihoo.NativeLoanArithmeticProofConsistency
+import Jihoo.NativeLoanProofNormalization
 
 /-! A scalar reader can read its newly opened reference and retained
 references at computed indices. Signed arithmetic preserves read order. -/
@@ -84,10 +84,32 @@ def ticks : LoanedArithmetic → Nat
   | .read _ index _ => 3+((index.rename Nat.succ).ticks+1)
   | .arithmetic _ left right => 1+(left.ticks+(1+(right.ticks+1)))
 
-def ArithmeticEvidence (meanings : Nat → Term) : LoanedArithmetic → Prop
+inductive ClosedEvidence (env : Environment) (proof : Term) : Prop where
+  | direct : Semantics.LoanArithmetic.Supported proof → ClosedEvidence env proof
+  | replay :
+      LoanTyping.ProofNormalization.normalize? env budget fuel proof = some residual →
+      Semantics.LoanArithmetic.Supported residual → ClosedEvidence env proof
+
+/-- A typed proof can be interpreted directly or through an actual bounded
+replay. Preservation gives the residual the exact original bound type. -/
+theorem ClosedEvidence.affine_bound (evidence : ClosedEvidence env proof)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env) (index : AffineSum.Expr)
+    (typed : LoanTyping.HasType env [] [] true proof (.lt left right))
+    (leftValue : RawLend.Conv env left index.toTerm) (rightValue : RawLend.Conv env right (.natural length))
+    (assignment : Nat → Nat) :
+    index.eval assignment < length := by
+  cases evidence with
+  | direct supported =>
+      exact Semantics.LoanArithmetic.supported_affine_bound history.wellFormed index typed supported
+        leftValue rightValue assignment
+  | replay ran supported =>
+      exact Semantics.LoanArithmetic.supported_affine_bound history.wellFormed index
+        (LoanTyping.ProofNormalization.normalize?_preserves history typed ran) supported leftValue rightValue assignment
+
+def ArithmeticEvidence (env : Environment) (meanings : Nat → Term) : LoanedArithmetic → Prop
   | .literal _ => True
-  | .read _ _ evidence => Semantics.LoanArithmetic.Supported (evidence.subst meanings)
-  | .arithmetic _ left right => ArithmeticEvidence meanings left ∧ ArithmeticEvidence meanings right
+  | .read _ _ evidence => ClosedEvidence env (evidence.subst meanings)
+  | .arithmetic _ left right => ArithmeticEvidence env meanings left ∧ ArithmeticEvidence env meanings right
 
 structure Observation where
   number : Int
@@ -200,7 +222,7 @@ private theorem checked_reference_index
     (leased : heap.metadata.heap.lease token = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw resourceFuel env loans original.context
       (.index (reference.specialized owner) word.term evidence) = some receipt)
-    (supported : Semantics.LoanArithmetic.Supported (evidence.subst meanings))
+    (supported : ClosedEvidence env (evidence.subst meanings))
     (offsetValue : word.value meanings = some offset)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
@@ -227,8 +249,7 @@ private theorem checked_reference_index
     simpa only [Term.lt,Term.subst,substArgs,Op.binders,liftSub] using
       evidenceTyped.ghostSubstitution history.wellFormed context.closing
   have within : offset < heap.metadata.length object :=
-    Semantics.LoanArithmetic.supported_affine_bound history.wellFormed (.literal offset)
-      evidenceClosed supported converted physical.symm (fun _ => 0)
+    supported.affine_bound history (.literal offset) evidenceClosed converted physical.symm (fun _ => 0)
   have read : heap.read token offset = some (heap.cell object offset) := by
     unfold SizedBufferHeap.IndexedState.read
     rw [leased]
@@ -248,7 +269,7 @@ theorem checked_run (tree : LoanedArithmetic)
     (stored : original.values[owner]? = some (some (.owner object)))
     (leased : heap.metadata.heap.lease fresh = some object)
     (checked : LoanTyping.ResourceQuantity.projectRaw depth env loans original.context (tree.specialized owner) = some receipt)
-    (evidence : tree.ArithmeticEvidence meanings)
+    (evidence : tree.ArithmeticEvidence env meanings)
     (observed : tree.replay original heap fresh meanings = some observation)
     (domain readerBody origin : Term) (stack : List Frame) (pending : List (BufferFrame × List Frame)) :
     let entry := enter false domain readerBody original.context original.origins original.values origin (some (.reference fresh))
@@ -316,7 +337,7 @@ theorem reachable_loaned_arithmetic_restore (program : Term) (fuel : Nat) (tree 
     (slots : LoanSlots code loans (run fuel (initial program)).state.activeStack)
     (coverage : LoanCoverage code loans (run fuel (initial program)).state.activeStack)
     (entered : Loans.Entered code.context.length loans)
-    (evidence : tree.ArithmeticEvidence meanings)
+    (evidence : tree.ArithmeticEvidence env meanings)
     (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+1) env loans code.context code.term = some receipt)
     (budget : LoanTyping.ResourceQuantity.LoanBudget code.context.length loans receipt)
     (world : OwnerDemandWorld (run fuel (initial program)).state.heap.metadata code receipt)

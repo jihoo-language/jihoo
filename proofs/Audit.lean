@@ -10507,3 +10507,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_checked_erased_closure_entry
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.checked_erased_call_skips_overflowing_evidence
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_closed_types_need_typed_evidence_irrelevance
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.ClosedEvidence.affine_bound
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.beta_hidden_reader_bound_replays
