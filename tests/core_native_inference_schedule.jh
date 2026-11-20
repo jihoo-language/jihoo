@@ -379,6 +379,45 @@ fn wide_ghost_sum() {
     assert_spent(&c, "wide ghost sum uses five ticks")
 }
 
+fn array_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    var elements = Vec(u32).new()
+    elements.push(c.add(core.Term.Integer(3), span).unwrap())
+    elements.push(c.add(core.Term.Integer(-4), span).unwrap())
+    c.add(core.Term.Elements(elements), span).unwrap()
+    let length = c.add(core.Term.Natural(2), span).unwrap()
+    c.add(core.Term.Array(length), span).unwrap()
+    c
+}
+
+fn array_and_allocation_inference() {
+    var limited = array_fixture()
+    spend(&limited, 999995)
+    assert(match limited.infer(2, [], true, 20) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "array checks its second element before committing the length")
+    assert(limited.node_count() == 7, "array keeps each prior signed comparison node")
+
+    var array = array_fixture()
+    spend(&array, 999991)
+    let inferred = array.infer(2, [], true, 20).unwrap()
+    assert(inferred == 9 && array.term(8) == core.Term.Natural(2) && array.term(inferred) == core.Term.Array(8),
+        "array type uses the emitted element count")
+    assert_spent(&array, "array inference uses nine ticks")
+
+    var allocation = core.Core.new()
+    let span = diag.Span.nowhere()
+    let count = allocation.add(core.Term.Natural(2), span).unwrap()
+    let fill = allocation.add(core.Term.Integer(-7), span).unwrap()
+    let source = allocation.add(core.Term.Alloc(count, fill), span).unwrap()
+    allocation.add(core.Term.Buffer(count), span).unwrap()
+    spend(&allocation, 999991)
+    let buffer = allocation.infer(source, [], true, 20).unwrap()
+    assert(buffer == 8 && allocation.term(buffer) == core.Term.Buffer(count), "buffer type keeps the source count")
+    assert_spent(&allocation, "allocation inference uses nine ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -396,6 +435,7 @@ fn main() -> i32 {
     transitive_proof_inference()
     absurd_inference()
     wide_ghost_sum()
+    array_and_allocation_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")
     0
 }

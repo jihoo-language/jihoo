@@ -154,6 +154,20 @@ private def inferFixed (infer : Infer) (normal : Visit) (limit depth : Nat) (sta
   (checkFixed infer normal limit depth state operand args).next fun checked comparisons =>
     (append checked output refs).next fun after root => ⟨after, .ok ⟨root, comparisons⟩⟩
 
+private def inferElements (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (root count : Nat) (elements : List Nat) : Outcome Inferred :=
+  if elements.length = count ∧ count < 2^64 then
+    (checkFixed infer normal limit depth state .i64 elements).next fun checked comparisons =>
+      (append checked (.natural count) []).next fun afterLength length =>
+        (append afterLength .array [length]).next fun after result => ⟨after,.ok ⟨result,comparisons⟩⟩
+  else discard state root
+
+private def inferAlloc (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (count fill : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [count]).next fun afterCount countPairs =>
+    (checkFixed infer normal limit depth afterCount .i64 [fill]).next fun afterFill fillPairs =>
+      (append afterFill .buffer [count]).next fun after result => ⟨after,.ok ⟨result,countPairs ++ fillPairs⟩⟩
+
 private def finishDecide (normal : Visit) (state : State) (root first second : Nat) : Outcome Nat :=
   (normal state first).next fun afterFirst left =>
     (normal afterFirst second).next fun afterSecond right =>
@@ -365,6 +379,11 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
         | some (.node .array [n]) | some (.node .buffer [n]) =>
             inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               .u64 [n] (.universe 0) []
+        | some (.node (.elements count) elements) =>
+            inferElements (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              root count elements
+        | some (.node .alloc [n, fill]) =>
+            inferAlloc (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered n fill
         | some (.node .eq [a, b]) | some (.node .lt [a, b]) =>
             inferFixed (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .prop []
@@ -523,6 +542,29 @@ private theorem finishDecide_progress
     · exact append_progress _ _ _
     · exact Progress.atState _ _
   · exact Progress.atState _ _
+
+private theorem inferElements_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferElements infer normal limit depth state root count elements) := by
+  unfold inferElements
+  split
+  · apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) room) room
+    intro _ _ _
+    exact (append_progress _ _ _).next (fun _ => (append_progress _ _ _).next (fun _ => Progress.atState _ _))
+  · exact Progress.atState _ _
+
+private theorem inferAlloc_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferAlloc infer normal limit depth state count fill) := by
+  apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) room) room
+  intro _ _ countRoom
+  apply next_progress (checkFixed_progress infers (fun state ref _ => normalizes state ref) countRoom) countRoom
+  intro _ _ _
+  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
 
 private theorem inferDecide_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -856,6 +898,8 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
       all_goals with_reducible first
         | exact inferFixed_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
+        | exact inferElements_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferAlloc_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
         | exact inferZeroLe_progress (fun _ _ room => ih room) (normalProgress depth) within
@@ -1306,6 +1350,92 @@ private theorem inferFixed_refines
     (resultProgress.kept.trans ambient) retained
   obtain ⟨resultKept, resultBack, outputRep⟩ := append_refines (resultRefs.frame checkedKept) resultArity resultOk
   exact ⟨checkedKept.trans resultKept, resultBack ∘ checkedBack, _, outputRep, typing typedOperands⟩
+
+private theorem inferElements_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (elementsRep : RepresentsList state.arena refs elements)
+    (success : (inferElements infer normal limit depth state root count refs).result = .ok answer)
+    (ambient : Prefix (inferElements infer normal limit depth state root count refs).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.elements count elements)
+      (inferElements infer normal limit depth state root count refs) answer := by
+  unfold inferElements at success ambient ⊢
+  split at success
+  · rename_i permitted
+    simp only [ite_eq_left permitted] at ambient ⊢
+    obtain ⟨pairs,checkedOk,checkedNext⟩ := Outcome.next_success success
+    rw [checkedNext] at success ambient ⊢
+    obtain ⟨length,lengthOk,lengthNext⟩ := Outcome.next_success success
+    rw [lengthNext] at success ambient ⊢
+    obtain ⟨selected,outputOk,outputNext⟩ := Outcome.next_success success
+    rw [outputNext] at success ambient ⊢
+    simp only [Except.ok.injEq] at success
+    subst answer
+    let checked := checkFixed infer normal limit depth state .i64 refs
+    let emitted := append checked.state (.natural count) []
+    have tail := (append_progress (limit := limit) checked.state (.natural count) []).kept.trans
+      ((append_progress (limit := limit) emitted.state .array [length]).kept.trans ambient)
+    obtain ⟨checkedKept,checkedBack,typed⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+      onBase room elementsRep rfl checkedOk tail retained
+    obtain ⟨lengthKept,lengthBack,lengthRep⟩ := append_refines .nil rfl lengthOk
+    obtain ⟨resultKept,resultBack,resultRep⟩ := append_refines (.cons lengthRep .nil) rfl outputOk
+    have elementsLength : (expandArgs env elements).length = count := by
+      rw [EnvironmentDelta.expandArgs_map,List.length_map,← NativeCoreIdentical.represented_length elementsRep]
+      exact permitted.1
+    have members : ∀ term ∈ expandArgs env elements, LoanTyping.HasType env [] ctx true term .i64 := by
+      intro term found
+      rw [EnvironmentDelta.expandArgs_map] at found
+      obtain ⟨original,member,rfl⟩ := List.mem_map.mp found
+      simpa only [Term.i64,expand,expandArgs] using typed original member
+    have arrayTyped := LoanTyping.HasType.elements elementsLength (elementsLength.symm ▸ permitted.2) members
+    refine ⟨checkedKept.trans (lengthKept.trans resultKept),resultBack ∘ lengthBack ∘ checkedBack,_,resultRep,?_⟩
+    simpa only [Term.elements,Term.array,Term.natural,expand,expandArgs,elementsLength] using arrayTyped
+  · simp [discard] at success
+
+private theorem inferAlloc_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (countRep : Represents state.arena count n) (fillRep : Represents state.arena fill x)
+    (success : (inferAlloc infer normal limit depth state count fill).result = .ok answer)
+    (ambient : Prefix (inferAlloc infer normal limit depth state count fill).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.alloc n x) (inferAlloc infer normal limit depth state count fill) answer := by
+  unfold inferAlloc at success ambient ⊢
+  obtain ⟨countPairs,countOk,countNext⟩ := Outcome.next_success success
+  rw [countNext] at success ambient ⊢
+  obtain ⟨fillPairs,fillOk,fillNext⟩ := Outcome.next_success success
+  rw [fillNext] at success ambient ⊢
+  obtain ⟨selected,outputOk,outputNext⟩ := Outcome.next_success success
+  rw [outputNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let counts := checkFixed infer normal limit depth state .u64 [count]
+  let fills := checkFixed infer normal limit depth counts.state .i64 [fill]
+  have countProgress := checkFixed_progress (state := state) (operand := .u64) (args := [count]) (depth := depth)
+    childProgress (fun state ref _ => normalProgress state ref) room
+  have countRoom := countProgress.accepted room countPairs countOk
+  have fillProgress := checkFixed_progress (state := counts.state) (operand := .i64) (args := [fill]) (depth := depth)
+    childProgress (fun state ref _ => normalProgress state ref) countRoom
+  have fillFinal := (append_progress (limit := limit) fills.state .buffer [count]).kept.trans ambient
+  obtain ⟨countKept,countBack,countTyped⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    onBase room (.cons countRep .nil) rfl countOk (fillProgress.kept.trans fillFinal)
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨fillKept,fillBack,fillTyped⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    (onBase.trans countKept) countRoom (.cons (fillRep.frame countKept) .nil) rfl fillOk fillFinal
+    (fun pair member => retained pair (List.mem_append_right _ member))
+  have throughFill := countKept.trans fillKept
+  obtain ⟨resultKept,resultBack,represented⟩ := append_refines (.cons (countRep.frame throughFill) .nil) rfl outputOk
+  refine ⟨throughFill.trans resultKept,resultBack ∘ fillBack ∘ countBack,_,represented,?_⟩
+  simp only [expand,expandArgs] at countTyped fillTyped
+  simp only [Term.alloc,expand,expandArgs]
+  exact .alloc (countTyped n List.mem_cons_self) (fillTyped x List.mem_cons_self)
 
 private theorem finishDecide_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -2520,6 +2650,24 @@ theorem runWithData_sound {normal : NormalAt}
                 have left := typed _ List.mem_cons_self
                 have right := typed _ (List.mem_cons_of_mem _ List.mem_cons_self)
                 first | exact .eq left right | exact .lt left right | exact .uadd left right | exact .arith left right
+          case elements count =>
+            exact inferElements_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+              (normalSound depth) (normalProgress depth) sameContext
+              (fun _ _ budget => runWithData_progress normalProgress budget)
+              onBase within children success ambient retained
+          case alloc =>
+            have length : refs.length = 2 := arity
+            rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons countRep rest =>
+              cases rest with
+              | cons fillRep tail =>
+                cases tail
+                dsimp only at success ambient ⊢
+                exact inferAlloc_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                  (normalSound depth) (normalProgress depth) sameContext
+                  (fun _ _ budget => runWithData_progress normalProgress budget)
+                  onBase within countRep fillRep success ambient retained
           case absurd =>
             have length : refs.length = 2 := arity
             rcases refs with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> simp at length
@@ -3105,6 +3253,38 @@ theorem admitted_absurd_infers_original_target :
     NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot absurdSnapshot) = true ∧
     (let finished := run absurdSnapshot.definitions 0 24 24 [⟨1,true⟩] ⟨absurdSnapshot.arena,0⟩ 4
      finished.state.steps = 11 ∧ finished.result.map Inferred.typeRoot = .ok 2) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def arraySnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨4,2⟩]
+  families := []
+  arena := #[.node (.integer 3) [],.node (.integer (-4)) [],.node (.elements 2) [0,1],
+    .node (.natural 2) [],.node .array [3]]
+
+/-- The native array length is appended only after all elements check. -/
+theorem admitted_array_inference_checks_elements_before_length :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot arraySnapshot) = true ∧
+    run arraySnapshot.definitions 0 5 20 [] ⟨arraySnapshot.arena,0⟩ 2 =
+      ⟨⟨arraySnapshot.arena ++ #[.node .i64 [],.node .i64 []],6⟩,
+        .error (.tick (.stepLimit 1))⟩ ∧
+    (let output := run arraySnapshot.definitions 0 9 20 [] ⟨arraySnapshot.arena,0⟩ 2
+     output.result.map Inferred.typeRoot = .ok 9 ∧ output.state.arena[9]? = some (.node .array [8])) := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def allocationSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨3,2⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.integer (-7)) [],.node .alloc [0,1],.node .buffer [0]]
+
+/-- The allocation checks the word count before the signed fill and writes
+the original count under Buffer. -/
+theorem admitted_allocation_inference_keeps_original_count :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot allocationSnapshot) = true ∧
+    run allocationSnapshot.definitions 0 9 20 [] ⟨allocationSnapshot.arena,0⟩ 2 =
+      ⟨⟨allocationSnapshot.arena ++ #[.node .u64 [],.node .u64 [],.node .i64 [],.node .i64 [],.node .buffer [0]],9⟩,
+        .ok ⟨8,[(5,4),(7,6)]⟩⟩ := by
   rw [NativeLoanMixedAdmission.checkBytes_encode]
   cbv
 

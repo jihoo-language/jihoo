@@ -3482,6 +3482,15 @@ sum model and Lean agree on the shared half in `U64.max + 1` and all five
 ticks. The focused rebuild passed 427 jobs and the audit used only
 standard Lean axioms.
 
+### Metered array and allocation inference
+
+`Elements` checks each signed value before emitting the array length, and
+`Alloc` checks the unsigned count before its signed fill. The inferred
+`Buffer` retains the original count reference. Lean and the rebuilt compiler
+agree on the nine-tick successful paths and on the array prefix at tick 6.
+The focused build passed 427 jobs and its four-declaration audit used only
+standard Lean axioms.
+
 ### Ghost inference of an impossible case
 
 `Absurd` checks the requested type's sort, exposes the evidence's original
