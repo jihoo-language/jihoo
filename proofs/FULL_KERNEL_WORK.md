@@ -3726,3 +3726,22 @@ standard Lean axioms in the others. The rebuilt compiler passed 89 native
 kernel fixtures and 31 additional checks. Mixed checking passed 69 source
 fixtures and 55 exact-byte checks, including the pure admission of the
 native snapshot. Peak sampled process-tree RSS was 4,764.8 MiB.
+
+### Comparison paths and ownership after entering a full call
+
+Successful native graph identity now relates the original retained occurrences
+in order at every depth. For well-formed terms it preserves the full opcode,
+including the arity hidden by field omission, and records where Strict nodes
+were stripped. A pair of checked dependent types illustrates the retained Pack
+position under a family application. Source inversion of the original Pi and
+application derivations types the two skipped proofs at the same formed
+proposition when the retained operands are convertible. A general typed
+comparison interpretation under arbitrary binders is still open.
+
+The final entered call telescope gives a demand of one for each installed live
+linear owner. Existing aliases of those owners retain zero demand, and all
+other captured slots retain their original exact demand. The theorem uses the
+actual slot ordering and local checked-scope conditions. Installation and
+retirement still need to be derived across arbitrary machine call sequences.
+The focused build passed 421 jobs and the five new declarations use only
+standard Lean axioms.

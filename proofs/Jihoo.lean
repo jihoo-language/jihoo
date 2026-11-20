@@ -1175,6 +1175,7 @@ import Jihoo.NativeBindingMachineMutableLoadFree
 import Jihoo.NativeBindingMachineMutableUnsignedSubtraction
 import Jihoo.NativeLoanPureTyping
 import Jihoo.NativeCoreCompareWire
+import Jihoo.NativeCoreComparisonOccurrences
 import Jihoo.NativeCoreEffectAnalysis
 import Jihoo.NativeBindingMachineMutableRefinement
 import Jihoo.NativeLoanPureTypingChecker
@@ -1253,6 +1254,7 @@ import Jihoo.NativeCoreCaseStrict
 import Jihoo.NativeCoreElimNormal
 import Jihoo.NativeCoreRecursiveElim
 import Jihoo.NativeBindingMachineMutableCheckedClosure
+import Jihoo.NativeBindingMachineMutableTelescopeDemand
 import Jihoo.NativeLoanIndexedPropositionModel
 import Jihoo.NativeCoreViewNormal
 import Jihoo.NativeCoreViewShape

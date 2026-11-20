@@ -1,6 +1,7 @@
 import Jihoo.NativeLoanPureTyping
 import Jihoo.NativeLoanCheckerSoundness
 import Jihoo.NativeCoreIdentical
+import Jihoo.NativeCoreComparisonOccurrences
 import Jihoo.NativeFamilyIotaNeutralCoherence
 
 /-! Core.identical ignores evidence in three constructors. Recovering the
@@ -152,6 +153,33 @@ theorem live_identity_common_proposition
   · exact ⟨rfl, SharedOperands.pack.common_proposition firstTyped secondTyped⟩
   · exact ⟨rfl, SharedOperands.give.common_proposition firstTyped secondTyped⟩
 
+/-- An accepted live identity comparison retains the original aligned
+subtrees and their omitted evidence positions under arbitrary binders. -/
+theorem live_identity_aligns_occurrences
+    (first : Represents arena left firstTerm) (second : Represents arena right secondTerm)
+    (accepted : NativeCoreIdentical.runArena arena limit depth initial left right = (.ok true,spent)) :
+    NativeCoreCompare.OccurrenceAlignment firstTerm secondTerm :=
+  NativeCoreCompare.project_aligns_occurrences first.wellFormed second.wellFormed
+    ((NativeCoreIdentical.runArena_refines first second accepted).mp rfl)
+
+/-- Actual checking of two dependent types exposes the ignored arguments
+under the original Pi binder. Their source derivations retain the common
+proposition when the two visited operands are convertible. -/
+theorem pi_application_common_proposition
+    (first : IgnoredProposition op a b proposition) (second : IgnoredProposition op a' b' other)
+    (firstTyped : HasType env loans ctx mode (.pi erased domain (.app family (.node op [a,b,leftProof]))) leftType)
+    (secondTyped : HasType env otherLoans ctx otherMode
+      (.pi erased domain (.app family (.node op [a',b',rightProof]))) rightType)
+    (left : RawLend.Conv env a a') (right : RawLend.Conv env b b') :
+    HasEvidence env (⟨domain,erased⟩ :: ctx) proposition leftProof ∧
+      HasType env [] (⟨domain,erased⟩ :: ctx) true rightProof proposition := by
+  obtain ⟨_,_,_,leftBody,_⟩ := firstTyped.principalView
+  obtain ⟨_,_,_,rightBody,_⟩ := secondTyped.principalView
+  obtain ⟨_,_,_,_,leftArgument,_,_⟩ := leftBody.appView
+  obtain ⟨_,_,_,_,rightArgument,_,_⟩ := rightBody.appView
+  exact converted_operands_common_proposition first second (.native (leftArgument.ghost []))
+    (.native (rightArgument.ghost [])) left right
+
 end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence
 
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples
@@ -210,5 +238,15 @@ theorem checked_closed_types_need_typed_evidence_irrelevance :
     | cons _ rest =>
       cases rest with
       | cons evidence _ => exact different_evidence evidence
+
+/-- The deployed identity path exposes the same Pack position in both
+checked dependent types, even though their proof subtrees differ. -/
+theorem checked_comparison_aligns_hidden_pack_proofs :
+    NativeCoreCompare.OccurrenceAlignment (dependentType (.zeroLe zero)) (dependentType (.decide zero one)) := by
+  obtain ⟨_,_,first,second,identity,_⟩ := checked_closed_types_need_typed_evidence_irrelevance
+  rcases found : NativeCoreIdentical.runArena arena 128 24 0 15 16 with ⟨answer,spent⟩
+  simp only [found] at identity
+  subst answer
+  exact live_identity_aligns_occurrences first second found
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples

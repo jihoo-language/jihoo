@@ -10565,3 +10565,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.RefinementWord.representation_unique
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.saved_refinement_closure_witness_returns
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_buffer_operations_infer_original_lengths
+#print axioms Jihoo.NativeKernel.NativeCoreCompare.project_aligns_occurrences
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_aligns_occurrences
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.pi_application_common_proposition
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_comparison_aligns_hidden_pack_proofs
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.opened_telescope
