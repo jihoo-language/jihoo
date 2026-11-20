@@ -3473,3 +3473,17 @@ entering the payload, with its required source fiber already committed.
 The native Proof projection separately confirms that the emitted Witness
 uses the original local subject and consumes 14 ticks. The focused build
 and 33-declaration axiom audit passed.
+
+### Dependent semantics of refinement values
+
+The finite semantic model interprets `Refine(P)` in Type0 as a natural
+number paired with evidence in the proposition carrier for that number.
+Pack builds the pair in any dependent valuation context. Witness and
+Proof realize the two projections using the original raw equations.
+
+Convertible witnesses determine the same semantic refinement value.
+Every semantic family therefore assigns the same fiber to packs of the
+same word with different proofs of the predicate. These local semantic
+rules compose with the existing dependent relation. Reconstructing the
+relation from arbitrary checked terms remains open. The focused build
+passed 100 jobs and a six-declaration axiom audit.

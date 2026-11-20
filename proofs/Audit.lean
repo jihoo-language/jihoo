@@ -10510,3 +10510,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.LoanedArithmetic.ClosedEvidence.affine_bound
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.beta_hidden_reader_bound_replays
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_transport_limit_keeps_source_fiber
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.pack_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.witness_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.proof_realizes
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.packed_proofs_agree
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.refinement_witness_determines_value
+#print axioms Jihoo.NativeKernel.Environment.Semantics.DependentRelation.dependent_pack_fibers_agree

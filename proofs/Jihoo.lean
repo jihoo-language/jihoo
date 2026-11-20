@@ -972,6 +972,7 @@ import Jihoo.NativeDependentLogicalRelation
 import Jihoo.NativeDependentRelationalContexts
 import Jihoo.NativeDependentRelationExamples
 import Jihoo.NativeDependentNumericCoherence
+import Jihoo.NativeDependentRefinementRelation
 import Jihoo.NativeScopeCheck
 import Jihoo.NativeLoanScopeInputExamples
 import Jihoo.NativeLoanConversion
