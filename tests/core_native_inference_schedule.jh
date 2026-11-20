@@ -117,11 +117,52 @@ fn decision_inference() {
     assert_spent(&bad, "rejected decision used 11 ticks")
 }
 
+fn zero_bound_inference() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let maximum = c.add(core.Term.Natural(18446744073709551615), span).unwrap()
+    let proof = c.add(core.Term.ZeroLe(maximum), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let successor = c.add(core.Term.UAdd(maximum, one), span).unwrap()
+    c.add(core.Term.Lt(zero, successor), span).unwrap()
+    spend(&c, 999995)
+    let inferred = c.infer(proof, [], true, 16).unwrap()
+    assert(inferred == 11 && c.node_count() == 12, "zero bound result position")
+    assert(c.term(6) == core.Term.U64 && c.term(7) == core.Term.U64, "zero bound operand check")
+    assert(c.term(8) == core.Term.Natural(0) && c.term(9) == core.Term.Natural(1), "zero bound constants")
+    assert(c.term(10) == core.Term.UAdd(maximum, 9), "successor remains a ghost sum")
+    assert(c.term(inferred) == core.Term.Lt(8, 10), "zero bound keeps the wide successor")
+    assert_spent(&c, "zero bound inference used five ticks")
+}
+
+fn subtract_bound_exhaustion() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let proof = c.add(core.Term.ZeroLe(zero), span).unwrap()
+    let subtract = c.add(core.Term.USub(zero, zero, proof), span).unwrap()
+    c.add(core.Term.U64, span).unwrap()
+    spend(&c, 999986)
+    assert(match c.infer(subtract, [], true, 16) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, "subtraction stops at the bound comparison tick")
+    assert(c.node_count() == 16, "both subtraction bound graphs remain")
+    for i in 4..7 { assert(c.term(i as u32) == core.Term.U64, "subtraction operand check") }
+    assert(c.term(7) == core.Term.Natural(1) && c.term(8) == core.Term.UAdd(zero, 7), "required successor")
+    assert(c.term(9) == core.Term.Lt(zero, 8), "required subtraction bound")
+    assert(c.term(10) == core.Term.U64 && c.term(11) == core.Term.U64, "bound proof operand check")
+    assert(c.term(12) == core.Term.Natural(0) && c.term(13) == core.Term.Natural(1), "inferred bound constants")
+    assert(c.term(14) == core.Term.UAdd(zero, 13) && c.term(15) == core.Term.Lt(12, 14), "inferred subtraction bound")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
     impredicative_product()
     decision_inference()
-    println("Native Core.infer matched primitive, binder and decision graph traces and checking costs")
+    zero_bound_inference()
+    subtract_bound_exhaustion()
+    println("Native Core.infer matched primitive, binder and arithmetic evidence graph traces and checking costs")
     0
 }

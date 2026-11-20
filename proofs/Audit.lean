@@ -10468,6 +10468,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_impredicative_product_infers
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_strict_decision_infers
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.false_decision_keeps_operand_rows
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_zero_bound_keeps_wide_successor
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.subtraction_limit_keeps_both_bound_graphs
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FamilyIota.case_scrutinee_context
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.constantMotive_sound
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.changeScrutinee

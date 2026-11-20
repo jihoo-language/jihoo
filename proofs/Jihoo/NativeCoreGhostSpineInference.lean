@@ -166,6 +166,32 @@ private def inferStrict (infer : Infer) (state : State) (effect result : Nat) : 
     (infer afterEffect result).next fun afterResult second =>
       ⟨afterResult, .ok ⟨second.typeRoot, first.compared ++ second.compared⟩⟩
 
+private def addOne (state : State) (word : Nat) : Outcome Nat :=
+  (append state (.natural 1) []).next fun after one => append after .uadd [word, one]
+
+private def subtractBound (state : State) (numerator denominator : Nat) : Outcome Nat :=
+  (addOne state numerator).next fun after successor => append after .lt [denominator, successor]
+
+private def zeroBound (state : State) (word : Nat) : Outcome Nat :=
+  (append state (.natural 0) []).next fun afterZero zeroRef => subtractBound afterZero word zeroRef
+
+private def inferZeroLe (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (word : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [word]).next fun checked comparisons =>
+    (zeroBound checked word).next fun after result => ⟨after, .ok ⟨result, comparisons⟩⟩
+
+private def checkSubtract (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (numerator denominator proof : Nat) : Outcome (List (Nat × Nat)) :=
+  (subtractBound state numerator denominator).next fun assembled expected =>
+    requireOperands infer normal limit depth expected assembled [proof]
+
+private def inferSubtract (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+    (numerator denominator proof : Nat) : Outcome Inferred :=
+  (checkFixed infer normal limit depth state .u64 [numerator, denominator]).next fun checked comparisons =>
+    (checkSubtract infer normal limit depth checked numerator denominator proof).next fun afterProof proofComparisons =>
+      (append afterProof .u64 []).next fun after result =>
+        ⟨after, .ok ⟨result, comparisons ++ proofComparisons⟩⟩
+
 /-- Post-tick App inference in ghost mode. Every recursive call here uses
 the same child depth. The inferred codomain is returned immediately. -/
 def inferApp (infer : Infer) (normal : Visit) (limit childDepth : Nat) (state : State)
@@ -228,6 +254,11 @@ def runWithData (normal : NormalAt) (roots : List Roots) (visible limit : Nat) (
               root a b
         | some (.node .strict [a, b]) =>
             inferStrict (runWithData normal roots visible limit isData depth ctx) entered a b
+        | some (.node .zeroLe [a]) =>
+            inferZeroLe (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered a
+        | some (.node .usub [a, b, proof]) =>
+            inferSubtract (runWithData normal roots visible limit isData depth ctx) (normal depth) limit depth entered
+              a b proof
         | some (.node (.pi erased) [a, b]) =>
             inferBinding (runWithData normal roots visible limit isData depth ctx)
               (runWithData normal roots visible limit isData depth (⟨a, erased⟩ :: ctx))
@@ -351,6 +382,45 @@ private theorem inferStrict_progress
   intro type _ effectRoom
   exact (infers _ _ effectRoom).next (fun _ => Progress.atState _ _)
 
+private theorem addOne_progress (state : State) (word : Nat) : Progress limit state (addOne state word) :=
+  (append_progress _ _ _).next (fun _ => append_progress _ _ _)
+
+private theorem subtractBound_progress (state : State) (numerator denominator : Nat) :
+    Progress limit state (subtractBound state numerator denominator) :=
+  (addOne_progress _ _).next (fun _ => append_progress _ _ _)
+
+private theorem zeroBound_progress (state : State) (word : Nat) : Progress limit state (zeroBound state word) :=
+  (append_progress _ _ _).next (fun _ => subtractBound_progress _ _ _)
+
+private theorem inferZeroLe_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferZeroLe infer normal limit depth state word) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro comparisons _ _
+  exact (zeroBound_progress _ _).next (fun _ => Progress.atState _ _)
+
+private theorem checkSubtract_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (checkSubtract infer normal limit depth state numerator denominator proof) := by
+  apply next_progress (subtractBound_progress _ _ _) room
+  intro expected _ after
+  exact requireOperands_progress infers (fun state root _ => normalizes state root) after
+
+private theorem inferSubtract_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferSubtract infer normal limit depth state numerator denominator proof) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro comparisons _ operandsRoom
+  apply next_progress (checkSubtract_progress infers normalizes operandsRoom) operandsRoom
+  intro proofComparisons _ _
+  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
 private theorem inferBinder_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
@@ -457,6 +527,8 @@ theorem runWithData_progress {normal : NormalAt} {roots : List Roots} {bindings 
             (fun state ref _ => normalProgress depth state ref) within
         | exact inferDecide_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferStrict_progress (fun _ _ room => ih room) within
+        | exact inferZeroLe_progress (fun _ _ room => ih room) (normalProgress depth) within
+        | exact inferSubtract_progress (fun _ _ room => ih room) (normalProgress depth) within
         | exact inferBinding_progress (fun _ _ room => ih room) (fun _ _ room => ih room)
             (normalProgress depth) within
         | exact inferApp_progress (fun _ _ room => ih room)
@@ -976,6 +1048,138 @@ private theorem inferStrict_refines
   simp only [Term.strict, expand, expandArgs]
   exact .strict effectTyped valueTyped
 
+private theorem addOne_refines (wordRep : Represents state.arena word a)
+    (success : (addOne state word).result = .ok selected) :
+    let after := (addOne state word).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      Represents after selected (.uadd a (.natural 1)) := by
+  unfold addOne at success ⊢
+  obtain ⟨one, oneOk, oneNext⟩ := Outcome.next_success success
+  rw [oneNext] at success ⊢
+  obtain ⟨firstKept, firstBack, oneRep⟩ := append_refines .nil rfl oneOk
+  obtain ⟨secondKept, secondBack, sumRep⟩ := append_refines
+    (.cons (wordRep.frame firstKept) (.cons oneRep .nil)) rfl success
+  exact ⟨firstKept.trans secondKept, secondBack ∘ firstBack, sumRep⟩
+
+private theorem subtractBound_refines
+    (numeratorRep : Represents state.arena numerator a) (denominatorRep : Represents state.arena denominator b)
+    (success : (subtractBound state numerator denominator).result = .ok selected) :
+    let after := (subtractBound state numerator denominator).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      Represents after selected (.lt b (.uadd a (.natural 1))) := by
+  unfold subtractBound at success ⊢
+  obtain ⟨successor, successorOk, successorNext⟩ := Outcome.next_success success
+  rw [successorNext] at success ⊢
+  obtain ⟨firstKept, firstBack, successorRep⟩ := addOne_refines numeratorRep successorOk
+  obtain ⟨secondKept, secondBack, boundRep⟩ := append_refines
+    (.cons (denominatorRep.frame firstKept) (.cons successorRep .nil)) rfl success
+  exact ⟨firstKept.trans secondKept, secondBack ∘ firstBack, boundRep⟩
+
+private theorem zeroBound_refines (wordRep : Represents state.arena word a)
+    (success : (zeroBound state word).result = .ok selected) :
+    let after := (zeroBound state word).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      Represents after selected (.lt (.natural 0) (.uadd a (.natural 1))) := by
+  unfold zeroBound at success ⊢
+  obtain ⟨zeroRef, zeroOk, zeroNext⟩ := Outcome.next_success success
+  rw [zeroNext] at success ⊢
+  obtain ⟨firstKept, firstBack, zeroRep⟩ := append_refines .nil rfl zeroOk
+  obtain ⟨secondKept, secondBack, boundRep⟩ := subtractBound_refines (wordRep.frame firstKept) zeroRep success
+  exact ⟨firstKept.trans secondKept, secondBack ∘ firstBack, boundRep⟩
+
+private theorem inferZeroLe_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (wordRep : Represents state.arena word a)
+    (success : (inferZeroLe infer normal limit depth state word).result = .ok answer)
+    (ambient : Prefix (inferZeroLe infer normal limit depth state word).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.zeroLe a) (inferZeroLe infer normal limit depth state word) answer := by
+  unfold inferZeroLe at success ambient ⊢
+  obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
+  rw [checkedNext] at success ambient ⊢
+  obtain ⟨selected, boundOk, boundNext⟩ := Outcome.next_success success
+  rw [boundNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := checkFixed infer normal limit depth state .u64 [word]
+  have boundProgress := zeroBound_progress (limit := limit) checked.state word
+  obtain ⟨checkedKept, checkedBack, typed⟩ := checkFixed_refines normalSound normalProgress childSound
+    childProgress onBase room (.cons wordRep .nil) rfl checkedOk (boundProgress.kept.trans ambient) retained
+  obtain ⟨boundKept, boundBack, resultRep⟩ := zeroBound_refines (wordRep.frame checkedKept) boundOk
+  refine ⟨checkedKept.trans boundKept, boundBack ∘ checkedBack, _, resultRep, ?_⟩
+  simp only [Term.zeroLe, Term.lt, Term.uadd, Term.natural, expand, expandArgs] at typed ⊢
+  exact .zeroLe (typed _ List.mem_cons_self)
+
+private theorem checkSubtract_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (numeratorRep : Represents state.arena numerator a) (denominatorRep : Represents state.arena denominator b)
+    (proofRep : Represents state.arena proof p)
+    (success : (checkSubtract infer normal limit depth state numerator denominator proof).result = .ok comparisons)
+    (ambient : Prefix (checkSubtract infer normal limit depth state numerator denominator proof).state.arena final)
+    (retained : ∀ pair ∈ comparisons, PairRetained final pair) :
+    let after := (checkSubtract infer normal limit depth state numerator denominator proof).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.HasType env [] ctx true (expand env p) (expand env (.lt b (.uadd a (.natural 1)))) := by
+  unfold checkSubtract at success ambient ⊢
+  obtain ⟨expected, expectedOk, continued⟩ := Outcome.next_success success
+  rw [continued] at success ambient ⊢
+  obtain ⟨assembledKept, assembledBack, expectedRep⟩ := subtractBound_refines numeratorRep denominatorRep expectedOk
+  have assembledRoom := (subtractBound_progress state numerator denominator).accepted room expected expectedOk
+  obtain ⟨proofKept, proofBack, typed⟩ := requireOperands_refines normalSound normalProgress childSound childProgress
+    (onBase.trans assembledKept) assembledRoom (.cons (proofRep.frame assembledKept) .nil) expectedRep success ambient retained
+  exact ⟨assembledKept.trans proofKept, proofBack ∘ assembledBack, typed _ List.mem_cons_self⟩
+
+private theorem inferSubtract_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (numeratorRep : Represents state.arena numerator a) (denominatorRep : Represents state.arena denominator b)
+    (proofRep : Represents state.arena proof p)
+    (success : (inferSubtract infer normal limit depth state numerator denominator proof).result = .ok answer)
+    (ambient : Prefix (inferSubtract infer normal limit depth state numerator denominator proof).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.usub a b p) (inferSubtract infer normal limit depth state numerator denominator proof) answer := by
+  unfold inferSubtract at success ambient ⊢
+  obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
+  rw [checkedNext] at success ambient ⊢
+  obtain ⟨proofComparisons, proofOk, proofNext⟩ := Outcome.next_success success
+  rw [proofNext] at success ambient ⊢
+  obtain ⟨selected, selectedOk, selectedNext⟩ := Outcome.next_success success
+  rw [selectedNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let checked := checkFixed infer normal limit depth state .u64 [numerator, denominator]
+  have checkedProgress := checkFixed_progress (operand := .u64) (args := [numerator, denominator]) (depth := depth)
+    childProgress (fun state root _ => normalProgress state root) room
+  have checkedRoom := checkedProgress.accepted room comparisons checkedOk
+  have proofProgress := checkSubtract_progress (state := checked.state) (depth := depth) (numerator := numerator)
+    (denominator := denominator) (proof := proof) childProgress normalProgress checkedRoom
+  let proofChecks := checkSubtract infer normal limit depth checked.state numerator denominator proof
+  have proofFinal := (append_progress (limit := limit) proofChecks.state .u64 []).kept.trans ambient
+  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+    onBase room (.cons numeratorRep (.cons denominatorRep .nil)) rfl checkedOk
+    (proofProgress.kept.trans proofFinal) (fun pair found => retained pair (List.mem_append_left _ found))
+  obtain ⟨proofKept, proofBack, typedProof⟩ := checkSubtract_refines normalSound normalProgress childSound childProgress
+    (onBase.trans checkedKept) checkedRoom (numeratorRep.frame checkedKept) (denominatorRep.frame checkedKept)
+    (proofRep.frame checkedKept) proofOk proofFinal (fun pair found => retained pair (List.mem_append_right _ found))
+  obtain ⟨resultKept, resultBack, resultRep⟩ := append_refines .nil rfl selectedOk
+  refine ⟨checkedKept.trans (proofKept.trans resultKept), resultBack ∘ proofBack ∘ checkedBack, _, resultRep, ?_⟩
+  simp only [Term.lt, Term.uadd, Term.natural, expand, expandArgs] at typedProof
+  simp only [expand, expandArgs] at typedOperands
+  simp only [Term.usub, expand, expandArgs]
+  exact .usub (typedOperands _ List.mem_cons_self)
+    (typedOperands _ (List.mem_cons_of_mem _ List.mem_cons_self)) typedProof
+
 /-- A successful application returns the captured Pi body instantiated with
 the original graph operand. The proof exposes a real function type and
 reflects the accepted argument comparison under its retention evidence. -/
@@ -1216,6 +1420,32 @@ theorem runWithData_sound {normal : NormalAt}
               intro typed
               simp only [expand, expandArgs] at typed ⊢
               exact .refl (typed _ List.mem_cons_self)
+          case zeroLe =>
+            have length : refs.length = 1 := arity
+            obtain ⟨argument, rfl⟩ := List.length_eq_one_iff.mp length
+            cases children with
+            | cons child tail =>
+              cases tail
+              dsimp only at success ambient ⊢
+              exact inferZeroLe_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                (normalSound depth) (normalProgress depth) sameContext
+                (fun _ _ budget => runWithData_progress normalProgress budget)
+                onBase within child success ambient retained
+          case usub =>
+            have length : refs.length = 3 := arity
+            rcases refs with _ | ⟨numerator, _ | ⟨denominator, _ | ⟨proof, _ | ⟨_, _⟩⟩⟩⟩ <;> simp at length
+            cases children with
+            | cons first rest =>
+              cases rest with
+              | cons second rest =>
+                cases rest with
+                | cons bound tail =>
+                  cases tail
+                  dsimp only at success ambient ⊢
+                  exact inferSubtract_refines (state := {state with steps := state.steps + 1}) (depth := depth)
+                    (normalSound depth) (normalProgress depth) sameContext
+                    (fun _ _ budget => runWithData_progress normalProgress budget)
+                    onBase within first second bound success ambient retained
           case eq | lt | uadd | arith =>
             have length : refs.length = 2 := arity
             rcases refs with _ | ⟨left, _ | ⟨right, _ | ⟨_, _⟩⟩⟩ <;> simp at length
@@ -1579,6 +1809,37 @@ theorem false_decision_keeps_operand_rows :
     run decisionSnapshot.definitions 0 11 16 [] ⟨decisionSnapshot.arena, 0⟩ 4 =
       ⟨⟨decisionSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 []], 11⟩,
         .error (.outsideFragment 4)⟩ := by cbv
+
+private def wordMax : Nat := 18446744073709551615
+private def zeroBoundSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨5, 1⟩]
+  families := []
+  arena := #[.node (.natural wordMax) [], .node .zeroLe [0], .node (.natural 0) [],
+    .node (.natural 1) [], .node .uadd [0, 3], .node .lt [2, 4]]
+
+/-- ZeroLe retains the original maximum-width word and expresses its
+successor as a ghost sum in the inferred proposition. -/
+theorem admitted_zero_bound_keeps_wide_successor :
+    NativeLoanMixedAdmission.checkBytes 64 128 (NativeFamilyWire.encodeSnapshot zeroBoundSnapshot) = true ∧
+    run zeroBoundSnapshot.definitions 0 5 16 [] ⟨zeroBoundSnapshot.arena, 0⟩ 1 =
+      ⟨⟨zeroBoundSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node (.natural 0) [],
+        .node (.natural 1) [], .node .uadd [0, 9], .node .lt [8, 10]], 5⟩, .ok ⟨11, [(7, 6)]⟩⟩ := by
+  rw [NativeLoanMixedAdmission.checkBytes_encode]
+  cbv
+
+private def subtractionSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨3, 2⟩]
+  families := []
+  arena := #[.node (.natural 0) [], .node .zeroLe [0], .node .usub [0, 0, 1], .node .u64 []]
+
+/-- Budget exhaustion during the bound comparison keeps both the required
+and inferred proposition rows. -/
+theorem subtraction_limit_keeps_both_bound_graphs :
+    run subtractionSnapshot.definitions 0 14 16 [] ⟨subtractionSnapshot.arena, 0⟩ 2 =
+      ⟨⟨subtractionSnapshot.arena ++ #[.node .u64 [], .node .u64 [], .node .u64 [],
+        .node (.natural 1) [], .node .uadd [0, 7], .node .lt [0, 8], .node .u64 [], .node .u64 [],
+        .node (.natural 0) [], .node (.natural 1) [], .node .uadd [0, 13], .node .lt [12, 14]], 15⟩,
+        .error (.tick (.stepLimit 15))⟩ := by cbv
 
 end Examples
 
