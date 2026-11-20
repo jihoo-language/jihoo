@@ -377,6 +377,36 @@ private theorem erased_value_context
       subst binding
       simpa only [shift_subst_consValues] using context.kinds index previous value found stored
 
+private theorem checked_nonowner_body_world (capture : Code)
+    (projected : LoanTyping.ResourceQuantity.projectRaw fuel env loans (⟨domain,erased⟩ :: capture.context) body =
+      some receipt)
+    (valid : LocalScopes (.scope mode (functionTail body receipt)))
+    (total : OwnerDemandWorld.Total capture (.closure (.scope mode (functionTail body receipt))))
+    (slots : LoanSlots capture loans stack) (entered : Loans.Entered capture.context.length loans)
+    (origin : Term) (nonowner : ∀ object, value ≠ some (.owner object)) :
+    let next := enter erased domain body capture.context capture.origins capture.values origin value
+    LoanSlots next loans stack ∧ LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt ∧
+      OwnerDemandWorld heap next receipt ∧ OwnerDemandWorld.Total next receipt := by
+  let next := enter erased domain body capture.context capture.origins capture.values origin value
+  have unused index object (stored : next.values[index]? = some (some (.owner object))) :
+      receipt.demand index = some 0 := by
+    cases index with
+    | zero => exact False.elim (nonowner object (Option.some.inj stored))
+    | succ index =>
+      have outer := captured_scope_zero (total index object stored).choose_spec
+      exact LoanTyping.ResourceQuantity.projectRaw_body_zero_demand projected
+        ((demand_under_checked_scope valid index).symm.trans outer)
+  have nextSlots := slots.enter entered erased domain body origin value
+  refine ⟨nextSlots,?_,⟨?_,?_⟩,fun index object stored => ⟨0,unused index object stored⟩⟩
+  · intro index active
+    obtain ⟨object,stored,_⟩ := nextSlots index active
+    exact unused index object stored
+  · intro index object uses stored positive
+    rw [unused index object stored] at positive
+    cases positive
+  · intro index alias object uses different stored previous positive
+    exact unused alias object previous
+
 /-- The indexed machine applies the saved erased closure without running the
 pending argument. The checked ghost argument closes the original dependent
 result, while the original captured owners and active loans retain their
@@ -418,36 +448,71 @@ theorem saved_checked_erased_closure_entry (state : State) (capture argument : C
     cases different
   obtain ⟨mode,receipt,modeResolved,bodyProjected,rfl⟩ := LoanTyping.ResourceQuantity.projectRaw_closure_origin checked
   cases modeResolved
-  let next := enter true domain body capture.context capture.origins capture.values argument.origin none
-  have scopeValid : LocalScopes (.scope .erased (functionTail body receipt)) := valid
-  have unused index object (stored : next.values[index]? = some (some (.owner object))) :
-      receipt.demand index = some 0 := by
-    cases index with
-    | zero => cases stored
-    | succ index =>
-      have unchanged : capture.values[index]? = some (some (.owner object)) := stored
-      have outer := captured_scope_zero (total index object unchanged).choose_spec
-      exact LoanTyping.ResourceQuantity.projectRaw_body_zero_demand bodyProjected
-        ((demand_under_checked_scope scopeValid index).symm.trans outer)
-  have nextSlots := slots.enter entered true domain body argument.origin none
-  have bodyWorld : OwnerDemandWorld state.heap.metadata next receipt := by
-    refine ⟨?_,?_⟩
-    · intro index object uses stored positive
-      rw [unused index object stored] at positive
-      cases positive
-    · intro index alias object uses different stored previous positive
-      exact unused alias object previous
-  have bodyBudget : LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt := by
-    intro index active
-    obtain ⟨object,stored,_⟩ := nextSlots index active
-    exact unused index object stored
-  have bodyTotal : OwnerDemandWorld.Total next receipt :=
-    fun index object stored => ⟨0,unused index object stored⟩
+  obtain ⟨nextSlots,bodyBudget,bodyWorld,bodyTotal⟩ :=
+    checked_nonowner_body_world (heap := state.heap.metadata) capture bodyProjected valid total slots entered
+      argument.origin doesNotOwn
   refine ⟨?_,opened,erased_value_context context opened.1 body argument.origin,
     nextSlots,
     coverage.enter_nonowner entered true domain body argument.origin none doesNotOwn,
     receipt,bodyProjected,bodyBudget,bodyWorld,bodyTotal⟩
   simp only [step,returned,stackShape,returnAction,applyValue,executeLegacy,execute,Option.map_some]
+
+/-- The saved relevant closure consumes the actual returned non-owner value.
+Its closed source representative instantiates the dependent type. The
+argument origin remains provenance, and the body retains its original
+resource projection even when it begins with another lambda. -/
+theorem saved_checked_nonowner_closure_entry (state : State) (capture : Code)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (functionTyped : LoanClosingTyped env loans false (capture.child (.lam false domain body)) meanings
+      (.pi false inputType resultType))
+    (argumentTyped : LoanTyping.HasType env [] [] true source inputType)
+    (argumentKind : ValueKind env value inputType)
+    (naturalMeaning : ∀ number, value = .natural number → source = .natural number)
+    (integerMeaning : ∀ number, value = .integer number → source = .integer number)
+    (nonowner : ∀ object, value ≠ .owner object)
+    (context : ValueContext env capture meanings) (sizes : OwnerSizes env state.heap.metadata capture meanings)
+    (slots : LoanSlots capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (coverage : LoanCoverage capture loans (stack ++ state.pending.flatMap Prod.snd))
+    (entered : Loans.Entered capture.context.length loans)
+    (returned : state.control = .returned value)
+    (stackShape : state.stack = .argument (.closure false domain body capture.context capture.origins capture.values)
+      origin :: stack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (fuel+1) env loans capture.context (.lam false domain body) =
+      some closureReceipt)
+    (valid : LocalScopes closureReceipt) (total : OwnerDemandWorld.Total capture closureReceipt) :
+    let next := enter false domain body capture.context capture.origins capture.values origin (some value)
+    let nextMeanings := consValues source meanings
+    step state = some (⟨state.heap,.evaluate next,stack,state.pending⟩,
+      some (.legacy (.activate false body origin))) ∧
+    LoanClosingTyped env loans false next nextMeanings (resultType.subst (single source)) ∧
+    ValueContext env next nextMeanings ∧ OwnerSizes env state.heap.metadata next nextMeanings ∧
+    LoanSlots next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    LoanCoverage next loans (stack ++ state.pending.flatMap Prod.snd) ∧
+    ∃ receipt, LoanTyping.ResourceQuantity.projectRaw fuel env loans next.context next.term = some receipt ∧
+      LoanTyping.ResourceQuantity.LoanBudget next.context.length loans receipt ∧
+      OwnerDemandWorld state.heap.metadata next receipt ∧ OwnerDemandWorld.Total next receipt := by
+  obtain ⟨_,localType,sourceFunction,closedType⟩ := functionTyped
+  obtain ⟨_,bodyType,_,bodyTyped,functionConverted⟩ := sourceFunction.lamView
+  have callable : LoanTyping.Conversion.Conv env
+      (.pi false (domain.subst meanings) (bodyType.subst (liftSubOne meanings))) (.pi false inputType resultType) := by
+    simpa only [Term.subst,substArgs,Op.binders,liftSub] using
+      (functionConverted.substitution meanings history.wellFormed.closed).trans closedType
+  obtain ⟨_,domainConverted,bodyConverted⟩ := callable.pi_injective history.wellFormed.admissible
+  obtain ⟨nextContext,nextSizes⟩ := bind_variable_context context sizes
+    (argumentTyped.convert domainConverted.symm) (argumentKind.convert domainConverted.symm)
+    (fun object same => False.elim (nonowner object same)) naturalMeaning integerMeaning body origin
+  have bodyResult : LoanTyping.Conversion.Conv env (bodyType.subst (consValues source meanings))
+      (resultType.subst (single source)) := by
+    simpa only [subst_lift_consValues] using bodyConverted.substitution (single source) history.wellFormed.closed
+  obtain ⟨mode,receipt,_,bodyProjected,rfl⟩ := LoanTyping.ResourceQuantity.projectRaw_closure_origin checked
+  have notOwner object (same : some value = some (.owner object)) : False := nonowner object (Option.some.inj same)
+  obtain ⟨nextSlots,bodyBudget,bodyWorld,bodyTotal⟩ :=
+    checked_nonowner_body_world (heap := state.heap.metadata) capture bodyProjected valid total slots entered
+      origin notOwner
+  exact ⟨enter_retained_call_step state capture domain body origin value returned stackShape,
+    ⟨nextContext.closing,bodyType,bodyTyped,bodyResult⟩,nextContext,nextSizes,nextSlots,
+    coverage.enter_nonowner entered false domain body origin (some value) notOwner,
+    receipt,bodyProjected,bodyBudget,bodyWorld,bodyTotal⟩
 
 namespace Examples
 

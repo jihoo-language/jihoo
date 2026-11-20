@@ -3457,6 +3457,18 @@ inequality nodes retained. The native regression also checks both successful
 directions. The focused build passed 329 jobs and the 34-declaration audit
 used only standard Lean axioms.
 
+### Relevant closure entry with returned non-owner values
+
+The actual pending argument frame opens the saved closure at the dependent
+result type instantiated by the returned value's source representative.
+The event still records the original argument expression. The proof
+constructs the updated value and size contexts and preserves both directions
+of the active-loan association. The shared resource lemma recovers the body
+receipt through a leading telescope for both relevant and erased entry.
+
+The focused build passed 407 jobs. Both entry theorems use only standard
+Lean axioms.
+
 ### Proof irrelevance in dependent type comparison
 
 Two closed Type1 annotations apply the same bound type family to
