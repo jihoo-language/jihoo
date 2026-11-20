@@ -370,23 +370,40 @@ private theorem mapM_read {index : Nat} {words : List NodeWords} {nodes : List N
           exact ⟨word, rfl, head⟩
       | succ index => exact ih tail read
 
+/-- Every represented node supplies the comparison view of its actual arena
+row, including the ordered children retained by conversion. -/
+theorem arena_view_matches (represented : Represents arena root term) :
+    ∃ node, arena[root]? = some node ∧ ViewMatches arena (nodeView node) term := by
+  cases represented with
+  | var read => exact ⟨_, read, [], .nil, by simp [project]⟩
+  | node read _ children => exact ⟨_, read, syntaxView_matches _ children⟩
+
+/-- Decoded rows and their original snapshot words supply the same
+comparison lookup at every reference, including missing rows. -/
+theorem comparison_rows_agree {words : List NodeWords} {nodes : List Node}
+    (aligned : words.mapM NodeWords.toNode = some nodes) :
+    words.map wireView = nodes.map nodeView := by
+  induction words generalizing nodes with
+  | nil =>
+      simp at aligned
+      subst nodes
+      rfl
+  | cons word words ih =>
+      simp only [List.mapM_cons] at aligned
+      obtain ⟨first, decoded, aligned⟩ := Option.bind_eq_some_iff.mp aligned
+      obtain ⟨later, rest, aligned⟩ := Option.bind_eq_some_iff.mp aligned
+      cases aligned
+      simp only [List.map_cons, wireView_refines decoded, ih rest]
+
 /-- An observed row at a represented root is related to the same projected
 subtree or to the exact ordered list of retained child terms. -/
 theorem wire_matches {words : List NodeWords} {arena : Arena}
     (aligned : words.mapM NodeWords.toNode = some arena.toList)
     (represented : Represents arena root term) :
     ∃ word, words[root]? = some word ∧ ViewMatches arena (wireView word) term := by
-  cases represented with
-  | var read =>
-      obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
-      refine ⟨word, found, ?_⟩
-      rw [wireView_refines decoded]
-      exact ⟨[], .nil, by simp [project]⟩
-  | node read _ children =>
-      obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
-      refine ⟨word, found, ?_⟩
-      rw [wireView_refines decoded]
-      exact syntaxView_matches _ children
+  obtain ⟨node, read, matched⟩ := arena_view_matches represented
+  obtain ⟨word, found, decoded⟩ := mapM_read aligned (by simpa using read)
+  exact ⟨word, found, by rw [wireView_refines decoded]; exact matched⟩
 
 private theorem compareRefs_sound {step : Nat → Nat → Nat → Option (Ordering × Nat)}
     (stepSound : ∀ work a b first second result remaining,

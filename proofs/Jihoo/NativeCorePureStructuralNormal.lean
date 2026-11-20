@@ -455,7 +455,8 @@ private theorem failure_refines (kept : Prefix arena current) (backward : Backwa
     Refines arena (⟨current, .error reason, spent⟩ : Outcome α) valid :=
   ⟨kept, backward, by simp⟩
 
-private theorem frameDefinitions (aligned : RepresentsDefinitions arena roots definitions)
+/-- Appending normalized rows preserves every original definition root. -/
+theorem frameDefinitions (aligned : RepresentsDefinitions arena roots definitions)
     (kept : Prefix arena current) : RepresentsDefinitions current roots definitions := by
   induction aligned with
   | nil => exact .nil

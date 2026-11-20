@@ -1187,3 +1187,6 @@ import Jihoo.NativeCorePureStructuralNormal
 import Jihoo.NativeCoreZeroLoopNormal
 import Jihoo.NativeBindingMachineMutableArrayCall
 import Jihoo.NativeLoanPureProofObservation
+import Jihoo.NativeBindingMachineMutableHeapHistory
+import Jihoo.NativeCorePureStructuralEqual
+import Jihoo.NativeCoreSignedNormal

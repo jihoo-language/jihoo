@@ -194,6 +194,11 @@ The subsequent explicit user pause request overrides that instruction: finish
 the current checked checkpoint, commit and push it, then pause the active goal.
 Do not begin another proof task until the user resumes work.
 
+The user resumed full-kernel work on 2026-11-20 and explicitly requested
+continuation until they ask to stop. The active goal records the complete
+proof obligations and the conditional 0.7.0 release. Continue checked
+increments on the verification branch.
+
 Use the checkout of `https://github.com/jihoolang/jihoo` at
 `/home/user/jihoo`. Work resumed on 2026-11-20 on
 `codex/kernel-pure-and-array`, following the merge of
@@ -2245,3 +2250,34 @@ and an annotation that requires Free conversion.
 The aggregate check passed 1,006 Lake jobs, 9,554 declaration audits, and
 all generated fixture comparisons. The cached, resource-limited run took
 11.33 seconds.
+
+### Live arena equality, signed normal forms, and mutable heap history
+
+Pure structural equality now carries the arena produced by the left
+normalization into the right normalization and then reads both returned
+references with the shared identity evaluator. The live evaluator agrees
+with aligned version-6 words, including failures and the step counter.
+Successful comparison decides equality of the normalized retained shapes.
+The shared limit bounds both normalizations and the final identity call,
+and every appended row is charged to a visit.
+
+Signed arithmetic normalization visits nested operands left to right and
+passes exact I64 words through the widened fold. It retains overflow as an
+arithmetic node. Represented results preserve the original Loan64 ghost
+type, including when exact-byte admission supplies that type. In this
+fragment the nonarithmetic leaf paths end in atoms.
+
+Actual Mutable transitions project to the exact allocation and lease
+history of their metadata, including when evaluation fails. This supplies
+the history needed to transport captured Buffer lengths across arbitrary
+reachable Store and Load suffixes and to show released owner IDs stay dead.
+Indexed reads, writes, and activation leave this metadata unchanged.
+
+Bounded ghost proof observation now replays computed proof loops and
+nested arithmetic evidence through the actual stored derivations. The
+mixed admission example replays a checked two-step dependent induction at
+its original annotation. The general logical interpretation and
+termination argument remain open.
+
+The aggregate check passed 1,009 Lake jobs, 9,573 declaration audits, and
+all generated fixture comparisons in 39.78 seconds with the warm cache.
