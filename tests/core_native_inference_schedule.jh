@@ -1,5 +1,5 @@
-// Check the arena rows and exact work used by the primitive ghost inference
-// fixtures in NativeCoreGhostSpineInference. The public atomic normalizer
+// Check the arena rows and exact work used by the ghost inference fixtures
+// in NativeCoreGhostSpineInference. The public atomic normalizer
 // charges one tick per call, so the shared checker limit measures inference
 // cost without exposing or modifying Core's private counter.
 import core
@@ -24,16 +24,20 @@ fn spend(inout c: core.Core, count: i64) {
     }
 }
 
-fn main() -> i32 {
+fn assert_spent(inout c: core.Core, message: str) {
+    assert(match c.normal(0, core.DEPTH) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    }, message)
+}
+
+fn primitive_inference() {
     var good = fixture()
     spend(&good, 999987)
     let inferred = good.infer(4, [], true, 16).unwrap()
     assert(inferred == 12 && good.node_count() == 13, "result position")
     for i in 7..12 { assert(good.term(i as u32) == core.Term.U64, "expected word rows") }
     assert(good.term(inferred) == core.Term.Eq(2, 2), "original sum references")
-    assert(match good.normal(0, core.DEPTH) {
-        Err(e) => e.msg == "core: checking step limit reached", _ => false
-    }, "successful inference used 13 ticks")
+    assert_spent(&good, "successful inference used 13 ticks")
 
     var bad = fixture()
     spend(&bad, 999995)
@@ -42,9 +46,48 @@ fn main() -> i32 {
     }, "signed operand rejected")
     assert(bad.node_count() == 9 && bad.term(7) == core.Term.U64 && bad.term(8) == core.Term.I64,
         "only first operand's rows remain")
-    assert(match bad.normal(0, core.DEPTH) {
-        Err(e) => e.msg == "core: checking step limit reached", _ => false
-    }, "rejected inference used 5 ticks")
-    println("Native Core.infer matched both graph outputs and checking costs")
+    assert_spent(&bad, "rejected inference used 5 ticks")
+}
+
+fn erased_lambda() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let index = c.add(core.Term.Var(0), span).unwrap()
+    let proof = c.add(core.Term.Refl(index), span).unwrap()
+    let lambda = c.add(core.Term.Lam(true, word, proof), span).unwrap()
+    let equality = c.add(core.Term.Eq(index, index), span).unwrap()
+    c.add(core.Term.Pi(true, word, equality), span).unwrap()
+    spend(&c, 999990)
+    let inferred = c.infer(lambda, [], true, 16).unwrap()
+    assert(inferred == 9 && c.node_count() == 10, "lambda result position")
+    assert(c.term(6) == core.Term.Universe(0) && c.term(7) == core.Term.U64, "lambda formation rows")
+    assert(c.term(8) == core.Term.Eq(index, index), "lambda codomain refers to the bound word")
+    assert(c.term(inferred) == core.Term.Pi(true, word, 8), "lambda keeps the written domain")
+    assert_spent(&c, "lambda inference used 10 ticks")
+}
+
+fn impredicative_product() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let highest = c.add(core.Term.Universe(31), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let equality = c.add(core.Term.Eq(zero, zero), span).unwrap()
+    let product = c.add(core.Term.Pi(false, highest, equality), span).unwrap()
+    c.add(core.Term.Prop, span).unwrap()
+    spend(&c, 999987)
+    let inferred = c.infer(product, [], true, 16).unwrap()
+    assert(inferred == 10 && c.node_count() == 11, "product result position")
+    assert(c.term(5) == core.Term.Universe(32), "administrative universe of the domain")
+    for i in 6..9 { assert(c.term(i as u32) == core.Term.U64, "equality formation rows") }
+    assert(c.term(9) == core.Term.Prop && c.term(inferred) == core.Term.Prop, "impredicative product")
+    assert_spent(&c, "product inference used 13 ticks")
+}
+
+fn main() -> i32 {
+    primitive_inference()
+    erased_lambda()
+    impredicative_product()
+    println("Native Core.infer matched primitive, lambda and Pi graph traces and checking costs")
     0
 }

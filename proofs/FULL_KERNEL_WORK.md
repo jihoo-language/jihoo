@@ -14,7 +14,7 @@ Version 0.7.0 is gated on the complete verification obligations below.
 | General consistency and typed normalization | `NativeLoanOpenDependentTransport.lean` opens the checked declaration's written affine telescope. It normalizes selected beta-hidden equality evidence and transports the arithmetic payload at the original instantiated annotation. General dependent telescopes, family values and arbitrary checked ghost derivations still need the fundamental theorem. |
 | Whole-language preservation | `NativeCoreExpandedFamilies.lean` composes recursive global lookup, dependent operand conversion and typed Case, Elim, Borrow, Deref and View reentry in the same arena. It now commutes Strict out of Case and data Elim when the expanded motive is independent of the scrutinized value and the family indices are all parameters. Connect general dependent Strict scrutinees, specialized Lend, wider View shapes and the remaining effect rules. |
 | Ownership, borrowing and continuations | `NativeBindingMachineMutableLoanedArithmeticProgress.lean` derives either typed restoration or an exact signed overflow prefix for an ordered reader tree containing fresh and captured live references. It requires supported bound evidence and fitting unsigned sums. General execution across arbitrary closures and dependent runtime forms remains open. |
-| Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost application spines, local and global heads, universe and scalar heads, and primitive operators with fixed operand types. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with binders, the remaining constructors, code checking, and full implementation refinement. |
+| Production refinement | `NativeCoreGhostSpineInference.lean` covers ghost Pi and lambda binders, application spines, local and global heads, universe and scalar heads, and primitive operators with fixed operand types. Successful inference gives a type convertible to the admitted declaration type when comparisons retain all positions. Continue with the remaining constructors, code checking, and full implementation refinement. |
 
 Run the aggregate proof check from the checkout with the declared resource
 limits. It checks Lake compilation, the exact axiom audit, and the generated
@@ -3283,3 +3283,18 @@ in five ticks after appending the expected U64 and the inferred I64. The three
 new declarations join the project axiom audit. The native kernel correspondence
 suite checks both traces against `Core.infer` using the shared work limit and
 the actual graph rows.
+
+### Dependent binder inference
+
+Pi and lambda first infer and expose the domain sort. For erased type domains,
+the graph visitor checks a normalized U64 or consults the declared data-family
+flag. Context representation then extends with the original domain at its
+pre-binder scope. Lambda returns a Pi using the body type directly. Pi exposes
+the codomain sort and computes the product sort, including the impredicative
+Prop case. The soundness theorem carries the context representation through
+allocation and derives the binder and body judgments used by Loan64 typing.
+
+The admitted erased U64 lambda uses the new variable in a Refl result in ten
+ticks. The admitted product over Type31 returns Prop in 13 ticks, with Type32
+used for the intermediate sort query. Native `Core.infer` matches both traces
+under the same work limits, and nine new declarations join the axiom audit.

@@ -10457,6 +10457,15 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_reflexive_sum_executes
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_reflexive_sum_typed
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.primitive_first_mismatch_keeps_checked_prefix
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSort.sort_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSort.sort_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSort.isDataAt_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSort.policy_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSort.policy_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithData_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithData_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_erased_lambda_infers
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.Examples.admitted_impredicative_product_infers
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FamilyIota.case_scrutinee_context
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.constantMotive_sound
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyStrict.changeScrutinee
