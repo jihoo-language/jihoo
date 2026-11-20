@@ -4036,3 +4036,12 @@ specified three-binder type and retains all existing rows.
 Open native and Lean fixtures agree on the callback edges and five ticks
 for `Fold` and three for `Loop`. The focused build passed 329 jobs and all
 five new declarations use standard Lean axioms.
+
+### Aggregate check of code mode and iteration telescope construction
+
+At `0d4dd1f`, 1,147 Lake jobs and the generated fixture comparisons passed.
+The audit covered 10,647 declarations, with 527 axiom-free and only
+standard Lean axioms in the others. The rebuilt compiler passed 89 native
+kernel fixtures and 31 additional checks. Mixed checking passed 69 source
+fixtures and 55 exact-byte checks, including the pure admission of the
+native snapshot. Peak sampled process-tree RSS was 4,798.5 MiB.
