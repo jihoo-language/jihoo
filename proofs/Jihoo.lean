@@ -1336,6 +1336,8 @@ import Jihoo.NativeCoreCodeUses
 import Jihoo.NativeCoreCodeLendGates
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodePartialApplication
+import Jihoo.NativeLoanErasedCaseSpines
+import Jihoo.NativeCoreErasedCasePolicy
 import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodePartialApplicationExamples
 import Jihoo.NativeCoreCodeLeaseLookup

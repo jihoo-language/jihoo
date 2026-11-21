@@ -1,5 +1,7 @@
 import Jihoo.NativeCoreCodeApplication
 import Jihoo.NativeCoreCodePartialApplication
+import Jihoo.NativeCoreErasedCasePolicy
+import Jihoo.NativeCoreMeteredVisit
 
 /-! Runtime application inference keeps the original instantiated
 codomain. A function-valued top result performs the authenticated
@@ -18,7 +20,9 @@ def finish (ghost : Infer) (normal : Visit) (boxed : Nat → Bool) (state : Stat
   else
     (normal state candidate).next fun exposed selected =>
       match exposed.arena[selected]? with
-      | some (.node (.pi _) _) => NativeCoreCodePartialApplication.run ghost normal boxed exposed root
+      | some (.node (.pi _) _) =>
+          if NativeCoreErasedCasePolicy.hasCaseHead exposed.arena root then ⟨exposed,.error (.outsideFragment root)⟩
+          else NativeCoreCodePartialApplication.run ghost normal boxed exposed root
       | _ => ⟨exposed,.ok []⟩
 
 theorem finish_progress
@@ -32,8 +36,21 @@ theorem finish_progress
   · apply next_progress (normalProgress _ _) room
     intro _ _ exposedRoom
     split
-    · exact NativeCoreCodePartialApplication.run_progress ghostProgress normalProgress exposedRoom
+    · split
+      · exact Progress.atState _ _
+      · exact NativeCoreCodePartialApplication.run_progress ghostProgress normalProgress exposedRoom
     · exact Progress.atState _ _
+
+/-- A top-level partial application whose actual source head is Case is
+rejected directly after result normalization. The ownership scan starts
+only for other function values. -/
+theorem finish_rejects_partial_case
+    (normalized : (normal state candidate).result = .ok selected)
+    (stillProduct : (normal state candidate).state.arena[selected]? = some (.node (.pi erased) children))
+    (caseApplication : NativeCoreErasedCasePolicy.hasCaseHead (normal state candidate).state.arena root = true) :
+    finish ghost normal boxed state candidate root false =
+      ⟨(normal state candidate).state,.error (.outsideFragment root)⟩ := by
+  simp only [finish,Bool.false_eq_true,ite_false,Outcome.next,normalized,stillProduct,caseApplication,ite_true]
 
 private theorem visited_prefix
     (ghostProgress : ∀ state root, state.steps ≤ limit → Progress limit state (ghost state root))
@@ -156,10 +173,14 @@ theorem finish_backward
     split at success
     · rename_i flag refs pi
       simp only [pi] at ambient ⊢
-      have afterRoom := (normalProgress _ _).accepted room _ normalized
-      have observed := (NativeCoreCodePartialApplication.run_visits success).2
-      exact visits_backward ghostSound normalSound ghostProgress normalProgress metadata observed
-        (onBase.trans kept) afterRoom (rootRep.frame kept) ambient retained (safe backward)
+      split at success
+      · cases success
+      · rename_i noCaseHead
+        simp only [ite_eq_right noCaseHead] at ambient ⊢
+        have afterRoom := (normalProgress _ _).accepted room _ normalized
+        have observed := (NativeCoreCodePartialApplication.run_visits success).2
+        exact visits_backward ghostSound normalSound ghostProgress normalProgress metadata observed
+          (onBase.trans kept) afterRoom (rootRep.frame kept) ambient retained (safe backward)
     · exact safe backward
 
 def run (functionInfer : Infer) (argumentInfer : Bool → Infer) (ghost : Infer)
@@ -226,5 +247,26 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
     (onBase.trans kept) within (rootRep.frame kept) represented checked ambient
       (fun pair member => retained pair (List.mem_append_right _ member))
   exact ⟨kept.trans finishCost.kept,finished ∘ initialBackward,type,represented.frame finishCost.kept,typed⟩
+
+namespace Examples
+
+private def caseInput : Arena := #[.node .u64 [],.node (.pi true) [0,0],
+  .node (.caseOf 0 0) [0,0],.node .app [2,0]]
+
+private def oneVisit : Visit := fun state root =>
+  (NativeCoreMeteredVisit.charge 1 3 state root).next fun after _ => ⟨after,.ok root⟩
+
+/-- An applied Case can continue checking internal arguments. Its final
+result must no longer be a product. Rejecting a partial value consumes
+only the final native normalization tick. -/
+theorem case_spine_must_be_saturated :
+    let ghost : Infer := fun state root => ⟨state,.error (.outsideFragment root)⟩
+    let start : State := ⟨caseInput,0⟩
+    let charged : State := ⟨caseInput,1⟩
+    finish ghost oneVisit (fun _ => false) start 1 3 false = ⟨charged,.error (.outsideFragment 3)⟩ ∧
+    finish ghost oneVisit (fun _ => false) start 1 3 true = ⟨start,.ok []⟩ ∧
+    finish ghost oneVisit (fun _ => false) start 0 3 false = ⟨charged,.ok []⟩ := by cbv
+
+end Examples
 
 end Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization

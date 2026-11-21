@@ -5077,3 +5077,19 @@ root 52. Elimination into a proposition follows the same 200-tick,
 tick. The data result proof covers the canonical nonfunction head check.
 The focused build passed 493 tasks, eight declaration audits, and the
 expanded native schedule.
+
+### Erased arguments of an applied Case
+
+The native result check normalizes the annotation once and then walks the
+written Pi chain without further ticks. Its exact arena scan admits erased
+binders and ends at the first raw non-Pi head. Application finalization
+looks through the original application chain and rejects a function-valued
+Case before running the ordinary partial-application ownership scan.
+
+The source spine judgment retains the CODE scrutinee and branch derivations
+and the typed erased arguments. A completed spine with a certified
+nonfunction result replays at its original annotation in ghost mode.
+Recursive CODE admission and runtime ownership for this judgment remain
+separate obligations. The native regression accepts the saturated example
+and rejects its standalone and underapplied variants. The focused build
+passed 494 tasks and eleven declaration audits.

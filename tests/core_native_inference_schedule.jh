@@ -2171,6 +2171,46 @@ fn code_conditional_inference(equality: bool) {
     assert_spent(&rejected, "rejected runtime conditional uses ten ticks")
 }
 
+fn case_spine_fixture(two_erased: bool) -> core.Core {
+    var c = boxed_elimination_fixture()
+    let span = diag.Span.nowhere()
+    let once = c.add(core.Term.Pi(true, 1, 1), span).unwrap()
+    let product = if two_erased { c.add(core.Term.Pi(true, 1, once), span).unwrap() } else { once }
+    let inner_motive = c.add(core.Term.Lam(false, 6, product), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, 1, inner_motive), span).unwrap()
+    let seed = c.add(core.Term.Lam(true, 1, 9), span).unwrap()
+    let start = if two_erased { c.add(core.Term.Lam(true, 1, seed), span).unwrap() } else { seed }
+    let owner = c.add(core.Term.Var(if two_erased { 2 } else { 1 }), span).unwrap()
+    let released = c.add(core.Term.Drop(0, owner, 9), span).unwrap()
+    let one_erasure = c.add(core.Term.Lam(true, 1, released), span).unwrap()
+    let branch_under_erasure = if two_erased { c.add(core.Term.Lam(true, 1, one_erasure), span).unwrap() } else { one_erasure }
+    let branch = c.add(core.Term.Lam(false, 3, branch_under_erasure), span).unwrap()
+    var branches = Vec(u32).new()
+    branches.push(start)
+    branches.push(branch)
+    let head = c.add(core.Term.Case(0, motive, branches, 5), span).unwrap()
+    c.add(core.Term.App(head, 9), span).unwrap()
+    c
+}
+
+fn case_spine_application_inference() {
+    var isolated = case_spine_fixture(false)
+    let isolated_root = (isolated.node_count() - 2) as u32
+    assert(match isolated.infer(isolated_root, [], false, 32) {
+        Err(e) => e.msg == "core: a continuation's result is not a function", _ => false
+    }, "an unapplied case result cannot hold the owner")
+    var full = case_spine_fixture(false)
+    let applied = (full.node_count() - 1) as u32
+    let result = full.infer(applied, [], false, 32).unwrap()
+    let normal = full.normal(result, 32).unwrap()
+    assert(full.term(normal) == core.Term.U64, "the fully applied case returns U64")
+    var partial = case_spine_fixture(true)
+    let partial_root = (partial.node_count() - 1) as u32
+    assert(match partial.infer(partial_root, [], false, 32) {
+        Err(e) => e.msg == "core: case analysis is given all of its evidence", _ => false
+    }, "the top application rejects a remaining erased case argument")
+}
+
 fn main() -> i32 {
     code_conditional_inference(false)
     code_conditional_inference(true)
@@ -2238,6 +2278,7 @@ fn main() -> i32 {
     scalar_code_inference()
     scalar_code_declaration()
     code_application_inference()
+    case_spine_application_inference()
     runtime_partial_applications()
     loop_motive_inference()
     dependent_lend_callbacks()

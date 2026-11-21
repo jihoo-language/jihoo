@@ -11088,3 +11088,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.runInMode_refines_using
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.formed_subject_facts
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.indexed_code_elimination_matches_native
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ErasedCaseSpines.Spine.ghost
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ErasedCaseSpines.Spine.case_head
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ErasedCaseSpines.Complete.ghost
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ErasedCaseSpines.Complete.has_result_head
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ErasedCaseSpines.Complete.not_product
+#print axioms Jihoo.NativeKernel.NativeCoreErasedCasePolicy.erased_products_iff
+#print axioms Jihoo.NativeKernel.NativeCoreErasedCasePolicy.check_progress
+#print axioms Jihoo.NativeKernel.NativeCoreErasedCasePolicy.check_refines
+#print axioms Jihoo.NativeKernel.NativeCoreErasedCasePolicy.hasCaseHead_iff
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.finish_rejects_partial_case
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.Examples.case_spine_must_be_saturated
