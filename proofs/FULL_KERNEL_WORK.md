@@ -4493,3 +4493,19 @@ substitutes the same actual parameters into both telescopes and
 preserves the positions, erasure and indices of recursive hypotheses.
 It covers one-level cases and boxed recursion. The focused build
 passed 238 jobs.
+
+### Recursive runtime inference for scalar calls and lambdas
+
+The code visitor recurses through signed and unsigned arithmetic,
+Strict, Free, lambda bodies, and both sides of an application. It
+switches to ghost mode for annotations, erased arguments and the
+partial-application ownership scan. The refinement proof extends the
+represented context with the written lambda domain, uses the original
+argument for codomain substitution and preserves backward references
+when the input arena has them. It takes sound ghost and normalization
+visits, including global resolution for the argument policy, as premises.
+
+Native and Lean agree on 26 ticks for a lambda call with an unsigned
+addition body, 28 for that call under Strict, and 44 for a partial
+application that leaves a signed binder and an unsigned result.
+The focused build passed 458 jobs.

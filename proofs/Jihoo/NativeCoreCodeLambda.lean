@@ -127,13 +127,13 @@ theorem run_refines (metadata : NativeCoreGhostSort.DataFamilies env isData)
       limit false (visitBody ⟨domain,erased⟩))
     (binderProgress : ∀ state root, state.steps ≤ limit → Progress limit state (visitBinder state root))
     (bodyProgress : ∀ state ref, state.steps ≤ limit → Progress limit state (visitBody ⟨domain,erased⟩ state ref))
-    (onBase : Prefix base state.arena) (room : state.steps ≤ limit) (back : Backward state.arena)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (domainRep : Represents state.arena domain D) (bodyRep : Represents state.arena body b)
     (success : (run visitBinder visitBody normal isData boxed limit depth state root domain body erased).result = .ok answer)
     (ambient : Prefix (run visitBinder visitBody normal isData boxed limit depth state root domain body erased).state.arena final)
     (retained : RetainedComparisons final answer) :
     let after := (run visitBinder visitBody normal isData boxed limit depth state root domain body erased).state.arena
-    Prefix state.arena after ∧ Backward after ∧
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot (.pi erased D type) ∧
         LoanTyping.HasType env loans ctx false (.lam erased (expand env D) (expand env b))
           (.pi erased (expand env D) (expand env type)) := by
@@ -167,13 +167,13 @@ theorem run_refines (metadata : NativeCoreGhostSort.DataFamilies env isData)
       (fun pair member => retained pair (List.mem_append_right _ member))
   have beforeDemand := domainKept.trans bodyKept
   have afterDemand := beforeDemand.trans useCost.kept
-  have demandBack := checkDemand_backward normalSound boxedMetadata (onBase.trans beforeDemand)
+  have demandBack (back : Backward state.arena) := checkDemand_backward normalSound boxedMetadata (onBase.trans beforeDemand)
     (bodyBack (domainBack back)) (domainRep.frame beforeDemand) (bodyRep.frame beforeDemand) used
   obtain ⟨appendKept,appendBack,represented⟩ := append_refines
     (.cons (domainRep.frame afterDemand) (.cons (resultRep.frame useCost.kept) .nil)) rfl added
   have actualBinder : LoanTyping.Binder env loans ctx erased (expand env D) binder.sort := by
     cases binderType with | intro existsSort allowed => exact .intro (existsSort.ghost loans) allowed
-  exact ⟨afterDemand.trans appendKept,appendBack demandBack,_,represented,.lam actualBinder typed⟩
+  exact ⟨afterDemand.trans appendKept,appendBack ∘ demandBack,_,represented,.lam actualBinder typed⟩
 
 private def fixture : Arena :=
   #[.node (.natural 2) [],.node .u64 [],.node .buffer [0],.node (.lam false) [2,1],

@@ -10857,3 +10857,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.recursion_case_matches_native
 #print axioms Jihoo.NativeKernel.Environment.SignatureConversion.data_case
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.run_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.nested_runtime_calls_match_native

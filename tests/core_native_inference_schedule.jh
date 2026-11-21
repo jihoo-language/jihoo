@@ -1167,6 +1167,51 @@ fn recursive_data_case_type() {
         "the short budget retains the weakened motive for the last hypothesis")
 }
 
+fn recursive_code_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let bound = c.add(core.Term.Var(0), span).unwrap()
+    let sum = c.add(core.Term.UAdd(bound, two), span).unwrap()
+    let add = c.add(core.Term.Lam(false, word, sum), span).unwrap()
+    let call = c.add(core.Term.App(add, two), span).unwrap()
+    let signed = c.add(core.Term.Integer(-1), span).unwrap()
+    c.add(core.Term.Strict(signed, call), span).unwrap()
+    let signed_ty = c.add(core.Term.I64, span).unwrap()
+    let outside = c.add(core.Term.Var(1), span).unwrap()
+    let inner = c.add(core.Term.Lam(false, signed_ty, outside), span).unwrap()
+    let outer = c.add(core.Term.Lam(false, word, inner), span).unwrap()
+    c.add(core.Term.App(outer, two), span).unwrap()
+    c
+}
+
+fn recursive_code_inference() {
+    var direct = recursive_code_fixture()
+    spend(&direct, 999974)
+    assert(direct.infer(5, [], false, 32).unwrap() == 16 &&
+        direct.node_count() == 19 && direct.term(16) == core.Term.U64,
+        "the call checks the lambda body before instantiating the result")
+    assert_spent(&direct, "the direct call uses 26 ticks")
+
+    var strict = recursive_code_fixture()
+    spend(&strict, 999972)
+    assert(strict.infer(7, [], false, 32).unwrap() == 17 &&
+        strict.node_count() == 20 && strict.term(17) == core.Term.U64,
+        "Strict returns the result type of its recursive runtime call")
+    assert_spent(&strict, "Strict with the call uses 28 ticks")
+
+    var partial = recursive_code_fixture()
+    spend(&partial, 999956)
+    let selected = partial.infer(12, [], false, 32).unwrap()
+    assert(selected == 15 && partial.node_count() == 22, "partial function result keeps the instantiated root")
+    assert(match partial.term(selected) {
+        core.Term.Pi(false, domain, result) => partial.term(domain) == core.Term.I64 && partial.term(result) == core.Term.U64,
+        _ => false
+    }, "the remaining binder returns U64 after the first argument")
+    assert_spent(&partial, "the partial call uses 44 ticks")
+}
+
 fn open_sum_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1739,6 +1784,7 @@ fn main() -> i32 {
     proposition_motive_telescope()
     proposition_case_telescope()
     recursive_data_case_type()
+    recursive_code_inference()
     data_case_parameter_telescope()
     proposition_elimination_inference()
     indexed_data_elimination()

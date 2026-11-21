@@ -1375,3 +1375,4 @@ import Jihoo.NativeCorePropSignatureReplay
 import Jihoo.NativeCorePropSignatureReplayExamples
 import Jihoo.NativeCoreDataRecursionCase
 import Jihoo.NativeCoreDataSignatureConversion
+import Jihoo.NativeCoreCodeInference

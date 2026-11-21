@@ -19,7 +19,7 @@ open EnvironmentDelta (expand expandArgs)
 
 abbrev NormalAt := Nat → Visit
 
-private def enter (limit depth : Nat) (state : State) (root : Nat) (next : State → Outcome Inferred) : Outcome Inferred :=
+def enter (limit depth : Nat) (state : State) (root : Nat) (next : State → Outcome Inferred) : Outcome Inferred :=
   let (paid,steps) := NativeCoreUnsignedCancellation.tick state.arena limit depth state.steps root
   let entered := {state with steps}
   match paid with
@@ -32,14 +32,14 @@ private def checkOperand (infer : Infer) (normal : Visit) (limit depth : Nat) (s
     (requireTypes normal limit depth inferred answer.typeRoot expected operand).next fun checked pair =>
       ⟨checked,.ok (answer.compared ++ [pair])⟩
 
-private def arithmetic (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+def arithmetic (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (type : Op) (left right : Nat) : Outcome Inferred :=
   (append state type []).next fun expected typeRoot =>
     (checkOperand infer normal limit depth expected typeRoot left).next fun checked first =>
       (checkOperand infer normal limit depth checked typeRoot right).next fun inferred second =>
         (append inferred type []).next fun after output => ⟨after,.ok ⟨output,first ++ second⟩⟩
 
-private def strict (infer : Infer) (state : State) (effect value : Nat) : Outcome Inferred :=
+def strict (infer : Infer) (state : State) (effect value : Nat) : Outcome Inferred :=
   (infer state effect).next fun checked first =>
     (infer checked value).next fun after second => ⟨after,.ok ⟨second.typeRoot,first.compared ++ second.compared⟩⟩
 
@@ -57,7 +57,7 @@ def run (normal : NormalAt) (limit : Nat) (rows : List GraphBinding) : Nat → S
         inferFree (run normal limit rows depth) (normal depth) checked buffer tail
     | _ => NativeCoreCodeHeadInference.run limit (depth+1) rows state root
 
-private theorem enter_progress
+theorem enter_progress
     (continued : ∀ entered, entered.steps ≤ limit → Progress limit entered (next entered)) :
     Progress limit state (enter limit depth state root next) := by
   have rejected (reason : NativeCoreIdentical.Error) :
@@ -76,7 +76,7 @@ private theorem enter_progress
   exact ⟨progress.kept,Nat.le_trans (Nat.le_succ _) progress.monotone,
     fun _ => progress.bounded room,fun _ => progress.accepted room⟩
 
-private theorem enter_success (success : (enter limit depth state root next).result = .ok answer) :
+theorem enter_success (success : (enter limit depth state root next).result = .ok answer) :
     enter limit depth state root next = next {state with steps := state.steps+1} ∧ state.steps+1 ≤ limit := by
   by_cases clock : limit < state.steps+1
   · simp [enter,NativeCoreUnsignedCancellation.tick,clock] at success
@@ -96,7 +96,7 @@ private theorem checkOperand_progress
   exact (requireTypes_progress (fun after root _ => normalizes after root) inferredRoom).next
     (fun _ => Progress.atState _ _)
 
-private theorem arithmetic_progress
+theorem arithmetic_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
     Progress limit state (arithmetic infer normal limit depth state type left right) := by
@@ -108,7 +108,7 @@ private theorem arithmetic_progress
   exact (checkOperand_progress infers normalizes leftRoom).next (fun _ =>
     (append_progress _ _ _).next (fun _ => Progress.atState _ _))
 
-private theorem strict_progress
+theorem strict_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root)) (room : state.steps ≤ limit) :
     Progress limit state (strict infer state effect value) := by
   unfold strict
@@ -160,7 +160,7 @@ private theorem checkOperand_refines
     typeRep (wanted.frame kept) checked ambient (retained pair (by simp))
   exact ⟨kept.trans checkedKept,checkedBack ∘ backward,typed.convert converted⟩
 
-private theorem arithmetic_refines
+theorem arithmetic_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (childSound : Sound env base ctx limit infer)
@@ -208,7 +208,7 @@ private theorem arithmetic_refines
   exact ⟨throughLeft.trans (rightKept.trans outputKept),outputBack ∘ rightBack ∘ leftBack ∘ addedBack,
     _,resultRep,typing typedLeft typedRight⟩
 
-private theorem strict_refines (childSound : Sound env base ctx limit infer)
+theorem strict_refines (childSound : Sound env base ctx limit infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (firstRep : Represents state.arena effect first) (tailRep : Represents state.arena value tail)
