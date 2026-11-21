@@ -1,4 +1,4 @@
-import Jihoo.NativeNumeralForward
+import Jihoo.NativeRawAdditiveFloor
 import Jihoo.NativeLoanMixedPreservation
 import Jihoo.NativeLoanDeltaPreservation
 
@@ -8,7 +8,7 @@ The typing rules construct valid comparison evidence without a word bound on
 an intermediate sum, a supplied interpretation, or a correctness oracle. -/
 namespace Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic
 open AffineSum (Expr)
-open EnvironmentDelta.NumeralForward (Represents family_forward_preserves)
+open EnvironmentDelta.NumeralForward (Represents)
 open NativeKernel.Conversion (ListRel)
 
 private theorem represented_unique (first : Represents term a) (second : Represents term b) : a = b := by
@@ -17,26 +17,6 @@ private theorem represented_unique (first : Represents term a) (second : Represe
   | add left right ihLeft ihRight =>
     cases second with
     | add otherLeft otherRight => rw [ihLeft otherLeft,ihRight otherRight]
-
-private theorem raw_forward_represents (steps : RawLend.Forward env input output) :
-    ∀ {value}, Represents input value → Represents output value := by
-  induction steps using RawLend.Forward.rec
-    (motive_2 := fun xs ys _ => ListRel
-      (fun a b => ∀ {value}, Represents a value → Represents b value) xs ys) with
-  | old steps => exact family_forward_preserves steps
-  | lend => intro _ represented; cases represented
-  | refl => intro _ represented; exact represented
-  | trans _ _ first second => intro _ represented; exact second (first represented)
-  | node op children ih =>
-    intro value represented
-    cases represented with
-    | natural => cases ih; exact .natural _
-    | add left right =>
-      cases ih with
-      | cons alongLeft rest => cases rest with
-        | cons alongRight rest => cases rest; exact .add (alongLeft left) (alongRight right)
-  | nil => exact .nil
-  | cons _ _ left right => exact .cons left right
 
 private theorem evaluated_represents (expr : Expr) (assignment : Nat → Nat) :
     Represents (expr.toTerm.subst (fun i => .natural (assignment i))) (expr.eval assignment) := by
@@ -57,8 +37,44 @@ theorem affine_conversion_value (wf : UnifiedProgram.EnvWellFormed env) (left ri
   have closed := converted.substitution (fun i => .natural (assignment i)) wf.closed
   obtain ⟨_,leftSteps,rightSteps⟩ := closed.church_rosser wf.admissible
   exact represented_unique
-    (raw_forward_represents leftSteps (evaluated_represents left assignment))
-    (raw_forward_represents rightSteps (evaluated_represents right assignment))
+    (leftSteps.represents (evaluated_represents left assignment))
+    (rightSteps.represents (evaluated_represents right assignment))
+
+private def ZeroLeResult (env : Environment) (type term : Term) : Prop :=
+  ∀ input, term = .zeroLe input → RawLend.Conv env type (.lt (.natural 0) (.uadd input (.natural 1)))
+
+private theorem zeroLe_result (typed : LoanTyping.HasType env loans ctx mode term type) :
+    ZeroLeResult env type term := by
+  apply LoanTyping.HasType.rec (t := typed)
+    (motive_1 := fun _ _ _ _ _ _ => True)
+    (motive_2 := fun _ _ _ term type _ => ZeroLeResult env type term)
+    (motive_3 := fun _ _ _ _ _ _ _ _ => True)
+    (motive_4 := fun _ _ _ _ _ _ => True)
+    (motive_5 := fun _ _ _ _ _ _ => True)
+  all_goals intros
+  all_goals first | exact True.intro | skip
+  all_goals unfold ZeroLeResult
+  all_goals try solve | intro input equal; cases equal
+  case zeroLe =>
+    intro input equal
+    cases equal
+    exact .refl _
+  case convert =>
+    rename_i original converted ih
+    intro input equal
+    exact converted.symm.trans (ih input equal)
+  case dataElim =>
+    intro input equal
+    split at equal <;> cases equal
+
+/-- ZeroLe cannot prove a strict inequality with upper bound zero, even when
+its argument is an arbitrary checked term. -/
+theorem zeroLe_no_less_zero (admissible : EnvironmentDelta.Admissible env)
+    (typed : LoanTyping.HasType env loans ctx mode (.zeroLe input) type)
+    (requested : RawLend.Conv env type (.lt left (.natural 0))) : False := by
+  have principal : RawLend.Conv env type (.lt (.natural 0) (.uadd input (.natural 1))) := zeroLe_result typed input rfl
+  exact RawLend.Conv.successor_ne_zero admissible
+    ((principal.symm.trans requested).lt_injective admissible).2
 
 private def Affine (term : Term) : Prop := ∃ expr : Expr, expr.toTerm = term
 

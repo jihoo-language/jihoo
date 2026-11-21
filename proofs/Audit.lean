@@ -10943,3 +10943,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreViewSubject.run_refines_formed
 #print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.checkCases_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.run_refines
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.literalFloor_mono
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Forward.represents
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.literalFloor_le_natural
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.successor_ne_zero
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.zeroLe_no_less_zero

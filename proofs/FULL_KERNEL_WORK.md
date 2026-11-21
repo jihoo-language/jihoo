@@ -4735,3 +4735,13 @@ order, and retains the actual final type root. It takes independent
 formation of the inferred annotation and a correspondence between each
 live branch type builder and its checked signature. The focused build
 passed 462 jobs and all three declarations passed the axiom audit.
+
+### Positive summands in the full raw conversion theory
+
+Forward reduction preserves the lower bound contributed by explicit
+literal summands through arithmetic, beta, global lookup, family
+elimination, and Lend. Church–Rosser then bounds that lower bound when
+the expression converts to a numeral. This rules out `a + 1 = 0` in
+raw conversion for every term `a`. The Loan64 typing inversion for
+`ZeroLe` uses the bound to exclude a zero upper endpoint for any checked
+argument. The focused build passed 284 jobs and five axiom audits.
