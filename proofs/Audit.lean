@@ -10919,3 +10919,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.branch
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.conditional_receipts
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_handoff
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.projected_common_proposition
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.follow_sound
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_typed_occurrences
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_common_proposition

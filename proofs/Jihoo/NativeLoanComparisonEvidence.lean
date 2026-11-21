@@ -123,6 +123,32 @@ private theorem IgnoredProposition.project_node (field : IgnoredProposition op a
   cases field <;>
     simp only [project, projectArgs, NativeCoreCompare.syntaxView, NativeCoreCompare.conversionChildren] <;> rfl
 
+/-- Equality of projected checked roots recovers the proposition of their
+omitted evidence when the comparison retains both operands in full. -/
+theorem projected_common_proposition
+    (firstField : IgnoredProposition firstOp firstA firstB firstType)
+    (secondField : IgnoredProposition secondOp secondA secondB secondType)
+    (firstTyped : PureTyping.HasType env ctx (.node firstOp [firstA, firstB, firstProof]) firstResult)
+    (secondTyped : PureTyping.HasType env ctx (.node secondOp [secondA, secondB, secondProof]) secondResult)
+    (firstKept : FullyRetained firstA ∧ FullyRetained firstB)
+    (secondKept : FullyRetained secondA ∧ FullyRetained secondB)
+    (matched : project (.node firstOp [firstA,firstB,firstProof]) = project (.node secondOp [secondA,secondB,secondProof])) :
+    firstType = secondType ∧ HasType env [] ctx true firstType .prop ∧
+      HasType env [] ctx true firstProof firstType ∧ HasType env [] ctx true secondProof firstType := by
+  rw [firstField.project_node, secondField.project_node] at matched
+  obtain ⟨header, kept⟩ := Shape.node.inj matched
+  have sameOp := header_injective header (firstField.arity.trans secondField.arity.symm)
+  simp only [List.cons.injEq, and_true] at kept
+  have sameA := project_injective_of_fully_retained firstKept.1 secondKept.1 kept.1
+  have sameB := project_injective_of_fully_retained firstKept.2 secondKept.2 kept.2
+  subst secondOp
+  subst secondA
+  subst secondB
+  cases firstField <;> cases secondField
+  · exact ⟨rfl, SharedOperands.subtract.common_proposition firstTyped secondTyped⟩
+  · exact ⟨rfl, SharedOperands.pack.common_proposition firstTyped secondTyped⟩
+  · exact ⟨rfl, SharedOperands.give.common_proposition firstTyped secondTyped⟩
+
 /-- Live identity of checked roots with ignored evidence supplies a common
 well-formed proposition, provided identity retained both operand subtrees
 in full. The unmatched proof children are typed by the original derivations. -/
@@ -137,21 +163,9 @@ theorem live_identity_common_proposition
     (secondKept : FullyRetained secondA ∧ FullyRetained secondB)
     (compared : NativeCoreIdentical.runArena arena limit depth initial leftRoot rightRoot = (.ok true, spent)) :
     firstType = secondType ∧ HasType env [] ctx true firstType .prop ∧
-      HasType env [] ctx true firstProof firstType ∧ HasType env [] ctx true secondProof firstType := by
-  have matched := (NativeCoreIdentical.runArena_refines firstShape secondShape compared).mp rfl
-  rw [firstField.project_node, secondField.project_node] at matched
-  obtain ⟨header, kept⟩ := Shape.node.inj matched
-  have sameOp := header_injective header (firstField.arity.trans secondField.arity.symm)
-  simp only [List.cons.injEq, and_true] at kept
-  have sameA := project_injective_of_fully_retained firstKept.1 secondKept.1 kept.1
-  have sameB := project_injective_of_fully_retained firstKept.2 secondKept.2 kept.2
-  subst secondOp
-  subst secondA
-  subst secondB
-  cases firstField <;> cases secondField
-  · exact ⟨rfl, SharedOperands.subtract.common_proposition firstTyped secondTyped⟩
-  · exact ⟨rfl, SharedOperands.pack.common_proposition firstTyped secondTyped⟩
-  · exact ⟨rfl, SharedOperands.give.common_proposition firstTyped secondTyped⟩
+      HasType env [] ctx true firstProof firstType ∧ HasType env [] ctx true secondProof firstType :=
+  projected_common_proposition firstField secondField firstTyped secondTyped firstKept secondKept
+    ((NativeCoreIdentical.runArena_refines firstShape secondShape compared).mp rfl)
 
 /-- An accepted live identity comparison retains the original aligned
 subtrees and their omitted evidence positions under arbitrary binders. -/

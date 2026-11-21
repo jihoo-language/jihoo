@@ -4661,3 +4661,14 @@ used by its ownership check. The same inference and normalization proofs
 preserve backward references through every scan step. The recursive CODE
 soundness theorem uses these represented visits. The focused build passed
 480 jobs and the three rechecked declarations use only standard Lean axioms.
+
+### Recovering ignored evidence along a live comparison path
+
+An executable path follows retained holes through Pi, lambda, application,
+and Strict, and reconstructs the exact original binding context at its
+endpoint. A successful live identity comparison supplies the equal shape
+of both selected occurrences. Their original typing derivations give both
+ignored proofs the same formed proposition when the binder contexts are
+compatible and the operands at that occurrence are fully retained. The
+focused build passed 293 jobs. The four declarations use only `propext`
+and `Quot.sound`.
