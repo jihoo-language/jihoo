@@ -720,7 +720,7 @@ fn family_index_inference() {
     assert(wrong.node_count() == 5, "an incorrect family arity appends no rows")
 }
 
-fn constructor_inference_fixture() -> core.Core {
+fn constructor_inference_fixture(data: bool) -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let number = c.add(core.Term.Natural(3), span).unwrap()
@@ -739,7 +739,7 @@ fn constructor_inference_fixture() -> core.Core {
     c.add(core.Term.Con(0, 0, fields.clone()), span).unwrap()
     fields.push(proof)
     c.add(core.Term.Con(0, 0, fields), span).unwrap()
-    c.push_family(core.Family { name: "ReflexiveAt".to_string(), data: false, params: 0, arity: 1,
+    c.push_family(core.Family { name: "ReflexiveAt".to_string(), data: data, params: 0, arity: 1,
         constructors: Vec(core.Constructor).new(), globals: 0, span })
     c.push_constructor(0, core.Constructor { name: "Intro".to_string(), ty: signature })
     c.check().unwrap()
@@ -747,7 +747,7 @@ fn constructor_inference_fixture() -> core.Core {
 }
 
 fn dependent_constructor_inference() {
-    var c = constructor_inference_fixture()
+    var c = constructor_inference_fixture(false)
     spend(&c, 999922)
     let result = c.infer(10, [], true, 32).unwrap()
     assert(result == 17 && c.node_count() == 22 && c.term(16) == core.Term.Eq(0, 0),
@@ -758,10 +758,51 @@ fn dependent_constructor_inference() {
         "constructor inference retains its original family and exact index root")
     assert_spent(&c, "dependent constructor inference uses 54 ticks beyond family checking")
 
-    var short = constructor_inference_fixture()
+    var short = constructor_inference_fixture(false)
     assert(match short.infer(9, [], true, 32) {
         Err(e) => e.msg == "core: a constructor needs all of its fields", _ => false
     }, "a partly supplied constructor does not produce a family type")
+}
+
+fn local_constructor_fixture(data: bool) -> core.Core {
+    var c = constructor_inference_fixture(data)
+    let sp = diag.Span.nowhere()
+    var fields = Vec(u32).new()
+    fields.push(3)
+    fields.push(2)
+    c.add(core.Term.Con(0, 0, fields), sp).unwrap()
+    c
+}
+
+fn accepted_local_constructor(data: bool, erased: bool, ghost: bool) {
+    var baseline = local_constructor_fixture(data)
+    let budget = remaining_ticks(&baseline)
+    var c = local_constructor_fixture(data)
+    let context = [core.Binding { ty: 1, erased: erased }, core.Binding { ty: 4, erased: true }]
+    spend(&c, budget-54)
+    let result = c.infer(15, context, ghost, 32).unwrap()
+    assert(result == 24 && c.node_count() == 25, "constructor checking keeps its exact field replay")
+    assert(match c.term(result) {
+        core.Term.Ind(family, indices) => family == 0 && indices.len() == 1 && c.term(indices[0]) == core.Term.Var(1),
+        _ => false
+    }, "constructor result retains the first field's local index")
+    assert_spent(&c, "the complete dependent constructor uses 54 ticks")
+}
+
+fn dependent_constructor_field_modes() {
+    accepted_local_constructor(true, false, false)
+    accepted_local_constructor(true, true, true)
+    accepted_local_constructor(false, true, false)
+
+    var baseline = local_constructor_fixture(true)
+    let budget = remaining_ticks(&baseline)
+    var denied = local_constructor_fixture(true)
+    let erased = [core.Binding { ty: 1, erased: true }, core.Binding { ty: 4, erased: true }]
+    spend(&denied, budget-18)
+    assert(match denied.infer(15, erased, false, 32) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    } && denied.node_count() == 16, "a relevant data field rejects the erased word before substitution")
+    assert_spent(&denied, "erased runtime constructor field rejection uses 18 ticks")
 }
 
 fn annotated_fixture() -> core.Core {
@@ -2148,6 +2189,7 @@ fn main() -> i32 {
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)
     dependent_constructor_inference()
+    dependent_constructor_field_modes()
     boxed_drop_inference(true)
     boxed_drop_inference(false)
     declaration_annotation_inference()

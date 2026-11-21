@@ -1,3 +1,4 @@
+import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreGhostTypeRequirement
 
 /-! A native ghost constructor field walk starts with the live shifted
@@ -34,7 +35,7 @@ private theorem instantiate_progress (limit depth : Nat) (state : State) (result
 
 /-- The last normalized type must be inductive. In a successful field
 step, require compares the two live normalized domains before substitution. -/
-def run (infer : Infer) (normal : Visit) (limit depth root : Nat) : List Nat → State → Nat → Outcome Inferred
+def runByErasure (inferField : Bool → Infer) (normal : Visit) (limit depth root : Nat) : List Nat → State → Nat → Outcome Inferred
   | [], state, telescope =>
     (normal state telescope).next fun after result =>
       match after.arena[result]? with
@@ -43,30 +44,34 @@ def run (infer : Infer) (normal : Visit) (limit depth root : Nat) : List Nat →
   | argument :: rest, state, telescope =>
     (normal state telescope).next fun exposed piType =>
       match exposed.arena[piType]? with
-      | some (.node (.pi _) [domain,result]) =>
-        (infer exposed argument).next fun afterArg inferred =>
+      | some (.node (.pi erased) [domain,result]) =>
+        (inferField erased exposed argument).next fun afterArg inferred =>
           (requireTypes normal limit depth afterArg inferred.typeRoot domain argument).next fun checked comparison =>
             (instantiate limit depth checked result argument).next fun instantiated tail =>
-              (run infer normal limit depth root rest instantiated tail).next fun after output =>
+              (runByErasure inferField normal limit depth root rest instantiated tail).next fun after output =>
                 ⟨after,.ok ⟨output.typeRoot,inferred.compared ++ (comparison :: output.compared)⟩⟩
       | _ => reject exposed argument
 
-theorem run_progress
-    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+abbrev run (infer : Infer) :=
+  runByErasure (fun _ => infer)
+
+theorem runByErasure_progress
+    (infers : ∀ erased state root, state.steps ≤ limit → Progress limit state (inferField erased state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (run infer normal limit depth root fields state telescope) := by
+    Progress limit state (runByErasure inferField normal limit depth root fields state telescope) := by
   induction fields generalizing state telescope with
   | nil =>
     apply (normalizes _ _).next
     intro selected
     split <;> exact Progress.atState _ _
   | cons arg rest ih =>
-    unfold run
+    unfold runByErasure
     apply next_progress (normalizes _ _) room
     intro selected _ exposedRoom
     split
-    · apply next_progress (infers _ _ exposedRoom) exposedRoom
+    · rename_i erased domain result read
+      apply next_progress (infers erased _ _ exposedRoom) exposedRoom
       intro inferred _ inferredRoom
       apply next_progress (requireTypes_progress (fun state root _ => normalizes state root) inferredRoom) inferredRoom
       intro comparison _ comparedRoom
@@ -74,6 +79,13 @@ theorem run_progress
       intro tail _ tailRoom
       exact (ih tailRoom).next (fun _ => Progress.atState _ _)
     · exact Progress.atState _ _
+
+theorem run_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (run infer normal limit depth root fields state telescope) :=
+  runByErasure_progress (fun _ => infers) normalizes room
 
 private theorem graph_node (held : Represents arena root term) (read : arena[root]? = some (.node op refs)) :
     ∃ args, term = .node op args ∧ RepresentsList arena refs args := by
@@ -91,33 +103,38 @@ private theorem graph_pi (held : Represents arena root term) (read : arena[root]
       cases empty
       exact ⟨_,_,shape,first,second⟩
 
-structure Refines (env : Environment) (start : Arena) (ctx : Context) (data : Bool) (source : Term)
+structure ModeRefines (env : Environment) (loans : Loans.Stack) (start : Arena)
+    (ctx : Context) (mode data : Bool) (source : Term)
     (inputs : List Term) (output : Outcome Inferred) (answer : Inferred) : Prop where
   kept : Prefix start output.state.arena
   backward : Backward start → Backward output.state.arena
   result : ∃ family count indices,
     Represents output.state.arena answer.typeRoot (.node (.ind family count) indices) ∧
-    LoanTyping.Arguments env [] ctx true data (expand env source) (expandArgs env inputs)
+    LoanTyping.Arguments env loans ctx mode data (expand env source) (expandArgs env inputs)
       (.node (.ind family count) (expandArgs env indices))
+
+abbrev Refines (env : Environment) (start : Arena) (ctx : Context) (data : Bool) :=
+  ModeRefines env [] start ctx true data
 
 /-- The checked graph walk produces the full Loan64 Arguments derivation
 at the original source telescope, including all dependent substitutions. -/
-theorem run_refines
+theorem runByErasure_refines
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (inferSound : InferSound env base ctx limit infer)
-    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (inferSound : ∀ erased, NativeCoreBufferRelease.ModeSound env loans base ctx limit
+      (mode || !(data && !erased)) (inferField erased))
+    (inferProgress : ∀ erased state root, state.steps ≤ limit → Progress limit state (inferField erased state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (written : Represents state.arena telescope type) (fieldsRep : RepresentsList state.arena fields args)
-    (success : (run infer normal limit depth root fields state telescope).result = .ok answer)
-    (ambient : Prefix (run infer normal limit depth root fields state telescope).state.arena final)
+    (success : (runByErasure inferField normal limit depth root fields state telescope).result = .ok answer)
+    (ambient : Prefix (runByErasure inferField normal limit depth root fields state telescope).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx data type args (run infer normal limit depth root fields state telescope) answer := by
+    ModeRefines env loans state.arena ctx mode data type args (runByErasure inferField normal limit depth root fields state telescope) answer := by
   induction fields generalizing state telescope type args answer with
   | nil =>
     cases fieldsRep
-    unfold run at success ambient ⊢
+    unfold runByErasure at success ambient ⊢
     obtain ⟨selected,normalized,next⟩ := Outcome.next_success success
     rw [next] at success ambient ⊢
     obtain ⟨kept,backward,residual,held,changed⟩ := normalSound onBase written normalized
@@ -134,7 +151,7 @@ theorem run_refines
   | cons arg rest ih =>
     cases fieldsRep with
     | @cons _ source _ more argRep restRep =>
-      unfold run at success ambient ⊢
+      unfold runByErasure at success ambient ⊢
       obtain ⟨piRoot,exposedOk,exposedNext⟩ := Outcome.next_success success
       rw [exposedNext] at success ambient ⊢
       split at success
@@ -151,11 +168,11 @@ theorem run_refines
         simp only [Except.ok.injEq] at success
         subst answer
         let exposed := normal state telescope
-        let inferredType := infer exposed.state arg
+        let inferredType := inferField erased exposed.state arg
         let checked := requireTypes normal limit depth inferredType.state inferred.typeRoot domain arg
         let substituted := instantiate limit depth checked.state result arg
         have normalWithin := (normalProgress state telescope).accepted room piRoot exposedOk
-        have inferredProgress := inferProgress exposed.state arg normalWithin
+        have inferredProgress := inferProgress erased exposed.state arg normalWithin
         have inferredWithin := inferredProgress.accepted normalWithin inferred inferredOk
         have comparedProgress := requireTypes_progress (state := inferredType.state) (depth := depth)
           (actual := inferred.typeRoot) (expected := domain) (argument := arg)
@@ -163,12 +180,12 @@ theorem run_refines
         have comparedWithin := comparedProgress.accepted inferredWithin pair compareOk
         have substProgress := instantiate_progress limit depth checked.state result arg
         have substWithin := substProgress.accepted comparedWithin remaining substituteOk
-        have restProgress := run_progress (root := root) (fields := rest) (state := substituted.state)
+        have restProgress := runByErasure_progress (root := root) (fields := rest) (state := substituted.state)
           (telescope := remaining) (depth := depth) inferProgress normalProgress substWithin
         have comparedFinal := substProgress.kept.trans (restProgress.kept.trans ambient)
         obtain ⟨normalKept,normalBack,exposedType,exposedRep,changed⟩ := normalSound onBase written exposedOk
         obtain ⟨argumentType,bodyType,samePi,domainRep,bodyRep⟩ := graph_pi exposedRep read
-        obtain ⟨argKept,argBack,_,actualRep,actualTyped⟩ := inferSound (onBase.trans normalKept) normalWithin
+        obtain ⟨argKept,argBack,_,actualRep,actualTyped⟩ := inferSound erased (onBase.trans normalKept) normalWithin
           (argRep.frame normalKept) inferredOk (comparedProgress.kept.trans comparedFinal)
           (fun entry member => retained entry (List.mem_append_left _ member))
         have throughArg := normalKept.trans argKept
@@ -196,5 +213,23 @@ theorem run_refines
         simp only [expandArgs]
         exact .cons piConversion (actualTyped.convert compatible) typedTail
       · simp [reject] at success
+
+theorem run_refines
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (written : Represents state.arena telescope type) (fieldsRep : RepresentsList state.arena fields args)
+    (success : (run infer normal limit depth root fields state telescope).result = .ok answer)
+    (ambient : Prefix (run infer normal limit depth root fields state telescope).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx data type args (run infer normal limit depth root fields state telescope) answer := by
+  apply runByErasure_refines wf normalSound normalProgress _ (fun _ => inferProgress)
+    onBase room written fieldsRep success ambient retained
+  intro erased _ _ _ _ _ later cost represented accepted after tape
+  obtain ⟨kept,backward,typed⟩ := inferSound later cost represented accepted after tape
+  exact ⟨kept,backward,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostConstructorFields

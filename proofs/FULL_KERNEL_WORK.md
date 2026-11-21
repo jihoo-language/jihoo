@@ -5001,3 +5001,18 @@ typing judgment and rules out observed closed bounds with upper zero.
 Typed source normalization can expose the arithmetic proof before this
 walk. The checked Strict example now executes the projected operand
 read. The focused build passed 408 tasks and four declaration audits.
+
+### Constructor fields in the caller's mode
+
+The recursive CODE visitor now reads the admitted constructor signature
+from the same graph and retains the active loan snapshots across fields.
+After each signature instantiation, the family kind and the exposed Pi
+binder's erasure select the field visitor. The proof checks the resulting
+field modes and preserves the instantiated family indices.
+
+The native schedule and Lean fixture agree on 54 ticks, 25 graph rows and
+result root 24 for a live data field in CODE, an erased data field in
+ghost mode, and an erased proposition field in CODE. The result retains
+local index 1. An erased variable in a CODE data field is rejected after
+18 ticks with the original 16 rows. The focused build passed 492 tasks
+and nine declaration audits.
