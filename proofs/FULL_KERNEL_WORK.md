@@ -4405,3 +4405,18 @@ theorem still takes the normalized scrutinee's declared arity as a
 premise. Lean and native Core agree on 171 ticks for Type0, 200 for Prop,
 and one tick when the matching branch is missing. The focused build
 passed 455 jobs and the audit covered ten declarations, one axiom-free.
+
+### Code references to declarations and buffer releases
+
+The live global table supplies the original declaration's annotation,
+with the same scoped shift as native Core. The regression also shows
+why code refinement keeps the global name. Its admitted proof body
+requires ghost mode to read an erased local, while its name is typed at
+the admitted annotation when code inference encounters it.
+
+Buffer length recovery and Free now share the metered graph walk in
+both checking modes. The code visitor checks both original operands
+before applying the lambda's demand rule. Lean and native agree on
+21 ticks for a single release and reject two releases after 33. The
+focused build passed 457 jobs and the twelve audited declarations use
+standard Lean axioms.

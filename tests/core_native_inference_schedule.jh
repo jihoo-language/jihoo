@@ -1618,6 +1618,44 @@ fn runtime_partial_applications() {
     assert_spent(&c, "rejecting a captured buffer costs forty-eight ticks")
 }
 
+fn ghost_global_fixture(admit: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let equality = c.add(core.Term.Eq(zero, zero), span).unwrap()
+    let bound = c.add(core.Term.Var(0), span).unwrap()
+    let body = c.add(core.Term.Lam(true, equality, bound), span).unwrap()
+    let signature = c.add(core.Term.Pi(true, equality, equality), span).unwrap()
+    c.add(core.Term.Global(0), span).unwrap()
+    c.push_definition(core.Definition { name: "proof_identity".to_string(), ty: signature, value: body,
+        exported: false, span })
+    if admit { c.check().unwrap() }
+    c
+}
+
+fn runtime_global_from_ghost_declaration() {
+    var baseline = ghost_global_fixture(true)
+    let budget = remaining_ticks(&baseline)
+    var admitted = ghost_global_fixture(true)
+    spend(&admitted, budget-8)
+    let ty = admitted.infer(5, [], false, 32).unwrap()
+    assert(ty == 4 && admitted.node_count() == 20 && admitted.term(ty) == core.Term.Pi(true, 1, 1),
+        "runtime inference looks up the original ghost declaration annotation")
+    assert_spent(&admitted, "the verified global visits only its written annotation")
+
+    var body = ghost_global_fixture(true)
+    assert(match body.infer(3, [], false, 32) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    }, "the expanded identity requires ghost mode for its local proof")
+
+    var invisible = ghost_global_fixture(false)
+    spend(&invisible, 999999)
+    assert(match invisible.infer(5, [], false, 32) {
+        Err(e) => e.msg == "core: recursive or forward definition", _ => false
+    }, "the global cannot be visited before its definition is visible")
+    assert_spent(&invisible, "forward global rejection stops on its entry tick")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1654,6 +1692,7 @@ fn main() -> i32 {
     declaration_annotation_inference()
     ghost_definition_body_checking()
     code_local_inference()
+    runtime_global_from_ghost_declaration()
     scalar_code_inference()
     scalar_code_declaration()
     code_application_inference()

@@ -10821,3 +10821,15 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.indexed_motives_match_native
+#print axioms Jihoo.NativeKernel.NativeCoreGlobalAnnotation.checked_type_at
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.ghost_proof_body_not_code
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.admitted_global_does_not_require_code_body
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.original_global_reference_schedule
+#print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.bufferLength_progress
+#print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.inferFree_progress
+#print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.unary_read
+#print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.bufferLength_refines
+#print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.inferFree_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.code_buffer_release_matches_native

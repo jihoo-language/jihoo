@@ -1,7 +1,8 @@
+import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreCodeHeadInference
 
 /-! Runtime scalar inference recurses in code mode on both arithmetic
-operands and on both sides of Strict. Leaf inference is the same code-mode
+operands, on both sides of Strict, and through buffer release. Leaf inference is the same code-mode
 checker that refuses an erased local before shifting its domain. -/
 namespace Jihoo.NativeKernel.NativeCoreCodeScalarInference
 
@@ -13,6 +14,7 @@ open NativeCoreCaseStrict (append append_progress append_refines)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred PairRetained RetainedComparisons
   requireTypes requireTypes_progress requireTypes_refines next_progress)
 open NativeCoreCodeHeadInference (Refines Sound)
+open NativeCoreBufferRelease (inferFree inferFree_progress)
 open EnvironmentDelta (expand expandArgs)
 
 abbrev NormalAt := Nat → Visit
@@ -51,6 +53,8 @@ def run (normal : NormalAt) (limit : Nat) (rows : List GraphBinding) : Nat → S
         arithmetic (run normal limit rows depth) (normal depth) limit depth checked .u64 a b
     | some (.node .strict [a,b]) => enter limit (depth+1) state root fun checked =>
         strict (run normal limit rows depth) checked a b
+    | some (.node .free [buffer,tail]) => enter limit (depth+1) state root fun checked =>
+        inferFree (run normal limit rows depth) (normal depth) checked buffer tail
     | _ => NativeCoreCodeHeadInference.run limit (depth+1) rows state root
 
 private theorem enter_progress
@@ -123,6 +127,7 @@ theorem run_progress
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalizes depth) inside)
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalizes depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
+    · exact enter_progress (fun _ inside => inferFree_progress (fun _ _ => ih) (normalizes depth) inside)
     · exact NativeCoreCodeHeadInference.run_progress
 
 private theorem checkOperand_refines
@@ -236,6 +241,10 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env) (context : ContextRep 
   | succ depth childSound =>
     intro state root term answer final onBase room source success ambient retained
     unfold run at success ambient ⊢
+    have modeSound : NativeCoreBufferRelease.ModeSound env [] base ctx limit false (run normal limit rows depth) := by
+      intro _ _ _ _ _ onBase inside source accepted ambient retained
+      obtain ⟨kept,backward,typed⟩ := childSound onBase inside source accepted ambient retained
+      exact ⟨kept,backward,typed⟩
     have childCost : ∀ state root, state.steps ≤ limit → Progress limit state (run normal limit rows depth state root) :=
       fun _ _ inside => run_progress normalProgress inside
     cases source with
@@ -245,7 +254,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env) (context : ContextRep 
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
-      case arith | uadd | strict =>
+      case arith | uadd | strict | free =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
         cases children with
@@ -259,6 +268,10 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env) (context : ContextRep 
             first
             | exact strict_refines (state := {state with steps := state.steps+1})
                 childSound childCost onBase inside first second success ambient retained
+            | obtain ⟨kept,backward,typed⟩ := NativeCoreBufferRelease.inferFree_refines
+                (state := {state with steps := state.steps+1}) (normalSound depth) (normalProgress depth)
+                modeSound childCost onBase inside first second success ambient retained
+              exact ⟨kept,backward,typed⟩
             | apply arithmetic_refines (state := {state with steps := state.steps+1}) (depth := depth)
                 (normalSound depth) (normalProgress depth) childSound childCost
                 onBase inside first second rfl _ success ambient retained

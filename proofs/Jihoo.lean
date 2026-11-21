@@ -1318,6 +1318,9 @@ import Jihoo.NativeCoreGhostConstructorFields
 import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreGhostConstructorExamples
 import Jihoo.NativeCoreGhostDeclarationAnnotations
+import Jihoo.NativeCoreGlobalAnnotation
+import Jihoo.NativeCoreCodeGlobal
+import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreCodeHeadInference
 import Jihoo.NativeCoreGhostDefinitionChecking
 import Jihoo.NativeCoreCodeScalarInference

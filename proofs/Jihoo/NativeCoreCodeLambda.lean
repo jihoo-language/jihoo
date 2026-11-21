@@ -1,6 +1,7 @@
 import Jihoo.NativeCoreCodeApplication
 import Jihoo.NativeCoreCodeLinearity
 import Jihoo.NativeCoreCodeUses
+import Jihoo.NativeCoreCodeScalarInference
 import Jihoo.NativeCoreExpandedFamilies
 
 /-! Runtime lambda checking visits the ghost annotation and the code
@@ -184,7 +185,7 @@ private def runFixture (limit root domain body : Nat) : Outcome Inferred :=
   let depth := 31
   let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
   let ghost := NativeCoreGhostSpineInference.runWith normal [] 0 limit depth []
-  let code := fun binding => NativeCoreCodeHeadInference.run limit depth [binding]
+  let code := fun binding => NativeCoreCodeScalarInference.run normal limit [binding] depth
   run ghost code (normal depth) (fun _ => false) (fun _ => false) limit depth ⟨fixture,1⟩ root domain body false
 
 /-- The original annotation survives the successful code lambda. Zero
@@ -201,5 +202,16 @@ theorem checked_scalar_and_owner_lambdas_match_native :
      returned.state.steps = 50 ∧ returned.state.arena.size = 25 ∧ returned.result.map Inferred.typeRoot = .ok 24 ∧
        returned.state.arena[24]? = some (.node (.pi false) [4,4])) := by
   exact ⟨by cbv,by cbv,by cbv,by cbv⟩
+
+/-- The code visitor checks both Free operands before the quantity pass.
+The same live owner is accepted once and rejected when Strict releases it twice. -/
+theorem code_buffer_release_matches_native :
+    (let freed := runFixture 21 12 2 7
+     freed.state.steps = 21 ∧ freed.state.arena.size = 20 ∧ freed.result.map Inferred.typeRoot = .ok 19 ∧
+       freed.state.arena[19]? = some (.node (.pi false) [2,18])) ∧
+    (let duplicated := runFixture 33 13 2 8
+     duplicated.state.steps = 33 ∧ duplicated.state.arena.size = 20 ∧
+       duplicated.result = .error (.outsideFragment 13)) := by
+  exact ⟨by cbv,by cbv⟩
 
 end Jihoo.NativeKernel.NativeCoreCodeLambda

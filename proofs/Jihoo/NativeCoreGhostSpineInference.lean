@@ -1,3 +1,5 @@
+import Jihoo.NativeCoreGlobalAnnotation
+import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreGhostTypeRequirement
 import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreGhostOwnerReturns
@@ -26,6 +28,8 @@ open NativeCoreBinderTraversal (VisitsFrom)
 open EnvironmentDelta (expand expandArgs)
 open NativeCoreGhostSort (DataFamilies)
 open NativeCoreGhostBinderCheck
+open NativeCoreGlobalAnnotation (checked_type_at)
+open NativeCoreBufferRelease (bufferLength inferFree bufferLength_progress inferFree_progress unary_read)
 open NativeCoreGhostReferenceTypes
 
 structure GraphBinding where
@@ -149,19 +153,6 @@ private def inferAlloc (infer : Infer) (normal : Visit) (limit depth : Nat) (sta
   (checkFixed infer normal limit depth state .u64 [count]).next fun afterCount countPairs =>
     (checkFixed infer normal limit depth afterCount .i64 [fill]).next fun afterFill fillPairs =>
       (append afterFill .buffer [count]).next fun after result => ⟨after,.ok ⟨result,countPairs ++ fillPairs⟩⟩
-
-private def bufferLength (infer : Infer) (normal : Visit) (state : State) (buffer : Nat) :
-    Outcome (Nat × List (Nat × Nat)) :=
-  (infer state buffer).next fun inferred found =>
-    (normal inferred found.typeRoot).next fun exposed root =>
-      match exposed.arena[root]? with
-      | some (.node .buffer [length]) => ⟨exposed,.ok (length,found.compared)⟩
-      | _ => discard exposed buffer
-
-private def inferFree (infer : Infer) (normal : Visit) (state : State) (buffer tail : Nat) : Outcome Inferred :=
-  (bufferLength infer normal state buffer).next fun afterBuffer checked =>
-    (infer afterBuffer tail).next fun after result =>
-      ⟨after,.ok ⟨result.typeRoot,checked.2 ++ result.compared⟩⟩
 
 private def checkIndexEvidence (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (index length proof : Nat) : Outcome (List (Nat × Nat)) :=
@@ -718,17 +709,6 @@ private theorem inferFamily_progress
     · exact inferFixed_progress infers (fun state root _ => normalizes state root) room
     · exact Progress.atState _ _
 
-private theorem bufferLength_progress
-    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
-    (normalizes : ∀ state root, Progress limit state (normal state root))
-    (room : state.steps ≤ limit) :
-    Progress limit state (bufferLength infer normal state buffer) := by
-  apply next_progress (infers _ _ room) room
-  intro _ _ _
-  apply (normalizes _ _).next
-  intro root
-  split <;> exact Progress.atState _ _
-
 private theorem ownerFamily_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
@@ -752,15 +732,6 @@ private theorem inferDrop_progress
     intro _ _ remaining
     exact (infers _ _ remaining).next (fun _ => Progress.atState _ _)
   · exact Progress.atState _ _
-
-private theorem inferFree_progress
-    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
-    (normalizes : ∀ state root, Progress limit state (normal state root))
-    (room : state.steps ≤ limit) :
-    Progress limit state (inferFree infer normal state buffer tail) := by
-  apply next_progress (bufferLength_progress infers normalizes room) room
-  intro _ _ bufferRoom
-  exact (infers _ _ bufferRoom).next (fun _ => Progress.atState _ _)
 
 private theorem checkIndexEvidence_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -1375,45 +1346,6 @@ theorem ContextRep.lookup_type (represented : ContextRep env arena rows ctx)
           refine ⟨term, source, ?_⟩
           simp only [lookup, atIndex, Option.map_some, Term.rename_comp, Nat.succ_eq_add_one, Nat.add_assoc]
 
-private theorem represented_at {index : Nat} (aligned : RepresentsDefinitions arena roots definitions)
-    (found : roots[index]? = some row) :
-    ∃ source, definitions[index]? = some source ∧ RepresentsDefinition arena row source := by
-  induction aligned generalizing index with
-  | nil => simp at found
-  | @cons _ source _ _ head _ tail =>
-      cases index with
-      | zero => cases found; exact ⟨source, rfl, head⟩
-      | succ index => exact tail found
-
-private theorem type_expansion_at {index : Nat} (history : LoanTyping.MixedProgram.History definitions declarations env)
-    (found : definitions[index]? = some source) :
-    ∃ entry, env.globals[index]? = some entry ∧ GlobalEnvironment.Expansion env.globals source.type entry.type := by
-  induction history with
-  | empty => simp at found
-  | @definition definitions declarations env raw entry history checked ih =>
-      by_cases earlier : index < definitions.length
-      · rw [List.getElem?_append_left earlier] at found
-        obtain ⟨previous, previousFound, expanded⟩ := ih found
-        have inside : index < env.globals.size := history.globalLength.symm ▸ earlier
-        refine ⟨previous, ?_, expanded.extend entry⟩
-        rw [Array.getElem?_eq_getElem inside] at previousFound
-        exact (Array.getElem?_push_lt (x := entry) inside).trans previousFound
-      · have bound := (List.getElem?_eq_some_iff.mp found).1
-        have atEnd : index = definitions.length := by simp only [List.length_append, List.length_singleton] at bound; omega
-        subst index
-        have same : raw = source := by simpa using found
-        subst source
-        exact ⟨entry, by rw [← history.globalLength, Array.getElem?_push_size], checked.typeExpansion.extend entry⟩
-  | family _ _ ih => exact ih found
-
-private theorem checked_type_at {index : Nat} (history : LoanTyping.MixedProgram.History definitions declarations env)
-    (aligned : RepresentsDefinitions arena roots definitions) (found : roots[index]? = some row) :
-    ∃ entry written, env.globals[index]? = some entry ∧ Represents arena row.typeRoot written ∧
-      expand env written = entry.type := by
-  obtain ⟨source, sourceFound, represented⟩ := represented_at aligned found
-  obtain ⟨entry, recorded, expanded⟩ := type_expansion_at history sourceFound
-  exact ⟨entry, source.type, recorded, represented.1, EnvironmentDelta.expansion_eq_expand expanded⟩
-
 private theorem plain_success {original : Outcome Nat} (success : (original.result.map plain) = .ok answer) :
     ∃ selected, original.result = .ok selected ∧ answer = plain selected := by
   cases found : original.result with
@@ -1771,17 +1703,6 @@ private theorem inferAlloc_refines
   simp only [Term.alloc,expand,expandArgs]
   exact .alloc (countTyped n List.mem_cons_self) (fillTyped x List.mem_cons_self)
 
-private theorem unary_read (represented : Represents arena root term)
-    (read : arena[root]? = some (.node op [ref])) :
-    ∃ child, term = .node op [child] ∧ Represents arena ref child := by
-  cases represented with
-  | var other => rw [read] at other; cases other
-  | node other arity args =>
-    rw [read] at other
-    cases other
-    cases args with
-    | cons first tail => cases tail; exact ⟨_,rfl,first⟩
-
 private theorem bufferLength_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
@@ -1796,25 +1717,12 @@ private theorem bufferLength_refines
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ length, Represents after answer.1 length ∧
         LoanTyping.HasType env [] ctx true (expand env b) (.buffer (expand env length)) := by
-  unfold bufferLength at success ambient ⊢
-  obtain ⟨found,foundOk,foundNext⟩ := Outcome.next_success success
-  rw [foundNext] at success ambient ⊢
-  obtain ⟨root,exposedOk,exposedNext⟩ := Outcome.next_success success
-  rw [exposedNext] at success ambient ⊢
-  split at success
-  · rename_i length read
-    simp only [read] at ambient ⊢
-    simp only [Except.ok.injEq] at success
-    subst answer
-    have inferred := childProgress state buffer room
-    have normalized := normalProgress (infer state buffer).state found.typeRoot
-    obtain ⟨_,inferredBack,_,foundRep,typed⟩ := childSound onBase room bufferRep foundOk
-      (normalized.kept.trans ambient) retained
-    obtain ⟨kept,backward,residual,held,converted⟩ := normalSound (onBase.trans inferred.kept) foundRep exposedOk
-    obtain ⟨count,shape,countRep⟩ := unary_read held read
-    refine ⟨inferred.kept.trans kept,backward ∘ inferredBack,count,countRep,?_⟩
-    simpa only [shape,Term.buffer,expand,expandArgs] using typed.convert converted.converted
-  · simp [discard] at success
+  have sound : NativeCoreBufferRelease.ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ onBase inside source accepted ambient retained
+    obtain ⟨kept,backward,typed⟩ := childSound onBase inside source accepted ambient retained
+    exact ⟨kept,backward,typed⟩
+  exact NativeCoreBufferRelease.bufferLength_refines normalSound normalProgress sound childProgress
+    onBase room bufferRep success ambient retained
 
 private theorem ownerFamily_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -1903,25 +1811,13 @@ private theorem inferFree_refines
     (ambient : Prefix (inferFree infer normal state buffer tail).state.arena final)
     (retained : RetainedComparisons final answer) :
     Refines env state.arena ctx (.free b t) (inferFree infer normal state buffer tail) answer := by
-  unfold inferFree at success ambient ⊢
-  obtain ⟨checked,bufferOk,bufferNext⟩ := Outcome.next_success success
-  rw [bufferNext] at success ambient ⊢
-  obtain ⟨result,tailOk,tailNext⟩ := Outcome.next_success success
-  rw [tailNext] at success ambient ⊢
-  simp only [Except.ok.injEq] at success
-  subst answer
-  let checkedBuffer := bufferLength infer normal state buffer
-  have bufferProgress := bufferLength_progress (state := state) (buffer := buffer) childProgress normalProgress room
-  have bufferRoom := bufferProgress.accepted room checked bufferOk
-  have tailProgress := childProgress checkedBuffer.state tail bufferRoom
-  obtain ⟨bufferKept,bufferBack,_,_,typedBuffer⟩ := bufferLength_refines normalSound normalProgress childSound
-    childProgress onBase room bufferRep bufferOk (tailProgress.kept.trans ambient)
-    (fun pair member => retained pair (List.mem_append_left _ member))
-  obtain ⟨tailKept,tailBack,_,resultRep,typedTail⟩ := childSound (onBase.trans bufferKept) bufferRoom
-    (tailRep.frame bufferKept) tailOk ambient (fun pair member => retained pair (List.mem_append_right _ member))
-  refine ⟨bufferKept.trans tailKept,tailBack ∘ bufferBack,_,resultRep,?_⟩
-  simp only [Term.free,expand,expandArgs]
-  exact .free typedBuffer typedTail
+  have sound : NativeCoreBufferRelease.ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ onBase inside source accepted ambient retained
+    obtain ⟨kept,backward,typed⟩ := childSound onBase inside source accepted ambient retained
+    exact ⟨kept,backward,typed⟩
+  obtain ⟨kept,backward,typed⟩ := NativeCoreBufferRelease.inferFree_refines normalSound normalProgress sound
+    childProgress onBase room bufferRep tailRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 private theorem checkIndexEvidence_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
