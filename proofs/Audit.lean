@@ -10833,3 +10833,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.bufferLength_refines
 #print axioms Jihoo.NativeKernel.NativeCoreBufferRelease.inferFree_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.code_buffer_release_matches_native
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.finish_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.finish_backward
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.run_refines

@@ -1333,6 +1333,7 @@ import Jihoo.NativeCoreCodeLinearity
 import Jihoo.NativeCoreCodeUses
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodePartialApplication
+import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodePartialApplicationExamples
 import Jihoo.NativeCoreCodeLeaseLookup
 import Jihoo.NativeCoreCodeBorrow

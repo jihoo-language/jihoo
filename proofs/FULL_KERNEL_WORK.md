@@ -4420,3 +4420,13 @@ before applying the lambda's demand rule. Lean and native agree on
 21 ticks for a single release and reject two releases after 33. The
 focused build passed 457 jobs and the twelve audited declarations use
 standard Lean axioms.
+
+### Complete result inspection for covered code applications
+
+The application driver now composes the original code callee and
+argument checks with the final result inspection. An inner spine
+segment returns directly. A function-valued result at the outermost
+segment runs the ownership scan and retains its comparison receipts.
+Both the typing theorem and the native correspondence fixture return
+the original instantiated codomain reference. The focused build passed
+455 jobs and the four new audited declarations use standard Lean axioms.
