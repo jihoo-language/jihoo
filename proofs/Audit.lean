@@ -11000,3 +11000,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferIndexWithProof_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferIndexWithProof_modeRefines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.memory_visits_match_native_code
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.HasType.withAmbientLoans
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.ContextRep.length_eq
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarInference.arithmetic_refinesMode
+#print axioms Jihoo.NativeKernel.NativeCoreCodeScalarInference.strict_refinesMode
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithLoans_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithLoans_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.prepared_reader_borrow_matches_native

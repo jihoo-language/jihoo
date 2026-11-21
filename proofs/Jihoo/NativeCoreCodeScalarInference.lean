@@ -14,7 +14,7 @@ open NativeCoreCaseStrict (append append_progress append_refines)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred PairRetained RetainedComparisons
   requireTypes requireTypes_progress requireTypes_refines next_progress)
 open NativeCoreCodeHeadInference (Refines Sound)
-open NativeCoreBufferRelease (inferFree inferFree_progress)
+open NativeCoreBufferRelease (ModeSound inferFree inferFree_progress)
 open EnvironmentDelta (expand expandArgs)
 
 abbrev NormalAt := Nat → Visit
@@ -130,10 +130,10 @@ theorem run_progress
     · exact enter_progress (fun _ inside => inferFree_progress (fun _ _ => ih) (normalizes depth) inside)
     · exact NativeCoreCodeHeadInference.run_progress
 
-private theorem checkOperand_refines
+private theorem checkOperand_refinesMode
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : Sound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit false infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (source : Represents state.arena operand term) (wanted : Represents state.arena expected type)
@@ -142,7 +142,7 @@ private theorem checkOperand_refines
     (retained : ∀ entry ∈ pairs, PairRetained final entry) :
     let after := (checkOperand infer normal limit depth state expected operand).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.HasType env [] ctx false (expand env term) (expand env type) := by
+      LoanTyping.HasType env loans ctx false (expand env term) (expand env type) := by
   unfold checkOperand at success ambient ⊢
   obtain ⟨answer,inferred,next⟩ := Outcome.next_success success
   rw [next] at success ambient ⊢
@@ -160,21 +160,24 @@ private theorem checkOperand_refines
     typeRep (wanted.frame kept) checked ambient (retained pair (by simp))
   exact ⟨kept.trans checkedKept,checkedBack ∘ backward,typed.convert converted⟩
 
-theorem arithmetic_refines
+theorem arithmetic_refinesMode
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : Sound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit false infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
     (arity : type.arity = 0)
-    (typing : LoanTyping.HasType env [] ctx false (expand env a) (expand env (.node type [])) →
-      LoanTyping.HasType env [] ctx false (expand env b) (expand env (.node type [])) →
-      LoanTyping.HasType env [] ctx false (expand env term) (expand env (.node type [])))
+    (typing : LoanTyping.HasType env loans ctx false (expand env a) (expand env (.node type [])) →
+      LoanTyping.HasType env loans ctx false (expand env b) (expand env (.node type [])) →
+      LoanTyping.HasType env loans ctx false (expand env term) (expand env (.node type [])))
     (success : (arithmetic infer normal limit depth state type left right).result = .ok answer)
     (ambient : Prefix (arithmetic infer normal limit depth state type left right).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx term (arithmetic infer normal limit depth state type left right) answer := by
+    let after := (arithmetic infer normal limit depth state type left right).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx false (expand env term) (expand env type) := by
   unfold arithmetic at success ambient ⊢
   obtain ⟨expected,expectedOk,expectedNext⟩ := Outcome.next_success success
   rw [expectedNext] at success ambient ⊢
@@ -197,25 +200,28 @@ theorem arithmetic_refines
     childProgress normalProgress leftRoom
   have afterRight := (append_progress (limit := limit) rightChecked.state type []).kept.trans ambient
   obtain ⟨addedKept,addedBack,expectedRep⟩ := append_refines .nil arity.symm expectedOk
-  obtain ⟨leftKept,leftBack,typedLeft⟩ := checkOperand_refines normalSound normalProgress childSound childProgress
+  obtain ⟨leftKept,leftBack,typedLeft⟩ := checkOperand_refinesMode normalSound normalProgress childSound childProgress
     (onBase.trans addedKept) addedRoom (leftRep.frame addedKept) expectedRep leftOk (rightCost.kept.trans afterRight)
     (fun pair member => retained pair (List.mem_append_left _ member))
   have throughLeft := addedKept.trans leftKept
-  obtain ⟨rightKept,rightBack,typedRight⟩ := checkOperand_refines normalSound normalProgress childSound childProgress
+  obtain ⟨rightKept,rightBack,typedRight⟩ := checkOperand_refinesMode normalSound normalProgress childSound childProgress
     (onBase.trans throughLeft) leftRoom (rightRep.frame throughLeft) (expectedRep.frame leftKept) rightOk afterRight
     (fun pair member => retained pair (List.mem_append_right _ member))
   obtain ⟨outputKept,outputBack,resultRep⟩ := append_refines .nil arity.symm outputOk
   exact ⟨throughLeft.trans (rightKept.trans outputKept),outputBack ∘ rightBack ∘ leftBack ∘ addedBack,
     _,resultRep,typing typedLeft typedRight⟩
 
-theorem strict_refines (childSound : Sound env base ctx limit infer)
+theorem strict_refinesMode (childSound : ModeSound env loans base ctx limit false infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (firstRep : Represents state.arena effect first) (tailRep : Represents state.arena value tail)
     (success : (strict infer state effect value).result = .ok answer)
     (ambient : Prefix (strict infer state effect value).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.strict first tail) (strict infer state effect value) answer := by
+    let after := (strict infer state effect value).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx false (expand env (.strict first tail)) (expand env type) := by
   unfold strict at success ambient ⊢
   obtain ⟨a,firstOk,firstNext⟩ := Outcome.next_success success
   rw [firstNext] at success ambient ⊢
@@ -231,6 +237,43 @@ theorem strict_refines (childSound : Sound env base ctx limit infer)
     tailOk ambient (fun pair member => retained pair (List.mem_append_right _ member))
   refine ⟨firstKept.trans tailKept,tailBack ∘ firstBack,_,typedRep,?_⟩
   simpa only [Term.strict,expand,expandArgs] using LoanTyping.HasType.strict typedFirst typedTail
+
+private theorem asModeSound (sound : Sound env base ctx limit infer) :
+    ModeSound env [] base ctx limit false infer := by
+  intro _ _ _ _ _ onBase room represented accepted final retained
+  obtain ⟨kept,backward,typed⟩ := sound onBase room represented accepted final retained
+  exact ⟨kept,backward,typed⟩
+
+theorem arithmetic_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : Sound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
+    (arity : type.arity = 0)
+    (typing : LoanTyping.HasType env [] ctx false (expand env a) (expand env (.node type [])) →
+      LoanTyping.HasType env [] ctx false (expand env b) (expand env (.node type [])) →
+      LoanTyping.HasType env [] ctx false (expand env term) (expand env (.node type [])))
+    (success : (arithmetic infer normal limit depth state type left right).result = .ok answer)
+    (ambient : Prefix (arithmetic infer normal limit depth state type left right).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx term (arithmetic infer normal limit depth state type left right) answer := by
+  obtain ⟨kept,backward,typed⟩ := arithmetic_refinesMode normalSound normalProgress (asModeSound childSound)
+    childProgress onBase room leftRep rightRep arity typing success ambient retained
+  exact ⟨kept,backward,typed⟩
+
+theorem strict_refines (childSound : Sound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (firstRep : Represents state.arena effect first) (tailRep : Represents state.arena value tail)
+    (success : (strict infer state effect value).result = .ok answer)
+    (ambient : Prefix (strict infer state effect value).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.strict first tail) (strict infer state effect value) answer := by
+  obtain ⟨kept,backward,typed⟩ := strict_refinesMode (asModeSound childSound) childProgress
+    onBase room firstRep tailRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 theorem run_sound (wf : UnifiedProgram.EnvWellFormed env) (context : ContextRep env base rows ctx)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))

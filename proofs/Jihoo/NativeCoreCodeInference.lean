@@ -1,3 +1,5 @@
+import Jihoo.NativeCoreCodeBorrow
+import Jihoo.NativeCoreDependentLendCallbacks
 import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodeScalarInference
@@ -19,16 +21,17 @@ open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred
   inferStoreWithProof inferStoreWithProof_progress inferStoreWithProof_modeRefines
   inferIndexWithProof inferIndexWithProof_progress inferIndexWithProof_modeRefines)
 open NativeCoreCodeScalarInference (enter enter_progress enter_success arithmetic arithmetic_progress
-  arithmetic_refines strict strict_progress strict_refines)
-open NativeCoreBufferRelease (inferFree inferFree_progress)
+  arithmetic_refinesMode strict strict_progress strict_refinesMode)
+open NativeCoreBufferRelease (ModeSound inferFree inferFree_progress)
+open NativeCoreCodeLeaseLookup (Snapshot FramesRep)
 
 abbrev GhostAt := Nat → List GraphBinding → Infer
 
-def run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
-    (isData boxed : Nat → Bool) (limit : Nat) : Nat → List GraphBinding → Bool → Infer
+def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
+    (isData boxed : Nat → Bool) (limit : Nat) (snapshots : List Snapshot) : Nat → List GraphBinding → Bool → Infer
   | 0,bindings,_,state,root => NativeCoreCodeHeadInference.run limit 0 bindings state root
   | depth+1,bindings,head,state,root =>
-    let recur := run normal ghost env isData boxed limit depth bindings false
+    let recur := runWithLoans normal ghost env isData boxed limit snapshots depth bindings false
     match state.arena[root]? with
     | some (.node (.arith _) [left,right]) => enter limit (depth+1) state root fun entered =>
         arithmetic recur (normal depth) limit depth entered .i64 left right
@@ -44,37 +47,40 @@ def run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         inferStoreWithProof recur (ghost depth bindings) (normal depth) limit depth entered buffer index value proof
     | some (.node .index [subject,index,proof]) => enter limit (depth+1) state root fun entered =>
         inferIndexWithProof recur (ghost depth bindings) (normal depth) limit depth entered subject index proof
+    | some (.node .borrow [owner]) => enter limit (depth+1) state root fun entered =>
+        NativeCoreCodeBorrow.run boxed (ghost depth bindings) (normal depth)
+          limit depth bindings.length entered snapshots root owner
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
         strict recur entered first last
     | some (.node .ifLt [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
-        inferConditional recur (fun assumption => run normal ghost env isData boxed limit depth
+        inferConditional recur (fun assumption => runWithLoans normal ghost env isData boxed limit snapshots depth
           (⟨assumption,true⟩ :: bindings) false) (normal depth) limit depth entered false left right yes no
     | some (.node .ifEq [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
-        inferConditional recur (fun assumption => run normal ghost env isData boxed limit depth
+        inferConditional recur (fun assumption => runWithLoans normal ghost env isData boxed limit snapshots depth
           (⟨assumption,true⟩ :: bindings) false) (normal depth) limit depth entered true left right yes no
     | some (.node .free [buffer,tail]) => enter limit (depth+1) state root fun entered =>
         inferFree recur (normal depth) entered buffer tail
     | some (.node (.lam erased) [domain,body]) => enter limit (depth+1) state root fun entered =>
         NativeCoreCodeLambda.run (ghost depth bindings)
-          (fun binding => run normal ghost env isData boxed limit depth (binding :: bindings) false)
+          (fun binding => runWithLoans normal ghost env isData boxed limit snapshots depth (binding :: bindings) false)
           (normal depth) isData boxed limit depth entered root domain body erased
     | some (.node .app [function,argument]) => enter limit (depth+1) state root fun entered =>
-        let callee := run normal ghost env isData boxed limit depth bindings true
+        let callee := runWithLoans normal ghost env isData boxed limit snapshots depth bindings true
         let erased := ghost depth bindings
         let argumentInfer := fun flag => if flag then erased else recur
         NativeCoreCodeApplicationFinalization.run callee argumentInfer erased normal env boxed
           limit depth entered root function argument head
     | _ => NativeCoreCodeHeadInference.run limit (depth+1) bindings state root
 
-theorem run_progress
+theorem runWithLoans_progress
     (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (run normal ghost env isData boxed limit depth bindings head state root) := by
+    Progress limit state (runWithLoans normal ghost env isData boxed limit snapshots depth bindings head state root) := by
   induction depth generalizing bindings head state root with
   | zero => exact NativeCoreCodeHeadInference.run_progress
   | succ depth ih =>
-    unfold run
+    unfold runWithLoans
     split
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
@@ -86,6 +92,8 @@ theorem run_progress
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferIndexWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside =>
+        NativeCoreCodeBorrow.run_progress (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
         (fun _ _ _ => ih) (normalProgress depth) inside)
@@ -103,11 +111,19 @@ theorem run_progress
       · exact ghostProgress depth bindings
     · exact NativeCoreCodeHeadInference.run_progress
 
+private theorem headSound (wf : UnifiedProgram.EnvWellFormed env)
+    (context : ContextRep env base bindings ctx) :
+    ModeSound env loans base ctx limit false (NativeCoreCodeHeadInference.run limit depth bindings) := by
+  intro _ _ _ _ _ onBase room source success ambient retained
+  obtain ⟨kept,safe,type,represented,typed⟩ :=
+    NativeCoreCodeHeadInference.run_sound wf context onBase room source success ambient retained
+  exact ⟨kept,safe,type,represented,typed.withAmbientLoans wf⟩
+
 /-- All recursive code branches share the original local annotations.
 The ghost callback handles annotations, erased arguments and ownership
 inspection. The application policy uses a normalizer that resolves
 transparent globals before inspecting their representation. -/
-theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
+theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
     (metadata : NativeCoreGhostSort.DataFamilies env isData)
     (boxedMetadata : NativeCoreGhostReferenceTypes.BoxedFamilies env boxed)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
@@ -116,31 +132,28 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
     (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
     (ghostSound : ∀ {arena bindings ctx}, Prefix base arena → ContextRep env arena bindings ctx →
       ∀ depth, InferSound env arena ctx limit (ghost depth bindings))
-    (onStart : Prefix base start) (context : ContextRep env start bindings ctx) :
-    NativeCoreCodeHeadInference.Sound env start ctx limit (run normal ghost env isData boxed limit depth bindings head) := by
+    (onStart : Prefix base start) (context : ContextRep env start bindings ctx)
+    (frames : FramesRep start snapshots loans) :
+    ModeSound env loans start ctx limit false (runWithLoans normal ghost env isData boxed limit snapshots depth bindings head) := by
   induction depth generalizing head start bindings ctx with
-  | zero => exact NativeCoreCodeHeadInference.run_sound wf context
+  | zero => exact headSound wf context
   | succ depth ih =>
     intro state root term answer final onBase room source success ambient retained
-    let recur := run normal ghost env isData boxed limit depth bindings false
+    let recur := runWithLoans normal ghost env isData boxed limit snapshots depth bindings false
     have normalLocal (depth : Nat) : VisitsFrom start (ExpandedNormalization env) (normal depth) := by
       intro _ _ _ _ later represented succeeded
       exact normalSound depth (onStart.trans later) represented succeeded
     have normalLocalFree : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs start normal := by
       intro _ _ _ _ _ _ onBase input succeeded output
       exact normalFree (onStart.trans onBase) input succeeded output
-    have childSound : NativeCoreCodeHeadInference.Sound env start ctx limit recur := ih onStart context
     have childCost : ∀ state root, state.steps ≤ limit → Progress limit state (recur state root) :=
-      fun _ _ inside => run_progress ghostProgress normalProgress inside
-    have modeSound : NativeCoreBufferRelease.ModeSound env [] start ctx limit false recur := by
-      intro _ _ _ _ _ withinBase room source found after retained
-      obtain ⟨kept,safe,typed⟩ := childSound withinBase room source found after retained
-      exact ⟨kept,safe,typed⟩
-    unfold run at success ambient ⊢
+      fun _ _ inside => runWithLoans_progress ghostProgress normalProgress inside
+    have modeSound : ModeSound env loans start ctx limit false recur := ih onStart context frames
+    unfold runWithLoans at success ambient ⊢
     cases source with
     | var read =>
       simp only [read] at success ambient ⊢
-      exact NativeCoreCodeHeadInference.run_sound wf context onBase room (.var read) success ambient retained
+      exact headSound wf context onBase room (.var read) success ambient retained
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
@@ -156,8 +169,9 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
             obtain ⟨entered,inside⟩ := enter_success success
             rw [entered] at success ambient ⊢
             first
-            | exact strict_refines (state := {state with steps := state.steps+1})
-                childSound childCost onBase inside first second success ambient retained
+            | obtain ⟨kept,safe,typed⟩ := strict_refinesMode (state := {state with steps := state.steps+1})
+                modeSound childCost onBase inside first second success ambient retained
+              exact ⟨kept,safe,typed⟩
             | obtain ⟨kept,backward,typed⟩ := NativeCoreBufferRelease.inferFree_refines
                 (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
                 modeSound childCost onBase inside first second success ambient retained
@@ -165,28 +179,28 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
             | obtain ⟨kept,backward,typed⟩ := inferAlloc_modeRefines (state := {state with steps := state.steps+1})
                 (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside first second success ambient retained
               exact ⟨kept,backward,typed⟩
-            | apply arithmetic_refines (state := {state with steps := state.steps+1}) (depth := depth)
-                (normalLocal depth) (normalProgress depth) childSound childCost
+            | apply arithmetic_refinesMode (state := {state with steps := state.steps+1}) (depth := depth)
+                (normalLocal depth) (normalProgress depth) modeSound childCost
                 onBase inside first second rfl _ success ambient retained
               intro left right
               simp only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] at left right ⊢
               first | exact .arith left right | exact .uadd left right
-            | let callee := run normal ghost env isData boxed limit depth bindings true
+            | let callee := runWithLoans normal ghost env isData boxed limit snapshots depth bindings true
               let erased := ghost depth bindings
-              have calleeTyped : NativeCoreCodeApplication.Sound env [] start ctx limit false callee := by
+              have calleeTyped : NativeCoreCodeApplication.Sound env loans start ctx limit false callee := by
                 intro _ _ _ _ _ held cost represented succeeded finalPrefix comparisons
-                obtain ⟨kept,safe,typed⟩ := ih onStart context held cost
+                obtain ⟨kept,safe,typed⟩ := ih onStart context frames held cost
                   represented succeeded finalPrefix comparisons
                 exact ⟨kept,safe,typed⟩
-              have operandTyped : ∀ mode, NativeCoreCodeApplication.Sound env [] start ctx limit mode
+              have operandTyped : ∀ mode, NativeCoreCodeApplication.Sound env loans start ctx limit mode
                   (if mode then erased else recur) := by
                 intro mode
                 cases mode
                 · exact modeSound
                 · intro _ _ _ _ _ held cost represented succeeded finalPrefix comparisons
-                  obtain ⟨kept,safe,typed⟩ := ghostSound onStart context depth held cost
+                  obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onStart context depth held cost
                     represented succeeded finalPrefix comparisons
-                  exact ⟨kept,safe,typed⟩
+                  exact ⟨kept,safe,type,annotation,typed.ghost loans⟩
               have operandProgress : ∀ (mode : Bool) state root, state.steps ≤ limit →
                   Progress limit state ((if mode then erased else recur) state root) := by
                 intro mode
@@ -195,7 +209,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 · exact ghostProgress depth bindings
               obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreCodeApplicationFinalization.run_refines
                 (state := {state with steps := state.steps+1}) wf normalLocalFree normalLocal normalProgress
-                calleeTyped operandTyped (fun _ _ inside => run_progress ghostProgress normalProgress inside)
+                calleeTyped operandTyped (fun _ _ inside => runWithLoans_progress ghostProgress normalProgress inside)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
@@ -223,6 +237,24 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                   modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
                   onBase inside left right proof success ambient retained
                 exact ⟨kept,safe,typed⟩
+      case borrow =>
+        have length : refs.length = 1 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
+        cases children with
+        | cons ownerRep rest =>
+          cases rest
+          dsimp only at success ambient ⊢
+          obtain ⟨entered,inside⟩ := enter_success success
+          rw [entered] at success ambient ⊢
+          obtain ⟨index,rfl⟩ := NativeCoreCodeBorrow.accepted_owner_named
+            (state := {state with steps := state.steps+1}) ownerRep success
+          rw [context.length_eq] at success ambient ⊢
+          obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreCodeBorrow.run_refines
+            (state := {state with steps := state.steps+1}) wf boxedMetadata (frames.frame onBase)
+            (ghostSound onStart context depth) (normalLocal depth) (normalProgress depth)
+            onBase inside ownerRep success ambient retained
+          exact ⟨kept,safe,.ref type,represented,by
+            simpa only [Term.borrow,Term.ref,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       case elements count =>
         dsimp only at success ambient ⊢
         obtain ⟨entered,inside⟩ := enter_success success
@@ -265,11 +297,11 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 dsimp only at success ambient ⊢
                 obtain ⟨entered,inside⟩ := enter_success success
                 rw [entered] at success ambient ⊢
-                let next := fun assumption => run normal ghost env isData boxed limit depth
+                let next := fun assumption => runWithLoans normal ghost env isData boxed limit snapshots depth
                   (⟨assumption,true⟩ :: bindings) false
                 have branchSound (equality : Bool) : ∀ {opened assumption}, Prefix state.arena opened →
                     Represents opened assumption (.node (conditionOp equality) [a,b]) →
-                    NativeCoreBufferRelease.ModeSound env [] opened
+                    ModeSound env loans opened
                       (⟨EnvironmentDelta.expand env (.node (conditionOp equality) [a,b]),true⟩ :: ctx) limit false
                       (next assumption) := by
                   intro opened assumption kept represented _ _ _ _ _ current currentRoom branch checked future tape
@@ -277,24 +309,24 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                   have extended : ContextRep env opened (⟨assumption,true⟩ :: bindings)
                       (⟨EnvironmentDelta.expand env (.node (conditionOp equality) [a,b]),true⟩ :: ctx) :=
                     .cons ⟨_,represented,rfl,rfl⟩ (context.frame baseHere)
-                  obtain ⟨kept,safe,typed⟩ := ih (head := false) (onStart.trans baseHere) extended
+                  obtain ⟨kept,safe,typed⟩ := ih (head := false) (onStart.trans baseHere) extended (frames.frame baseHere)
                     current currentRoom branch checked future tape
                   exact ⟨kept,safe,typed⟩
                 have enteredNormal : VisitsFrom state.arena (ExpandedNormalization env) (normal depth) := by
                   intro _ _ _ _ later represented succeeded
                   exact normalLocal depth (onBase.trans later) represented succeeded
-                have enteredMode : NativeCoreBufferRelease.ModeSound env [] state.arena ctx limit false recur := by
+                have enteredMode : ModeSound env loans state.arena ctx limit false recur := by
                   intro _ _ _ _ _ later room represented succeeded after tape
                   exact modeSound (onBase.trans later) room represented succeeded after tape
                 first
                 | obtain ⟨kept,safe,typed⟩ := inferConditional_modeRefines
                     (state := {state with steps := state.steps+1}) (inferThen := next) wf enteredNormal (normalProgress depth)
-                    enteredMode childCost (branchSound false) (fun _ _ _ room => run_progress ghostProgress normalProgress room)
+                    enteredMode childCost (branchSound false) (fun _ _ _ room => runWithLoans_progress ghostProgress normalProgress room)
                     (.refl _) inside leftRep rightRep yesRep noRep success ambient retained
                   exact ⟨kept,safe,typed⟩
                 | obtain ⟨kept,safe,typed⟩ := inferConditional_modeRefines
                     (state := {state with steps := state.steps+1}) (inferThen := next) wf enteredNormal (normalProgress depth)
-                    enteredMode childCost (branchSound true) (fun _ _ _ room => run_progress ghostProgress normalProgress room)
+                    enteredMode childCost (branchSound true) (fun _ _ _ room => runWithLoans_progress ghostProgress normalProgress room)
                     (.refl _) inside leftRep rightRep yesRep noRep success ambient retained
                   exact ⟨kept,safe,typed⟩
       case lam flag =>
@@ -316,22 +348,50 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
             have enteredNormal : VisitsFrom state.arena (ExpandedNormalization env) (normal depth) := by
               intro _ _ _ _ later represented succeeded
               exact normalLocal depth (onBase.trans later) represented succeeded
-            let visitBody := fun binding => run normal ghost env isData boxed limit depth (binding :: bindings) false
-            have bodySound : NativeCoreCodeApplication.Sound env [] state.arena
+            let visitBody := fun binding => runWithLoans normal ghost env isData boxed limit snapshots depth (binding :: bindings) false
+            have bodySound : NativeCoreCodeApplication.Sound env loans state.arena
                 (⟨EnvironmentDelta.expand env D,flag⟩ :: ctx) limit false (visitBody ⟨domain,flag⟩) := by
               intro _ _ _ _ _ localBase cost represented succeeded finalPrefix comparisons
-              obtain ⟨kept,safe,typed⟩ := ih (head := false) enteredBase extended localBase cost
+              obtain ⟨kept,safe,typed⟩ := ih (head := false) enteredBase extended (frames.frame onBase) localBase cost
                 represented succeeded finalPrefix comparisons
               exact ⟨kept,safe,typed⟩
             obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreCodeLambda.run_refines
               (state := {state with steps := state.steps+1}) (visitBody := visitBody) (depth := depth)
               metadata boxedMetadata enteredNormal (normalProgress depth) (ghostSound enteredBase enteredContext depth)
-              bodySound (ghostProgress depth bindings) (fun _ _ inside => run_progress ghostProgress normalProgress inside)
+              bodySound (ghostProgress depth bindings) (fun _ _ inside => runWithLoans_progress ghostProgress normalProgress inside)
               (.refl _) inside domainRep bodyRep success ambient retained
             exact ⟨kept,safe,_,represented,by simpa only [Term.lam,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       all_goals
-        exact NativeCoreCodeHeadInference.run_sound wf context onBase room (.node read arity children)
+        exact headSound wf context onBase room (.node read arity children)
           success ambient retained
+
+abbrev run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
+    (isData boxed : Nat → Bool) (limit : Nat) : Nat → List GraphBinding → Bool → Infer :=
+  runWithLoans normal ghost env isData boxed limit []
+
+theorem run_progress
+    (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (run normal ghost env isData boxed limit depth bindings head state root) :=
+  runWithLoans_progress ghostProgress normalProgress room
+
+theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
+    (metadata : NativeCoreGhostSort.DataFamilies env isData)
+    (boxedMetadata : NativeCoreGhostReferenceTypes.BoxedFamilies env boxed)
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
+    (normalFree : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs base normal)
+    (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
+    (ghostSound : ∀ {arena bindings ctx}, Prefix base arena → ContextRep env arena bindings ctx →
+      ∀ depth, InferSound env arena ctx limit (ghost depth bindings))
+    (onStart : Prefix base start) (context : ContextRep env start bindings ctx) :
+    NativeCoreCodeHeadInference.Sound env start ctx limit (run normal ghost env isData boxed limit depth bindings head) := by
+  intro _ _ _ _ _ onBase room source success ambient retained
+  obtain ⟨kept,safe,typed⟩ := runWithLoans_sound wf metadata boxedMetadata normalProgress normalSound normalFree
+    ghostProgress ghostSound onStart context (loans := []) FamilyEnvironment.RelList.nil
+    onBase room source success ambient retained
+  exact ⟨kept,safe,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreCodeInference
 
@@ -460,5 +520,31 @@ theorem memory_visits_match_native_code :
       borrowed.state.arena[16]? = some (.node .lt [1,0]) ∧ borrowed.state.arena[21]? = some (.node .i64 []) := by
   cbv
 
+
+private def lendCallbackInput : Arena := #[
+  .var 0,.node (.natural 1) [],.node .buffer [1],.node .ref [2],
+  .node (.natural 0) [],.node .decide [4,1],.node .index [0,4,5],.node (.lam false) [3,6],
+  .node .i64 [],.var 1,.node .free [0,9],.node (.lam false) [2,10],
+  .node (.lam false) [8,11],.node .lend [0,7,12],.node .ref [2]]
+
+private def preparedReaderArena : Arena :=
+  (NativeCoreDependentLendCallbacks.run 13 31 ⟨lendCallbackInput,0⟩ 0 7 12).state.arena
+
+private def checkReader (limit : Nat) (snapshots : List NativeCoreCodeLeaseLookup.Snapshot) :=
+  runWithLoans (NativeCoreGhostLiteralAddition.run [] 0 limit) (NativeCoreGhostSpineInference.run [] 0 limit)
+    empty (fun _ => false) (fun _ => false) limit snapshots 31 [⟨2,false⟩] false ⟨preparedReaderArena,0⟩ 16
+
+set_option maxRecDepth 4096 in
+/-- The actual specialized Index reader gains its borrowed reference from
+the saved owner. The same reader without that snapshot stops after two
+entries with the original arena. -/
+theorem prepared_reader_borrow_matches_native :
+    let active := checkReader 38 [⟨1,0⟩]
+    let outside := checkReader 2 []
+    active.state = ⟨preparedReaderArena ++ #[.node .ref [2],.node .u64 [],.node .u64 [],.node .lt [4,1],
+      .node .u64 [],.node .u64 [],.node .u64 [],.node .lt [4,1],.node .i64 []],38⟩ ∧
+      active.result.map Inferred.typeRoot = .ok 29 ∧
+      outside = ⟨⟨preparedReaderArena,2⟩,.error (.outsideFragment 15)⟩ := by
+  cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

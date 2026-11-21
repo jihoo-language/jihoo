@@ -89,17 +89,8 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : BoxedFam
     obtain ⟨ownedKept,ownedBack,ownerType⟩ := requireOwned_refines metadata normalSound
       (onBase.trans (authorization.kept.trans childKept)) typeRep ownedOk
     obtain ⟨appendKept,appendBack,rootRep⟩ := append_refines (.cons (typeRep.frame ownedKept) .nil) rfl refOk
-    have renamed : LoanTyping.CodeRenaming [] ctx loans ctx id := by
-      refine ⟨?_,?_,?_⟩
-      · intro i binding found
-        simpa only [Term.rename_id,id_eq] using found
-      · intro frame member
-        cases member
-      · intro selected impossible
-        cases impossible
-    have restored := typed.codeRenaming wf renamed
     have ownerTyped : LoanTyping.HasType env loans ctx true (.var index) (expand env type) := by
-      simpa only [expand,Term.rename_id] using restored
+      simpa only [expand] using typed.withAmbientLoans (loans := loans) wf
     refine ⟨authorization.kept.trans (childKept.trans (ownedKept.trans appendKept)),?_,type,rootRep,
       .codeBorrowOwned ownerTyped ownerType allowed⟩
     intro backward

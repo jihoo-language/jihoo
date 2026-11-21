@@ -1657,9 +1657,29 @@ fn dependent_lend_callbacks() {
     assert(!short.infer(13, scope.as_slice(), true, 32).is_ok() && short.node_count() == 18,
         "one fewer checking tick leaves the final callback unbuilt")
 
+    var reader_done = dependent_lend_fixture()
+    spend(&reader_done, budget-76)
+    assert(!reader_done.infer(13, scope.as_slice(), false, 32).is_ok() &&
+        reader_done.node_count() == 34 && reader_done.term(25) == core.Term.Ref(2) &&
+        reader_done.term(26) == core.Term.U64 && reader_done.term(27) == core.Term.U64 &&
+        reader_done.term(28) == core.Term.Lt(4, 1) && reader_done.term(29) == core.Term.U64 &&
+        reader_done.term(30) == core.Term.U64 && reader_done.term(31) == core.Term.U64 &&
+        reader_done.term(32) == core.Term.Lt(4, 1) && reader_done.term(33) == core.Term.I64,
+        "the specialized CODE reader leaves the exact borrow, bound and signed result rows")
+    var reader_short = dependent_lend_fixture()
+    spend(&reader_short, budget-75)
+    assert(!reader_short.infer(13, scope.as_slice(), false, 32).is_ok() &&
+        reader_short.node_count() == 33, "one fewer tick leaves the reader's result unbuilt")
+
     var code = dependent_lend_fixture()
     let typed = code.infer(13, scope.as_slice(), false, 32).unwrap()
-    assert(code.term(typed) == core.Term.I64, "the active reader permits borrowing the named owner in code")
+    assert(typed == 8 && code.term(typed) == core.Term.I64 && code.node_count() == 37,
+        "the active CODE reader borrows the named owner and returns the original signed type")
+    assert(match code.infer(16, scope.as_slice(), false, 31) {
+        Err(e) => e.msg == "core: a borrow of a value is evidence only", _ => false
+    } && code.node_count() == 37, "the same specialized reader is rejected after its scope exits")
+    assert(budget-remaining_ticks(&code) == 114,
+        "CODE lending uses 112 ticks and revisiting its reader outside the scope uses two")
     var outside = dependent_lend_fixture()
     let borrow = outside.add(core.Term.Borrow(0), diag.Span.nowhere()).unwrap()
     let before = outside.node_count()

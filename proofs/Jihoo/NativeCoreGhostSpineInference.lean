@@ -13,6 +13,7 @@ import Jihoo.NativeCoreGhostSort
 import Jihoo.NativeCoreGhostBinderCheck
 import Jihoo.NativeCoreGhostReferenceTypes
 import Jihoo.NativeCoreGhostLiteralAddition
+import Jihoo.NativeLoanGhostPromotion
 import Jihoo.NativeLoanTypeUniqueness
 
 /-! Ghost Core.infer on local and global heads, dependent application spines,
@@ -1415,7 +1416,7 @@ inductive ContextRep (env : Environment) (arena : Arena) : List GraphBinding →
   | cons : BindingRep env arena row binding → ContextRep env arena rows ctx →
       ContextRep env arena (row :: rows) (binding :: ctx)
 
-private theorem ContextRep.length_eq (represented : ContextRep env arena bindings ctx) :
+theorem ContextRep.length_eq (represented : ContextRep env arena bindings ctx) :
     bindings.length = ctx.length := by
   induction represented with
   | nil => rfl
@@ -1582,7 +1583,7 @@ private theorem ghost_as_mode (sound : InferSound env base ctx limit infer) :
 private theorem requireOperands_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (operands : RepresentsList state.arena args terms) (expectedRep : Represents state.arena expected type)
@@ -1591,7 +1592,7 @@ private theorem requireOperands_modeRefines
     (retained : ∀ pair ∈ comparisons, PairRetained final pair) :
     let outcome := requireOperands infer normal limit depth expected state args
     Prefix state.arena outcome.state.arena ∧ (Backward state.arena → Backward outcome.state.arena) ∧
-      ∀ term ∈ terms, LoanTyping.HasType env [] ctx mode (expand env term) (expand env type) := by
+      ∀ term ∈ terms, LoanTyping.HasType env loans ctx mode (expand env term) (expand env type) := by
   induction args generalizing state terms comparisons with
   | nil =>
       cases operands
@@ -1653,7 +1654,7 @@ private theorem requireOperands_refines
 private theorem checkFixed_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (operands : RepresentsList state.arena args terms) (operandArity : operand.arity = 0)
@@ -1662,7 +1663,7 @@ private theorem checkFixed_modeRefines
     (retained : ∀ pair ∈ comparisons, PairRetained final pair) :
     let after := (checkFixed infer normal limit depth state operand args).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      ∀ term ∈ terms, LoanTyping.HasType env [] ctx mode (expand env term) (expand env (.node operand [])) := by
+      ∀ term ∈ terms, LoanTyping.HasType env loans ctx mode (expand env term) (expand env (.node operand [])) := by
   unfold checkFixed at success ambient ⊢
   obtain ⟨expected, emittedOk, emittedNext⟩ := Outcome.next_success success
   rw [emittedNext] at success ambient ⊢
@@ -1759,7 +1760,7 @@ private theorem inferFamily_refines
 theorem inferElements_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (elementsRep : RepresentsList state.arena refs elements)
@@ -1769,7 +1770,7 @@ theorem inferElements_modeRefines
     let after := (inferElements infer normal limit depth state root count refs).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧
-        LoanTyping.HasType env [] ctx mode (expand env (.elements count elements)) (expand env type) := by
+        LoanTyping.HasType env loans ctx mode (expand env (.elements count elements)) (expand env type) := by
   unfold inferElements at success ambient ⊢
   split at success
   · rename_i permitted
@@ -1793,7 +1794,7 @@ theorem inferElements_modeRefines
     have elementsLength : (expandArgs env elements).length = count := by
       rw [EnvironmentDelta.expandArgs_map,List.length_map,← NativeCoreIdentical.represented_length elementsRep]
       exact permitted.1
-    have members : ∀ term ∈ expandArgs env elements, LoanTyping.HasType env [] ctx mode term .i64 := by
+    have members : ∀ term ∈ expandArgs env elements, LoanTyping.HasType env loans ctx mode term .i64 := by
       intro term found
       rw [EnvironmentDelta.expandArgs_map] at found
       obtain ⟨original,member,rfl⟩ := List.mem_map.mp found
@@ -1822,7 +1823,7 @@ private theorem inferElements_refines
 theorem inferAlloc_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (countRep : Represents state.arena count n) (fillRep : Represents state.arena fill x)
@@ -1832,7 +1833,7 @@ theorem inferAlloc_modeRefines
     let after := (inferAlloc infer normal limit depth state count fill).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧
-        LoanTyping.HasType env [] ctx mode (expand env (.alloc n x)) (expand env type) := by
+        LoanTyping.HasType env loans ctx mode (expand env (.alloc n x)) (expand env type) := by
   unfold inferAlloc at success ambient ⊢
   obtain ⟨countPairs,countOk,countNext⟩ := Outcome.next_success success
   rw [countNext] at success ambient ⊢
@@ -2021,7 +2022,7 @@ private theorem checkIndexEvidence_refines
 theorem inferStoreWithProof_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (proofSound : InferSound env base ctx limit inferProof)
     (proofCost : ∀ state root, state.steps ≤ limit → Progress limit state (inferProof state root))
@@ -2034,7 +2035,7 @@ theorem inferStoreWithProof_modeRefines
     let after := (inferStoreWithProof infer inferProof normal limit depth state buffer index value proof).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧
-        LoanTyping.HasType env [] ctx mode (expand env (.store b i v p)) (expand env type) := by
+        LoanTyping.HasType env loans ctx mode (expand env (.store b i v p)) (expand env type) := by
   unfold inferStoreWithProof at success ambient ⊢
   obtain ⟨checked,bufferOk,bufferNext⟩ := Outcome.next_success success
   rw [bufferNext] at success ambient ⊢
@@ -2086,7 +2087,7 @@ theorem inferStoreWithProof_modeRefines
     _,resultRep,?_⟩
   simp only [expand,expandArgs] at typedIndex typedValue
   simp only [Term.store,expand,expandArgs]
-  exact .store typedBuffer (typedIndex i List.mem_cons_self) (typedValue v List.mem_cons_self) typedProof
+  exact .store typedBuffer (typedIndex i List.mem_cons_self) (typedValue v List.mem_cons_self) (typedProof.ghost loans)
 
 private theorem inferStore_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -2448,7 +2449,7 @@ private theorem readIndexType_refines
 theorem inferIndexWithProof_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (proofSound : InferSound env base ctx limit inferProof)
     (proofCost : ∀ state root, state.steps ≤ limit → Progress limit state (inferProof state root))
@@ -2461,7 +2462,7 @@ theorem inferIndexWithProof_modeRefines
     let after := (inferIndexWithProof infer inferProof normal limit depth state subject index proof).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧
-        LoanTyping.HasType env [] ctx mode (expand env (.index x i p)) (expand env type) := by
+        LoanTyping.HasType env loans ctx mode (expand env (.index x i p)) (expand env type) := by
   unfold inferIndexWithProof at success ambient ⊢
   obtain ⟨subjectType,subjectOk,subjectNext⟩ := Outcome.next_success success
   rw [subjectNext] at success ambient ⊢
@@ -2511,9 +2512,9 @@ theorem inferIndexWithProof_modeRefines
   simp only [Term.index,expand,expandArgs]
   cases reference : bound.2
   · simp only [reference,Bool.false_eq_true,ite_false] at decoded
-    exact .index (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) typedProof
+    exact .index (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) (typedProof.ghost loans)
   · simp only [reference,ite_true] at decoded
-    exact .borrowedIndex (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) typedProof
+    exact .borrowedIndex (typedSubject.convert decoded) (typedIndex i List.mem_cons_self) (typedProof.ghost loans)
 
 private theorem inferIndex_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -2715,7 +2716,7 @@ private theorem checkSubtract_refines
 theorem inferSubtractWithProof_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (proofSound : InferSound env base ctx limit inferProof)
     (proofProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferProof state root))
@@ -2728,7 +2729,7 @@ theorem inferSubtractWithProof_modeRefines
     let after := (inferSubtractWithProof infer inferProof normal limit depth state numerator denominator proof).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧
-        LoanTyping.HasType env [] ctx mode (expand env (.usub a b p)) (expand env type) := by
+        LoanTyping.HasType env loans ctx mode (expand env (.usub a b p)) (expand env type) := by
   unfold inferSubtractWithProof at success ambient ⊢
   obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
   rw [checkedNext] at success ambient ⊢
@@ -2758,7 +2759,7 @@ theorem inferSubtractWithProof_modeRefines
   simp only [expand, expandArgs] at typedOperands
   simp only [Term.usub, expand, expandArgs]
   exact .usub (typedOperands _ List.mem_cons_self)
-    (typedOperands _ (List.mem_cons_of_mem _ List.mem_cons_self)) typedProof
+    (typedOperands _ (List.mem_cons_of_mem _ List.mem_cons_self)) (typedProof.ghost loans)
 
 
 private theorem inferSubtract_refines
@@ -2966,11 +2967,11 @@ private theorem finishConditional_modeRefines
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (thenTypeRep : Represents state.arena thenType written)
-    (thenTyped : LoanTyping.HasType env [] thenContext mode (expand env consequent) (expand env written))
+    (thenTyped : LoanTyping.HasType env loans thenContext mode (expand env consequent) (expand env written))
     (alternativeRep : Represents state.arena alternative other)
     (success : (finishConditional infer normal limit depth state thenType alternative).result = .ok answer)
     (ambient : Prefix (finishConditional infer normal limit depth state thenType alternative).state.arena final)
@@ -2978,8 +2979,8 @@ private theorem finishConditional_modeRefines
     let output := finishConditional infer normal limit depth state thenType alternative
     Prefix state.arena output.state.arena ∧ (Backward state.arena → Backward output.state.arena) ∧
       ∃ result, Represents output.state.arena answer.typeRoot result ∧
-        LoanTyping.HasType env [] thenContext mode (expand env consequent) ((expand env result).rename Nat.succ) ∧
-        LoanTyping.HasType env [] ctx mode (expand env other) (expand env result) := by
+        LoanTyping.HasType env loans thenContext mode (expand env consequent) ((expand env result).rename Nat.succ) ∧
+        LoanTyping.HasType env loans ctx mode (expand env other) (expand env result) := by
   unfold finishConditional at success ambient ⊢
   obtain ⟨normalRoot, normalOk, normalNext⟩ := Outcome.next_success success
   rw [normalNext] at success ambient ⊢
@@ -3007,11 +3008,11 @@ theorem inferConditional_modeRefines
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : ModeSound env [] base ctx limit mode infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (thenSound : ∀ {entered assumption}, Prefix state.arena entered →
       Represents entered assumption (.node (conditionOp equality) [a, b]) →
-      ModeSound env [] entered (⟨expand env (.node (conditionOp equality) [a, b]), true⟩ :: ctx)
+      ModeSound env loans entered (⟨expand env (.node (conditionOp equality) [a, b]), true⟩ :: ctx)
         limit mode (inferThen assumption))
     (thenProgress : ∀ assumption state root, state.steps ≤ limit → Progress limit state (inferThen assumption state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
@@ -3022,7 +3023,7 @@ theorem inferConditional_modeRefines
     (retained : RetainedComparisons final answer) :
     let after := (inferConditional infer inferThen normal limit depth state equality left right yes no).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env [] ctx mode
+      ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx mode
         (expand env (.node (conditionalOp equality) [a, b, consequent, alternative])) (expand env type) := by
   unfold inferConditional at success ambient ⊢
   obtain ⟨conditionPairs, checkedOk, checkedNext⟩ := Outcome.next_success success

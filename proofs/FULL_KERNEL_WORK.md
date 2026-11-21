@@ -4879,3 +4879,18 @@ The native inference schedule passed. The correspondence suites passed
 and 55 exact-byte checks, and 8 type-family controls and 9 exact diagnostic
 rejections. The pure mixed checker accepted the exact native snapshot
 bytes. Peak sampled process-tree RSS was 5,035.2 MiB.
+
+### Recursive CODE checks use the active loan snapshots
+
+The recursive CODE visitor now carries the saved owner roots through its
+scalar, memory, conditional, lambda, and application checks. A nested
+Borrow checks its active named frame before visiting the owner's original
+annotation in ghost mode. The source typing proof uses the same loan stack
+and the actual local binding depth.
+
+The specialized reader from native Lend appends the same nine rows in Lean
+and native Core. In Lean the reader takes 38 ticks, including its Borrow
+and Index visits. The full native Lend takes 112 ticks and returns its
+written signed type. Both visitors reject the reader after its scope exits
+in two ticks with zero appended rows. The focused build passed 490 tasks,
+seven declaration audits, and the native schedule.

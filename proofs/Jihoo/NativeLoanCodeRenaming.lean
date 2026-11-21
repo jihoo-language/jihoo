@@ -571,6 +571,21 @@ theorem HasType.codeRenaming (wellFormed : UnifiedProgram.EnvWellFormed env)
     HasType env targetLoans target mode (term.rename indices) (type.rename indices) :=
   code_renaming_rule wellFormed typed target targetLoans indices renamed
 
+/-- Adding ambient loans to a derivation started without any readers leaves
+all local bindings and the source term unchanged. -/
+theorem HasType.withAmbientLoans (wellFormed : UnifiedProgram.EnvWellFormed env)
+    (typed : HasType env [] ctx mode term type) :
+    HasType env loans ctx mode term type := by
+  have same : CodeRenaming [] ctx loans ctx id := by
+    refine ⟨?_,?_,?_⟩
+    · intro index binding found
+      simpa only [Term.rename_id,id_eq] using found
+    · intro frame member
+      cases member
+    · intro owner impossible
+      cases impossible
+  simpa only [Term.rename_id] using typed.codeRenaming wellFormed same
+
 private def openVariable (selected : Nat) : Nat → Nat
   | 0 => selected
   | n + 1 => n
