@@ -5201,3 +5201,17 @@ Loop uses 103 ticks and retains its result at root 58. The proposition
 Loop uses 196 ticks and preserves the ghost graph at root 83.
 The focused build passed 498 tasks, nine declaration audits and the
 expanded native inference schedule.
+
+### Aggregate check through CODE iteration modes
+
+At `397a1bb`, the rootless Nix shell built all 1,237 Lake jobs and
+audited 11,131 declarations. The audit found 535 declarations with
+no axioms. All other declarations used only Lean's standard logical
+axioms. The five generated proof fixtures matched their sources.
+The guarded run sampled a peak tree RSS of 5,105.8 MiB.
+
+The same checkout passed 89 native kernel fixtures and 31 additional
+checks, 69 mixed-program source fixtures and 55 exact-byte comparisons,
+eight type-family controls and nine exact-diagnostic rejections, and
+20 native family fixtures with 18 additional checks. The independent
+pure admission check accepted the exact native mixed-program bytes.
