@@ -10978,3 +10978,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferSubtractWithProof_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferSubtractWithProof_modeRefines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.subtraction_proof_mode_matches_native
+#print axioms Jihoo.NativeKernel.NativeCoreNumericalObservation.read_refines
+#print axioms Jihoo.NativeKernel.NativeCoreNumericalObservation.literal_visit_numeric
+#print axioms Jihoo.NativeKernel.NativeCoreNumericalObservation.wide_normalized_sum_has_exact_observation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_observed_usub_phases

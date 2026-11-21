@@ -1400,3 +1400,5 @@ import Jihoo.NativeCoreViewCheckedPlan
 import Jihoo.NativeCoreViewMotiveAgreement
 import Jihoo.NativeLoanNumericalEvidence
 import Jihoo.NativeBindingMachineMutableObservedUnsigned
+import Jihoo.NativeCoreNumericalObservation
+import Jihoo.NativeBindingMachineMutableUnsignedPhases

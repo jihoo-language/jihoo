@@ -4835,3 +4835,14 @@ erased variable provides the proof. Putting that variable in an operand
 fails after two ticks with seven rows committed. The focused build
 passed 487 jobs, the expanded native schedule, and three declaration
 audits.
+
+### Live numerical results and ordered subtraction phases
+
+The numerical reader decodes the actual returned arena root and
+certifies its mathematical value. The wide normalization fixture
+returns two summands whose value is exactly `2^64`. The subtraction
+proof composes the actual left and right operand runs, retaining the
+ordered effects of both and restoring the saved stack at the typed
+return. The original erased evidence justifies that return through the
+checked numeric observations. The focused build passed 418 jobs and
+four declaration audits.
