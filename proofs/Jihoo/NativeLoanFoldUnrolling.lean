@@ -6,35 +6,44 @@ namespace Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling
 
 open ProofLoop (lower_lift)
 
-private def FoldView (env : Environment) (ctx : Context) : Term → Term → Prop
+private def FoldView (env : Environment) (loans : Loans.Stack) (ctx : Context) (mode : Bool) : Term → Term → Prop
   | .fold count initial body, result => ∃ accumulator,
-      HasType env [] ctx true count .u64 ∧ HasType env [] ctx true initial accumulator ∧
-      HasType env [] ctx true body (foldAccumulatorBodyType count accumulator) ∧
+      HasType env loans ctx mode count .u64 ∧ HasType env loans ctx mode initial accumulator ∧
+      HasType env loans ctx mode body (foldAccumulatorBodyType count accumulator) ∧
       Conversion.Conv env accumulator result
   | _, _ => True
 
-private theorem FoldView.convert (view : FoldView env ctx term old)
-    (converted : Conversion.Conv env old next) : FoldView env ctx term next := by
-  fun_cases FoldView env ctx term old <;> simp only [FoldView] at view ⊢
+private theorem FoldView.convert (view : FoldView env loans ctx mode term old)
+    (converted : Conversion.Conv env old next) : FoldView env loans ctx mode term next := by
+  fun_cases FoldView env loans ctx mode term old <;> simp only [FoldView] at view ⊢
   all_goals first | exact view | skip
   obtain ⟨accumulator,count,initial,body,original⟩ := view
   exact ⟨accumulator,count,initial,body,original.trans converted⟩
 
-private theorem fold_view (typed : HasType env loans ctx mode term type) : FoldView env ctx term type := by
+private theorem fold_view (typed : HasType env loans ctx mode term type) : FoldView env loans ctx mode term type := by
   apply HasType.rec (t := typed)
     (motive_1 := fun _ _ _ _ _ _ => True)
-    (motive_2 := fun _ ctx _ term type _ => FoldView env ctx term type)
+    (motive_2 := fun loans ctx mode term type _ => FoldView env loans ctx mode term type)
     (motive_3 := fun _ _ _ _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ => True)
     (motive_5 := fun _ _ _ _ _ _ => True)
   all_goals intros
   all_goals first | trivial | skip
   case foldI64 count initial body _ _ _ _ =>
-    exact ⟨.i64,count.ghost [],initial.ghost [],by simpa using body.ghost [],.refl _⟩
+    exact ⟨.i64,count,initial,by simpa using body,.refl _⟩
   case foldOwned count initial _ body _ _ _ _ =>
-    exact ⟨_,count.ghost [],initial.ghost [],body.ghost [],.refl _⟩
+    exact ⟨_,count,initial,body,.refl _⟩
   case dataElim => split <;> trivial
   case convert _ converted ih => exact ih.convert converted
+
+/-- Fold checks its three original operands in the same mode, including
+the actual dependent telescope of a signed or owned accumulator. -/
+theorem fold_inputs (typed : HasType env loans ctx mode (.fold count initial body) type) :
+    ∃ accumulator,
+      HasType env loans ctx mode count .u64 ∧ HasType env loans ctx mode initial accumulator ∧
+      HasType env loans ctx mode body (foldAccumulatorBodyType count accumulator) ∧
+      Conversion.Conv env accumulator type :=
+  fold_view typed
 
 private theorem lift_zero (replacements : Nat → Term) : liftSub 0 replacements = replacements := rfl
 
@@ -86,14 +95,14 @@ theorem unroll_preserves
     (converted : Conversion.Conv env count (.natural n)) (range : n < 2^64)
     (iterations : Nat) (within : iterations ≤ n) :
     HasType env [] ctx true (ProofLoop.unroll n initial body iterations) type := by
-  obtain ⟨accumulator,_,initialTyped,bodyTyped,result⟩ := fold_view typed
+  obtain ⟨accumulator,_,initialTyped,bodyTyped,result⟩ := fold_inputs typed
   suffices prefixTyped : HasType env [] ctx true (ProofLoop.unroll n initial body iterations) accumulator by
     exact prefixTyped.convert result
   induction iterations with
-  | zero => exact initialTyped
+  | zero => exact initialTyped.ghost []
   | succ i ih =>
     change HasType env [] ctx true (.app (.app (.app body (.natural i)) (.decide (.natural i) (.natural n)))
       (ProofLoop.unroll n initial body i)) accumulator
-    exact step_result count accumulator i n converted range (by omega) bodyTyped (ih (by omega))
+    exact step_result count accumulator i n converted range (by omega) (bodyTyped.ghost []) (ih (by omega))
 
 end Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling

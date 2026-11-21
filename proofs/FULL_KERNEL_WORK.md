@@ -5234,3 +5234,16 @@ zero demand throughout the callback repetition, including a trapped or
 fuel-exhausted prefix. The setup retains the original owner liveness
 and distinct-allocation checks. The focused build passed 389 tasks and
 three declaration audits.
+
+### Typed iteration origins and computed counts
+
+The original Fold rule supplies its three operands in the admitted
+mode. Supported unsigned count expressions therefore execute under
+the actual source and resource checks and return their derived numeral
+with no heap events. The three callback scopes retain their original
+parameter types, including the erased bound and the accumulator.
+
+At each observed index, the actual closing origin store types the
+unrolled accumulator. Fold preserves its original accumulator type.
+Loop inhabits the original motive applied to the current index. The
+focused build passed 469 tasks and six declaration audits.

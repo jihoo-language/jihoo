@@ -11151,3 +11151,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.fold_receipts
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.loop_receipts
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.iteration
+
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofLoop.unroll_prefix_typed
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling.fold_inputs
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.fold_prefix_origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.loop_prefix_origin
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_fold_count
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.iteration_callback_scopes

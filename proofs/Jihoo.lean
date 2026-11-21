@@ -1268,6 +1268,7 @@ import Jihoo.NativeCoreCaseStrict
 import Jihoo.NativeCoreElimNormal
 import Jihoo.NativeCoreRecursiveElim
 import Jihoo.NativeBindingMachineMutableCheckedClosure
+import Jihoo.NativeBindingMachineIterationScopes
 import Jihoo.NativeBindingMachineMutableTelescopeDemand
 import Jihoo.NativeBindingMachineMutableCallEntry
 import Jihoo.NativeBindingMachineMutableCallLeases
@@ -1318,6 +1319,7 @@ import Jihoo.NativeCoreExpandedRealization
 import Jihoo.NativeLoanUniverseEqualityTransport
 import Jihoo.NativeBindingMachineMutableLoanedArithmetic
 import Jihoo.NativeBindingMachineMutableLoanedArithmeticProgress
+import Jihoo.NativeBindingMachineFoldCount
 import Jihoo.NativeCoreGhostSpineInference
 import Jihoo.NativeCoreVisibleFamilyPrefix
 import Jihoo.NativeCoreGhostConstructorFields
@@ -1415,3 +1417,4 @@ import Jihoo.NativeLoanNumericProofExecution
 import Jihoo.NativeBindingMachineMutableUnsignedPhases
 import Jihoo.NativeCoreShiftedTypeFormation
 import Jihoo.NativeLoanObservedSubtractionConversion
+import Jihoo.NativeBindingMachineIterationOrigins

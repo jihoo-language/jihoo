@@ -120,15 +120,25 @@ private theorem unroll_index_typed (bound : count < 2^64)
       .old (.legacy (.add i 1 nextValid))
     exact third.convert (.node .app (.cons (.refl _) (.cons added .nil)))
 
+/-- A prefix of dependent iteration inhabits the original motive at the
+current index. The checked step uses the same observed count at each call. -/
+theorem unroll_prefix_typed (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : HasType env loans ctx mode (.loop count motive initial body) type)
+    (countConverted : Conversion.Conv env count (.natural n)) (bound : n < 2^64)
+    (i : Nat) (within : i ≤ n) :
+    HasType env [] ctx true (unroll n initial body i) (.app motive (.natural i)) := by
+  obtain ⟨proof,_,init,step,_⟩ := iteration_view typed
+  have stepConverted := loopBodyType_count_congr wf.closed motive proof countConverted
+  exact unroll_index_typed bound init (step.convert stepConverted) i within
+
 /-- The actual base/step judgments, with bounds derived from the count's
 successful observation, construct the complete original-type unrolling. -/
 theorem unroll_typed (wf : UnifiedProgram.EnvWellFormed env)
     (typed : HasType env loans ctx mode (.loop count motive initial body) type)
     (countConverted : Conversion.Conv env count (.natural n)) (bound : n < 2^64) :
     HasType env [] ctx true (unroll n initial body n) type := by
-  obtain ⟨proof,_,init,step,original⟩ := iteration_view typed
-  have stepConverted := loopBodyType_count_congr wf.closed motive proof countConverted
-  have exactResult := unroll_index_typed bound init (step.convert stepConverted) n (Nat.le_refl _)
+  obtain ⟨_,_,_,_,original⟩ := iteration_view typed
+  have exactResult := unroll_prefix_typed wf typed countConverted bound n (Nat.le_refl _)
   have convertedBack : Conversion.Conv env (.app motive (.natural n)) (.app motive count) :=
     .node .app (.cons (.refl _) (.cons countConverted.symm .nil))
   exact exactResult.convert (convertedBack.trans original)
