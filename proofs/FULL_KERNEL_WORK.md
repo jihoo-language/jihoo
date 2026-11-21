@@ -5225,3 +5225,12 @@ contextual normalization retains the original type. A checked mixed
 declaration with count `1 + 2` returns the signed value `7`, and a
 budget of 16 rejects the unroll before building it.
 The focused build passed 289 tasks and three declaration audits.
+
+### Captured owner demand in repeated callbacks
+
+The actual resource projection exposes the setup and opened
+three-binder callback for Fold and Loop. Every captured owner slot has
+zero demand throughout the callback repetition, including a trapped or
+fuel-exhausted prefix. The setup retains the original owner liveness
+and distinct-allocation checks. The focused build passed 389 tasks and
+three declaration audits.

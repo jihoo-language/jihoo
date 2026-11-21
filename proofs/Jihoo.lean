@@ -1230,6 +1230,7 @@ import Jihoo.NativeLoanOpenProofNormalization
 import Jihoo.NativeBindingMachineMutableOwnerDemand
 import Jihoo.NativeBindingMachineMutableLoadOwnerDemand
 import Jihoo.NativeBindingMachineMutableDemandSequence
+import Jihoo.NativeBindingMachineIterationDemand
 import Jihoo.NativeBindingMachineMutableDemandTotality
 import Jihoo.NativeCoreBetaNormal
 import Jihoo.NativeCoreTrapAnalysis

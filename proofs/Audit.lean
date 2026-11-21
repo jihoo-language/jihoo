@@ -11147,3 +11147,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofLoop.normalizeIteration_preserves
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling.normalizeFold?_preserves
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling.computed_signed_fold_observation
+
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.fold_receipts
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.loop_receipts
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.iteration
