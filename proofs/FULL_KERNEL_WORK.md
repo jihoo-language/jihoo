@@ -4604,3 +4604,37 @@ substitution, literal folding, selected branches, and ordinary congruence.
 The runtime application policy consumes this fact for the represented
 original domain and argument, and the recursive CODE visitor carries it
 across arena extension. The focused build passed 480 jobs.
+
+### Aggregate check through transparent global resolution
+
+At `16eef7b`, 1,207 Lake jobs and the generated fixtures passed. The
+axiom audit checked 10,892 declarations, including 533 that used no
+axioms. The other declarations used only `propext`, `Quot.sound`, or
+`Classical.choice`. The native kernel passed 89 fixtures and 31 additional
+checks. Native mixed checking passed 69 fixtures and 55 exact-byte checks,
+and the pure mixed checker accepted the exact native output bytes. The
+native type-family tests passed eight positive and nine negative cases.
+The proof guard sampled 4,991.2 MiB of peak process-tree RSS.
+
+### Borrowed fields and dependent View motives
+
+The native reading operation retains every binder while rewriting the
+selected field as a dereference. The exact graph traces take five ticks
+at the original scope and seven under a later Pi binder. The case builder
+opens the written parameters, normalizes each field domain for ownership
+classification, and retains the original domain in the borrowed field
+type. It records each scope change, reconstructs the constructor for a
+dependent motive, and appends the recursive hypotheses in order.
+
+Lean and native Core agree on the four branch-construction traces. An
+ordinary or recursive branch with a constant motive takes four or five
+ticks, respectively. With a dependent motive the same branches take ten
+or fourteen. Subject inference keeps the first normalized Ref for motive
+comparison and obtains the parameter roots by a separate normalization
+of its inner family. The motive gate proves its Type0 result, checks the
+borrow domain of a dependent motive, and checks that the result's
+representation is fixed across all values it reads.
+
+The focused build passed 438 jobs and the 16-declaration axiom audit.
+The rebuilt compiler passed the expanded inference schedule with the
+same View rows and exact budgets.

@@ -1813,7 +1813,94 @@ fn runtime_global_from_ghost_declaration() {
     assert_spent(&invisible, "forward global rejection stops on its entry tick")
 }
 
+fn view_reading_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let first = c.add(core.Term.Var(0), span).unwrap()
+    let second = c.add(core.Term.Var(1), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    c.add(core.Term.App(first, second), span).unwrap()
+    let inside = c.add(core.Term.App(second, first), span).unwrap()
+    c.add(core.Term.Pi(false, word, inside), span).unwrap()
+    c
+}
+
+fn view_reading_scope() {
+    var outer = view_reading_fixture()
+    spend(&outer, 999995)
+    assert(outer.reading(3, 16).unwrap() == 8 && outer.node_count() == 9, "outer reading finishes at row eight")
+    assert(outer.term(6) == core.Term.Var(0) && outer.term(7) == core.Term.Deref(6) &&
+        outer.term(8) == core.Term.App(7, 1), "outer reading keeps the other variable")
+    assert_spent(&outer, "outer reading uses five ticks")
+
+    var under = view_reading_fixture()
+    spend(&under, 999993)
+    assert(under.reading(5, 16).unwrap() == 11 && under.node_count() == 12, "reading under Pi finishes at row eleven")
+    assert(under.term(6) == core.Term.Var(0) && under.term(7) == core.Term.Deref(6) &&
+        under.term(8) == core.Term.Var(1) && under.term(9) == core.Term.Deref(8) &&
+        under.term(10) == core.Term.App(9, 0) && under.term(11) == core.Term.Pi(false, 2, 10),
+        "reading under Pi dereferences the outer field and keeps the local binder")
+    assert_spent(&under, "reading under Pi uses seven ticks")
+}
+
+fn view_case_builder_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let owner = c.add(core.Term.Ind(0, Vec(u32).new()), span).unwrap()
+    let step = c.add(core.Term.Pi(false, owner, owner), span).unwrap()
+    let reference = c.add(core.Term.Ref(owner), span).unwrap()
+    c.add(core.Term.Lam(false, reference, word), span).unwrap()
+    c.push_family(core.Family { name: "BoxedView".to_string(), data: true, params: 0, arity: 0,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: owner })
+    c.push_constructor(0, core.Constructor { name: "Step".to_string(), ty: step })
+    c.check().unwrap()
+    c
+}
+
+fn view_case_builder(dependent: bool, recursion: bool) {
+    var c = view_case_builder_fixture()
+    let span = diag.Span.nowhere()
+    assert(c.node_count() == 8, "checked view signature starts with eight rows")
+    let available = if dependent { if recursion { 14 } else { 10 } } else { if recursion { 5 } else { 4 } }
+    spend(&c, 999999 - available)
+    let motive: u32 = if dependent { 4 } else { 0 }
+    let root = c.view_case_type(0, 1, [], motive, recursion, span, 16).unwrap()
+    assert(c.term(8) == core.Term.Ref(1) && c.term(9) == core.Term.Var(0) && c.term(10) == core.Term.Deref(9),
+        "all view branches borrow the recursive field")
+    if dependent {
+        let index: u32 = if recursion { 1 } else { 0 }
+        assert(c.term(11) == core.Term.Var(index) && c.term(12) == core.Term.Deref(11),
+            "the reconstructed node reads the field through its borrow")
+        match c.term(13) {
+            core.Term.Con(0, 1, fields) => assert(fields.len() == 1 && fields[0] == 12, "constructor holds the field value"),
+            _ => assert(false, "the dependent branch rebuilds the original constructor")
+        }
+        assert(c.term(14) == core.Term.Borrow(13) && c.term(15) == core.Term.App(4, 14),
+            "the motive receives the rebuilt borrow")
+        if recursion {
+            assert(root == 19 && c.node_count() == 20 && c.term(16) == core.Term.Var(0) &&
+                c.term(17) == core.Term.App(4, 16) && c.term(18) == core.Term.Pi(false, 17, 15) &&
+                c.term(root) == core.Term.Pi(false, 8, 18), "dependent recursive case type")
+        } else {
+            assert(root == 16 && c.node_count() == 17 && c.term(root) == core.Term.Pi(false, 8, 15),
+                "dependent one-level case type")
+        }
+    } else if recursion {
+        assert(root == 12 && c.node_count() == 13 && c.term(11) == core.Term.Pi(false, 0, 0) &&
+            c.term(root) == core.Term.Pi(false, 8, 11), "constant recursive case type")
+    } else {
+        assert(root == 11 && c.node_count() == 12 && c.term(root) == core.Term.Pi(false, 8, 0), "constant one-level case type")
+    }
+    assert_spent(&c, "view case construction uses the exact checking budget")
+}
+
 fn main() -> i32 {
+    view_reading_scope()
+    for dependent in [false, true] {
+        for recursion in [false, true] { view_case_builder(dependent, recursion) }
+    }
     primitive_inference()
     erased_lambda()
     impredicative_product()

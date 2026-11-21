@@ -1383,3 +1383,7 @@ import Jihoo.NativeCoreGhostFamilyElimination
 import Jihoo.NativeCoreProductSpine
 import Jihoo.NativeCoreDataRecursiveCaseLink
 import Jihoo.NativeCoreGlobalFreeComputation
+import Jihoo.NativeCoreViewReading
+import Jihoo.NativeCoreViewCaseType
+import Jihoo.NativeCoreViewSubject
+import Jihoo.NativeCoreViewMotiveGate
