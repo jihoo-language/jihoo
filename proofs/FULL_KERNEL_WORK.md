@@ -4870,3 +4870,12 @@ length in the native result graph. Lean and native Core agree on 9 ticks
 for allocation and array construction, 40 for Store, 36 for array Index,
 and 34 for borrowed Index. The focused build passed 487 jobs, nine
 declaration audits, and the native schedule in both inference modes.
+
+The aggregate check at `3b88a9d` passed 1,228 Lake tasks and an audit of
+10,992 declarations, including 535 with no axiom dependencies. The
+remaining audited declarations use only Lean's standard logical axioms.
+The native inference schedule passed. The correspondence suites passed
+89 kernel fixtures and 31 additional checks, 69 mixed source fixtures
+and 55 exact-byte checks, and 8 type-family controls and 9 exact diagnostic
+rejections. The pure mixed checker accepted the exact native snapshot
+bytes. Peak sampled process-tree RSS was 5,035.2 MiB.
