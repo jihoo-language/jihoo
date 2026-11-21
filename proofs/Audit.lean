@@ -10973,3 +10973,5 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observed_residual_order
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.no_observed_residual_less_zero
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_observed_usub_return
+#print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.run_checked_view_node
+#print axioms Jihoo.NativeKernel.NativeCoreViewMotiveAgreement.normalized_motive_modes_agree

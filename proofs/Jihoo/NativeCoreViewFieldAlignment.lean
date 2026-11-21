@@ -229,4 +229,85 @@ theorem checked_case_replay
   · simp [viewCaseType,expandedWidth,Nat.not_lt_of_ge parameterBounds.1,planned,expected,positions]
   · exact case_type_conversion history.wellFormed recursive layout flags telescopes
 
+
+open NativeCoreGhostSpineInference (Infer InferSound Refines RetainedComparisons)
+open NativeCoreGhostFamilyElimination (TableRep)
+open NativeCorePureComputationNormal (Progress)
+
+/-- Select the checked family with the actual visibility table and use its
+original constructor order. The case premise constrains only the mode
+and shape reported by the genuine normalizer. -/
+theorem run_checked_view_node
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : RepresentsFamilies base familyRows familyTerms)
+    (visible : TableRep env base familyRows table)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (motiveRep : Represents state.arena motive M) (subjectRep : Represents state.arena subject X)
+    (branchReps : RepresentsList state.arena branches cases)
+    (subjectFormation : ∀ {input original}, (infer state subject).result = .ok input →
+      Represents (infer state subject).state.arena input.typeRoot original →
+      ∃ sort : SortTag, LoanTyping.HasType env [] ctx true (expand env original) sort.term)
+    (classification : ∀ {entry : Environment.CheckedFamily} {values : List Term} {dependent : Bool}
+      {after : Arena} {constructor : Nat} {signature : Environment.Signature} {telescope : Term}
+      {roots : List FieldRoot} {fields : List Environment.Field} {motiveShape : Term} {plans : List ViewFieldPlan},
+      env.families[family]? = some entry →
+      LoanTyping.HasType env [] ctx true (expand env M)
+        (viewMotiveType dependent (.node (.ind family entry.declaration.arity) (expandArgs env values))) →
+      entry.signatures[constructor]? = some signature →
+      viewPlan env family (signature.fields.drop entry.declaration.params) = some plans →
+      FieldLayout env family after telescope roots fields →
+      ExpandedNormalization env M motiveShape →
+      roots.map fieldFlags = plans.map planFlags ∧ LoanTyping.Checker.viewDependent motiveShape = dependent)
+    (success : (NativeCoreGhostViewInference.runNode (some env) table infer normal limit depth state
+      recursive root family (motive :: (branches ++ [subject]))).result = .ok answer)
+    (ambient : Prefix (NativeCoreGhostViewInference.runNode (some env) table infer normal limit depth state
+      recursive root family (motive :: (branches ++ [subject]))).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.node (.view recursive family cases.length) (M :: (cases ++ [X])))
+      (NativeCoreGhostViewInference.runNode (some env) table infer normal limit depth state
+        recursive root family (motive :: (branches ++ [subject]))) answer := by
+  cases tableEntry : table family with
+  | none =>
+    simp only [NativeCoreGhostViewInference.runNode,tableEntry] at success
+    cases success
+  | some active =>
+    have parsed : NativeCoreGhostViewInference.runNode (some env) table infer normal limit depth state
+        recursive root family (motive :: (branches ++ [subject])) =
+        NativeCoreGhostViewInference.run infer normal env limit depth state family motive subject root active.source
+          active.boxed recursive branches := by
+      simp [NativeCoreGhostViewInference.runNode,tableEntry]
+    rw [parsed] at success ambient ⊢
+    obtain ⟨entry,rowFound,entryFound,boxed,_⟩ := visible family active tableEntry
+    obtain ⟨verified,verifiedFound,actualKind,parameters,arity⟩ :=
+      NativeCoreConstructorTelescopeAlignment.checked_family_layout history rows rowFound
+    have same := Option.some.inj (verifiedFound.symm.trans entryFound)
+    subst verified
+    obtain ⟨_,constructors⟩ :=
+      NativeCoreConstructorTelescopeAlignment.checked_family_widths history rows rowFound entryFound
+    have liveBox : active.boxed = true := by
+      unfold NativeCoreGhostViewInference.run at success
+      split at success
+      · rename_i available
+        exact (Bool.and_eq_true_iff.mp available).1
+      · cases success
+    obtain ⟨_,_,_,_,_,_,checked,_⟩ := history.family_prefix entryFound
+    have data : entry.declaration.data = true := by
+      rw [checked.declaration]
+      exact (Bool.and_eq_true_iff.mp (checked.layout.symm.trans (boxed.symm.trans liveBox))).2
+    apply NativeCoreGhostViewInference.run_refines normalSound normalProgress inferSound inferProgress onBase room
+      entryFound data arity.symm parameters.symm boxed constructors motiveRep subjectRep branchReps subjectFormation
+      _ success ambient retained
+    intro start params values dependent kept original parameterReps width _ _ typedMotive
+    have visitSound : VisitsFrom start (ExpandedNormalization env) normal := by
+      intro _ _ _ _ later source accepted
+      exact normalSound (kept.trans later) source accepted
+    intro current constructor written selected currentPrefix chosen built
+    exact checked_case_replay (ctx := ctx) (limit := limit) (depth := depth) (recursive := recursive)
+      history (familyRows_frame rows kept) rowFound entryFound data visitSound original parameterReps width
+      (classification entryFound typedMotive) currentPrefix chosen built
+
 end Jihoo.NativeKernel.NativeCoreViewFieldAlignment

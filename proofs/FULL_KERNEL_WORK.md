@@ -4813,3 +4813,14 @@ unsigned subtraction return frame, the original checked bound rules out
 underflow for the observed operands. The machine restores the saved
 stack and returns a word at the original closed type. The focused build
 passed 374 jobs and seven declaration audits.
+
+### Typing a View from its visible graph entry
+
+The represented View node selects its family through the actual
+visibility table. Checked declaration metadata supplies its kind,
+parameter width, and constructor order. The branch replay and result
+typing then use the original motive, subject, and branch roots. The
+proof takes formation of the subject's inferred type and agreement of
+the observed branch classifications. Free neutral motive applications
+also agree with rigid normalized outputs on the mode when both visits
+succeed. The focused build passed 471 jobs and both declaration audits.

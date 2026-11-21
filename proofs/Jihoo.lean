@@ -1397,5 +1397,6 @@ import Jihoo.NativeCoreViewStableHead
 import Jihoo.NativeCoreViewCaseExpansion
 import Jihoo.NativeCoreViewFieldAlignment
 import Jihoo.NativeCoreViewCheckedPlan
+import Jihoo.NativeCoreViewMotiveAgreement
 import Jihoo.NativeLoanNumericalEvidence
 import Jihoo.NativeBindingMachineMutableObservedUnsigned
