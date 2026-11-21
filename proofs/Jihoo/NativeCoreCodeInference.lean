@@ -11,7 +11,8 @@ open NativeArena Environment
 open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
-open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons)
+open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons
+  conditionOp inferConditional inferConditional_progress inferConditional_modeRefines)
 open NativeCoreCodeScalarInference (enter enter_progress enter_success arithmetic arithmetic_progress
   arithmetic_refines strict strict_progress strict_refines)
 open NativeCoreBufferRelease (inferFree inferFree_progress)
@@ -30,6 +31,12 @@ def run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         arithmetic recur (normal depth) limit depth entered .u64 left right
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
         strict recur entered first last
+    | some (.node .ifLt [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
+        inferConditional recur (fun assumption => run normal ghost env isData boxed limit depth
+          (⟨assumption,true⟩ :: bindings) false) (normal depth) limit depth entered false left right yes no
+    | some (.node .ifEq [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
+        inferConditional recur (fun assumption => run normal ghost env isData boxed limit depth
+          (⟨assumption,true⟩ :: bindings) false) (normal depth) limit depth entered true left right yes no
     | some (.node .free [buffer,tail]) => enter limit (depth+1) state root fun entered =>
         inferFree recur (normal depth) entered buffer tail
     | some (.node (.lam erased) [domain,body]) => enter limit (depth+1) state root fun entered =>
@@ -57,6 +64,10 @@ theorem run_progress
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
+    · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
+        (fun _ _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
+        (fun _ _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferFree_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside =>
         NativeCoreCodeLambda.run_progress (ghostProgress depth bindings) (fun _ _ => ih) (normalProgress depth) inside)
@@ -162,6 +173,53 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
+      case ifLt | ifEq =>
+        have length : refs.length = 4 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
+        cases children with
+        | @cons _ a _ _ leftRep rest =>
+          cases rest with
+          | @cons _ b _ _ rightRep rest =>
+            cases rest with
+            | cons yesRep rest =>
+              cases rest with
+              | cons noRep rest =>
+                cases rest
+                dsimp only at success ambient ⊢
+                obtain ⟨entered,inside⟩ := enter_success success
+                rw [entered] at success ambient ⊢
+                let next := fun assumption => run normal ghost env isData boxed limit depth
+                  (⟨assumption,true⟩ :: bindings) false
+                have branchSound (equality : Bool) : ∀ {opened assumption}, Prefix state.arena opened →
+                    Represents opened assumption (.node (conditionOp equality) [a,b]) →
+                    NativeCoreBufferRelease.ModeSound env [] opened
+                      (⟨EnvironmentDelta.expand env (.node (conditionOp equality) [a,b]),true⟩ :: ctx) limit false
+                      (next assumption) := by
+                  intro opened assumption kept represented _ _ _ _ _ current currentRoom branch checked future tape
+                  have baseHere := onBase.trans kept
+                  have extended : ContextRep env opened (⟨assumption,true⟩ :: bindings)
+                      (⟨EnvironmentDelta.expand env (.node (conditionOp equality) [a,b]),true⟩ :: ctx) :=
+                    .cons ⟨_,represented,rfl,rfl⟩ (context.frame baseHere)
+                  obtain ⟨kept,safe,typed⟩ := ih (head := false) (onStart.trans baseHere) extended
+                    current currentRoom branch checked future tape
+                  exact ⟨kept,safe,typed⟩
+                have enteredNormal : VisitsFrom state.arena (ExpandedNormalization env) (normal depth) := by
+                  intro _ _ _ _ later represented succeeded
+                  exact normalLocal depth (onBase.trans later) represented succeeded
+                have enteredMode : NativeCoreBufferRelease.ModeSound env [] state.arena ctx limit false recur := by
+                  intro _ _ _ _ _ later room represented succeeded after tape
+                  exact modeSound (onBase.trans later) room represented succeeded after tape
+                first
+                | obtain ⟨kept,safe,typed⟩ := inferConditional_modeRefines
+                    (state := {state with steps := state.steps+1}) (inferThen := next) wf enteredNormal (normalProgress depth)
+                    enteredMode childCost (branchSound false) (fun _ _ _ room => run_progress ghostProgress normalProgress room)
+                    (.refl _) inside leftRep rightRep yesRep noRep success ambient retained
+                  exact ⟨kept,safe,typed⟩
+                | obtain ⟨kept,safe,typed⟩ := inferConditional_modeRefines
+                    (state := {state with steps := state.steps+1}) (inferThen := next) wf enteredNormal (normalProgress depth)
+                    enteredMode childCost (branchSound true) (fun _ _ _ room => run_progress ghostProgress normalProgress room)
+                    (.refl _) inside leftRep rightRep yesRep noRep success ambient retained
+                  exact ⟨kept,safe,typed⟩
       case lam flag =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨domain,_ | ⟨body,_ | ⟨_,_⟩⟩⟩ <;> simp at length
@@ -227,5 +285,28 @@ theorem nested_runtime_calls_match_native :
     strict.state.steps = 28 ∧ strict.state.arena.size = 20 ∧ strict.result.map Inferred.typeRoot = .ok 17 ∧
     underApplied.state.steps = 44 ∧ underApplied.state.arena.size = 22 ∧ underApplied.result.map Inferred.typeRoot = .ok 15 := by
   cbv
+
+
+private def conditionalArena (equality invalid : Bool) : Arena := #[
+  .node .u64 [],.node (.natural 0) [],.node (.natural 1) [],.var 1,.var 0,
+  .node (if equality then .ifEq else .ifLt) [1,2,if invalid then 4 else 3,4]]
+
+private def conditionalExtra (equality : Bool) : Arena := #[
+  .node .u64 [],.node .u64 [],.node .u64 [],.node (if equality then .eq else .lt) [1,2]]
+
+/-- Both runtime conditionals keep the pre-existing word slot and deny
+runtime access to the new proof slot. The exhausted remaining budgets and
+committed rows match the native paths. -/
+theorem conditionals_match_native_erased_scope (equality : Bool) :
+    let runAt := fun limit invalid =>
+      run (NativeCoreGhostLiteralAddition.run [] 0 limit) (fun _ _ state root => ⟨state,.error (.outsideFragment root)⟩)
+        empty (fun _ => false) (fun _ => false) limit 16 [⟨0,false⟩] false ⟨conditionalArena equality invalid,0⟩ 5
+    let accepted := runAt 18 false
+    let rejected := runAt 10 true
+    accepted.state = ⟨conditionalArena equality false ++ conditionalExtra equality,18⟩ ∧
+      accepted.result.map Inferred.typeRoot = .ok 0 ∧
+      rejected.state = ⟨conditionalArena equality true ++ conditionalExtra equality,10⟩ ∧
+      rejected.result = .error (.outsideFragment 4) := by
+  cases equality <;> cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

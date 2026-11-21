@@ -10933,3 +10933,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.Examples.recursive_ghost_view_matches_native
 #print axioms Jihoo.NativeKernel.NativeCoreViewStableHead.run_keeps_head
 #print axioms Jihoo.NativeKernel.NativeCoreViewStableHead.normal_matches_view_plan
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferConditional_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferConditional_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.conditionals_match_native_erased_scope

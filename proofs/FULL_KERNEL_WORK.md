@@ -4690,3 +4690,26 @@ checked view plan even if its subterms change. The focused View build
 passed 474 jobs. Native tests passed the expanded inference schedule,
 paired source and Core dependent View execution, counted releases, and
 all 11 source and 15 Core rejections.
+
+### Aggregate check through recursive borrowed View
+
+At `fe2e636`, all 1,216 Lake build jobs and the generated fixtures passed.
+The audit checked 10,925 declarations, including 533 without axioms.
+The remaining declarations use only `propext`, `Quot.sound`, or
+`Classical.choice`. Native checks passed 89 kernel fixtures and 31
+additional checks, 69 mixed fixtures and 55 exact-byte checks, and eight
+positive and nine negative type-family cases. The pure mixed checker
+accepted the exact native output bytes. Peak sampled process-tree RSS
+was 5,010.0 MiB.
+
+### Runtime inference through comparison branches
+
+The recursive runtime visitor uses the same conditional operation as the
+ghost visitor. Both operands are checked as words. The positive branch
+receives an erased assumption, and its inferred type is compared against
+the negative branch's type in the correct scope. The inferred result keeps
+the original outer scope. For both comparisons the native checker and Lean
+use 18 ticks when the positive branch reads a pre-existing runtime slot,
+and 10 ticks when runtime access to the proof slot is rejected. The
+focused build passed 485 jobs. The three audited declarations use only
+standard Lean axioms.

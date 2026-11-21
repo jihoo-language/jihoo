@@ -1935,7 +1935,43 @@ fn ghost_view_inference(dependent: bool, recursive: bool) {
     assert_spent(&c, "ghost view uses the exact checking budget")
 }
 
+fn code_conditional_fixture(equality: bool, erase_violation: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    let one = c.add(core.Term.Natural(1), span).unwrap()
+    let outer = c.add(core.Term.Var(1), span).unwrap()
+    let inner = c.add(core.Term.Var(0), span).unwrap()
+    let yes = if erase_violation { inner } else { outer }
+    c.add(if equality { core.Term.IfEq(zero, one, yes, inner) }
+        else { core.Term.IfLt(zero, one, yes, inner) }, span).unwrap()
+    c
+}
+
+fn code_conditional_inference(equality: bool) {
+    let context = [core.Binding { ty: 0, erased: false }]
+    var accepted = code_conditional_fixture(equality, false)
+    spend(&accepted, 999982)
+    assert(accepted.infer(5, context, false, 16).unwrap() == 0 && accepted.node_count() == 10,
+        "runtime conditional returns the written outer binding's type")
+    for row in 6..9 { assert(accepted.term(row as u32) == core.Term.U64, "checked comparison operands") }
+    let bound = if equality { core.Term.Eq(1, 2) } else { core.Term.Lt(1, 2) }
+    assert(accepted.term(9) == bound, "the positive arm binds the real comparison proposition")
+    assert_spent(&accepted, "accepted runtime conditional uses eighteen ticks")
+
+    var rejected = code_conditional_fixture(equality, true)
+    spend(&rejected, 999990)
+    assert(match rejected.infer(5, context, false, 16) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    }, "runtime conditional rejects its proof slot")
+    assert(rejected.node_count() == 10 && rejected.term(9) == bound, "rejection retains the committed proof annotation")
+    assert_spent(&rejected, "rejected runtime conditional uses ten ticks")
+}
+
 fn main() -> i32 {
+    code_conditional_inference(false)
+    code_conditional_inference(true)
     view_reading_scope()
     for dependent in [false, true] {
         for recursion in [false, true] {
