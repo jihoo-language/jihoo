@@ -2,6 +2,7 @@ import Jihoo.NativeCoreGhostConstructorFields
 import Jihoo.NativeCoreGhostSort
 import Jihoo.NativeCoreConstructorGraphLink
 import Jihoo.NativeLoanContextualPreservation
+import Jihoo.NativeLoanCheckedSignatureFormation
 
 /-! A ghost constructor checks actual field terms in the original caller
 context. Its shifted signature is the raw constructor root published by
@@ -308,5 +309,78 @@ theorem runSelectedByMode_refines {family constructor count : Nat}
     rw [data] at success ambient ⊢
     exact runByErasure_refines wf normalSound normalProgress (fun _ => inferSound _) (fun _ => inferProgress _)
       onBase room familyFound signatureFound (represented.frame onBase) converted fieldsRep length success ambient retained
+
+private theorem shifted_result_formed {sort : SortTag}
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : ∀ erased, NativeCoreBufferRelease.ModeSound env loans base ctx limit
+      (mode || !(data && !erased)) (inferField erased))
+    (inferProgress : ∀ erased state root, state.steps ≤ limit → Progress limit state (inferField erased state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (rawRep : Represents state.arena rawRoot rawType)
+    (rawFormed : LoanTyping.HasType env [] [] true (expand env rawType) sort.term)
+    (fieldsRep : RepresentsList state.arena fields args)
+    (success : (runByErasure inferField normal limit depth root ctx.length state rawRoot fields).result = .ok answer)
+    (ambient : Prefix (runByErasure inferField normal limit depth root ctx.length state rawRoot fields).state.arena final)
+    (retained : RetainedComparisons final answer)
+    (original : Represents (runByErasure inferField normal limit depth root ctx.length state rawRoot fields).state.arena answer.typeRoot type) :
+    ∃ resultSort : SortTag, LoanTyping.HasType env [] ctx true (expand env type) resultSort.term := by
+  unfold runByErasure at success ambient original
+  obtain ⟨shifted,shiftedOk,shiftedNext⟩ := Outcome.next_success success
+  rw [shiftedNext] at success ambient original
+  obtain ⟨initial,_,typeRep⟩ := shift_refines rawRep shiftedOk
+  have within := (shift_progress limit depth state rawRoot ctx.length).accepted room shifted shiftedOk
+  have shiftedFormed : LoanTyping.HasType env [] ctx true
+      (expand env (rawType.rename (fun index => index+ctx.length))) sort.term := by
+    rw [EnvironmentDelta.expand_renaming wf.admissible]
+    simpa only [SortTag.rename_term] using
+      rawFormed.ghostRenaming wf (Δ := ctx) (ρ := fun index => index+ctx.length)
+        (by intro index binding selected; cases selected)
+  exact (NativeCoreGhostConstructorFields.runByErasure_refines_formed wf normalSound normalProgress
+    inferSound inferProgress (onBase.trans initial) within typeRep (fieldsRep.frame initial) success ambient retained).2
+    original shiftedFormed
+
+/-- A successful constructor inferred from the authenticated declaration
+root returns a type in the original context. The proof uses its original
+dependent argument substitutions and the final observed normalization. -/
+theorem constructorAt_annotation_formed {family constructor : Nat}
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : NativeFamilyWire.RepresentsFamilies base familyRows familyTerms)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : ∀ flag, NativeCoreBufferRelease.ModeSound env loans base ctx limit flag (infer flag))
+    (inferProgress : ∀ flag state root, state.steps ≤ limit → Progress limit state (infer flag state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (fieldsRep : RepresentsList state.arena fields args)
+    (success : (runSelectedByMode env mode infer normal limit depth root ctx.length
+      (constructorAt familyRows visible) state family constructor fields).result = .ok answer)
+    (ambient : Prefix (runSelectedByMode env mode infer normal limit depth root ctx.length
+      (constructorAt familyRows visible) state family constructor fields).state.arena final)
+    (retained : RetainedComparisons final answer)
+    (original : Represents (runSelectedByMode env mode infer normal limit depth root ctx.length
+      (constructorAt familyRows visible) state family constructor fields).state.arena answer.typeRoot type) :
+    ∃ sort : SortTag, LoanTyping.HasType env [] ctx true (expand env type) sort.term := by
+  unfold runSelectedByMode at success ambient original
+  cases selected : constructorAt familyRows visible family constructor with
+  | none => simp [selected] at success
+  | some sourceRoot =>
+    simp only [selected] at success ambient original
+    unfold constructorAt at selected
+    obtain ⟨row,found,pending⟩ := Option.bind_eq_some_iff.mp selected
+    split at pending
+    · obtain ⟨entry,signature,source,_,_,familyFound,signatureFound,written,_,sourceRep,_,_⟩ :=
+        NativeCoreConstructorTelescopeAlignment.checked_constructor_source history rows found pending
+      obtain ⟨originalSource,sort,rawFound,rawFormed⟩ :=
+        LoanTyping.CheckedSignatureFormation.source_signature_formed (ctx := []) history familyFound signatureFound
+      have same := Option.some.inj (written.symm.trans rawFound)
+      subst originalSource
+      have data : NativeCoreGhostSort.isDataAt env family = entry.declaration.data := by
+        simp only [NativeCoreGhostSort.isDataAt,familyFound,Option.map_some,Option.getD_some]
+      rw [data] at success ambient original
+      exact shifted_result_formed history.wellFormed normalSound normalProgress
+        (fun _ => inferSound _) (fun _ => inferProgress _) onBase room (sourceRep.frame onBase)
+        rawFormed fieldsRep success ambient retained original
+    · cases pending
 
 end Jihoo.NativeKernel.NativeCoreGhostConstructorInference

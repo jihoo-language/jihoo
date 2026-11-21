@@ -118,7 +118,7 @@ abbrev Refines (env : Environment) (start : Arena) (ctx : Context) (data : Bool)
 
 /-- The checked graph walk produces the full Loan64 Arguments derivation
 at the original source telescope, including all dependent substitutions. -/
-theorem runByErasure_refines
+theorem runByErasure_refines_formed
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
@@ -130,7 +130,11 @@ theorem runByErasure_refines
     (success : (runByErasure inferField normal limit depth root fields state telescope).result = .ok answer)
     (ambient : Prefix (runByErasure inferField normal limit depth root fields state telescope).state.arena final)
     (retained : RetainedComparisons final answer) :
-    ModeRefines env loans state.arena ctx mode data type args (runByErasure inferField normal limit depth root fields state telescope) answer := by
+    ModeRefines env loans state.arena ctx mode data type args (runByErasure inferField normal limit depth root fields state telescope) answer ∧
+    (∀ {sort : SortTag} {output : Term},
+      Represents (runByErasure inferField normal limit depth root fields state telescope).state.arena answer.typeRoot output →
+      LoanTyping.HasType env [] ctx true (expand env type) sort.term →
+      ∃ resultSort : SortTag, LoanTyping.HasType env [] ctx true (expand env output) resultSort.term) := by
   induction fields generalizing state telescope type args answer with
   | nil =>
     cases fieldsRep
@@ -144,9 +148,13 @@ theorem runByErasure_refines
       subst answer
       obtain ⟨indices,shape,children⟩ := graph_node held read
       subst residual
-      refine ⟨kept,backward,family,count,indices,held,?_⟩
-      simp only [expandArgs]
-      exact .nil (by simpa only [expand] using changed.converted)
+      refine ⟨⟨kept,backward,family,count,indices,held,?_⟩,?_⟩
+      · simp only [expandArgs]
+        exact .nil (by simpa only [expand] using changed.converted)
+      · intro sort output represented formed
+        have agrees := held.unique represented
+        cases agrees
+        exact ⟨sort,changed.preserves formed⟩
     · simp [reject] at success
   | cons arg rest ih =>
     cases fieldsRep with
@@ -195,7 +203,7 @@ theorem runByErasure_refines
         obtain ⟨substKept,substBack,remainingRep⟩ := NativeCoreTransformExact.substitute_refines
           (bodyRep.frame (argKept.trans compareKept)) (argRep.frame throughCompare) (instantiate_success substituteOk)
         have throughSubst := throughCompare.trans substKept
-        obtain ⟨tailKept,tailBack,family,count,indices,resultRep,typedTail⟩ :=
+        obtain ⟨⟨tailKept,tailBack,family,count,indices,resultRep,typedTail⟩,tailFormed⟩ :=
           ih (onBase.trans throughSubst) substWithin remainingRep (restRep.frame throughSubst) tailOk ambient
             (fun entry member => retained entry (List.mem_append_right _ (List.mem_cons_of_mem _ member)))
         have substitution : expand env (bodyType.subst (single source)) =
@@ -208,11 +216,36 @@ theorem runByErasure_refines
             (.pi erased (expand env argumentType) (expand env bodyType)) := by
           simpa only [samePi,Term.pi,EnvironmentDelta.expand_node_cons,expandArgs] using changed.converted
         rw [substitution] at typedTail
-        refine ⟨throughSubst.trans tailKept,tailBack ∘ substBack ∘ compareBack ∘ argBack ∘ normalBack,
-          family,count,indices,resultRep,?_⟩
-        simp only [expandArgs]
-        exact .cons piConversion (actualTyped.convert compatible) typedTail
+        have argumentTyped := actualTyped.convert compatible
+        refine ⟨⟨throughSubst.trans tailKept,tailBack ∘ substBack ∘ compareBack ∘ argBack ∘ normalBack,
+          family,count,indices,resultRep,?_⟩,?_⟩
+        · simp only [expandArgs]
+          exact .cons piConversion argumentTyped typedTail
+        · intro sort output represented formed
+          have exposedFormed : LoanTyping.HasType env [] ctx true
+              (.pi erased (expand env argumentType) (expand env bodyType)) sort.term := by
+            simpa only [samePi,Term.pi,EnvironmentDelta.expand_node_cons,expandArgs] using changed.preserves formed
+          obtain ⟨_,bodySort,_,bodyFormed,_⟩ := exposedFormed.principalView
+          have tailTyped := bodyFormed.ghostInstantiate wf (argumentTyped.ghost [])
+          rw [← substitution,SortTag.subst_term] at tailTyped
+          exact tailFormed represented tailTyped
       · simp [reject] at success
+
+theorem runByErasure_refines
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : ∀ erased, NativeCoreBufferRelease.ModeSound env loans base ctx limit
+      (mode || !(data && !erased)) (inferField erased))
+    (inferProgress : ∀ erased state root, state.steps ≤ limit → Progress limit state (inferField erased state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (written : Represents state.arena telescope type) (fieldsRep : RepresentsList state.arena fields args)
+    (success : (runByErasure inferField normal limit depth root fields state telescope).result = .ok answer)
+    (ambient : Prefix (runByErasure inferField normal limit depth root fields state telescope).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    ModeRefines env loans state.arena ctx mode data type args (runByErasure inferField normal limit depth root fields state telescope) answer :=
+  (runByErasure_refines_formed wf normalSound normalProgress inferSound inferProgress onBase room
+    written fieldsRep success ambient retained).1
 
 theorem run_refines
     (wf : UnifiedProgram.EnvWellFormed env)

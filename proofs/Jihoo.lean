@@ -1002,6 +1002,7 @@ import Jihoo.NativeLoanFamilyContextualEvaluation
 import Jihoo.NativeLoanFamilyIotaCase
 import Jihoo.NativeLoanFamilyIotaCasePreservation
 import Jihoo.NativeLoanFamilyIotaConstructor
+import Jihoo.NativeLoanCheckedSignatureFormation
 import Jihoo.NativeLoanFamilyIotaDataElimPreservation
 import Jihoo.NativeLoanFamilyIotaElimArguments
 import Jihoo.NativeLoanFamilyIotaElimCongruence

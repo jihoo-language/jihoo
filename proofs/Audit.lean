@@ -11125,3 +11125,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithFamilies_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithFamilies_sound
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.nested_code_elimination_matches_native
+
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.CheckedSignatureFormation.signature_formed
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.CheckedSignatureFormation.source_signature_formed
+#print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorFields.runByErasure_refines_formed
+#print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorInference.constructorAt_annotation_formed

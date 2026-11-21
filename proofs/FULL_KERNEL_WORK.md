@@ -5154,3 +5154,18 @@ Strict. It consumes 201 ticks, leaves 57 rows, and returns the dependent
 type at root 54 with the original motive, index and scrutinee. A hidden
 family row fails after the entry tick. The focused build passed 496
 tasks and ten declaration audits. The expanded native schedule passed.
+
+### Constructor signature and inferred annotation formation
+
+The family admission history now forms both a stored signature and the
+original written signature after translation of its visible globals.
+The derivation uses each earlier binder and independently checked
+recursive index. In the original signature, conversion of earlier field
+types justifies moving the remaining telescope into its written context.
+
+The actual constructor field walk preserves formation from the shifted
+written signature through its dependent substitutions and the final
+observed normalization. The result holds at the original graph type root
+selected from the declared constructor table. The focused build passed
+480 tasks and four declaration audits, including the existing native
+constructor schedule examples in Lean.
