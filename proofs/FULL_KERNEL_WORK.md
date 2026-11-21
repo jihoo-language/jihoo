@@ -4801,3 +4801,15 @@ For a checked global with a Type-sorted annotation, the actual earlier
 declaration supplies a runtime-typed transparent value in the reference
 context. This includes the type root returned by the real global lookup.
 All six declarations passed the focused axiom audit.
+
+### Numerical observations at unsigned subtraction return
+
+Each observed term has one mathematical value because its finite
+numeric trees have a common reduct. Wide ghost sums retain that value.
+Loan64 evidence reflects strict order after closing when each operand
+used by its arithmetic rules has an observed value. This includes
+evidence reached by typed contextual computation. At the actual
+unsigned subtraction return frame, the original checked bound rules out
+underflow for the observed operands. The machine restores the saved
+stack and returns a word at the original closed type. The focused build
+passed 374 jobs and seven declaration audits.

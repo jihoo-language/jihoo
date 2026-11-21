@@ -10966,3 +10966,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_buffer_lengths_share_bound
 #print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.relevant_global_value
 #print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.run_refines_relevant
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.Numeric.unique
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.Numeric.add
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.Order.reflect
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observed_evidence_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observed_residual_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.no_observed_residual_less_zero
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_observed_usub_return
