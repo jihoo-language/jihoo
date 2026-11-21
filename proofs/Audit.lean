@@ -10807,3 +10807,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.scan_visits
 #print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.run_visits
 #print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.Examples.partial_application_matches_native_meter
+#print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.reconstruct_admitted
+#print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.checked_reconstruction
+#print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.reconstructed_type_application
+#print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.reconstructed_quantified_false

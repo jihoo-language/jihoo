@@ -4380,3 +4380,15 @@ that check. Native and Lean agree on 37 ticks for an ordinary partial
 call, 35 for an erased argument, and rejection at 48 for a buffer.
 The focused build passed 452 jobs and the five audited declarations use
 standard Lean axioms.
+
+### Executable reconstruction of finite type codes
+
+The checked declaration's original value drives reconstruction of
+universe codes, dependent products, type-level applications and closed
+affine propositions. The nondependent product branch verifies scope
+lowering before reusing the outer context. Successful reconstruction
+supplies an exact source identity and the finite semantic code at the
+sort of the exact admitted declaration. The fixtures cover type-level
+application and a proposition quantified over Type0 and Type31. The
+focused build passed 365 jobs and the four audited declarations use
+standard Lean axioms.
