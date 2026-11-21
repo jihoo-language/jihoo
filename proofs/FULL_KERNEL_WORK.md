@@ -4724,3 +4724,14 @@ also preserves each active owner's slot and loan reader binding in the
 selected branch. The positive branch installs the erased proof slot
 while keeping the previous reader bindings. The focused build passed
 401 jobs. The four declarations use only standard Lean axioms.
+
+### Original typing of a checked borrowed View
+
+Formation of the actual inferred scrutinee annotation determines its
+referenced family, declared arity, and well-typed word parameters.
+The local View typing theorem follows the successful motive and
+constructor checks, derives the source branch typing in constructor
+order, and retains the actual final type root. It takes independent
+formation of the inferred annotation and a correspondence between each
+live branch type builder and its checked signature. The focused build
+passed 462 jobs and all three declarations passed the axiom audit.

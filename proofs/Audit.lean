@@ -10940,3 +10940,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_scope
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_common_proposition_in_context
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_retains_loan_slots
+#print axioms Jihoo.NativeKernel.NativeCoreViewSubject.run_refines_formed
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.checkCases_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.run_refines

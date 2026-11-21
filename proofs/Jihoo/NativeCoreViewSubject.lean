@@ -1,4 +1,5 @@
 import Jihoo.NativeCoreGhostTypeRequirement
+import Jihoo.NativeCoreFamilyHeadFormation
 
 /-! View retains the normalized outer reference type for its motive
 comparison and separately normalizes the referenced family to recover
@@ -83,7 +84,7 @@ private theorem family_children (held : Represents arena selected residual)
 
 /-- The two distinct normalization visits justify the reference used by the
 motive and the selected family's parameter roots used by the cases. -/
-theorem run_refines
+private theorem run_trace
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (inferSound : InferSound env base ctx limit infer)
@@ -94,7 +95,11 @@ theorem run_refines
     (retained : RetainedComparisons final answer.inferred) :
     let after := (run infer normal state family subject).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      ∃ inner values, Represents after answer.referenceType (.ref inner) ∧
+      ∃ original inner values, (infer state subject).result = .ok answer.inferred ∧
+        Represents (infer state subject).state.arena answer.inferred.typeRoot original ∧
+        ExpandedNormalization env original (.ref inner) ∧
+        ExpandedNormalization env inner (.node (.ind family answer.arity) values) ∧
+        Represents after answer.referenceType (.ref inner) ∧
         RepresentsList after answer.parameters values ∧ answer.parameters.length = answer.arity ∧
         RawLend.Conv env (expand env inner) (.node (.ind family answer.arity) (expandArgs env values)) ∧
         LoanTyping.HasType env [] ctx true (expand env X)
@@ -140,11 +145,87 @@ theorem run_refines
           simpa only [familyShape,expand] using innerChanged.converted
         have outerConversion : RawLend.Conv env (expand env inferredType) (.ref (expand env T)) := by
           simpa only [shape,Term.ref,expand,expandArgs] using outerChanged.converted
-        exact ⟨beforeInner.trans innerKept,innerBack ∘ outerBack ∘ inferBack,T,values,
-          shape ▸ outerRep.frame innerKept,valuesRep,width,innerConversion,
+        exact ⟨beforeInner.trans innerKept,innerBack ∘ outerBack ∘ inferBack,inferredType,T,values,inferredOk,inferredRep,
+          shape ▸ outerChanged,familyShape ▸ innerChanged,shape ▸ outerRep.frame innerKept,valuesRep,width,innerConversion,
           typed.convert (outerConversion.trans (.node .ref (.cons innerConversion .nil)))⟩
       · cases success
     · cases success
   · cases success
+
+theorem run_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena subject X)
+    (success : (run infer normal state family subject).result = .ok answer)
+    (ambient : Prefix (run infer normal state family subject).state.arena final)
+    (retained : RetainedComparisons final answer.inferred) :
+    let after := (run infer normal state family subject).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ inner values, Represents after answer.referenceType (.ref inner) ∧
+        RepresentsList after answer.parameters values ∧ answer.parameters.length = answer.arity ∧
+        RawLend.Conv env (expand env inner) (.node (.ind family answer.arity) (expandArgs env values)) ∧
+        LoanTyping.HasType env [] ctx true (expand env X)
+          (.ref (.node (.ind family answer.arity) (expandArgs env values))) := by
+  obtain ⟨kept,safe,_,inner,values,_,_,_,_,reference,parameters,width,relation,typed⟩ :=
+    run_trace normalSound normalProgress inferSound onBase room source success ambient retained
+  exact ⟨kept,safe,inner,values,reference,parameters,width,relation,typed⟩
+
+
+private def ReferenceFormation (env : Environment) (ctx : Context) : Term → Prop
+  | .ref inner => LoanTyping.HasType env [] ctx true inner (.univ 0)
+  | _ => True
+
+private theorem reference_formation (typed : LoanTyping.HasType env [] ctx true (.ref subject) type) :
+    LoanTyping.HasType env [] ctx true subject (.univ 0) := by
+  have recover {loans ctx mode term type} (actual : LoanTyping.HasType env loans ctx mode term type) :
+      ReferenceFormation env ctx term := by
+    apply LoanTyping.HasType.rec (t := actual)
+      (motive_1 := fun _ _ _ _ _ _ => True)
+      (motive_2 := fun _ ctx _ term _ _ => ReferenceFormation env ctx term)
+      (motive_3 := fun _ _ _ _ _ _ _ _ => True)
+      (motive_4 := fun _ _ _ _ _ _ => True)
+      (motive_5 := fun _ _ _ _ _ _ => True)
+    all_goals intros
+    all_goals first | exact True.intro | assumption | skip
+    case refBuffer length _ => exact .buffer (length.ghost [])
+    case refOwned owner _ _ => exact owner.ghost []
+    case dataElim => split <;> trivial
+  exact recover typed
+
+/-- If the original inferred annotation has independent formation, the
+actual normalized borrow determines the declared arity and checks every
+recovered parameter as a word. This uses both original visits. -/
+theorem run_refines_formed
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena subject X)
+    (formation : ∀ {input original}, (infer state subject).result = .ok input →
+      Represents (infer state subject).state.arena input.typeRoot original →
+      ∃ sort : SortTag, LoanTyping.HasType env [] ctx true (expand env original) sort.term)
+    (success : (run infer normal state family subject).result = .ok answer)
+    (ambient : Prefix (run infer normal state family subject).state.arena final)
+    (retained : RetainedComparisons final answer.inferred) :
+    let after := (run infer normal state family subject).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ entry inner values, env.families[family]? = some entry ∧ answer.arity = entry.declaration.arity ∧
+        Represents after answer.referenceType (.ref inner) ∧ RepresentsList after answer.parameters values ∧
+        values.length = answer.arity ∧
+        (∀ value ∈ values,LoanTyping.HasType env [] ctx true (expand env value) .u64) ∧
+        RawLend.Conv env (expand env inner) (.node (.ind family answer.arity) (expandArgs env values)) ∧
+        LoanTyping.HasType env [] ctx true (expand env X)
+          (.ref (.node (.ind family answer.arity) (expandArgs env values))) := by
+  obtain ⟨kept,safe,original,inner,values,inferredOk,originalRep,outerChange,innerChange,referenceRep,
+    parameterRep,_,innerConv,typed⟩ := run_trace normalSound normalProgress inferSound onBase room
+      source success ambient retained
+  obtain ⟨sort,formed⟩ := formation inferredOk originalRep
+  have reference : LoanTyping.HasType env [] ctx true (.ref (expand env inner)) sort.term := by
+    simpa only [Term.ref,EnvironmentDelta.expand_node_cons,expandArgs] using outerChange.preserves formed
+  obtain ⟨entry,found,arity,width,parametersTyped⟩ := NativeCoreFamilyHeadFormation.normalized_family_head
+    (reference_formation reference) innerChange
+  exact ⟨kept,safe,entry,inner,values,found,arity,referenceRep,parameterRep,width,parametersTyped,innerConv,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreViewSubject
