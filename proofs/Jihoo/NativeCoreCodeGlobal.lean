@@ -1,3 +1,5 @@
+import Jihoo.NativeLoanCodeRenaming
+import Jihoo.NativeLoanTypeUniqueness
 import Jihoo.NativeCoreGlobalAnnotation
 import Jihoo.NativeCoreGhostTypeRequirement
 import Jihoo.NativeLoanFunctionInversion
@@ -82,6 +84,56 @@ theorem run_refines (history : LoanTyping.MixedProgram.History definitions decla
       exact .global checked
     · cases success
   · cases success
+
+/-- A checked global whose original annotation is a runtime type has
+a CODE-typed transparent value in any reference context. The accepted
+declaration's own mode is determined by uniqueness of its annotation sort. -/
+theorem relevant_global_value
+    {entry : GlobalDeclaration} {index : Nat}
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (found : env.globals[index]? = some entry)
+    (annotation : LoanTyping.HasType env [] [] true entry.type (.univ level)) :
+    LoanTyping.HasType env loans ctx false entry.value entry.type := by
+  obtain ⟨_,_,prior,_,_,_,checked,extension⟩ := history.global_prefix found
+  obtain ⟨sort,formation,body,_⟩ := checked.valid.typing
+  have wf := history.wellFormed
+  have actual := (formation.extend extension).unique wf annotation
+  have modeSort : sort = .type level := actual.sort_injective wf.admissible
+  subst sort
+  have weakening : LoanTyping.CodeRenaming [] [] loans ctx id := by
+    refine ⟨?_,?_,?_⟩
+    · intro index binding selected
+      cases selected
+    · intro frame member
+      cases member
+    · intro owner active
+      simp [Loans.active] at active
+  have weakened := (body.extend extension).codeRenaming wf weakening
+  simpa only [Term.rename_id,Definitions.bodyMode] using weakened
+
+/-- The actual graph lookup also justifies its transparently expanded
+CODE term when the stored source was checked as a runtime declaration. -/
+theorem run_refines_relevant
+    {entry : GlobalDeclaration}
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (rootsRep : RepresentsDefinitions state.arena roots definitions)
+    (source : Represents state.arena root (.node (.global index) []))
+    (found : env.globals[index]? = some entry)
+    (annotation : LoanTyping.HasType env [] [] true entry.type (.univ level))
+    (success : (run limit depth state root roots visible ctx.length).result = .ok answer) :
+    let after := (run limit depth state root roots visible ctx.length).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ written, Represents after answer.typeRoot written ∧
+        LoanTyping.HasType env loans ctx false (expand env (.node (.global index) [])) (expand env written) := by
+  obtain ⟨kept,safe,written,held,original⟩ := run_refines (loans := loans) history rootsRep source success
+  have closed := (history.wellFormed.globals _ _ found).1
+  have input := LoanTyping.HasType.global (loans := loans) (ctx := ctx) (ghost := false) found
+  rw [Environment.closed_rename closed] at input
+  have typeEq := input.unique history.wellFormed original
+  have value : LoanTyping.HasType env loans ctx false entry.value entry.type :=
+    relevant_global_value history found annotation
+  rw [EnvironmentDelta.expand_global found]
+  exact ⟨kept,safe,written,held,value.convert typeEq⟩
 
 private def readable (ctx : Context) (ghost : Bool) : Term → Prop
   | .var index => ∃ binding, lookup ctx index = some binding ∧ (ghost = true ∨ binding.erased = false)

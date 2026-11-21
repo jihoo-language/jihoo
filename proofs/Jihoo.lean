@@ -931,6 +931,7 @@ import Jihoo.NativeLendRawProjection
 import Jihoo.NativeLendRawConversion
 import Jihoo.NativeLendRawBinding
 import Jihoo.NativeLendRawInjectivity
+import Jihoo.NativeLendNeutralHead
 import Jihoo.NativeLendRawPolicies
 import Jihoo.NativeLendRawAPI
 import Jihoo.NativeLendRawTypedEndpoints

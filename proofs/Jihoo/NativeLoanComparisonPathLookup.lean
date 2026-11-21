@@ -1,7 +1,7 @@
 import Jihoo.NativeLoanComparisonBinderPaths
 
 /-! A native comparison path selects typed retained occurrences under
-products, lambdas, applications, and erased Strict prefixes. Selection
+products, lambdas, applications, unary types, and erased Strict prefixes. Selection
 uses child positions in the compared shape and recovers source binders. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence
 
@@ -13,6 +13,7 @@ private def chooseChild : Nat → Term → Option (Term × Option Binding)
   | 1,.pi erased domain body | 1,.lam erased domain body => some (body,some ⟨domain,erased⟩)
   | 0,.app function _ => some (function,none)
   | 1,.app _ argument => some (argument,none)
+  | 0,.array argument | 0,.buffer argument | 0,.ref argument | 0,.refine argument => some (argument,none)
   | _,_ => none
 
 private def childAt (index : Nat) (shape : Shape) : Option Shape :=
@@ -53,6 +54,10 @@ private theorem step_focus (found : chooseChild index source = some (child,bindi
       | exact .lambdaBody held
       | simpa only [Option.toList_none,List.append_nil] using (Focus.function held)
       | simpa only [Option.toList_none,List.append_nil] using (Focus.argument held)
+      | simpa only [Option.toList_none,List.append_nil] using (Focus.typeArgument .array held)
+      | simpa only [Option.toList_none,List.append_nil] using (Focus.typeArgument .buffer held)
+      | simpa only [Option.toList_none,List.append_nil] using (Focus.typeArgument .reference held)
+      | simpa only [Option.toList_none,List.append_nil] using (Focus.typeArgument .refinement held)
     · simp only [project,projectArgs,syntaxView,conversionChildren,reduceCtorEq,ite_false] <;> rfl
 
 private theorem strict_project (effect result : Term) : project (.strict effect result) = project result := by
@@ -238,3 +243,42 @@ theorem live_identity_path_common_proposition_in_context
     (Ghost.ContextConversion.refl env _) firstField secondField firstKept secondKept
 
 end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence
+
+namespace Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples
+
+open NativeArena
+open NativeCoreCompare (FullyRetained)
+
+private def zeroWord : Term := .natural 0
+private def oneWord : Term := .natural 1
+private def linearProof : Term := .zeroLe zeroWord
+private def computedProof : Term := .decide zeroWord oneWord
+private def subtraction (evidence : Term) : Term := .usub zeroWord zeroWord evidence
+private def sizeBound : Term := .lt zeroWord (.uadd zeroWord oneWord)
+
+private def bufferArena : Arena := #[
+  .node (.natural 0) [],.node (.natural 1) [],.node .zeroLe [0],.node .decide [0,1],
+  .node .usub [0,0,2],.node .usub [0,0,3],.node .buffer [4],.node .buffer [5]]
+
+/-- The real comparison skips the two different proofs in the retained
+dependent Buffer length. The checked path recovers their same bound. -/
+theorem checked_buffer_lengths_share_bound :
+    NativeCoreIdentical.runArena bufferArena 4 16 0 6 7 = (.ok true,4) ∧
+      HasEvidence .empty [] sizeBound linearProof ∧
+      HasType .empty [] [] true computedProof sizeBound := by
+  have compared : NativeCoreIdentical.runArena bufferArena 4 16 0 6 7 = (.ok true,4) := by cbv
+  have left : HasType .empty [] [] true (.buffer (subtraction linearProof)) (.univ 0) :=
+    Checker.infer_sound (fuel := 64) (by cbv)
+  have right : HasType .empty [] [] true (.buffer (subtraction computedProof)) (.univ 0) :=
+    Checker.infer_sound (fuel := 64) (by cbv)
+  have leftRep : Represents bufferArena 6 (.buffer (subtraction linearProof)) := decode_sound (fuel := 12) rfl
+  have rightRep : Represents bufferArena 7 (.buffer (subtraction computedProof)) := decode_sound (fuel := 12) rfl
+  have kept : FullyRetained zeroWord := .node (by decide) rfl rfl (by simp)
+  obtain ⟨_,first,second⟩ := live_identity_path_common_proposition_in_context
+    UnifiedProgram.EnvWellFormed.empty leftRep rightRep compared
+    (firstFuel := 2) (secondFuel := 2) (path := [0]) (leftBinders := []) (rightBinders := [])
+    rfl rfl left right (by simp) (by simp) IgnoredProposition.subtract IgnoredProposition.subtract
+    ⟨kept,kept⟩ ⟨kept,kept⟩
+  exact ⟨compared,first,second⟩
+
+end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples

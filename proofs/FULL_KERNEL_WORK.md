@@ -4787,3 +4787,17 @@ uses that plan and the observed field flags and motive mode to get the
 specified case type. Separately, a converted rigid field head fixes its
 borrow classification, and two rigid motive results select the same
 mode. The focused build passed 467 jobs and five declaration audits.
+
+### Neutral heads, retained type indices, and runtime globals
+
+Raw Lend projection preserves free neutral spines. Conversion fixes their
+free head and arity and relates corresponding arguments in the original
+theory. It also separates them from rigid nonapplication heads.
+
+Live comparison paths now recover source typing beneath Array, Buffer,
+Ref, and Refine. A four-tick comparison of checked dependent Buffer
+lengths recovers the common bound for the distinct ignored proofs.
+For a checked global with a Type-sorted annotation, the actual earlier
+declaration supplies a runtime-typed transparent value in the reference
+context. This includes the type root returned by the real global lookup.
+All six declarations passed the focused axiom audit.

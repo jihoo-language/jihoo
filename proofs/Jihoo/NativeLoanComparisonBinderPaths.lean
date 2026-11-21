@@ -2,9 +2,42 @@ import Jihoo.NativeLoanComparisonEvidence
 import Jihoo.NativeLoanContextConversion
 
 /-! Exact checked occurrences under any sequence of written binders,
-applications and Strict tails. A proof ignored by the native comparison
+applications, unary types and Strict tails. A proof ignored by the native comparison
 retains its original source context, including every erased binder. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence
+
+inductive TypeArgument : Op → Prop where
+  | array : TypeArgument .array
+  | buffer : TypeArgument .buffer
+  | reference : TypeArgument .ref
+  | refinement : TypeArgument .refine
+
+private def TypedTypeArgument (env : Environment) (ctx : Context) : Term → Prop
+  | .array arg | .buffer arg | .ref arg | .refine arg =>
+    ∃ type, HasType env [] ctx true arg type
+  | _ => True
+
+private theorem typed_type_argument (typed : HasType env loans ctx mode term type) :
+    TypedTypeArgument env ctx term := by
+  apply HasType.rec (t := typed)
+    (motive_1 := fun _ _ _ _ _ _ => True)
+    (motive_2 := fun _ ctx _ term _ _ => TypedTypeArgument env ctx term)
+    (motive_3 := fun _ _ _ _ _ _ _ _ => True)
+    (motive_4 := fun _ _ _ _ _ _ => True)
+    (motive_5 := fun _ _ _ _ _ _ => True)
+  all_goals intros
+  all_goals first | exact True.intro | assumption | skip
+  case array operand _ => exact ⟨_,operand.ghost []⟩
+  case buffer operand _ => exact ⟨_,operand.ghost []⟩
+  case refBuffer operand _ => exact ⟨_,HasType.buffer (operand.ghost [])⟩
+  case refOwned operand _ _ => exact ⟨_,operand.ghost []⟩
+  case refine operand _ => exact ⟨_,operand.ghost []⟩
+  case dataElim => split <;> trivial
+
+private theorem TypeArgument.typed (shape : TypeArgument op)
+    (typed : HasType env loans ctx mode (.node op [argument]) type) :
+    ∃ original, HasType env [] ctx true argument original := by
+  cases shape <;> exact typed_type_argument typed
 
 /-- Retained source occurrences record the exact extension of their context.
 Application visits add no binders. Strict only exposes its retained tail. -/
@@ -16,6 +49,7 @@ inductive Focus : Term → List Binding → Term → Prop where
   | lambdaBody : Focus body entered selected → Focus (.lam erased domain body) (entered ++ [⟨domain,erased⟩]) selected
   | function : Focus f entered selected → Focus (.app f arg) entered selected
   | argument : Focus arg entered selected → Focus (.app f arg) entered selected
+  | typeArgument : TypeArgument op → Focus argument entered selected → Focus (.node op [argument]) entered selected
   | strictTail : Focus tail entered selected → Focus (.strict effects tail) entered selected
 
 /-- Recover the source typing of the kept occurrence from the actual
@@ -43,6 +77,9 @@ theorem Focus.checked_occurrence (path : Focus source entered selected)
     exact ih head
   | argument child ih =>
     obtain ⟨_,_,_,_,argument,_,_⟩ := typed.appView
+    exact ih argument
+  | typeArgument shape child ih =>
+    obtain ⟨_,argument⟩ := shape.typed typed
     exact ih argument
   | strictTail child ih =>
     obtain ⟨_,tailTyped,_⟩ := typed.principalView

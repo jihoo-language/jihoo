@@ -10960,3 +10960,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.run_mode_refines
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.rigid_normal_motive_agrees
 #print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.checked_case_replay
+#print axioms Jihoo.NativeKernel.Environment.RawLend.project_neutralSpine
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.neutralSpine_node_separate
+#print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.neutralSpine_injective
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.Examples.checked_buffer_lengths_share_bound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.relevant_global_value
+#print axioms Jihoo.NativeKernel.NativeCoreCodeGlobal.run_refines_relevant
