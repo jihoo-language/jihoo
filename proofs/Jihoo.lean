@@ -1161,6 +1161,7 @@ import Jihoo.NativeLoanProofLoopUnrolling
 import Jihoo.NativeLoanFoldUnrolling
 import Jihoo.NativeLoanProofNormalization
 import Jihoo.NativeLoanProofLoopObservation
+import Jihoo.NativeLoanFoldObservation
 import Jihoo.NativeLoanProofObservation
 import Jihoo.NativeCoreGraph
 import Jihoo.NativeCoreGraphWire

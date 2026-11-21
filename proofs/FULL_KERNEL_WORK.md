@@ -5215,3 +5215,13 @@ checks, 69 mixed-program source fixtures and 55 exact-byte comparisons,
 eight type-family controls and nine exact-diagnostic rejections, and
 20 native family fixtures with 18 additional checks. The independent
 pure admission check accepted the exact native mixed-program bytes.
+
+### Bounded pure observation of Fold
+
+Fold and Loop share a bounded unroller that computes the count and checks
+the exact unrolled size before building the term. For Fold, the original
+body and accumulator derivations type the unrolled term. The subsequent
+contextual normalization retains the original type. A checked mixed
+declaration with count `1 + 2` returns the signed value `7`, and a
+budget of 16 rejects the unroll before building it.
+The focused build passed 289 tasks and three declaration audits.

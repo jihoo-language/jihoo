@@ -19,27 +19,37 @@ theorem unroll_treeSize (count : Nat) (initial body : Term) (i : Nat) :
 
 /-- Charge the exact size of the unrolled term before allocating it. An
 unavailable count, oversized unroll, or exhausted reduction returns failure. -/
-def normalizeLoop? (env : Environment) (budget countFuel reductionFuel : Nat) : Term → Option Term
-  | .loop count _ initial body => do
-    let .natural n ← Conversion.normalize? env countFuel count | none
-    if n < 2^64 ∧ treeSize initial + n * (treeSize body + 7) ≤ budget then
-      ProofNormalization.normalize? env budget reductionFuel (unroll n initial body n)
-    else none
-  | _ => none
+def normalizeIteration? (env : Environment) (budget countFuel reductionFuel : Nat)
+    (count initial body : Term) : Option Term := do
+  let .natural n ← Conversion.normalize? env countFuel count | none
+  if n < 2^64 ∧ treeSize initial + n * (treeSize body + 7) ≤ budget then
+    ProofNormalization.normalize? env budget reductionFuel (unroll n initial body n)
+  else none
 
-theorem normalizeLoop?_preserves (history : MixedProgram.History definitions familyDeclarations env)
-    (typed : HasType env loans ctx mode (.loop count motive initial body) type)
-    (accepted : normalizeLoop? env budget countFuel reductionFuel (.loop count motive initial body) = some result) :
+theorem normalizeIteration_preserves (history : MixedProgram.History definitions familyDeclarations env)
+    (typed : ∀ {n}, Conversion.Conv env count (.natural n) → n < 2^64 →
+      HasType env [] ctx true (unroll n initial body n) type)
+    (accepted : normalizeIteration? env budget countFuel reductionFuel count initial body = some result) :
     HasType env [] ctx true result type := by
-  simp only [normalizeLoop?] at accepted
+  unfold normalizeIteration? at accepted
   obtain ⟨countTerm,observed,accepted⟩ := Option.bind_eq_some_iff.mp accepted
   split at accepted
   · split at accepted
     · rename_i within
       exact ProofNormalization.normalize?_preserves history
-        (observed_unroll_typed history.wellFormed typed observed within.1) accepted
+        (typed (Conversion.normalize?_sound observed) within.1) accepted
     · contradiction
   · contradiction
+
+def normalizeLoop? (env : Environment) (budget countFuel reductionFuel : Nat) : Term → Option Term
+  | .loop count _ initial body => normalizeIteration? env budget countFuel reductionFuel count initial body
+  | _ => none
+
+theorem normalizeLoop?_preserves (history : MixedProgram.History definitions familyDeclarations env)
+    (typed : HasType env loans ctx mode (.loop count motive initial body) type)
+    (accepted : normalizeLoop? env budget countFuel reductionFuel (.loop count motive initial body) = some result) :
+    HasType env [] ctx true result type :=
+  normalizeIteration_preserves history (fun exactCount range => unroll_typed history.wellFormed typed exactCount range) accepted
 
 theorem observed_loop_truth (history : MixedProgram.History definitions familyDeclarations env)
     (typed : HasType env loans ctx mode (.loop count motive initial body) type)
