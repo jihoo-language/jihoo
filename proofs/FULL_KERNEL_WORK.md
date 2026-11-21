@@ -4548,3 +4548,14 @@ existing native traces now enter through the recursive visitor.
 They retain 63 ticks for the proposition example, 171 and 200
 for the data result modes, and one tick for the missing case.
 The focused build passed 463 jobs.
+
+### Recursive branch types from the checked signature
+
+The recursive builder preserves the written field layout and returns
+a type convertible to the branch expected by the actual checked
+constructor. Transparency commutes with parameter substitution and
+with each recursive hypothesis. The data case and code kind proofs
+share the bound on the number of rows in a represented product spine,
+so the case proof also works without an arena-wide ordering premise.
+It preserves backwardness when the arena already has that property.
+The focused build passed 443 jobs.

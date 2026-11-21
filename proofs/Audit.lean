@@ -10882,3 +10882,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.runNode_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.runNode_invisible
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyElimination_progress
+#print axioms Jihoo.NativeKernel.NativeCoreProductSpine.spineLength_le_arena
+#print axioms Jihoo.NativeKernel.NativeCoreProductSpine.folded_spineLength
+#print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.expand_data_case_type
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursiveFieldAlignment.run_matches_checked_case

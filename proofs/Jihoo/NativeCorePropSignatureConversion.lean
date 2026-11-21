@@ -97,7 +97,7 @@ theorem SignatureConversion.prop_case (closed : EnvironmentDelta.Basis.Closed en
   rw [fields] at results ⊢
   exact converted_field_domains (converted_hypotheses closed motive results recursive _ 0) signature.fields
 
-private def expandField (env : Environment) (field : Field) : Field :=
+def expandField (env : Environment) (field : Field) : Field :=
   ⟨field.erased,EnvironmentDelta.expand env field.domain,field.recursive.map (EnvironmentDelta.expandArgs env)⟩
 
 /-- The exact pass-through delta expansion of the separately stored field
@@ -124,7 +124,7 @@ private theorem expansion_renamed_indices (admissible : EnvironmentDelta.Admissi
   | cons head tail ih =>
     simp only [List.map_cons,EnvironmentDelta.expandArgs,EnvironmentDelta.expand_renaming admissible,ih]
 
-private theorem expanded_recursive_fields (env : Environment) (fields : List Field) (offset : Nat) :
+theorem expanded_recursive_fields (env : Environment) (fields : List Field) (offset : Nat) :
     ((fields.map (expandField env)).zipIdx offset).filterMap (fun (field,index) => field.recursive.map fun values => (index,values)) =
       ((fields.zipIdx offset).filterMap (fun (field,index) => field.recursive.map fun values => (index,values))).map
         (fun (index,values) => (index,EnvironmentDelta.expandArgs env values)) := by

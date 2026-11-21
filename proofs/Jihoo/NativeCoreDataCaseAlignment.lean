@@ -1,3 +1,5 @@
+import Jihoo.NativeCorePropSignatureConversion
+import Jihoo.NativeLoanFamilyIotaElimHypotheses
 import Jihoo.NativeCoreConstructorGraphLink
 import Jihoo.NativeCoreDataCaseTelescope
 import Jihoo.NativeLoanFamilyIotaParameterInstantiation
@@ -240,5 +242,120 @@ theorem run_matches_checked_case
   refine ⟨entry,signature,expected,_,found,familyData.trans data,entryParams,signatureFound,expectedType,kept,backward,observedGraph,?_⟩
   rw [expand_field_telescope,expanded_case_result history.wellFormed.admissible]
   simpa only [expandFields,List.length_map,writtenFields] using converted
+
+
+open LoanTyping.FamilyIota (dataCaseResult_hypotheses_shift)
+
+private def expandRecursive (env : Environment) (fields : List (Nat × List Term)) : List (Nat × List Term) :=
+  fields.map fun (position,indices) => (position,expandArgs env indices)
+
+private theorem expansion_mapped (env : Environment) (values : List Term)
+    (commutes : ∀ term, expand env (raw term) = expanded (expand env term)) :
+    expandArgs env (values.map raw) = (expandArgs env values).map expanded := by
+  simp only [EnvironmentDelta.expandArgs_map,List.map_map,Function.comp_def,commutes]
+
+private theorem parameter_expands (admissible : EnvironmentDelta.Admissible env)
+    (depth locals index : Nat) (values : List Term) :
+    expand env (parameterAt depth locals values index) =
+      parameterAt depth locals (expandArgs env values) index := by
+  by_cases bound : index < locals
+  · simp only [parameterAt,ite_eq_left bound,expand]
+  · simp only [parameterAt,ite_eq_right bound,EnvironmentDelta.expandArgs_map,← List.map_reverse,List.getElem?_map]
+    cases lookup : values.reverse[index-locals]? with
+    | none => simp [expand]
+    | some value => simp [EnvironmentDelta.expand_renaming admissible]
+
+private theorem expand_parameter_substitution (admissible : EnvironmentDelta.Admissible env)
+    (term : Term) (depth locals : Nat) (values : List Term) :
+    expand env (term.subst (parameterAt depth locals values)) =
+      (expand env term).subst (parameterAt depth locals (expandArgs env values)) := by
+  rw [EnvironmentDelta.expand_substitution admissible]
+  congr 1
+  funext index
+  exact parameter_expands admissible depth locals index values
+
+private theorem expand_instantiated_fields (admissible : EnvironmentDelta.Admissible env)
+    (fields : List Field) (position : Nat) :
+    expandFields env (instantiatedFields depth values recursion position fields) =
+      instantiatedFields depth (expandArgs env values) recursion position (fields.map (expandField env)) := by
+  induction fields generalizing position with
+  | nil => rfl
+  | cons field tail ih =>
+    obtain ⟨erased,domain,recursive⟩ := field
+    simp only [expandFields] at ih
+    cases recursive <;> simp [instantiatedFields,expandFields,expandField,expand_parameter_substitution admissible,ih]
+
+private theorem expand_instantiated_recursive (admissible : EnvironmentDelta.Admissible env)
+    (fields : List Field) :
+    expandRecursive env (instantiatedRecursive depth values fields) =
+      instantiatedRecursive depth (expandArgs env values) (fields.map (expandField env)) := by
+  unfold instantiatedRecursive
+  rw [show recursiveFields (fields.map (expandField env)) = expandRecursive env (recursiveFields fields)
+    from expanded_recursive_fields env fields 0]
+  simp only [expandRecursive,List.map_map,Function.comp_def]
+  apply List.map_congr_left
+  intro item _
+  obtain ⟨position,indices⟩ := item
+  exact congrArg (Prod.mk position) (expansion_mapped env indices fun term =>
+    expand_parameter_substitution admissible term depth position values)
+
+private theorem expand_result_with_hypotheses (admissible : EnvironmentDelta.Admissible env)
+    (ps indices : List Term) (motive : Term) (hypotheses : Nat) :
+    expand env (dataCaseResult family constructor params fields hypotheses ps motive indices) =
+      dataCaseResult family constructor params fields hypotheses (expandArgs env ps) (expand env motive) (expandArgs env indices) := by
+  rw [dataCaseResult_hypotheses_shift family constructor params fields hypotheses,
+    EnvironmentDelta.expand_renaming admissible,expanded_case_result admissible,←dataCaseResult_hypotheses_shift]
+
+private theorem expand_hypothesis (admissible : EnvironmentDelta.Admissible env)
+    (field : Nat × List Term) (offset : Nat) :
+    expand env (dataHypothesisType params fields motive field offset) =
+      dataHypothesisType params fields (expand env motive) (field.1,expandArgs env field.2) offset := by
+  unfold dataHypothesisType
+  simp only [Term.app,EnvironmentDelta.expand_node_cons,expandArgs]
+  rw [expand_applications,EnvironmentDelta.expand_renaming admissible,expansion_mapped env _ (fun term =>
+    EnvironmentDelta.expand_renaming admissible term _)]
+  simp only [EnvironmentDelta.expandArgs_map,List.map_drop,expand]
+
+private theorem expand_hypotheses (admissible : EnvironmentDelta.Admissible env)
+    (recursion : List (Nat × List Term)) (offset : Nat) :
+    expand env (dataHypothesisTelescope params fields offset recursion proof motive result) =
+      dataHypothesisTelescope params fields offset (expandRecursive env recursion) proof (expand env motive) (expand env result) := by
+  induction recursion generalizing offset with
+  | nil => rfl
+  | cons field tail ih =>
+    simp only [dataHypothesisTelescope,List.zipIdx_cons,List.foldr_cons,expandRecursive,List.map_cons]
+    simp only [Term.pi,EnvironmentDelta.expand_node_cons,expandArgs,expand_hypothesis admissible]
+    have next := ih (offset+1)
+    simp only [dataHypothesisTelescope,expandRecursive] at next
+    rw [next]
+
+/-- Transparent global expansion commutes with the assembled data case
+type, including every recursive index under its original field scope. -/
+theorem expand_data_case_type (admissible : EnvironmentDelta.Admissible env)
+    (signature : Signature) (ps : List Term) (motive : Term) :
+    (dataCaseType family constructor params depth signature ps motive recursion proof).map (expand env) =
+      dataCaseType family constructor params depth (expandSignature env signature)
+        (expandArgs env ps) (expand env motive) recursion proof := by
+  have fieldMap : (expandSignature env signature).fields = signature.fields.map (expandField env) := rfl
+  have indicesMap : (expandSignature env signature).result = expandArgs env signature.result := rfl
+  have psLength : (expandArgs env ps).length = ps.length := by
+    simp only [EnvironmentDelta.expandArgs_map,List.length_map]
+  unfold dataCaseType
+  rw [fieldMap,indicesMap,List.length_map,psLength,←List.map_drop]
+  split
+  · rfl
+  · simp only [Option.map_some,List.length_map]
+    rw [expand_field_telescope,expand_instantiated_fields admissible,expand_hypotheses admissible]
+    let suffix := signature.fields.drop params
+    have recursiveEq :
+        expandRecursive env (if recursion then instantiatedRecursive depth ps suffix else []) =
+          (if recursion then instantiatedRecursive depth (expandArgs env ps) (suffix.map (expandField env)) else []) := by
+      cases recursion
+      · rfl
+      · exact expand_instantiated_recursive admissible suffix
+    have widths := congrArg List.length recursiveEq
+    simp only [expandRecursive,List.length_map] at widths
+    rw [recursiveEq,expand_result_with_hypotheses admissible,widths]
+    rw [expansion_mapped env _ (fun term => expand_parameter_substitution admissible term depth suffix.length ps)]
 
 end Jihoo.NativeKernel.NativeCoreDataCaseAlignment

@@ -1,4 +1,5 @@
 import Jihoo.NativeCoreDataCaseTelescope
+import Jihoo.NativeCoreProductSpine
 import Jihoo.NativeCoreDataMotiveDomain
 import Jihoo.NativeCoreCaseNormal
 
@@ -79,7 +80,7 @@ private theorem prepend_refines (domainRep : Represents arena domain field.domai
 
 /-- The source graph's field order and raw recursive indices determine the
 read plan. The terminal application is the rebuilt motive result. -/
-theorem readPlan_refines {fields : List Field} (backward : Backward arena) (inside : root < fuel)
+theorem readPlan_refines {fields : List Field} (inside : fields.length < fuel)
     (source : Represents arena root (fields.foldr (fun field tail => .pi field.erased field.domain tail) (.app M value))) :
     PlanRep arena offset (readPlan arena family fuel offset root) (fields.map (markRecursive family)) (.app M value) := by
   induction fields generalizing fuel root offset with
@@ -102,9 +103,8 @@ theorem readPlan_refines {fields : List Field} (backward : Backward arena) (insi
           cases tail with
           | @cons bodyRoot bodyTerm refs values body last =>
             cases last
-            have below : bodyRoot < root := backward root _ read bodyRoot (by simp [Node.references])
             simp only [readPlan,read,List.map_cons]
-            exact prepend_refines domain (ih (by omega) body)
+            exact prepend_refines domain (ih (by simp only [List.length_cons] at inside; omega) body)
 
 def hypotheses (limit depth params fields motive : Nat) (proof : Bool) :
     List (Nat × List Nat) → Nat → State → Nat → Outcome Nat
@@ -219,16 +219,11 @@ theorem build_refines (motiveRep : Represents state.arena motive M)
   exact ⟨shiftKept.trans (hypKept.trans fieldKept),fieldBackward ∘ hypBackward ∘ shiftBackward,
     by simpa only [fieldRep.length_eq,recursive_width recursive] using closed⟩
 
-private theorem represented_inside (source : Represents arena root term) : root < arena.size := by
-  cases source with
-  | var read | node read => exact (Array.getElem?_eq_some_iff.mp read).1
-
-theorem run_refines (backward : Backward state.arena)
-    (motiveRep : Represents state.arena motive M) (source : Represents state.arena written signature)
+theorem run_refines (motiveRep : Represents state.arena motive M) (source : Represents state.arena written signature)
     (parametersRep : RepresentsList state.arena parameters values)
     (success : (run limit depth state family constructor params motive written parameters proof).result = .ok selected) :
     let after := (run limit depth state family constructor params motive written parameters proof).state.arena
-    Prefix state.arena after ∧ Backward after ∧
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ (fields : List Field) (resultFamily arity : Nat) (indices : List Term) (opened : Term),
         instantiateParameters values signature = some opened ∧
         opened = fields.foldr (fun field tail => .pi field.erased field.domain tail) (.node (.ind resultFamily arity) indices) ∧
@@ -242,11 +237,13 @@ theorem run_refines (backward : Backward state.arena)
   rw [next] at success ⊢
   obtain ⟨kept,baseBackward,fields,resultFamily,arity,indices,opened,instantiated,shape,caseRep⟩ :=
     NativeCoreDataCaseTelescope.run_refines source motiveRep parametersRep built
-  have within := Nat.lt_succ_of_lt (represented_inside caseRep)
-  have plan := readPlan_refines (family := family) (offset := 0) (baseBackward backward) within caseRep
+  have fits := NativeCoreProductSpine.spineLength_le_arena caseRep
+  rw [NativeCoreProductSpine.folded_spineLength] at fits
+  have within : fields.length < _ := Nat.lt_succ_of_le (Nat.le_trans (Nat.le_add_left _ _) fits)
+  have plan := readPlan_refines (family := family) (offset := 0) within caseRep
   obtain ⟨suffix,finalBackward,builtRep⟩ := build_refines
     (motiveRep.frame kept) plan.bodyRep plan.fieldsRep plan.recursiveRep success
-  exact ⟨kept.trans suffix,finalBackward (baseBackward backward),fields,resultFamily,arity,indices,opened,instantiated,shape,
+  exact ⟨kept.trans suffix,finalBackward ∘ baseBackward,fields,resultFamily,arity,indices,opened,instantiated,shape,
     by simpa [List.length_map,Nat.succ_eq_add_one,dataCaseResult] using builtRep⟩
 
 /-- The checked native example erases the recursive field in both result

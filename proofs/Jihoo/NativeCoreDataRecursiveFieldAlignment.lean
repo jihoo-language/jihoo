@@ -281,15 +281,15 @@ theorem run_matches_source_case
     (parameters : RepresentsList state.arena argumentRefs arguments)
     (width : arguments.length = params) (bound : params ≤ raw.fields.length)
     (noFamily : ∀ argument ∈ arguments, recursiveIndices family argument = none)
-    (motiveRep : Represents state.arena motiveRef motive) (back : Backward state.arena)
+    (motiveRep : Represents state.arena motiveRef motive)
     (success : (NativeCoreDataRecursionCase.run limit depth state family constructor params motiveRef constructorRef argumentRefs proof).result =
       .ok output) :
     let after := (NativeCoreDataRecursionCase.run limit depth state family constructor params motiveRef constructorRef argumentRefs proof).state.arena
-    Prefix state.arena after ∧ Backward after ∧
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ branch, dataCaseType family constructor params contextDepth raw arguments motive true proof = some branch ∧
         Represents after output branch := by
   obtain ⟨kept,safe,fields,resultFamily,arity,indices,opened,instantiated,shape,graph⟩ :=
-    NativeCoreDataRecursionCase.run_refines back motiveRep source parameters success
+    NativeCoreDataRecursionCase.run_refines motiveRep source parameters success
   let suffix := raw.fields.drop params
   have form := instantiated_exact (NativeCoreDataCaseAlignment.checked_opened_telescope
     (family := family) (depth := contextDepth) scope width bound)
