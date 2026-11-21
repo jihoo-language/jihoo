@@ -35,23 +35,9 @@ private theorem less_branch_context
     simpa only [Term.subst,substArgs,Op.binders,liftSub,leftMeaning,rightMeaning] using
       (show LoanTyping.HasType env [] [] true (.decide (.natural first) (.natural second))
         (.lt (.natural first) (.natural second)) from .decide firstBound secondBound compared)
-  refine ⟨context.closing.consValues proofTyped,?_,?_⟩
-  · constructor
-    · intro index actual stored
-      cases index with
-      | zero => cases stored
-      | succ index => exact context.scalars.1 index actual stored
-    · intro index actual stored
-      cases index with
-      | zero => cases stored
-      | succ index => exact context.scalars.2 index actual stored
-  · intro index binding value selected stored
-    cases index with
-    | zero => cases stored
-    | succ index =>
-        obtain ⟨previous,found,same⟩ := Option.map_eq_some_iff.mp selected
-        subst binding
-        simpa only [shift_subst_consValues] using context.kinds index previous value found stored
+  simpa only [branchCode,Code.child,enter,Term.subst,Bool.false_eq_true,ite_false] using
+    context.enter_erased (.lt (.var left) (.var right)) yes
+      (.decide (code.origins left) (code.origins right)) proofTyped
 
 set_option linter.unusedSimpArgs false in
 private theorem captured_less_five_steps (heap : SizedBufferHeap.State) (code : Code) (stack : List Frame)

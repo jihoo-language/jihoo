@@ -1,3 +1,6 @@
+import Jihoo.NativeBindingMachineDynamicIndex
+import Jihoo.NativeBindingMachineValueKinds
+import Jihoo.NativeBindingMachineMutableNumeric
 import Jihoo.NativeBindingMachineMutableReaderReturnDemand
 
 /-! A checked conditional has equal ownership demand in both alternatives.
@@ -155,5 +158,148 @@ theorem checked_branch_retains_loan_slots
       (if equality then Term.refl (first.subst code.origins)
        else Term.decide (first.subst code.origins) (second.subst code.origins)) none
   · exact suffix.child no
+
+
+open CodeKinds
+
+private def EqualityInputs (env : Environment) (loans : Loans.Stack) (ctx : Context)
+    (mode : Bool) : Term → Prop
+  | .ifEq left right yes no => ∃ result,
+      LoanTyping.HasType env loans ctx mode left .u64 ∧ LoanTyping.HasType env loans ctx mode right .u64 ∧
+      LoanTyping.HasType env loans (⟨.eq left right,true⟩ :: ctx) mode yes (result.rename Nat.succ) ∧
+      LoanTyping.HasType env loans ctx mode no result
+  | _ => True
+
+private theorem equality_inputs (typed : LoanTyping.HasType env loans ctx mode term type) :
+    EqualityInputs env loans ctx mode term := by
+  apply LoanTyping.HasType.rec (t := typed)
+    (motive_1 := fun _ _ _ _ _ _ => True)
+    (motive_2 := fun loans ctx mode term _ _ => EqualityInputs env loans ctx mode term)
+    (motive_3 := fun _ _ _ _ _ _ _ _ => True)
+    (motive_4 := fun _ _ _ _ _ _ => True)
+    (motive_5 := fun _ _ _ _ _ _ => True)
+  all_goals intros
+  all_goals first | trivial | assumption | skip
+  case ifEq => exact ⟨_,by assumption,by assumption,by assumption,by assumption⟩
+  case dataElim => split <;> trivial
+
+private theorem typed_branches (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : LoanTyping.HasType env loans ctx mode (conditionalTerm equality first second yes no) type) :
+    ∃ result, LoanTyping.HasType env loans (⟨comparisonType equality first second,true⟩ :: ctx)
+        mode yes (result.rename Nat.succ) ∧
+      LoanTyping.HasType env loans ctx mode no result ∧ RawLend.Conv env result type := by
+  cases equality
+  · obtain ⟨result,left,right,positive,negative⟩ := typed.ifLt_inputs
+    exact ⟨result,positive,negative,(LoanTyping.HasType.ifLt left right positive negative).unique wf typed⟩
+  · obtain ⟨result,left,right,positive,negative⟩ : EqualityInputs env loans ctx mode (.ifEq first second yes no) :=
+      equality_inputs typed
+    exact ⟨result,positive,negative,(LoanTyping.HasType.ifEq left right positive negative).unique wf typed⟩
+
+private theorem branch_context
+    (context : ValueContext env code meanings)
+    (proofTyped : LoanTyping.HasType env [] [] true proof ((comparisonType equality first second).subst meanings)) :
+    ValueContext env (branchCode equality (code.child yes) first second) (consValues proof meanings) := by
+  simpa only [branchCode,Code.child,enter,comparisonType] using
+    context.enter_erased (comparisonType equality first second) yes
+      (if equality then Term.refl (first.subst code.origins)
+        else Term.decide (first.subst code.origins) (second.subst code.origins)) proofTyped
+
+private theorem comparison_witness
+    (leftMeaning : RawLend.Conv env (first.subst meanings) (.natural left))
+    (rightMeaning : RawLend.Conv env (second.subst meanings) (.natural right))
+    (leftBound : left < 2^64) (rightBound : right < 2^64)
+    (taken : leftTaken equality left right = true) :
+    ∃ proof, LoanTyping.HasType env [] [] true proof ((comparisonType equality first second).subst meanings) := by
+  cases equality
+  · have ordered : left < right := of_decide_eq_true taken
+    refine ⟨.decide (.natural left) (.natural right),?_⟩
+    have converted : RawLend.Conv env (.lt (.natural left) (.natural right))
+        (.lt (first.subst meanings) (second.subst meanings)) :=
+      .node .lt (.cons leftMeaning.symm (.cons rightMeaning.symm .nil))
+    apply (LoanTyping.HasType.decide leftBound rightBound ordered).convert
+    simpa only [comparisonType,Bool.false_eq_true,ite_false,Term.lt,Term.subst,substArgs,Op.binders,liftSub] using converted
+  · have same : left = right := beq_iff_eq.mp taken
+    subst right
+    refine ⟨.refl (.natural left),?_⟩
+    have converted : RawLend.Conv env (.eq (.natural left) (.natural left))
+        (.eq (first.subst meanings) (second.subst meanings)) :=
+      .node .eq (.cons leftMeaning.symm (.cons rightMeaning.symm .nil))
+    apply (LoanTyping.HasType.refl (.natural leftBound)).convert
+    simpa only [comparisonType,ite_true,Term.eq,Term.subst,substArgs,Op.binders,liftSub] using converted
+
+/-- At the actual comparison frame, value interpretations of the evaluated
+operands give closed evidence for the selected positive branch. Both branches
+retain the original dependent result type and the interpretation of old slots. -/
+theorem checked_branch_closing
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (returning : state.control = .returned (.natural right))
+    (pendingComparison : state.stack = .branchRight equality left (code.child yes) (code.child no) first second :: stack)
+    (typed : LoanClosingTyped env loans false (code.child (conditionalTerm equality first second yes no)) meanings type)
+    (context : ValueContext env code meanings)
+    (leftMeaning : RawLend.Conv env (first.subst meanings) (.natural left))
+    (rightMeaning : RawLend.Conv env (second.subst meanings) (.natural right))
+    (leftBound : left < 2^64) (rightBound : right < 2^64) :
+    ∃ next actualMeanings, step state = some (⟨state.heap,.evaluate next,stack,state.pending⟩,none) ∧
+      LoanClosingTyped env loans false next actualMeanings type ∧ ValueContext env next actualMeanings := by
+  obtain ⟨closing,localType,source,expected⟩ := typed
+  obtain ⟨result,positive,negative,converted⟩ := typed_branches wf source
+  have resultType := (converted.substitution meanings wf.closed).trans expected
+  have stepped := step_branch returning pendingComparison
+  dsimp only at stepped
+  by_cases taken : leftTaken equality left right = true
+  · rw [ite_eq_left taken] at stepped
+    obtain ⟨proof,proofTyped⟩ := comparison_witness leftMeaning rightMeaning leftBound rightBound taken
+    have continued := branch_context (yes := yes) context proofTyped
+    refine ⟨_,_,stepped,⟨continued.closing,result.rename Nat.succ,positive,?_⟩,continued⟩
+    simpa only [shift_subst_consValues] using resultType
+  · rw [ite_eq_right taken] at stepped
+    exact ⟨_,_,stepped,⟨closing,result,negative,resultType⟩,context.child no⟩
+
+/-- Both comparison operands have word range by actual machine
+reachability. The original resource and ownership receipts transfer to
+the same uniquely selected and value-typed branch. -/
+theorem reachable_checked_branch_handoff (term : Term) (ticks : Nat)
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (returning : (run ticks (initial term)).state.control = .returned (.natural right))
+    (pendingComparison : (run ticks (initial term)).state.stack =
+      .branchRight equality left (code.child yes) (code.child no) first second :: stack)
+    (typed : LoanClosingTyped env loans false (code.child (conditionalTerm equality first second yes no)) meanings type)
+    (context : ValueContext env code meanings)
+    (leftMeaning : RawLend.Conv env (first.subst meanings) (.natural left))
+    (rightMeaning : RawLend.Conv env (second.subst meanings) (.natural right))
+    (checked : projectRaw (fuel+1) env loans code.context (conditionalTerm equality first second yes no) = some receipt)
+    (rest : receipt = .seq compared alternatives)
+    (world : OwnerDemandWorld (run ticks (initial term)).state.heap.metadata code alternatives)
+    (total : OwnerDemandWorld.Total code alternatives)
+    (valid : LocalScopes receipt) (budget : LoanBudget code.context.length loans receipt)
+    (entered : Loans.Entered code.context.length loans)
+    (slots : LoanSlots code loans (run ticks (initial term)).state.activeStack) :
+    let state := (run ticks (initial term)).state
+    ∃ next actualMeanings bodyReceipt,
+      step state = some (⟨state.heap,.evaluate next,stack,state.pending⟩,none) ∧
+      LoanClosingTyped env loans false next actualMeanings type ∧ ValueContext env next actualMeanings ∧
+      projectRaw fuel env loans next.context next.term = some bodyReceipt ∧
+      OwnerDemandWorld state.heap.metadata next bodyReceipt ∧ OwnerDemandWorld.Total next bodyReceipt ∧
+      LoanBudget next.context.length loans bodyReceipt ∧
+      LoanSlots next loans (⟨state.heap,.evaluate next,stack,state.pending⟩ : State).activeStack := by
+  have numeric := (initial_run_numbers term ticks).legacy
+  have rightBound := numeric.2.1
+  change ControlNumbers (run ticks (initial term)).state.control at rightBound
+  rw [returning] at rightBound
+  have leftFrame := numeric.2.2
+  change StackNumbers (run ticks (initial term)).state.stack at leftFrame
+  rw [pendingComparison] at leftFrame
+  have leftBound := leftFrame.head.1
+  obtain ⟨next,actual,stepTyped,closing,values⟩ := checked_branch_closing history.wellFormed
+    returning pendingComparison typed context leftMeaning rightMeaning leftBound rightBound.naturalBound
+  obtain ⟨resource,body,stepResource,projected,owners,allOwners,loans⟩ :=
+    checked_branch_handoff returning pendingComparison checked rest world total valid budget entered
+  have outcome := Option.some.inj (stepResource.symm.trans stepTyped)
+  have same := Control.evaluate.inj (congrArg (fun state : State × Option Event => state.1.control) outcome)
+  subst resource
+  obtain ⟨stepSlots,keptSlots⟩ := checked_branch_retains_loan_slots returning pendingComparison slots entered
+  have slotOutcome := Option.some.inj (stepSlots.symm.trans stepTyped)
+  have sameSlots := Control.evaluate.inj (congrArg (fun state : State × Option Event => state.1.control) slotOutcome)
+  exact ⟨next,actual,body,stepTyped,closing,values,projected,owners,allOwners,loans,sameSlots ▸ keptSlots⟩
 
 end Jihoo.NativeKernel.Environment.BindingMachine.Mutable

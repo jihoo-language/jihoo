@@ -4765,3 +4765,14 @@ rewrites precisely its original field slot across later domains.
 Transparent expansion commutes with the reconstructed borrowed
 constructor, the weakened motive, and the recursive hypotheses. The
 focused build passed 442 jobs and four declaration audits.
+
+### Typed runtime comparison handoff
+
+At an actual comparison frame, both operand widths follow from machine
+reachability. Interpreting their values gives the erased `Decide` or
+`Refl` witness when the positive branch is taken. The selected branch has
+the original closed result type and retains the interpretation of prior
+bindings. The same step transfers the exact branch resource receipt,
+owner demand, loan budget, and physical reader slots. Operand value
+interpretations and the post-operand ownership world are premises.
+The focused build passed 390 jobs and three declaration audits.

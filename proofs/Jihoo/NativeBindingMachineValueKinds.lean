@@ -106,6 +106,31 @@ private theorem value_context_cons
       subst binding
       simpa only [shift_subst_consValues] using context.kinds index previous actual found stored
 
+/-- An erased binding has a checked semantic value and an empty runtime
+slot. All previously interpreted values retain their original types. -/
+theorem ValueContext.enter_erased
+    (context : ValueContext env code meanings) (domain body origin : Term)
+    (proofTyped : LoanTyping.HasType env [] [] true proof (domain.subst meanings)) :
+    ValueContext env (enter true domain body code.context code.origins code.values origin none)
+      (consValues proof meanings) := by
+  refine ⟨context.closing.consValues proofTyped,?_,?_⟩
+  · constructor
+    · intro index actual stored
+      cases index with
+      | zero => cases stored
+      | succ index => exact context.scalars.1 index actual stored
+    · intro index actual stored
+      cases index with
+      | zero => cases stored
+      | succ index => exact context.scalars.2 index actual stored
+  · intro index binding value selected stored
+    cases index with
+    | zero => cases stored
+    | succ index =>
+      obtain ⟨previous,found,same⟩ := Option.map_eq_some_iff.mp selected
+      subst binding
+      simpa only [shift_subst_consValues] using context.kinds index previous value found stored
+
 /-- Function inversion supplies the domain conversion. No argument typing or
 post-entry value interpretation is requested from the caller. -/
 theorem ValueContext.enter_natural

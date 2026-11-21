@@ -10952,3 +10952,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreViewCaseExpansion.viewHypothesisTelescope_expand
 #print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.FieldLayout.matches_fields
 #print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.case_type_conversion
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.ValueContext.enter_erased
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_closing
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_checked_branch_handoff
