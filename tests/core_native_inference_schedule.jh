@@ -423,17 +423,17 @@ fn array_fixture() -> core.Core {
     c
 }
 
-fn array_and_allocation_inference() {
+fn array_and_allocation_inference(ghost: bool) {
     var limited = array_fixture()
     spend(&limited, 999995)
-    assert(match limited.infer(2, [], true, 20) {
+    assert(match limited.infer(2, [], ghost, 20) {
         Err(e) => e.msg == "core: checking step limit reached", _ => false
     }, "array checks its second element before committing the length")
     assert(limited.node_count() == 7, "array keeps each prior signed comparison node")
 
     var array = array_fixture()
     spend(&array, 999991)
-    let inferred = array.infer(2, [], true, 20).unwrap()
+    let inferred = array.infer(2, [], ghost, 20).unwrap()
     assert(inferred == 9 && array.term(8) == core.Term.Natural(2) && array.term(inferred) == core.Term.Array(8),
         "array type uses the emitted element count")
     assert_spent(&array, "array inference uses nine ticks")
@@ -445,7 +445,7 @@ fn array_and_allocation_inference() {
     let source = allocation.add(core.Term.Alloc(count, fill), span).unwrap()
     allocation.add(core.Term.Buffer(count), span).unwrap()
     spend(&allocation, 999991)
-    let buffer = allocation.infer(source, [], true, 20).unwrap()
+    let buffer = allocation.infer(source, [], ghost, 20).unwrap()
     assert(buffer == 8 && allocation.term(buffer) == core.Term.Buffer(count), "buffer type keeps the source count")
     assert_spent(&allocation, "allocation inference uses nine ticks")
 }
@@ -466,23 +466,23 @@ fn buffer_operations_fixture() -> core.Core {
     c
 }
 
-fn buffer_operation_inference() {
+fn buffer_operation_inference(ghost: bool) {
     var limited = buffer_operations_fixture()
     spend(&limited, 999980)
-    assert(match limited.infer(5, [], true, 32) {
+    assert(match limited.infer(5, [], ghost, 32) {
         Err(e) => e.msg == "core: checking step limit reached", _ => false
     }, "store exhausts the budget upon entering its bound evidence")
     assert(limited.node_count() == 20 && limited.term(19) == core.Term.Lt(1, 0), "store retains its original bound")
 
     var stored = buffer_operations_fixture()
     spend(&stored, 999960)
-    let owner = stored.infer(5, [], true, 32).unwrap()
+    let owner = stored.infer(5, [], ghost, 32).unwrap()
     assert(owner == 24 && stored.term(owner) == core.Term.Buffer(0), "store keeps its original buffer length")
     assert_spent(&stored, "store inference uses 40 ticks")
 
     var released = buffer_operations_fixture()
     spend(&released, 999956)
-    let result = released.infer(7, [], true, 32).unwrap()
+    let result = released.infer(7, [], ghost, 32).unwrap()
     assert(result == 25 && released.term(result) == core.Term.U64, "free returns the checked continuation type")
     assert_spent(&released, "free inference with the store uses 44 ticks")
 }
@@ -508,10 +508,10 @@ fn indexing_fixture() -> core.Core {
     c
 }
 
-fn array_and_borrowed_index_inference() {
+fn array_and_borrowed_index_inference(ghost: bool) {
     var array = indexing_fixture()
     spend(&array, 999964)
-    let array_result = array.infer(6, [], true, 32).unwrap()
+    let array_result = array.infer(6, [], ghost, 32).unwrap()
     assert(array_result == 26 && array.term(21) == core.Term.Lt(1, 17) && array.term(array_result) == core.Term.I64,
         "array indexing uses the inferred array length before returning a signed word")
     assert_spent(&array, "array indexing uses 36 ticks")
@@ -519,7 +519,7 @@ fn array_and_borrowed_index_inference() {
     var borrowed = indexing_fixture()
     let context = [core.Binding { ty: 8, erased: false }]
     spend(&borrowed, 999966)
-    let borrowed_result = borrowed.infer(10, context, true, 32).unwrap()
+    let borrowed_result = borrowed.infer(10, context, ghost, 32).unwrap()
     assert(borrowed_result == 21 && borrowed.term(16) == core.Term.Lt(1, 0) && borrowed.term(borrowed_result) == core.Term.I64,
         "borrowed indexing uses the original buffer length before returning a signed word")
     assert_spent(&borrowed, "borrowed indexing uses 34 ticks")
@@ -2029,9 +2029,12 @@ fn main() -> i32 {
     absurd_inference()
     wide_ghost_sum()
     open_word_sums()
-    array_and_allocation_inference()
-    buffer_operation_inference()
-    array_and_borrowed_index_inference()
+    array_and_allocation_inference(true)
+    array_and_allocation_inference(false)
+    buffer_operation_inference(true)
+    buffer_operation_inference(false)
+    array_and_borrowed_index_inference(true)
+    array_and_borrowed_index_inference(false)
     load_callback_inference()
     reference_inference()
     family_index_inference()

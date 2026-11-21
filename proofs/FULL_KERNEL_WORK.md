@@ -4859,3 +4859,14 @@ For a checked subtraction of observed words, the original evidence
 gives the bound of the actual literal contraction. Two proof terms
 with the same observed operands therefore yield convertible
 subtractions. The focused check verified nine declarations.
+
+### Recursive CODE allocation, arrays, stores, and index reads
+
+The recursive CODE visitor checks allocation operands, every materialized
+array element, owner stores, and array or borrowed Buffer indexing. A
+store or index check uses the shared ghost visitor for its original bound
+proof. Each visit keeps the written dimension or the exposed buffer
+length in the native result graph. Lean and native Core agree on 9 ticks
+for allocation and array construction, 40 for Store, 36 for array Index,
+and 34 for borrowed Index. The focused build passed 487 jobs, nine
+declaration audits, and the native schedule in both inference modes.

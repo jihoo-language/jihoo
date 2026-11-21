@@ -13,7 +13,11 @@ open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons
   conditionOp inferConditional inferConditional_progress inferConditional_modeRefines
-  inferSubtractWithProof inferSubtractWithProof_progress inferSubtractWithProof_modeRefines)
+  inferSubtractWithProof inferSubtractWithProof_progress inferSubtractWithProof_modeRefines
+  inferAlloc inferAlloc_progress inferAlloc_modeRefines
+  inferElements inferElements_progress inferElements_modeRefines
+  inferStoreWithProof inferStoreWithProof_progress inferStoreWithProof_modeRefines
+  inferIndexWithProof inferIndexWithProof_progress inferIndexWithProof_modeRefines)
 open NativeCoreCodeScalarInference (enter enter_progress enter_success arithmetic arithmetic_progress
   arithmetic_refines strict strict_progress strict_refines)
 open NativeCoreBufferRelease (inferFree inferFree_progress)
@@ -32,6 +36,14 @@ def run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         arithmetic recur (normal depth) limit depth entered .u64 left right
     | some (.node .usub [left,right,proof]) => enter limit (depth+1) state root fun entered =>
         inferSubtractWithProof recur (ghost depth bindings) (normal depth) limit depth entered left right proof
+    | some (.node .alloc [length,fill]) => enter limit (depth+1) state root fun entered =>
+        inferAlloc recur (normal depth) limit depth entered length fill
+    | some (.node (.elements length) elements) => enter limit (depth+1) state root fun entered =>
+        inferElements recur (normal depth) limit depth entered root length elements
+    | some (.node .store [buffer,index,value,proof]) => enter limit (depth+1) state root fun entered =>
+        inferStoreWithProof recur (ghost depth bindings) (normal depth) limit depth entered buffer index value proof
+    | some (.node .index [subject,index,proof]) => enter limit (depth+1) state root fun entered =>
+        inferIndexWithProof recur (ghost depth bindings) (normal depth) limit depth entered subject index proof
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
         strict recur entered first last
     | some (.node .ifLt [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
@@ -67,6 +79,12 @@ theorem run_progress
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferSubtractWithProof_progress (fun _ _ => ih)
+        (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferAlloc_progress (fun _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferElements_progress (fun _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferStoreWithProof_progress (fun _ _ => ih)
+        (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferIndexWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
@@ -126,7 +144,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
-      case arith | uadd | strict | free | app =>
+      case arith | uadd | alloc | strict | free | app =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
         cases children with
@@ -143,6 +161,9 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
             | obtain ⟨kept,backward,typed⟩ := NativeCoreBufferRelease.inferFree_refines
                 (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
                 modeSound childCost onBase inside first second success ambient retained
+              exact ⟨kept,backward,typed⟩
+            | obtain ⟨kept,backward,typed⟩ := inferAlloc_modeRefines (state := {state with steps := state.steps+1})
+                (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside first second success ambient retained
               exact ⟨kept,backward,typed⟩
             | apply arithmetic_refines (state := {state with steps := state.steps+1}) (depth := depth)
                 (normalLocal depth) (normalProgress depth) childSound childCost
@@ -178,7 +199,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
-      case usub =>
+      case usub | index =>
         have length : refs.length = 3 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩ <;> simp at length
         cases children with
@@ -191,11 +212,44 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
               dsimp only at success ambient ⊢
               obtain ⟨entered,inside⟩ := enter_success success
               rw [entered] at success ambient ⊢
-              obtain ⟨kept,safe,typed⟩ := inferSubtractWithProof_modeRefines
-                (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
-                modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
-                onBase inside left right proof success ambient retained
-              exact ⟨kept,safe,typed⟩
+              first
+              | obtain ⟨kept,safe,typed⟩ := inferSubtractWithProof_modeRefines
+                  (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
+                  modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                  onBase inside left right proof success ambient retained
+                exact ⟨kept,safe,typed⟩
+              | obtain ⟨kept,safe,typed⟩ := inferIndexWithProof_modeRefines
+                  (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
+                  modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                  onBase inside left right proof success ambient retained
+                exact ⟨kept,safe,typed⟩
+      case elements count =>
+        dsimp only at success ambient ⊢
+        obtain ⟨entered,inside⟩ := enter_success success
+        rw [entered] at success ambient ⊢
+        obtain ⟨kept,safe,typed⟩ := inferElements_modeRefines (state := {state with steps := state.steps+1})
+          (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside children success ambient retained
+        exact ⟨kept,safe,typed⟩
+      case store =>
+        have length : refs.length = 4 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons buffer rest =>
+          cases rest with
+          | cons index rest =>
+            cases rest with
+            | cons value rest =>
+              cases rest with
+              | cons proof rest =>
+                cases rest
+                dsimp only at success ambient ⊢
+                obtain ⟨entered,inside⟩ := enter_success success
+                rw [entered] at success ambient ⊢
+                obtain ⟨kept,safe,typed⟩ := inferStoreWithProof_modeRefines
+                  (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
+                  modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                  onBase inside buffer index value proof success ambient retained
+                exact ⟨kept,safe,typed⟩
       case ifLt | ifEq =>
         have length : refs.length = 4 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
@@ -354,5 +408,57 @@ theorem subtraction_proof_mode_matches_native :
       accepted.result.map Inferred.typeRoot = .ok 16 ∧
       rejected.state = ⟨subtractionArena true ++ #[.node .u64 []],2⟩ ∧
       rejected.result = .error (.outsideFragment 4) := by cbv
+
+private def runtimeArraySnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨4,2⟩]
+  families := []
+  arena := #[.node (.integer 3) [],.node (.integer (-4)) [],.node (.elements 2) [0,1],
+    .node (.natural 2) [],.node .array [3]]
+
+private def runtimeAllocationSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨3,2⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.integer (-7)) [],.node .alloc [0,1],.node .buffer [0]]
+
+private def runtimeBufferOperationsSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨8,5⟩,⟨9,7⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.natural 0) [],.node (.integer (-7)) [],.node .alloc [0,2],
+    .node .decide [1,0],.node .store [3,1,2,4],.node (.natural 9) [],.node .free [5,6],
+    .node .buffer [0],.node .u64 []]
+
+private def runtimeIndexSnapshot : NativeFamilyWire.Snapshot where
+  definitions := [⟨11,6⟩,⟨13,12⟩]
+  families := []
+  arena := #[.node (.natural 2) [],.node (.natural 1) [],.node (.integer 3) [],.node (.integer (-4)) [],
+    .node (.elements 2) [2,3],.node .decide [1,0],.node .index [4,1,5],.node .buffer [0],.node .ref [7],
+    .var 0,.node .index [9,1,5],.node .i64 [],.node (.lam false) [8,10],.node (.pi false) [8,11]]
+
+private def runtimeMemoryProbe (arena : Arena) (limit depth : Nat)
+    (bindings : List NativeCoreGhostSpineInference.GraphBinding) (root : Nat) :=
+  run (NativeCoreGhostLiteralAddition.run [] 0 limit) (NativeCoreGhostSpineInference.run [] 0 limit)
+    empty (fun _ => false) (fun _ => false) limit depth bindings false ⟨arena,0⟩ root
+
+set_option maxRecDepth 4096 in
+/-- Allocation, materialized arrays, owner stores and both forms of
+indexing use the original operands and the native result rows in CODE. -/
+theorem memory_visits_match_native_code :
+    let array := runtimeMemoryProbe runtimeArraySnapshot.arena 9 20 [] 2
+    let allocation := runtimeMemoryProbe runtimeAllocationSnapshot.arena 9 20 [] 2
+    let store := runtimeMemoryProbe runtimeBufferOperationsSnapshot.arena 40 32 [] 5
+    let plain := runtimeMemoryProbe runtimeIndexSnapshot.arena 36 32 [] 6
+    let borrowed := runtimeMemoryProbe runtimeIndexSnapshot.arena 34 32 [⟨8,false⟩] 10
+    array.state.steps = 9 ∧ array.result.map Inferred.typeRoot = .ok 9 ∧
+      array.state.arena[9]? = some (.node .array [8]) ∧
+    allocation.state.steps = 9 ∧ allocation.result.map Inferred.typeRoot = .ok 8 ∧
+      allocation.state.arena[8]? = some (.node .buffer [0]) ∧
+    store.state.steps = 40 ∧ store.result.map Inferred.typeRoot = .ok 24 ∧
+      store.state.arena[24]? = some (.node .buffer [0]) ∧
+    plain.state.steps = 36 ∧ plain.result.map Inferred.typeRoot = .ok 26 ∧
+      plain.state.arena[21]? = some (.node .lt [1,17]) ∧ plain.state.arena[26]? = some (.node .i64 []) ∧
+    borrowed.state.steps = 34 ∧ borrowed.result.map Inferred.typeRoot = .ok 21 ∧
+      borrowed.state.arena[16]? = some (.node .lt [1,0]) ∧ borrowed.state.arena[21]? = some (.node .i64 []) := by
+  cbv
+
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

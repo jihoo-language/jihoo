@@ -10991,3 +10991,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.FramesRep.frame
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.FramesRep.enter
 #print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.accepted_owner_named
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferAlloc_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferAlloc_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferElements_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferElements_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferStoreWithProof_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferStoreWithProof_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferIndexWithProof_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferIndexWithProof_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.memory_visits_match_native_code
