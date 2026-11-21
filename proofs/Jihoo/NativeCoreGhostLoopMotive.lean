@@ -12,7 +12,8 @@ open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (Infer Visit InferSound PairRetained requireTypes requireTypes_progress
   requireTypes_refines next_progress)
 open NativeCoreGhostBackMotive (exposeProduct product_progress product_refines checkRepresentation
-  representation_progress representation_refines)
+  representation_progress representation_refines iteration_representation_policy)
+open NativeCoreGhostReferenceTypes (BoxedFamilies)
 open EnvironmentDelta (expand expandArgs)
 
 structure CheckedMotive where
@@ -64,24 +65,27 @@ private theorem inspectSort_refines
     (success : (inspectSort normal isBoxed state level motive).result = .ok proof) :
     let after := (inspectSort normal isBoxed state level motive).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.Conversion.Conv env (expand env sort) (loopSortTerm proof) := by
+      LoanTyping.Conversion.Conv env (expand env sort) (loopSortTerm proof) ∧
+      (∀ mode, BoxedFamilies env isBoxed → LoanTyping.IterationMotiveAllowed env mode proof (expand env written)) := by
   unfold inspectSort at success ⊢
   obtain ⟨selected,sorted,next⟩ := Outcome.next_success success
   rw [next] at success ⊢
   obtain ⟨kept,backward,converted⟩ := NativeCoreGhostSort.sort_refines normalSound onBase sortRep sorted
   split at success
   · cases success
-    exact ⟨kept,backward,converted⟩
+    exact ⟨kept,backward,converted,fun _ _ => .inr (.inl rfl)⟩
   · obtain ⟨⟨⟩,allowed,accepted⟩ := Outcome.next_success success
     rw [accepted] at success ⊢
     cases success
     obtain ⟨after,afterBack⟩ := representation_refines normalSound (onBase.trans kept) (motiveRep.frame kept) allowed
-    exact ⟨kept.trans after,afterBack ∘ backward,converted⟩
+    exact ⟨kept.trans after,afterBack ∘ backward,converted,
+      fun mode metadata => iteration_representation_policy (mode := mode) metadata
+        normalSound (onBase.trans kept) (motiveRep.frame kept) allowed⟩
   · cases success
 
 /-- Native sort selection yields the original motive at the relevant U64
 product and the exact sort used to check the remaining iteration operands. -/
-theorem run_refines
+theorem run_refines_with_policy
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (childSound : InferSound env base ctx limit infer)
@@ -93,7 +97,8 @@ theorem run_refines
     (retained : ∀ pair ∈ checked.compared, PairRetained final pair) :
     let after := (run infer normal isBoxed limit depth state word motive).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.HasType env [] ctx true (expand env written) (.pi false .u64 (loopSortTerm checked.proof)) := by
+      LoanTyping.HasType env [] ctx true (expand env written) (.pi false .u64 (loopSortTerm checked.proof)) ∧
+      (∀ mode, BoxedFamilies env isBoxed → LoanTyping.IterationMotiveAllowed env mode checked.proof (expand env written)) := by
   unfold run at success ambient ⊢
   obtain ⟨inferred,inferOk,inferNext⟩ := Outcome.next_success success
   rw [inferNext] at success ambient ⊢
@@ -125,11 +130,28 @@ theorem run_refines
   obtain ⟨equalKept,equalBack,domainConv⟩ := requireTypes_refines normalSound (onBase.trans throughProduct)
     domainRep (wordRep.frame throughProduct) equalOk afterEqual (retained pair (by simp))
   have throughEqual := throughProduct.trans equalKept
-  obtain ⟨resultKept,resultBack,levelConv⟩ := inspectSort_refines normalSound (onBase.trans throughEqual)
+  obtain ⟨resultKept,resultBack,levelConv,resultPolicy⟩ := inspectSort_refines normalSound (onBase.trans throughEqual)
     (sortRep.frame equalKept) (motiveRep.frame throughEqual) resultOk
   have wordShape : expand env .u64 = .u64 := by simp only [Term.u64,expand,expandArgs]
   rw [wordShape] at domainConv
   exact ⟨throughEqual.trans resultKept,resultBack ∘ equalBack ∘ productBack ∘ inferBack,
-    typed.convert (converted.trans (.node (.pi false) (.cons domainConv (.cons levelConv .nil))))⟩
+    typed.convert (converted.trans (.node (.pi false) (.cons domainConv (.cons levelConv .nil)))),resultPolicy⟩
+
+theorem run_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (wordRep : Represents state.arena word .u64) (motiveRep : Represents state.arena motive written)
+    (success : (run infer normal isBoxed limit depth state word motive).result = .ok checked)
+    (ambient : Prefix (run infer normal isBoxed limit depth state word motive).state.arena final)
+    (retained : ∀ pair ∈ checked.compared, PairRetained final pair) :
+    let after := (run infer normal isBoxed limit depth state word motive).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.HasType env [] ctx true (expand env written) (.pi false .u64 (loopSortTerm checked.proof)) := by
+  obtain ⟨kept,backward,typed,_⟩ :=
+    run_refines_with_policy normalSound normalizes childSound infers onBase room wordRep motiveRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostLoopMotive

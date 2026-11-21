@@ -142,7 +142,10 @@ theorem representation_refines
 private theorem fixedHead_refines
     (metadata : BoxedFamilies env isBoxed) (represented : Represents arena root term)
     (accepted : fixedHead isBoxed allowBack arena[root]? = true) :
-    fixedRepresentation env (expand env term) = true := by
+    fixedRepresentation env (expand env term) = true ∧
+      (allowBack = false →
+        scalarLoopMotive (.lam flag domain (expand env term)) = true ∨
+          LoanTyping.Owned env (expand env term)) := by
   cases represented with
   | var read => simp [read,fixedHead] at accepted
   | @node _ op refs terms read width children =>
@@ -152,32 +155,42 @@ private theorem fixedHead_refines
       have empty : refs = [] := List.length_eq_zero_iff.mp width
       subst refs
       cases children
-      simp only [expand,expandArgs,fixedRepresentation]
+      simp only [expand,expandArgs,fixedRepresentation,scalarLoopMotive,Term.lam]
+      exact ⟨True.intro,fun _ => .inl True.intro⟩
     case refine | buffer =>
       have length : refs.length = 1 := width
       rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
       cases children with
-      | cons body tail => cases tail; simp only [expand,expandArgs,fixedRepresentation]
-    case back flag =>
+      | cons body tail =>
+        cases tail
+        simp only [expand,expandArgs,fixedRepresentation,scalarLoopMotive,Term.lam]
+        first
+        | exact ⟨True.intro,fun _ => .inl True.intro⟩
+        | exact ⟨True.intro,fun _ => .inr (.buffer (.refl _))⟩
+    case back erased =>
       have length : refs.length = 2 := width
       rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
       cases children with
       | cons owner tail =>
         cases tail with
-        | cons motive tail => cases tail; simp only [expand,expandArgs,fixedRepresentation]
+        | cons motive tail =>
+          cases tail
+          refine ⟨by simp only [expand,expandArgs,fixedRepresentation],fun loop => ?_⟩
+          simp [fixedHead,loop] at accepted
     case ind family count =>
       have boxed : isBoxed family = true := by simpa only [fixedHead] using accepted
       obtain ⟨entry,found,layout⟩ := metadata family boxed
-      simp only [expand,fixedRepresentation,found,Option.any_some,layout]
+      refine ⟨by simp only [expand,fixedRepresentation,found,Option.any_some,layout],fun _ => .inr ?_⟩
+      exact .family found layout (by simp only [expand]; exact .refl _)
 
-/-- Native representation checks record the actual normalized motive lambda
-and classify its written body using the authenticated family layout. -/
-theorem representation_policy
+private theorem representation_body
     (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
     (represented : Represents state.arena motive written)
     (success : (checkRepresentation normal isBoxed state motive allowBack).result = .ok ()) :
-    LoanTyping.BackRepresentation env false false (expand env written) := by
+    ∃ flag domain body, LoanTyping.Conversion.Conv env (expand env written) (.lam flag domain body) ∧
+      fixedRepresentation env body = true ∧
+      (allowBack = false → scalarLoopMotive (.lam flag domain body) = true ∨ LoanTyping.Owned env body) := by
   unfold checkRepresentation at success
   obtain ⟨selected,normalized,next⟩ := Outcome.next_success success
   rw [next] at success
@@ -196,10 +209,34 @@ theorem representation_policy
           cases rest with
           | cons bodyRep rest =>
             cases rest
-            exact .inr (.inr ⟨flag,_,_,by simpa only [Term.lam,expand,expandArgs] using conversion.converted,
-              fixedHead_refines metadata bodyRep good⟩)
+            exact ⟨flag,_,_,by simpa only [Term.lam,expand,expandArgs] using conversion.converted,
+              fixedHead_refines metadata bodyRep good⟩
     · cases success
   · cases success
+
+/-- Native representation checks record the actual normalized motive lambda
+and classify its written body using the authenticated family layout. -/
+theorem representation_policy
+    (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (represented : Represents state.arena motive written)
+    (success : (checkRepresentation normal isBoxed state motive allowBack).result = .ok ()) :
+    LoanTyping.BackRepresentation env false false (expand env written) := by
+  obtain ⟨flag,domain,body,converted,fixed,_⟩ := representation_body metadata normalSound onBase represented success
+  exact .inr (.inr ⟨flag,domain,body,converted,fixed⟩)
+
+/-- A data Loop needs the original normalized motive to return a scalar,
+refinement or owned accumulator at every index. -/
+theorem iteration_representation_policy
+    (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (represented : Represents state.arena motive written)
+    (success : (checkRepresentation normal isBoxed state motive false).result = .ok ()) :
+    LoanTyping.IterationMotiveAllowed env mode false (expand env written) := by
+  obtain ⟨flag,domain,body,converted,_,classification⟩ := representation_body metadata normalSound onBase represented success
+  rcases classification rfl with signed | owned
+  · exact .inr (.inr (.inl ⟨_,converted,signed⟩))
+  · exact .inr (.inr (.inr ⟨flag,domain,body,converted,owned⟩))
 
 private theorem result_refinesWithPolicy
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)

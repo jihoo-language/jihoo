@@ -1613,6 +1613,36 @@ fn loop_motive_inference() {
     assert_spent(&proof, "the proposition loop checks every dependent operand in one hundred ninety-six ticks")
 }
 
+fn code_iteration_inference() {
+    var signed = folding_fixture()
+    spend(&signed, 999938)
+    let signed_ty = signed.infer(9, [], false, 32).unwrap()
+    assert(signed_ty == 19 && signed.node_count() == 34 && signed.term(signed_ty) == core.Term.I64,
+        "CODE Fold checks the signed callback and retains its type")
+    assert_spent(&signed, "signed CODE Fold uses 62 ticks")
+
+    var owned = folding_fixture()
+    spend(&owned, 999912)
+    let owned_ty = owned.infer(15, [], false, 32).unwrap()
+    assert(owned_ty == 23 && owned.node_count() == 40 && owned.term(owned_ty) == core.Term.Buffer(0),
+        "CODE Fold checks the linear Buffer callback and retains its count")
+    assert_spent(&owned, "owned CODE Fold uses 88 ticks")
+
+    var data = loop_fixture()
+    spend(&data, 999897)
+    let data_ty = data.infer(10, [], false, 32).unwrap()
+    assert(data_ty == 58 && data.node_count() == 59 && data.term(data_ty) == core.Term.App(5, 0),
+        "CODE Loop uses the runtime visit for a data accumulator")
+    assert_spent(&data, "data CODE Loop uses 103 ticks")
+
+    var proof = loop_fixture()
+    spend(&proof, 999804)
+    let proof_ty = proof.infer(24, [], false, 32).unwrap()
+    assert(proof_ty == 83 && proof.node_count() == 84 && proof.term(proof_ty) == core.Term.App(21, 0),
+        "a proposition motive preserves the ghost callback in CODE")
+    assert_spent(&proof, "proposition CODE Loop uses 196 ticks")
+}
+
 fn proposition_elimination_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -2385,6 +2415,7 @@ fn main() -> i32 {
     dependent_proof_comparison()
     runtime_partial_applications()
     loop_motive_inference()
+    code_iteration_inference()
     dependent_lend_callbacks()
     code_word_definition()
     owner_return_inference(true)

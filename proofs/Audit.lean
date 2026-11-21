@@ -11133,3 +11133,13 @@ import Jihoo
 
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofLoop.lower_lift
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling.unroll_preserves
+
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.expanded_body_policy_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.global_free_body_policy
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.runWith_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostBackMotive.iteration_representation_policy
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopMotive.run_refines_with_policy
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.runInMode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopInference.runInMode_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldExamples.code_fold_checks_runtime_callback
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLoopExamples.code_loop_selects_operand_modes

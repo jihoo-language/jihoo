@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreGhostLoopInference
 import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreCodeInference
 
 /-! Two native fixtures exercise both accumulator erasure modes. The
 proposition case uses the real successor expression in its proof fiber. -/
@@ -55,5 +56,23 @@ theorem recursive_dispatch_checks_data_and_proof :
      let inferred := NativeCoreGhostSpineInference.runWith normal [] 0 196 32 [] ⟨input,0⟩ 24
      inferred.state.steps = 196 ∧ inferred.result.map Inferred.typeRoot = .ok 83 ∧
        inferred.state.arena[83]? = some (.node .app [21,0]) ∧ inferred.state.arena.size = 84) := by cbv
+
+private def codeLoop (limit motive initial body : Nat) : Outcome Inferred :=
+  let normal := NativeCorePureComputationNormal.runWithExtensions postSum (NativeCoreNestedAliases.extension [] 0) limit
+  let ghost := NativeCoreGhostSpineInference.runWith normal [] 0 limit
+  let inferCode := NativeCoreCodeInference.run normal ghost empty (fun _ => false) (fun _ => false) limit 31 [] false
+  let inferMode := fun flag => if flag then ghost 31 [] else inferCode
+  NativeCoreGhostLoopInference.runInMode (fun _ => false) (CoreEffectAnalysis.graphMemoryFree empty)
+    false (ghost 31 []) inferMode (normal 31) limit 31 ⟨input,1⟩ 0 motive initial body
+
+set_option maxRecDepth 4096 in
+/-- A native CODE Loop checks the data callback at runtime. A proposition
+motive gives the same graph and clock as the ghost entry point. -/
+theorem code_loop_selects_operand_modes :
+    (let data := codeLoop 103 5 6 9
+     data.state.steps = 103 ∧ data.result.map Inferred.typeRoot = .ok 58 ∧
+       data.state.arena[58]? = some (.node .app [5,0]) ∧ data.state.arena.size = 59) ∧
+    codeLoop 196 21 23 19 = loop 196 21 23 19 := by
+  exact ⟨by cbv,by cbv⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostLoopExamples

@@ -60,6 +60,42 @@ theorem body_policy_refines (represented : Represents arena root term)
   simp only [Bool.or_eq_true] at accepted
   exact accepted.imp id CoreEffectAnalysis.termMemoryFree_sound
 
+private theorem expanded_leading_lambdas (env : Environment) (count : Nat)
+    (leading : hasLeadingLambdas count term = true) :
+    hasLeadingLambdas count (expand env term) = true := by
+  induction count generalizing term with
+  | zero => rfl
+  | succ count ih =>
+    cases term with
+    | var => simp [hasLeadingLambdas] at leading
+    | node op args =>
+      cases op <;> try simp [hasLeadingLambdas] at leading
+      case lam erased =>
+        rcases args with _ | ⟨domain,_ | ⟨body,_ | ⟨extra,rest⟩⟩⟩
+        all_goals first | simp [hasLeadingLambdas] at leading | skip
+        simpa only [expand,expandArgs,hasLeadingLambdas] using ih leading
+
+/-- When expansion preserves the callback's memory classification, the
+native iteration gate gives the CODE source policy at the original root.
+A full written callback telescope needs no memory classification. -/
+theorem expanded_body_policy_refines (represented : Represents arena body written)
+    (accepted : checkBodyPolicy (CoreEffectAnalysis.graphMemoryFree env) arena depth body = true)
+    (expandedFree : iterationMemoryFree env written = true →
+      iterationMemoryFree env (expand env written) = true) :
+    LoanTyping.IterationBodyAllowed env mode (expand env written) := by
+  rcases body_policy_refines represented accepted with leading | free
+  · exact .inr (.inl (expanded_leading_lambdas env 3 leading))
+  · exact .inr (.inr (expandedFree free))
+
+/-- For a global-free body, the production scan certifies the runtime rule
+without any additional graph work. -/
+theorem global_free_body_policy (represented : Represents arena body written)
+    (accepted : checkBodyPolicy (CoreEffectAnalysis.graphMemoryFree env) arena depth body = true)
+    (free : GlobalEnvironment.GlobalFree written) :
+    LoanTyping.IterationBodyAllowed env mode (expand env written) :=
+  expanded_body_policy_refines represented accepted
+    (by rw [EnvironmentDelta.expand_globalFree free]; exact id)
+
 private def ownedHead (isBoxed : Nat → Bool) (arena : Arena) (root : Nat) : Bool :=
   match arena[root]? with
   | some (.node .buffer [_]) => true
@@ -234,10 +270,12 @@ private theorem expand_fold_type (wf : UnifiedProgram.EnvWellFormed env) (count 
 /-- Exact metered Fold inference gives either the signed or the owned
 source rule. The original count and accumulator types determine the body
 telescope used by the comparison, and the result is the same accumulator. -/
-theorem runWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : BoxedFamilies env isBoxed)
+theorem runWith_modeRefines (wf : UnifiedProgram.EnvWellFormed env) (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (inferSound : InferSound env base ctx limit infer)
+    (inferSound : ModeSound env loans base ctx limit mode infer)
+    (policy : ∀ arena, Represents arena body loopBody → checkBodyPolicy memoryFree arena depth body = true →
+      LoanTyping.IterationBodyAllowed env mode (expand env loopBody))
     (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (countRep : Represents state.arena count n) (initRep : Represents state.arena initial init)
@@ -245,7 +283,10 @@ theorem runWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : Boxe
     (success : (runWith isBoxed memoryFree infer normal limit depth state count initial body).result = .ok answer)
     (ambient : Prefix (runWith isBoxed memoryFree infer normal limit depth state count initial body).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.fold n init loopBody) (runWith isBoxed memoryFree infer normal limit depth state count initial body) answer := by
+    let after := (runWith isBoxed memoryFree infer normal limit depth state count initial body).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx mode
+        (expand env (.fold n init loopBody)) (expand env type) := by
   unfold runWith at success ambient ⊢
   obtain ⟨word,wordOk,wordNext⟩ := Outcome.next_success success
   rw [wordNext] at success ambient ⊢
@@ -287,7 +328,7 @@ theorem runWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : Boxe
     have afterExpose := callbackCost.kept.trans afterCallback
     have afterInfer := exposeCost.kept.trans afterExpose
     obtain ⟨wordKept,wordBack,wordRep⟩ := append_refines .nil rfl wordOk
-    obtain ⟨countKept,countBack,checkedCount⟩ := checkAgainst_refines normalSound normalProgress inferSound inferProgress
+    obtain ⟨countKept,countBack,checkedCount⟩ := checkAgainst_modeRefines normalSound normalProgress inferSound inferProgress
       (onBase.trans wordKept) wordRoom (countRep.frame wordKept) wordRep countOk (inferCost.kept.trans afterInfer)
       (fun pair member => retained pair (List.mem_append_left _ member))
     have throughCount := wordKept.trans countKept
@@ -300,21 +341,42 @@ theorem runWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : Boxe
     obtain ⟨callbackKept,callbackBack,callbackRep⟩ := NativeCoreIterationTelescope.fold_refines
       (countRep.frame throughExpose) accRep callbackOk
     have throughCallback := throughExpose.trans callbackKept
-    obtain ⟨bodyKept,bodyBack,checkedBody⟩ := checkAgainst_refines normalSound normalProgress inferSound inferProgress
+    obtain ⟨bodyKept,bodyBack,checkedBody⟩ := checkAgainst_modeRefines normalSound normalProgress inferSound inferProgress
       (onBase.trans throughCallback) callbackRoom (bodyRep.frame throughCallback) callbackRep bodyOk ambient
       (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _ member)))
     rw [expand_fold_type wf] at checkedBody
     have wordType : expand env (.node .u64 []) = .u64 := by simp only [expand,expandArgs,Term.u64]
     rw [wordType] at checkedCount
     have initTyped := checkedInit.convert accConv
+    have bodyAllowed := policy _ (bodyRep.frame (throughCallback.trans bodyKept)) allowed
     refine ⟨throughCallback.trans bodyKept, bodyBack ∘ callbackBack ∘ exposedBack ∘ inferredBack ∘ countBack ∘ wordBack,
       _,accRep.frame (callbackKept.trans bodyKept),?_⟩
     rcases classification with signed | owned
     · rw [signed] at initTyped checkedBody ⊢
       rw [foldAccumulatorBodyType_i64] at checkedBody
-      simpa only [Term.fold,expand,expandArgs] using LoanTyping.HasType.foldI64 checkedCount initTyped checkedBody (.inl rfl)
-    · simpa only [Term.fold,expand,expandArgs] using LoanTyping.HasType.foldOwned checkedCount initTyped owned checkedBody (.inl rfl)
+      simpa only [Term.fold,expand,expandArgs] using LoanTyping.HasType.foldI64 checkedCount initTyped checkedBody bodyAllowed
+    · simpa only [Term.fold,expand,expandArgs] using LoanTyping.HasType.foldOwned checkedCount initTyped owned checkedBody bodyAllowed
   · simp [reject] at success
+
+theorem runWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (countRep : Represents state.arena count n) (initRep : Represents state.arena initial init)
+    (bodyRep : Represents state.arena body loopBody)
+    (success : (runWith isBoxed memoryFree infer normal limit depth state count initial body).result = .ok answer)
+    (ambient : Prefix (runWith isBoxed memoryFree infer normal limit depth state count initial body).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.fold n init loopBody) (runWith isBoxed memoryFree infer normal limit depth state count initial body) answer := by
+  have sound : ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ later cost represented accepted after tape
+    obtain ⟨kept,backward,typed⟩ := inferSound later cost represented accepted after tape
+    exact ⟨kept,backward,typed⟩
+  obtain ⟨kept,backward,typed⟩ := runWith_modeRefines wf metadata normalSound normalProgress sound
+    (fun _ _ _ => .inl rfl) inferProgress onBase room countRep initRep bodyRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 def run (env : Environment) (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (count initial body : Nat) : Outcome Inferred :=

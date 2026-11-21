@@ -5180,3 +5180,24 @@ and owned accumulators, including an open dependent accumulator type.
 Fold and Loop share the substitution lemma for removing an outer binder
 beneath the remaining callback binders. The focused build passed 286
 tasks and two declaration audits.
+
+### CODE callback modes for Fold and Loop
+
+The native iteration branches now carry an explicit checking mode. Fold
+checks the count, accumulator and callback in that mode. Loop checks the
+motive in ghost mode and uses its observed sort to choose the mode for
+the count, initial value and callback. The normalized motive establishes
+a scalar, refinement or owned result using the checked boxed layout.
+
+The original body scan supplies the source repetition policy when
+expansion preserves its memory classification. Three leading lambdas
+satisfy the policy directly. A global-free callback also retains its
+classification through expansion. Recursive entry and treatment of
+effectful globals across the full CODE checker remain proof work.
+
+Lean and native schedules agree on 62 ticks for the signed Fold and 88
+for the owned Fold. The respective result roots are 19 and 23. The data
+Loop uses 103 ticks and retains its result at root 58. The proposition
+Loop uses 196 ticks and preserves the ghost graph at root 83.
+The focused build passed 498 tasks, nine declaration audits and the
+expanded native inference schedule.
