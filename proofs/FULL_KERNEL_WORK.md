@@ -5247,3 +5247,30 @@ At each observed index, the actual closing origin store types the
 unrolled accumulator. Fold preserves its original accumulator type.
 Loop inhabits the original motive applied to the current index. The
 focused build passed 469 tasks and six declaration audits.
+
+### Indexed runtime Fold and Loop execution
+
+The indexed machine evaluates the count and seed in source order. Each
+active iteration applies the original callback to the current index, its
+erased bound, and the retained accumulator. It records the corresponding
+application as the accumulator's origin and restores the exact suspended
+frames at completion. The read-only embedding covers the transitions
+shared by both machines. The indexed invariants retain alignment,
+representable numbers, heap history, reference provenance, and the
+active reader inventory through the new frames.
+
+The checked Fold fixtures return 10 for a signed accumulator, move one
+buffer through all iterations before releasing it, and reuse a live
+reader three times before closing and freeing its buffer. The latter
+returns 21 with the exact allocation, read, close, and release events.
+Arbitrary callbacks still require a common source-to-runtime value and
+resource interpretation.
+
+The guarded aggregate completed 1,242 Lake jobs, 11,150 declaration
+audits (535 axiom-free and only the three allowed Lean axioms), and all
+generated comparisons. Native kernel correspondence passed 89 fixtures
+and 31 additional checks. Mixed correspondence passed 69 source fixtures
+and 55 exact-byte checks, including pure admission of the native bytes.
+Type-family safety passed 8 controls and 9 exact-diagnostic rejections.
+Native family correspondence passed 20 fixtures and 18 additional checks.
+The sampled peak was 5,121.9 MiB under the 6 GiB guard.

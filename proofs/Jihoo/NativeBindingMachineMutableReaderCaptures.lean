@@ -95,6 +95,12 @@ private theorem resumeBuffer_reader_bounds (ready : ReaderCaptureWorld state)
     split
     · exact ⟨emptyChunk,ready.2⟩
     · split <;> exact ⟨emptyChunk,ready.2⟩
+  have repeatBounds (cursor : Iteration) (accumulator : Value) (origin : Term) :
+      ReaderCaptureWorld (continueIteration state cursor accumulator origin saved rest).1 := by
+    unfold continueIteration
+    split
+    · exact ⟨emptyChunk,savedBounds⟩
+    · exact savedBounds
   cases frame <;> cases value <;> simp only [resumeBuffer,fail]
   all_goals first
     | exact ready
@@ -102,6 +108,7 @@ private theorem resumeBuffer_reader_bounds (ready : ReaderCaptureWorld state)
     | exact ⟨emptyChunk,savedBounds⟩
     | exact ⟨emptyBounds,savedBounds⟩
     | exact savedBounds
+    | exact repeatBounds _ _ _
     | skip
   case value.integer =>
       split

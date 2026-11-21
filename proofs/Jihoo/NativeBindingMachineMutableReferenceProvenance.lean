@@ -13,6 +13,11 @@ def BufferFrameReferences (limit : Nat) : BufferFrame → Prop
       .arrayElements value _ _ => CodeReferences limit value
   | .value _ _ | .loadContinuation _ _ _ | .loadOwnerArgument _ _ |
       .usubRight _ | .refinement => True
+  | .iterationCount initial callback => CodeReferences limit initial ∧ CodeReferences limit callback
+  | .iterationInitial callback _ _ => CodeReferences limit callback
+  | .iterationIndex cursor value _ | .iterationBound cursor value _ | .iterationAccumulator cursor value _ =>
+      CodeReferences limit cursor.callback ∧ ValueReferences limit value
+  | .iterationResult cursor _ => CodeReferences limit cursor.callback
 
 def PendingReferences (limit : Nat) (pending : List (BufferFrame × List Frame)) : Prop :=
   ∀ frame ∈ pending, BufferFrameReferences limit frame.1 ∧ StackReferences limit frame.2
@@ -98,9 +103,18 @@ private theorem resumeBuffer_references (valid : SizedBufferHeap.Valid state.hea
   rw [pending] at suspended
   have top := suspended.head
   have outer := suspended.tail
+  have repeatReferences (cursor : Iteration) (accumulator : Value) (origin : Term)
+      (callback : CodeReferences state.heap.metadata.heap.nextLease cursor.callback)
+      (argument : ValueReferences state.heap.metadata.heap.nextLease accumulator) :
+      StateReferences (continueIteration state cursor accumulator origin saved rest).1 := by
+    unfold continueIteration
+    split
+    · exact ⟨⟨callback,StackReferences.empty⟩,outer.cons ⟨callback,argument⟩ top.2⟩
+    · exact ⟨⟨argument,top.2⟩,outer⟩
   cases frame <;> cases value <;> simp only [resumeBuffer,fail]
   all_goals first
     | exact ⟨⟨True.intro,StackReferences.empty⟩,ready.2⟩
+    | exact repeatReferences _ _ _ top.1 returned
     | skip
   case owner.owner =>
     exact ⟨⟨top.1.1,ready.1.2⟩,outer.cons top.1.2 top.2⟩
@@ -147,6 +161,24 @@ private theorem resumeBuffer_references (valid : SizedBufferHeap.Valid state.hea
     · exact ⟨⟨ValueReferences.array,top.2⟩,outer⟩
     · exact ⟨⟨top.1,ready.1.2⟩,outer.cons top.1 top.2⟩
 
+  case iterationCount.natural =>
+    exact ⟨⟨top.1.1,StackReferences.empty⟩,outer.cons top.1.2 top.2⟩
+  case iterationIndex.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_references valid (outer.cons top.1 top.2)
+        (applyValue_references_retained returned .natural StackReferences.empty)
+    · exact ⟨⟨True.intro,StackReferences.empty⟩,ready.2⟩
+  case iterationBound.closure =>
+    cases ‹Bool›
+    · exact ⟨⟨True.intro,StackReferences.empty⟩,ready.2⟩
+    · exact executeLegacy_references valid (outer.cons top.1 top.2)
+        (applyValue_references returned (by intro _ held; cases held) StackReferences.empty)
+  case iterationAccumulator.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_references valid (outer.cons top.1.1 top.2)
+        (applyValue_references_retained returned top.1.2 StackReferences.empty)
+    · exact ⟨⟨True.intro,StackReferences.empty⟩,ready.2⟩
+
 /-- Every real transition preserves reference provenance, including all
 stored or recursively captured references in suspended continuations. -/
 theorem step_references (valid : SizedBufferHeap.Valid state.heap.metadata)
@@ -179,6 +211,10 @@ theorem step_references (valid : SizedBufferHeap.Valid state.heap.metadata)
           · exact ⟨⟨ValueReferences.array,ready.1.2⟩,ready.2⟩
           · exact ⟨⟨controlReady,StackReferences.empty⟩,ready.2.cons controlReady ready.1.2⟩
         · exact ⟨⟨True.intro,ready.1.2⟩,ready.2⟩
+      · cases stepped
+        exact ⟨⟨controlReady,StackReferences.empty⟩,ready.2.cons ⟨controlReady,controlReady⟩ ready.1.2⟩
+      · cases stepped
+        exact ⟨⟨controlReady,StackReferences.empty⟩,ready.2.cons ⟨controlReady,controlReady⟩ ready.1.2⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

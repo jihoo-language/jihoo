@@ -73,7 +73,9 @@ def LegacyControl (state : BindingMachine.State) : Prop :=
       (∀ left right evidence, code.term ≠ .usub left right evidence) ∧
       (∀ predicate witness evidence, code.term ≠ .pack predicate witness evidence) ∧
       (∀ refinement, code.term ≠ .witness refinement) ∧
-      (∀ count elements, code.term ≠ .node (.elements count) elements)
+      (∀ count elements, code.term ≠ .node (.elements count) elements) ∧
+      (∀ count seed callback, code.term ≠ .fold count seed callback) ∧
+      (∀ count motive seed callback, code.term ≠ .loop count motive seed callback)
   | _ => True
 
 /-- An old transition agrees with the indexed transition outside the
@@ -97,7 +99,11 @@ theorem step_embedReadOnly (state : BindingMachine.State) (ordinary : LegacyCont
           · rename_i refinement shape
             exact False.elim (ordinary.2.2.2.2.1 refinement shape)
           · rename_i count elements shape
-            exact False.elim (ordinary.2.2.2.2.2 count elements shape)
+            exact False.elim (ordinary.2.2.2.2.2.1 count elements shape)
+          · rename_i count seed callback shape
+            exact False.elim (ordinary.2.2.2.2.2.2.1 count seed callback shape)
+          · rename_i count motive seed callback shape
+            exact False.elim (ordinary.2.2.2.2.2.2.2 count motive seed callback shape)
           · exact congrArg some (executeLegacy_embedReadOnly ⟨heap,.evaluate code,stack⟩ (evaluateAction code stack))
       | returned value =>
           cases chosen : returnAction value stack with

@@ -7,6 +7,9 @@ Stores and allocations establish widths of the cells they write, and indexed
 reads transport those widths into returned values and Load continuations. -/
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 
+private def IterationNumbers (cursor : Iteration) : Prop :=
+  CodeNumbers cursor.callback ∧ cursor.count < 2^64 ∧ cursor.index < cursor.count
+
 def BufferFrameNumbers : BufferFrame → Prop
   | .owner index fill | .loadOwner _ index fill => CodeNumbers index ∧ CodeNumbers fill
   | .index _ fill | .loadIndex _ _ fill | .usubLeft fill => CodeNumbers fill
@@ -14,6 +17,11 @@ def BufferFrameNumbers : BufferFrame → Prop
   | .loadContinuation _ _ value => ValueReduction.signed64 value
   | .loadOwnerArgument _ _ | .refinement => True
   | .arrayElements source _ reversed => CodeNumbers source ∧ ArrayNumbers reversed
+  | .iterationCount initial callback => CodeNumbers initial ∧ CodeNumbers callback
+  | .iterationInitial callback count _ => CodeNumbers callback ∧ count < 2^64
+  | .iterationIndex cursor value _ | .iterationBound cursor value _ | .iterationAccumulator cursor value _ =>
+      IterationNumbers cursor ∧ ValueNumbers value
+  | .iterationResult cursor _ => IterationNumbers cursor
 
 def PendingNumbers (pending : List (BufferFrame × List Frame)) : Prop :=
   ∀ frame ∈ pending, BufferFrameNumbers frame.1 ∧ StackNumbers frame.2
@@ -155,9 +163,21 @@ private theorem resumeBuffer_numbers (bounded : StateNumbers state)
   rw [pending] at suspended
   have top := suspended.head
   have outer := suspended.tail
+  have callbackBounded (cursor : Iteration) (accumulator : Value) (origin : Term)
+      (callback : CodeNumbers cursor.callback) (count : cursor.count < 2^64)
+      (argument : ValueNumbers accumulator) :
+      StateNumbers (continueIteration state cursor accumulator origin saved rest).1 := by
+    unfold continueIteration
+    split
+    · rename_i before
+      exact ⟨⟨bounded.legacy.1,callback,StackNumbers.empty⟩,
+        outer.cons ⟨⟨callback,count,before⟩,argument⟩ top.2,bounded.cells⟩
+    · exact ⟨⟨bounded.legacy.1,argument,top.2⟩,outer,bounded.cells⟩
   cases frame <;> cases value <;> simp only [resumeBuffer]
   all_goals first
     | exact ⟨⟨bounded.legacy.1,True.intro,StackNumbers.empty⟩,bounded.pending,bounded.cells⟩
+    | exact callbackBounded _ _ _ top.1.1 top.1.2 ready
+    | exact callbackBounded _ _ _ top.1.1 top.1.2.1 ready
     | skip
   case owner.owner =>
     exact ⟨⟨bounded.legacy.1,top.1.1,bounded.legacy.2.2⟩,outer.cons top.1.2 top.2,bounded.cells⟩
@@ -214,6 +234,24 @@ private theorem resumeBuffer_numbers (bounded : StateNumbers state)
     · exact ⟨⟨bounded.legacy.1,top.1.1,bounded.legacy.2.2⟩,
         outer.cons ⟨top.1.1,accumulated⟩ top.2,bounded.cells⟩
 
+  case iterationCount.natural =>
+    exact ⟨⟨bounded.legacy.1,top.1.1,StackNumbers.empty⟩,outer.cons ⟨top.1.2,ready.naturalBound⟩ top.2,bounded.cells⟩
+  case iterationIndex.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_numbers ⟨bounded.legacy,outer.cons top.1 top.2,bounded.cells⟩
+        (applyValue_numbers_retained ready (.natural (Nat.lt_trans top.1.1.2.2 top.1.1.2.1)) StackNumbers.empty)
+    · exact ⟨⟨bounded.legacy.1,True.intro,StackNumbers.empty⟩,bounded.pending,bounded.cells⟩
+  case iterationBound.closure =>
+    cases ‹Bool›
+    · exact ⟨⟨bounded.legacy.1,True.intro,StackNumbers.empty⟩,bounded.pending,bounded.cells⟩
+    · exact executeLegacy_numbers ⟨bounded.legacy,outer.cons top.1 top.2,bounded.cells⟩
+        (applyValue_numbers ready (by intro _ held; cases held) StackNumbers.empty)
+  case iterationAccumulator.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_numbers ⟨bounded.legacy,outer.cons top.1.1 top.2,bounded.cells⟩
+        (applyValue_numbers_retained ready top.1.2 StackNumbers.empty)
+    · exact ⟨⟨bounded.legacy.1,True.intro,StackNumbers.empty⟩,bounded.pending,bounded.cells⟩
+
 /-- Every indexed-buffer transition preserves numeric widths, including
 faults and nested Load and Store continuations. -/
 theorem step_numbers (bounded : StateNumbers state) (stepped : step state = some (next,event)) :
@@ -252,6 +290,12 @@ theorem step_numbers (bounded : StateNumbers state) (stepped : step state = some
           · exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
               bounded.pending.cons ⟨controlReady,fun _ member => by cases member⟩ bounded.legacy.2.2,bounded.cells⟩
         · exact ⟨⟨bounded.legacy.1,True.intro,bounded.legacy.2.2⟩,bounded.pending,bounded.cells⟩
+      · cases stepped
+        exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+          bounded.pending.cons ⟨controlReady,controlReady⟩ bounded.legacy.2.2,bounded.cells⟩
+      · cases stepped
+        exact ⟨⟨bounded.legacy.1,controlReady,StackNumbers.empty⟩,
+          bounded.pending.cons ⟨controlReady,controlReady⟩ bounded.legacy.2.2,bounded.cells⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]

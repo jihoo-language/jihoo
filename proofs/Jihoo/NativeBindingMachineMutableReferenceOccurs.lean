@@ -13,6 +13,11 @@ def BufferFrameReferenceOccurs (token : Nat) : BufferFrame → Prop
       .arrayElements value _ _ => CodeReferenceOccurs token value
   | .value _ _ | .loadContinuation _ _ _ | .loadOwnerArgument _ _ |
       .usubRight _ | .refinement => False
+  | .iterationCount initial callback => CodeReferenceOccurs token initial ∨ CodeReferenceOccurs token callback
+  | .iterationInitial callback _ _ => CodeReferenceOccurs token callback
+  | .iterationIndex cursor value _ | .iterationBound cursor value _ | .iterationAccumulator cursor value _ =>
+      CodeReferenceOccurs token cursor.callback ∨ ReferenceOccurs token value
+  | .iterationResult cursor _ => CodeReferenceOccurs token cursor.callback
 
 def PendingReferenceOccurs (token : Nat) (pending : List (BufferFrame × List Frame)) : Prop :=
   ∃ pair ∈ pending, BufferFrameReferenceOccurs token pair.1 ∨

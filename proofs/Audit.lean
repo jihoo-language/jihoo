@@ -11158,3 +11158,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.LoanSourceTyped.loop_prefix_origin
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_fold_count
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity.iteration_callback_scopes
+
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.three_binder_iteration_entry
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.signed_fold_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.signed_fold_returns
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.owned_fold_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.owned_fold_single_allocation
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.borrowed_fold_admitted
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.borrowed_fold_retains_reader

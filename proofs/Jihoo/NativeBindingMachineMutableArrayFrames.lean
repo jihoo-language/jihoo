@@ -54,11 +54,18 @@ private theorem resumeBuffer_sources (sources : PendingSources state.pending)
   rw [pending] at suspended
   have first := suspended (frame,saved) List.mem_cons_self
   have older : PendingSources rest := fun entry member => suspended entry (List.mem_cons_of_mem _ member)
+  have repeatSources (cursor : Iteration) (accumulator : Value) (origin : Term) :
+      PendingSources (continueIteration state cursor accumulator origin saved rest).1.pending := by
+    unfold continueIteration
+    split
+    · exact older.cons True.intro
+    · exact older
   cases frame <;> cases value <;> simp only [resumeBuffer]
   all_goals first
     | exact sources
     | exact older
     | exact older.cons True.intro
+    | exact repeatSources _ _ _
     | skip
   case value.integer =>
     split
@@ -89,6 +96,10 @@ private theorem resumeBuffer_sources (sources : PendingSources state.pending)
         refine ⟨visited ++ [current],element,count,?_,?_⟩
         · simpa only [List.append_assoc,List.singleton_append] using shape
         · simp only [List.length_append,List.length_cons,List.length_nil,length] <;> omega
+
+  case iterationIndex.closure | iterationBound.closure | iterationAccumulator.closure =>
+    cases ‹Bool› <;> simp only [executeLegacy,applyValue] <;>
+      first | exact sources | exact older.cons True.intro
 
 private theorem step_sources (sources : PendingSources state.pending)
     (stepped : step state = some (next,event)) : PendingSources next.pending := by

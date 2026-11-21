@@ -29,6 +29,11 @@ namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open CodeKinds
 variable {resource : Jihoo.Quantity.Control}
 
+structure Iteration where
+  callback : Code
+  count : Nat
+  index : Nat
+
 inductive BufferFrame where
   | owner (index value : Code)
   | index (object : Nat) (value : Code)
@@ -41,6 +46,12 @@ inductive BufferFrame where
   | usubRight (left : Nat)
   | refinement
   | arrayElements (source : Code) (remaining : List Term) (reversed : List Int)
+  | iterationCount (initial callback : Code)
+  | iterationInitial (callback : Code) (count : Nat) (origin : Term)
+  | iterationIndex (iteration : Iteration) (accumulator : Value) (origin : Term)
+  | iterationBound (iteration : Iteration) (accumulator : Value) (origin : Term)
+  | iterationAccumulator (iteration : Iteration) (accumulator : Value) (origin : Term)
+  | iterationResult (iteration : Iteration) (origin : Term)
 
 structure State where
   heap : SizedBufferHeap.IndexedState
@@ -97,6 +108,21 @@ def beginArray (state : State) (code : Code) (count : Nat) (elements : List Term
           (.arrayElements code remaining [],state.stack) :: state.pending⟩,none)
   else fail state .literalRange state.stack
 
+private def iterationProof (iteration : Iteration) : Term :=
+  .decide (.natural iteration.index) (.natural iteration.count)
+
+private def iterationOrigin (iteration : Iteration) (accumulator : Term) : Term :=
+  .app (.app (.app iteration.callback.origin (.natural iteration.index)) (iterationProof iteration)) accumulator
+
+/-- Retain the outer frames while the original callback is evaluated at
+each index. The current accumulator stays in a single pending frame. -/
+def continueIteration (state : State) (iteration : Iteration) (accumulator : Value) (origin : Term)
+    (saved : List Frame) (rest : List (BufferFrame × List Frame)) : State × Option Event :=
+  if iteration.index < iteration.count then
+    (⟨state.heap,.evaluate iteration.callback,[],(.iterationIndex iteration accumulator origin,saved) :: rest⟩,none)
+  else
+    (⟨state.heap,.returned accumulator,saved,rest⟩,none)
+
 def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMachine.Frame)
     (rest : List (BufferFrame × List BindingMachine.Frame)) (value : Value) : State × Option Event :=
   match frame,value with
@@ -139,6 +165,21 @@ def resumeBuffer (state : State) (frame : BufferFrame) (saved : List BindingMach
           ({ state with
             control := .evaluate (source.child element)
             pending := (.arrayElements source remaining (number :: reversed),saved) :: rest },none)
+  | .iterationCount initial callback,.natural count =>
+      (⟨state.heap,.evaluate initial,[],(.iterationInitial callback count initial.origin,saved) :: rest⟩,none)
+  | .iterationInitial callback count origin,accumulator =>
+      continueIteration state ⟨callback,count,0⟩ accumulator origin saved rest
+  | .iterationIndex iteration accumulator origin,callback@(.closure false _ _ _ _ _) =>
+      executeLegacy { state with pending := (.iterationBound iteration accumulator origin,saved) :: rest }
+        (applyValue callback (.natural iteration.index) (some (.natural iteration.index)) [])
+  | .iterationBound iteration accumulator origin,callback@(.closure true _ _ _ _ _) =>
+      executeLegacy { state with pending := (.iterationAccumulator iteration accumulator origin,saved) :: rest }
+        (applyValue callback (iterationProof iteration) none [])
+  | .iterationAccumulator iteration accumulator origin,callback@(.closure false _ _ _ _ _) =>
+      executeLegacy { state with pending := (.iterationResult iteration (iterationOrigin iteration origin),saved) :: rest }
+        (applyValue callback origin (some accumulator) [])
+  | .iterationResult iteration origin,accumulator =>
+      continueIteration state {iteration with index := iteration.index+1} accumulator origin saved rest
   | _,_ => fail state .wrongValue []
 
 def step (state : State) : Option (State × Option Event) :=
@@ -159,6 +200,9 @@ def step (state : State) : Option (State × Option Event) :=
           some (⟨state.heap,.evaluate (code.child witness),[],
             (.refinement,state.stack) :: state.pending⟩,none)
       | .node (.elements count) elements => some (beginArray state code count elements)
+      | .fold count initial callback | .loop count _ initial callback =>
+          some (⟨state.heap,.evaluate (code.child count),[],
+            (.iterationCount (code.child initial) (code.child callback),state.stack) :: state.pending⟩,none)
       | _ => some (executeLegacy state (evaluateAction code state.stack))
   | .returned value =>
       match returnAction value state.stack with
@@ -181,6 +225,30 @@ def run : Nat → State → Result
       | some (next,event) =>
           let result := run fuel next
           ⟨result.state,event.toList ++ result.events,result.steps+1⟩
+
+/-- A written three-binder callback enters its actual body with the
+current index, the erased bound, and the single retained accumulator.
+The iteration keeps the outer stack and records the original application. -/
+theorem three_binder_iteration_entry (cursor : Iteration)
+    (shape : cursor.callback.term = .lam false word (.lam true bound (.lam false domain body)))
+    (accumulator : Value) (origin : Term) (heap : SizedBufferHeap.IndexedState)
+    (saved : List Frame) (rest : List (BufferFrame × List Frame)) :
+    let index := Term.natural cursor.index
+    let evidence := Term.decide index (.natural cursor.count)
+    let indexed := enter false word (.lam true bound (.lam false domain body))
+      cursor.callback.context cursor.callback.origins cursor.callback.values index (some (.natural cursor.index))
+    let proved := enter true bound (.lam false domain body)
+      indexed.context indexed.origins indexed.values evidence none
+    let entered := enter false domain body proved.context proved.origins proved.values origin (some accumulator)
+    let nextOrigin := Term.app (.app (.app cursor.callback.origin index) evidence) origin
+    run 6 ⟨heap,.evaluate cursor.callback,[],(.iterationIndex cursor accumulator origin,saved) :: rest⟩ =
+      ⟨⟨heap,.evaluate entered,[],(.iterationResult cursor nextOrigin,saved) :: rest⟩,
+        [.legacy (.activate false (.lam true bound (.lam false domain body)) index),
+          .legacy (.activate true (.lam false domain body) evidence),.legacy (.activate false body origin)],6⟩ := by
+  rcases cursor with ⟨⟨term,context,origins,captured⟩,count,index⟩
+  change term = _ at shape
+  subst term
+  rfl
 
 def observe (result : Result) : Observation :=
   let state := result.state
@@ -283,9 +351,14 @@ private theorem resumeBuffer_invariant (state : State) (invariant : Invariant st
     simp only [ownedAccessFailure]
     split <;> try split
     all_goals exact ⟨invariant.1,by simpa [fail,State.activeStack,pending] using old⟩
+  have iteration (cursor : Iteration) (accumulator : Value) (origin : Term) :
+      Invariant (continueIteration state cursor accumulator origin saved rest).1 := by
+    unfold continueIteration
+    split <;> exact ⟨invariant.1,by simpa [State.activeStack] using old⟩
   cases frame <;> cases value <;> simp only [resumeBuffer,fail]
   all_goals first
     | exact ⟨invariant.1,by simpa [State.activeStack,empty,pending] using old⟩
+    | exact iteration _ _ _
     | skip
   case value.integer =>
     split
@@ -330,6 +403,10 @@ theorem step_invariant (invariant : Invariant state) (stepped : step state = som
         split
         · split <;> exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
         · exact invariant
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
+      · cases stepped
+        exact ⟨invariant.1,by simpa [State.activeStack] using invariant.2⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]
@@ -483,6 +560,46 @@ theorem store_then_load_returns : observe (run 40 (initial store_then_load)) = .
 theorem store_then_load_events : memoryEvents (run 40 (initial store_then_load)).events =
     [.legacy (.heap (.alloc 0 2 (encodeInteger 3))),.store 0 1 (encodeInteger 17),
       .load 0 1 (encodeInteger 17),.legacy (.heap (.free 0))] := by rfl
+
+private def foldCount := Term.natural 3
+
+private def foldStep (accumulator result : Term) : Term :=
+  .lam false .u64 (.lam true (.lt (.var 0) foldCount) (.lam false accumulator result))
+
+private def signedFold : Term :=
+  .fold foldCount (.integer 7) (foldStep .i64 (.arith .add (.var 0) (.integer 1)))
+
+private def ownedFold : Term :=
+  .free (.fold foldCount (.alloc (.natural 1) (.integer 7)) (foldStep (buffer 1) (.var 0))) (.integer 7)
+
+theorem signed_fold_admitted : LoanTyping.MixedProgram.checkDeclaration 64 64 .empty
+    ⟨.i64,signedFold⟩ = some ⟨.i64,signedFold⟩ := by cbv
+
+theorem signed_fold_returns : observe (run 80 (initial signedFold)) = .integer 10 := by rfl
+
+theorem owned_fold_admitted : LoanTyping.MixedProgram.checkDeclaration 64 64 .empty
+    ⟨.i64,ownedFold⟩ = some ⟨.i64,ownedFold⟩ := by cbv
+
+theorem owned_fold_single_allocation :
+    observe (run 80 (initial ownedFold)) = .integer 7 ∧
+      memoryEvents (run 80 (initial ownedFold)).events =
+        [.legacy (.heap (.alloc 0 1 (encodeInteger 7))),.legacy (.heap (.free 0))] := by
+  exact ⟨rfl,rfl⟩
+
+private def borrowedFold : Term :=
+  .lend (.alloc (.natural 1) (.integer 7)) (.lam false (.ref (buffer 1))
+    (.fold foldCount (.integer 0) (foldStep .i64 (.arith .add (.var 0) (read (.var 3) 0 1))))) (release 1)
+
+theorem borrowed_fold_admitted : LoanTyping.MixedProgram.checkDeclaration 64 64 .empty
+    ⟨.i64,borrowedFold⟩ = some ⟨.i64,borrowedFold⟩ := by cbv
+
+theorem borrowed_fold_retains_reader :
+    observe (run 128 (initial borrowedFold)) = .integer 21 ∧
+      memoryEvents (run 128 (initial borrowedFold)).events =
+        [.legacy (.heap (.alloc 0 1 (encodeInteger 7))),.legacy (.heap (.beginLease 0 0)),
+          .legacy (.heap (.read 0 0 (encodeInteger 7))),.legacy (.heap (.read 0 0 (encodeInteger 7))),
+          .legacy (.heap (.read 0 0 (encodeInteger 7))),.legacy (.heap (.close 0)),.legacy (.heap (.free 0))] := by
+  exact ⟨rfl,rfl⟩
 
 end Examples
 

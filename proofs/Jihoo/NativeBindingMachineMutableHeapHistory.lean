@@ -64,8 +64,14 @@ private theorem resumeBuffer_metadata_steps (valid : SizedBufferHeap.Valid state
     (frame : BufferFrame) (saved : List Frame) (rest : List (BufferFrame × List Frame)) (value : Value) :
     SizedBufferHeap.Steps state.heap.metadata ((resumeBuffer state frame saved rest value).2.toList.filterMap Event.lifecycle?)
       (resumeBuffer state frame saved rest value).1.heap.metadata := by
+  have repeatSteps (cursor : Iteration) (accumulator : Value) (origin : Term) :
+      SizedBufferHeap.Steps state.heap.metadata
+        ((continueIteration state cursor accumulator origin saved rest).2.toList.filterMap Event.lifecycle?)
+        (continueIteration state cursor accumulator origin saved rest).1.heap.metadata := by
+    unfold continueIteration
+    split <;> exact .nil
   cases frame <;> cases value <;> simp only [resumeBuffer]
-  all_goals first | exact .nil | skip
+  all_goals first | exact .nil | exact repeatSteps _ _ _ | skip
   case value.integer =>
     split
     · rename_i heap written
@@ -80,6 +86,8 @@ private theorem resumeBuffer_metadata_steps (valid : SizedBufferHeap.Valid state
   case loadContinuation.closure => cases ‹Bool› <;> exact .nil
   case loadOwnerArgument.closure => cases ‹Bool› <;> exact .nil
   case arrayElements.integer => split <;> exact .nil
+  case iterationIndex.closure | iterationBound.closure | iterationAccumulator.closure =>
+    cases ‹Bool› <;> exact .nil
 
 private theorem projected_step {pair : State × Option Event} {next : State} {event : Option Event}
     (same : pair = (next,event))

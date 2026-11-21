@@ -10,6 +10,11 @@ def BufferFrameAligned : BufferFrame → Prop
   | .owner index value | .loadOwner _ index value => CodeAligned index ∧ CodeAligned value
   | .index _ value | .loadIndex _ _ value | .usubLeft value => CodeAligned value
   | .arrayElements source _ _ => CodeAligned source
+  | .iterationCount initial callback => CodeAligned initial ∧ CodeAligned callback
+  | .iterationInitial callback _ _ => CodeAligned callback
+  | .iterationIndex cursor value _ | .iterationBound cursor value _ | .iterationAccumulator cursor value _ =>
+      CodeAligned cursor.callback ∧ ValueAligned value
+  | .iterationResult cursor _ => CodeAligned cursor.callback
   | _ => True
 
 def PendingAligned (pending : List (BufferFrame × List Frame)) : Prop :=
@@ -76,9 +81,17 @@ private theorem resumeBuffer_aligned (aligned : StateAligned state)
   rw [pending] at suspended
   have top := suspended (frame,saved) List.mem_cons_self
   have outer := suspended.tail
+  have callbackAligned (cursor : Iteration) (accumulator : Value) (origin : Term)
+      (callback : CodeAligned cursor.callback) (argument : ValueAligned accumulator) :
+      StateAligned (continueIteration state cursor accumulator origin saved rest).1 := by
+    unfold continueIteration
+    split
+    · exact ⟨callback,StackAligned.empty,outer.cons ⟨callback,argument⟩ top.2⟩
+    · exact ⟨argument,top.2,outer⟩
   cases frame <;> cases value <;> simp only [resumeBuffer]
   all_goals first
     | exact ⟨True.intro,StackAligned.empty,aligned.pending⟩
+    | exact callbackAligned _ _ _ top.1 ready
     | skip
   case owner.owner => exact ⟨top.1.1,aligned.stack,outer.cons top.1.2 top.2⟩
   case index.natural => exact ⟨top.1,aligned.stack,outer.cons True.intro top.2⟩
@@ -115,6 +128,24 @@ private theorem resumeBuffer_aligned (aligned : StateAligned state)
     · exact ⟨ValueAligned.array,top.2,outer⟩
     · exact ⟨top.1,aligned.stack,outer.cons top.1 top.2⟩
 
+  case iterationCount.natural =>
+    exact ⟨top.1.1,StackAligned.empty,outer.cons top.1.2 top.2⟩
+  case iterationIndex.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_aligned (outer.cons top.1 top.2)
+        (applyValue_retained_aligned ready rfl ValueAligned.natural StackAligned.empty)
+    · exact ⟨True.intro,StackAligned.empty,aligned.pending⟩
+  case iterationBound.closure =>
+    cases ‹Bool›
+    · exact ⟨True.intro,StackAligned.empty,aligned.pending⟩
+    · exact executeLegacy_aligned (outer.cons top.1 top.2)
+        (applyValue_aligned ready (by intro _ held; cases held) rfl StackAligned.empty)
+  case iterationAccumulator.closure =>
+    cases ‹Bool›
+    · exact executeLegacy_aligned (outer.cons top.1.1 top.2)
+        (applyValue_retained_aligned ready rfl top.1.2 StackAligned.empty)
+    · exact ⟨True.intro,StackAligned.empty,aligned.pending⟩
+
 theorem step_aligned (aligned : StateAligned state) (stepped : step state = some (next,event)) :
     StateAligned next := by
   have ready := aligned.control
@@ -143,6 +174,10 @@ theorem step_aligned (aligned : StateAligned state) (stepped : step state = some
           · exact ⟨ValueAligned.array,aligned.stack,aligned.pending⟩
           · exact ⟨ready,StackAligned.empty,aligned.pending.cons ready aligned.stack⟩
         · exact ⟨True.intro,aligned.stack,aligned.pending⟩
+      · cases stepped
+        exact ⟨ready,StackAligned.empty,aligned.pending.cons ⟨ready,ready⟩ aligned.stack⟩
+      · cases stepped
+        exact ⟨ready,StackAligned.empty,aligned.pending.cons ⟨ready,ready⟩ aligned.stack⟩
       · have same := congrArg Prod.fst (Option.some.inj stepped)
         change _ = next at same
         rw [← same]
