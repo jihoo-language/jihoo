@@ -23,28 +23,23 @@ structure SignatureConversion (env : Environment) (first second : Signature) : P
   fields : RelList (FieldConversion env) first.fields second.fields
   result : ListRel (RawLend.Conv env) first.result second.result
 
-private def RecursiveFieldConversion (env : Environment) (first second : Nat × List Term) : Prop :=
+def RecursiveFieldConversion (env : Environment) (first second : Nat × List Term) : Prop :=
   first.1 = second.1 ∧ ListRel (RawLend.Conv env) first.2 second.2
 
-private theorem related_length (related : RelList P first second) : first.length = second.length := by
-  induction related with
-  | nil => rfl
-  | cons _ _ ih => exact congrArg Nat.succ ih
-
-private theorem renamed_indices (closed : EnvironmentDelta.Basis.Closed env) (rename : Nat → Nat)
+theorem renamed_indices (closed : EnvironmentDelta.Basis.Closed env) (rename : Nat → Nat)
     (related : ListRel (RawLend.Conv env) first second) :
     ListRel (RawLend.Conv env) (first.map fun t => t.rename rename) (second.map fun t => t.rename rename) := by
   induction related with
   | nil => exact .nil
   | cons head _ ih => exact .cons (head.renaming rename closed) ih
 
-private theorem application_spines (callee : RawLend.Conv env F G) (related : ListRel (RawLend.Conv env) first second) :
+theorem application_spines (callee : RawLend.Conv env F G) (related : ListRel (RawLend.Conv env) first second) :
     RawLend.Conv env (applications F first) (applications G second) := by
   induction related generalizing F G with
   | nil => exact callee
   | cons head _ ih => exact ih (.node .app (.cons callee (.cons head .nil)))
 
-private theorem aligned_recursive_fields (fields : RelList (FieldConversion env) first second) (offset : Nat) :
+theorem aligned_recursive_fields (fields : RelList (FieldConversion env) first second) (offset : Nat) :
     RelList (RecursiveFieldConversion env)
       ((first.zipIdx offset).filterMap fun (field,j) => field.recursive.map fun xs => (j,xs))
       ((second.zipIdx offset).filterMap fun (field,j) => field.recursive.map fun xs => (j,xs)) := by
@@ -88,10 +83,10 @@ theorem SignatureConversion.prop_case (closed : EnvironmentDelta.Basis.Closed en
     (signature : SignatureConversion env first second) (motive : RawLend.Conv env M N) :
     RawLend.Conv env (propCaseType first M) (propCaseType second N) := by
   rw [propCaseType_eq,propCaseType_eq]
-  have fields := related_length signature.fields
+  have fields := signature.fields.length
   have recursive : RelList (RecursiveFieldConversion env) (recursiveFields first.fields) (recursiveFields second.fields) :=
     aligned_recursive_fields signature.fields 0
-  have hypotheses := related_length recursive
+  have hypotheses := recursive.length
   have results : RawLend.Conv env
       (applications (M.rename fun x => x+first.fields.length+(recursiveFields first.fields).length)
         (first.result.map fun term => term.rename fun x => x+(recursiveFields first.fields).length))

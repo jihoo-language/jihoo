@@ -4475,3 +4475,21 @@ hypothesis. Code application and its result inspection propagate
 backwardness when it holds on entry. Their source typing derivations
 only require representation of the operands. The focused build passed
 454 jobs, including the existing code kind and application fixtures.
+
+### Aggregate check through bounded runtime kind classification
+
+At `03894af`, 1,198 Lake jobs and the generated fixtures passed. The
+audit covered 10,848 declarations, with 533 axiom-free and only standard
+Lean axioms elsewhere. Native checks passed 89 kernel fixtures and 31
+additional checks, 69 mixed fixtures and 55 exact-byte checks, and all
+eight positive and nine rejection cases for type families. Peak
+sampled process-tree RSS was 4,945.9 MiB.
+
+### Conversion of data branch types
+
+Two independently normalized signatures with related field domains
+and result indices give convertible data branch types. The proof
+substitutes the same actual parameters into both telescopes and
+preserves the positions, erasure and indices of recursive hypotheses.
+It covers one-level cases and boxed recursion. The focused build
+passed 238 jobs.
