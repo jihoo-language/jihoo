@@ -1695,17 +1695,18 @@ fn indexed_data_elimination_fixture(proof: bool) -> core.Core {
     c
 }
 
-fn indexed_data_elimination() {
+fn indexed_data_elimination(ghost: bool) {
     for proof in [false, true] {
         var baseline = indexed_data_elimination_fixture(proof)
         let budget = remaining_ticks(&baseline)
         var sample = indexed_data_elimination_fixture(proof)
         assert(sample.node_count() == 22, "checked indexed family input")
-        let cost = if proof { 200 } else { 171 }
+        let cost = if proof { 200 } else if ghost { 171 } else { 199 }
         spend(&sample, budget-cost)
-        let selected = sample.infer(16, [], true, 32).unwrap()
+        let selected = sample.infer(16, [], ghost, 32).unwrap()
         let expected: u32 = if proof { 58 } else { 52 }
-        assert(selected == expected && sample.node_count() == expected as i64+1 &&
+        let rows = if proof { 59 } else if ghost { 53 } else { 55 }
+        assert(selected == expected && sample.node_count() == rows &&
             sample.term(selected-1) == core.Term.App(13, 0) &&
             sample.term(selected) == core.Term.App(selected-1, 9),
             "indexed elimination retains its original motive, result index and scrutinee")
@@ -1716,7 +1717,7 @@ fn indexed_data_elimination() {
     let budget = remaining_ticks(&wrong)
     var short = indexed_data_elimination_fixture(false)
     spend(&short, budget-1)
-    assert(match short.infer(17, [], true, 32) {
+    assert(match short.infer(17, [], ghost, 32) {
         Err(e) => e.msg == "core: induction needs one case per constructor", _ => false
     } && short.node_count() == before, "missing data case rejects before the scrutinee visit")
     assert_spent(&short, "missing data case costs the entry tick")
@@ -2222,7 +2223,8 @@ fn main() -> i32 {
     data_case_parameter_telescope()
     proposition_elimination_inference(true)
     proposition_elimination_inference(false)
-    indexed_data_elimination()
+    indexed_data_elimination(true)
+    indexed_data_elimination(false)
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)
     dependent_constructor_inference()

@@ -56,7 +56,7 @@ private theorem inspect_refines (held : Represents state.arena selected type)
     · cases success
   · cases success
 
-theorem evidence_refines
+theorem evidence_trace
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (inferSound : InferSound env base ctx limit infer)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -67,7 +67,10 @@ theorem evidence_refines
     (retained : RetainedComparisons final inferred) :
     let after := (evidence infer normal state family subject).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      ∃ values, RepresentsList after indices values ∧ indices.length = arity ∧
+      ∃ original values, (infer state subject).result = .ok inferred ∧
+        Represents (infer state subject).state.arena inferred.typeRoot original ∧
+        ExpandedNormalization env original (.node (.ind family arity) values) ∧
+        RepresentsList after indices values ∧ indices.length = arity ∧
         LoanTyping.HasType env [] ctx true (expand env X) (.node (.ind family arity) (expandArgs env values)) := by
   unfold evidence at success ambient ⊢
   obtain ⟨answer,answerOk,answerNext⟩ := Outcome.next_success success
@@ -91,8 +94,26 @@ theorem evidence_refines
   obtain ⟨normalKept,normalBack,residual,residualRep,converted⟩ := normalSound
     (onBase.trans inferredKept) typeRep selectedOk
   obtain ⟨values,shape,valuesRep,width⟩ := inspect_refines residualRep resultOk
-  exact ⟨inferredKept.trans normalKept,normalBack ∘ inferredBack,values,valuesRep,width,
-    typed.convert (by simpa only [shape,expand] using converted.converted)⟩
+  rw [shape] at converted
+  exact ⟨inferredKept.trans normalKept,normalBack ∘ inferredBack,type,values,answerOk,typeRep,
+    converted,valuesRep,width,typed.convert (by simpa only [expand] using converted.converted)⟩
+
+theorem evidence_refines
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (subjectRep : Represents state.arena subject X)
+    (success : (evidence infer normal state family subject).result = .ok (inferred,arity,indices))
+    (ambient : Prefix (evidence infer normal state family subject).state.arena final)
+    (retained : RetainedComparisons final inferred) :
+    let after := (evidence infer normal state family subject).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ values, RepresentsList after indices values ∧ indices.length = arity ∧
+        LoanTyping.HasType env [] ctx true (expand env X) (.node (.ind family arity) (expandArgs env values)) := by
+  obtain ⟨kept,backward,_,values,_,_,_,represented,width,typed⟩ :=
+    evidence_trace normalProgress inferSound normalSound onBase room subjectRep success ambient retained
+  exact ⟨kept,backward,values,represented,width,typed⟩
 
 theorem expand_spine (env : Environment) (motive : Term) (indices : List Term) :
     expand env (applications motive indices) = applications (expand env motive) (expandArgs env indices) := by

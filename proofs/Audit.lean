@@ -11080,3 +11080,11 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observes_added_and_cancelled_bound
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_typed_variable_load_from_proof
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.computed_load_evidence_reads
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyEvidence.evidence_trace
+#print axioms Jihoo.NativeKernel.NativeCoreFamilyHeadFormation.evidence_refines_formed
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFoldInference.checkAgainst_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.runWithMode_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.runInMode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.runInMode_refines_using
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.formed_subject_facts
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.indexed_code_elimination_matches_native

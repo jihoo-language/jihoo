@@ -5061,3 +5061,19 @@ The accepted example offsets and cancels a bound supplied by an erased
 branch slot. The observed proof justifies the read at index 1, which returns
 17 in the typed callback. The focused build passed 455 tasks and three
 new declaration audits.
+
+### Data elimination selects the actual branch mode
+
+The data eliminator visits the scrutinee and motive in ghost mode first.
+The motive's observed sort then selects the mode for every case and the
+second scrutinee visit. Typing uniqueness relates that second visit to the
+original indices. An independently formed original scrutinee annotation
+supplies the index count and word types through the actual normalization.
+The returned annotation keeps the original motive and scrutinee references.
+
+The indexed data fixture uses 199 ticks and 55 rows in CODE, with result
+root 52. Elimination into a proposition follows the same 200-tick,
+59-row path in CODE and ghost mode. A missing case is rejected at the entry
+tick. The data result proof covers the canonical nonfunction head check.
+The focused build passed 493 tasks, eight declaration audits, and the
+expanded native schedule.

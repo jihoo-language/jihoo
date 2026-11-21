@@ -61,4 +61,30 @@ theorem normal_visit_family_head
   rw [represented.unique output] at replayed
   exact normalized_family_head formed replayed
 
+/-- The original subject visit plus its checked annotation formation supply
+all family index premises for the actual observed elimination head. -/
+theorem evidence_refines_formed
+    (normalProgress : ∀ state root, NativeCorePureComputationNormal.Progress limit state (normal state root))
+    (inferSound : NativeCoreGhostSpineInference.InferSound env base ctx limit infer)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (subjectRep : Represents state.arena subject X)
+    (formation : ∀ {answer original}, (infer state subject).result = .ok answer →
+      Represents (infer state subject).state.arena answer.typeRoot original →
+      ∃ sort : SortTag, LoanTyping.HasType env [] ctx true (expand env original) sort.term)
+    (success : (NativeCoreGhostFamilyEvidence.evidence infer normal state family subject).result = .ok (inferred,arity,indices))
+    (ambient : Prefix (NativeCoreGhostFamilyEvidence.evidence infer normal state family subject).state.arena final)
+    (retained : NativeCoreGhostSpineInference.RetainedComparisons final inferred) :
+    let after := (NativeCoreGhostFamilyEvidence.evidence infer normal state family subject).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ entry values, env.families[family]? = some entry ∧ arity = entry.declaration.arity ∧
+        RepresentsList after indices values ∧ values.length = arity ∧
+        (∀ value ∈ values, LoanTyping.HasType env [] ctx true (expand env value) .u64) ∧
+        LoanTyping.HasType env [] ctx true (expand env X) (.node (.ind family arity) (expandArgs env values)) := by
+  obtain ⟨kept,backward,_,values,inferredOk,originalRep,converted,represented,_,typed⟩ :=
+    NativeCoreGhostFamilyEvidence.evidence_trace normalProgress inferSound normalSound onBase room subjectRep success ambient retained
+  obtain ⟨_,formed⟩ := formation inferredOk originalRep
+  obtain ⟨entry,found,arity,indicesWidth,typedIndices⟩ := normalized_family_head formed converted
+  exact ⟨kept,backward,entry,values,found,arity,represented,indicesWidth,typedIndices,typed⟩
+
 end Jihoo.NativeKernel.NativeCoreFamilyHeadFormation

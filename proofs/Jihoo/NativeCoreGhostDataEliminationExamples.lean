@@ -1,6 +1,7 @@
 import Jihoo.NativeCoreGhostDataElimination
 import Jihoo.NativeCoreGhostSpineInference
 import Jihoo.NativeCoreExpandedFamilies
+import Jihoo.NativeCoreCodeInference
 
 namespace Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples
 
@@ -72,6 +73,38 @@ theorem boxed_induction_and_case_match_native :
        analysis.result.map Inferred.typeRoot = .ok 49 ∧
        analysis.state.arena[48]? = some (.node .app [8,0]) ∧
        analysis.state.arena[49]? = some (.node .app [48,5])) := by
+  exact ⟨by cbv,by cbv⟩
+
+private def runCodeFixture (limit : Nat) (proof : Bool) : Outcome Inferred :=
+  let arena := fixture proof
+  let snapshot : Snapshot := { definitions := [], families := [row], arena := arena }
+  let audited : Option Environment := do
+    let (definitions,families) ← decodeProgram snapshot
+    LoanTyping.MixedProgram.checkProgram 64 128 definitions (families.map NativeLoanMixedAdmission.declaration)
+  let env := audited.getD empty
+  let depth := 31
+  let normal := NativeCoreExpandedFamilies.raw env [row] [] 0 limit
+  let visible : NativeCoreGhostFamilyElimination.FamilyTable := fun family =>
+    if family = 0 then some ⟨row,false,[]⟩ else none
+  let kind := NativeCoreGhostSort.isDataAt env
+  let boxed := NativeCoreGhostReferenceTypes.isBoxedAt env
+  let constructors := NativeCoreGhostConstructorInference.constructorAt [row] 1
+  let ghost := NativeCoreGhostSpineInference.runWithFamilyElimination normal [] 0 limit kind boxed
+    (NativeCoreGhostSpineInference.visibleFamilyShape env 1) constructors visible
+  let children := fun erased =>
+    if erased then ghost depth []
+    else NativeCoreCodeInference.runWithConstructors normal ghost env kind boxed constructors limit [] depth [] false
+  runInMode (ghost depth []) children (normal depth) false limit depth ⟨arena,1⟩ 0 13 9 16 row [15] false
+
+set_option maxRecDepth 4096 in
+/-- The actual motive sort controls CODE branch and subject checks. A data
+result takes the final native normalization while the proof result keeps
+its ghost schedule. Both preserve the original applications. -/
+theorem indexed_code_elimination_matches_native :
+    (let data := runCodeFixture 199 false
+     data.state.steps = 199 ∧ data.state.arena.size = 55 ∧ data.result.map Inferred.typeRoot = .ok 52 ∧
+       data.state.arena[51]? = some (.node .app [13,0]) ∧ data.state.arena[52]? = some (.node .app [51,9])) ∧
+    runCodeFixture 200 true = runFixture 200 true [15] := by
   exact ⟨by cbv,by cbv⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples

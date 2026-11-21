@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreIterationTelescope
 import Jihoo.NativeCoreGhostReferenceTypes
+import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreEffectAnalysis
 
 /-! Fold checks its count, the original accumulator and a dependent
@@ -12,6 +13,7 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostReferenceTypes (BoxedFamilies isBoxedAt)
+open NativeCoreBufferRelease (ModeSound)
 open NativeCoreGhostSpineInference (Infer Inferred Visit InferSound Refines PairRetained RetainedComparisons
   next_progress requireTypes requireTypes_progress requireTypes_refines)
 open NativeCoreCaseStrict (append append_refines append_progress)
@@ -175,10 +177,10 @@ private theorem acceptAccumulator_refines (metadata : BoxedFamilies env isBoxed)
     · exact .inr (ownedHead_refines metadata inspectedRep owned related.converted)
   · simp [reject] at success
 
-theorem checkAgainst_refines
+theorem checkAgainst_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (inferSound : InferSound env base ctx limit infer)
+    (inferSound : ModeSound env loans base ctx limit mode infer)
     (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (argumentRep : Represents state.arena argument term) (expectedRep : Represents state.arena expected type)
@@ -187,7 +189,7 @@ theorem checkAgainst_refines
     (retained : ∀ pair ∈ pairs, PairRetained final pair) :
     let after := (checkAgainst infer normal limit depth state expected argument).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.HasType env [] ctx true (expand env term) (expand env type) := by
+      LoanTyping.HasType env loans ctx mode (expand env term) (expand env type) := by
   unfold checkAgainst at success ambient ⊢
   obtain ⟨answer,inferred,inferNext⟩ := Outcome.next_success success
   rw [inferNext] at success ambient ⊢
@@ -204,6 +206,25 @@ theorem checkAgainst_refines
   obtain ⟨kept,backward,converted⟩ := requireTypes_refines normalSound (onBase.trans inferKept)
     typeRep (expectedRep.frame inferKept) checked ambient (retained pair (by simp))
   exact ⟨inferKept.trans kept,backward ∘ inferBack,typed.convert converted⟩
+
+theorem checkAgainst_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (argumentRep : Represents state.arena argument term) (expectedRep : Represents state.arena expected type)
+    (success : (checkAgainst infer normal limit depth state expected argument).result = .ok pairs)
+    (ambient : Prefix (checkAgainst infer normal limit depth state expected argument).state.arena final)
+    (retained : ∀ pair ∈ pairs, PairRetained final pair) :
+    let after := (checkAgainst infer normal limit depth state expected argument).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.HasType env [] ctx true (expand env term) (expand env type) :=
+  checkAgainst_modeRefines normalSound normalProgress
+    (fun onBase room represented checked future tape => by
+      obtain ⟨kept,safe,typed⟩ := inferSound onBase room represented checked future tape
+      exact ⟨kept,safe,typed⟩)
+    inferProgress onBase room argumentRep expectedRep success ambient retained
 
 private theorem expand_fold_type (wf : UnifiedProgram.EnvWellFormed env) (count accumulator : Term) :
     expand env (foldAccumulatorBodyType count accumulator) = foldAccumulatorBodyType (expand env count) (expand env accumulator) := by

@@ -12,8 +12,9 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (Infer Visit InferSound PairRetained next_progress)
-open NativeCoreGhostFoldInference (checkAgainst checkAgainst_progress checkAgainst_refines)
+open NativeCoreGhostFoldInference (checkAgainst checkAgainst_progress checkAgainst_modeRefines)
 open EnvironmentDelta (expand expandArgs)
+open NativeCoreBufferRelease (ModeSound)
 
 private def branchType (limit depth : Nat) (state : State)
     (family constructor params motive source : Nat) (parameters : List Nat) (recursive proof : Bool) : Outcome Nat :=
@@ -110,11 +111,11 @@ private theorem remaining_constructor {entry : CheckedFamily}
   · have dropped := congrArg (List.drop 1) rest
     simpa only [List.drop_drop,List.drop_succ_cons,List.drop_zero,Nat.add_comm 1] using dropped
 
-theorem runWithMode_refines
+theorem runWithMode_modeRefines
     (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (rows : RepresentsFamilies state.arena familyRows familyTerms)
@@ -134,7 +135,7 @@ theorem runWithMode_refines
       ∃ types, (signatures.zipIdx constructor).mapM (fun (signature,index) =>
         dataCaseType family index entry.declaration.params ctx.length signature (expandArgs env values)
           (expand env M) recursive proof) = some types ∧
-        LoanTyping.BranchTypes env [] ctx true types (expandArgs env cases) := by
+        LoanTyping.BranchTypes env loans ctx mode types (expandArgs env cases) := by
   induction signatures generalizing branches cases state constructor compared with
   | nil =>
     have noCases := List.length_eq_zero_iff.mp width
@@ -177,7 +178,7 @@ theorem runWithMode_refines
         subst actualEntry
         have sameSignature := Option.some.inj (foundSignature.symm.trans atIndex)
         subst actualSignature
-        obtain ⟨branchKept,branchBack,typed⟩ := checkAgainst_refines normalSound normalProgress childSound childProgress
+        obtain ⟨branchKept,branchBack,typed⟩ := checkAgainst_modeRefines normalSound normalProgress childSound childProgress
           (onBase.trans typeKept) typeRoom (branchRep.frame typeKept) typeRep firstOk (tailCost.kept.trans ambient)
           (fun pair member => retained pair (List.mem_append_left _ member))
         have throughBranch := typeKept.trans branchKept
@@ -192,6 +193,38 @@ theorem runWithMode_refines
         · simp [List.zipIdx_cons,generatedFirst,generated]
         · simp only [expandArgs]
           exact .cons (typed.convert related) typedTail
+
+theorem runWithMode_refines
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (rows : RepresentsFamilies state.arena familyRows familyTerms)
+    (rowFound : familyRows[family]? = some row) (data : row.data = true)
+    (entryFound : env.families[family]? = some entry) (params : entry.declaration.params = row.params)
+    (motiveRep : Represents state.arena motive M) (parametersRep : RepresentsList state.arena parameters values)
+    (independentParameters : recursive = true →
+      ∀ value ∈ values, LoanTyping.HasType env [] ctx true (expand env value) .u64)
+    (branchesRep : RepresentsList state.arena branches cases)
+    (remaining : entry.signatures.drop constructor = signatures)
+    (width : branches.length = signatures.length)
+    (success : (runWithMode infer normal limit depth family motive root row parameters recursive proof branches constructor state).result = .ok compared)
+    (ambient : Prefix (runWithMode infer normal limit depth family motive root row parameters recursive proof branches constructor state).state.arena final)
+    (retained : ∀ pair ∈ compared, PairRetained final pair) :
+    let after := (runWithMode infer normal limit depth family motive root row parameters recursive proof branches constructor state).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ types, (signatures.zipIdx constructor).mapM (fun (signature,index) =>
+        dataCaseType family index entry.declaration.params ctx.length signature (expandArgs env values)
+          (expand env M) recursive proof) = some types ∧
+        LoanTyping.BranchTypes env [] ctx true types (expandArgs env cases) :=
+  runWithMode_modeRefines history normalSound normalProgress
+    (fun onBase room represented checked future tape => by
+      obtain ⟨kept,safe,typed⟩ := childSound onBase room represented checked future tape
+      exact ⟨kept,safe,typed⟩)
+    childProgress onBase room rows rowFound data entryFound params motiveRep parametersRep independentParameters branchesRep
+    remaining width success ambient retained
 
 theorem run_refines
     (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
