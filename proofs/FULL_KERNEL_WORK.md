@@ -4571,3 +4571,26 @@ and, for recursive branches, the word typing of its parameters.
 Native Core and Lean match 174 ticks and 63 rows for induction,
 and 115 ticks and 50 rows for one-level analysis. The focused build
 passed 468 jobs.
+
+### Aggregate check through boxed induction
+
+At `48cfaa5`, 1,206 Lake jobs and the generated fixtures passed. The
+axiom audit checked 10,881 declarations, including 533 that used no
+axioms. The other declarations used only `propext`, `Quot.sound`, or
+`Classical.choice`. Native correspondence passed 89 positive and 31
+negative kernel cases, and 69 positive and 55 negative mixed cases.
+The pure mixed admission checker accepted the exact native output bytes.
+The native type-family suite passed eight positive and nine negative cases.
+The proof guard measured 4,969.6 MiB of peak process-tree RSS.
+
+### Recognizing indexed constructor evidence after elimination
+
+The executable parser compiles the actual stored signature to a finite
+indexed telescope, preserving every index expression and checking that
+it uses only earlier word fields. A bounded recognizer constructs the
+semantic constructor tree from the stored value. The byte-admission
+corollary also accepts a recognized residual of typed family replay and
+interprets it at the original declared index vector. An admitted
+elimination over two recursive fields selects the second hypothesis and
+replays to a constructor in the original `[2, 7]` fiber. The module and
+these computations passed a focused Lean check.

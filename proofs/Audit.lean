@@ -10889,3 +10889,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.runWithMode_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.runWithMode_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.boxed_induction_and_case_match_native
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.checkTree_sound
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.checked_recognized_global_carrier
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.checked_replayed_global_carrier
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.recognizes_two_recursive_fields
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.checked_indexed_induction_replays_to_carrier

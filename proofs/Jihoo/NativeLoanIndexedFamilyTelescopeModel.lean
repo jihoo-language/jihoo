@@ -389,4 +389,215 @@ theorem two_index_family_excludes_other_second_index (other : second ≠ 7) :
     rw [read] at indices
     exact other (List.cons.inj (List.cons.inj indices).2).1
 
+
+private def wordCode (scope : List Bool) : Expr → Bool
+  | .var index => scope[index]? == some true
+  | .literal word => decide (word < 2^64)
+  | .add left right => wordCode scope left && wordCode scope right
+
+private theorem lookup_word {scope : List Bool} (found : scope[index]? = some true) :
+    ScalarSlot (scope.map slotKind) index := by
+  induction scope generalizing index with
+  | nil => cases found
+  | cons head tail ih =>
+    cases index with
+    | zero =>
+      simp only [List.getElem?_cons_zero,Option.some.injEq] at found
+      subst head
+      exact .here
+    | succ index =>
+      exact .there (ih found)
+
+private theorem wordCode_sound (checked : wordCode scope expression = true) : IndexCode scope expression := by
+  induction expression with
+  | var index =>
+    exact .var (lookup_word (beq_iff_eq.mp checked))
+  | literal word => exact .literal (of_decide_eq_true checked)
+  | add left right ihLeft ihRight =>
+    obtain ⟨checkedLeft,checkedRight⟩ := Bool.and_eq_true_iff.mp checked
+    exact .add (ihLeft checkedLeft) (ihRight checkedRight)
+
+private def parseIndex (scope : List Bool) (term : Term) :
+    Option {code : Expr // code.toTerm = term ∧ IndexCode scope code} :=
+  let parsed := AffineSum.parse term
+  if known : parsed.isSome then
+    let code := parsed.get known
+    if checked : wordCode scope code = true then
+      some ⟨code,AffineSum.parse_sound (Option.some_get known).symm,wordCode_sound checked⟩
+    else none
+  else none
+
+private def parseVector (scope : List Bool) :
+    (terms : List Term) → Option {codes : List Expr // codes.map Expr.toTerm = terms ∧ IndexCodes scope codes}
+  | [] => some ⟨[],rfl,by intro index absent; cases absent⟩
+  | term :: terms => do
+    let first ← parseIndex scope term
+    let rest ← parseVector scope terms
+    pure ⟨first.val :: rest.val,by rw [List.map_cons,first.property.1,rest.property.1],by
+      intro index member
+      rcases List.mem_cons.mp member with rfl | later
+      · exact first.property.2
+      · exact rest.property.2 index later⟩
+
+private def parseTelescope (family : Nat) :
+    (scope : List Bool) → (fields : List Field) → (result : List Term) →
+      Option {code : Telescope scope // code.fields family = fields ∧ code.resultIndices.map Expr.toTerm = result}
+  | scope,[],result => do
+    let indices ← parseVector scope result
+    pure ⟨.result indices.val indices.property.2,rfl,indices.property.1⟩
+  | scope,⟨erased,domain,none⟩ :: fields,result =>
+    if checked : domain == Term.u64 then do
+      let tail ← parseTelescope family (true :: scope) fields result
+      pure ⟨.word erased tail.val,by
+        simp only [Telescope.fields,beq_iff_eq.mp checked,tail.property.1],tail.property.2⟩
+    else none
+  | scope,⟨erased,domain,some recursive⟩ :: fields,result => do
+    let indices ← parseVector scope recursive
+    if checked : erased = true ∧ domain == indexType family indices.val then do
+      let tail ← parseTelescope family (false :: scope) fields result
+      pure ⟨.recursive indices.val indices.property.2 tail.val,by
+        simp only [Telescope.fields,checked.1,beq_iff_eq.mp checked.2,indices.property.1,tail.property.1],tail.property.2⟩
+    else none
+termination_by _ fields _ => fields.length
+
+/-- Compile a stored constructor signature to its exact finite telescope.
+The compiler checks the scopes and transports equality of the original
+index syntax into its output. -/
+def parseSignature (family : Nat) (signature : Signature) :
+    Option {schema : Telescope [] // schema.signature family = signature} := do
+  let schema ← parseTelescope family [] signature.fields signature.result
+  pure ⟨schema.val,by
+    cases signature
+    simp only [Telescope.signature,schema.property.1,schema.property.2]⟩
+
+private def checkFields (checkChild : Term → Bool) : Telescope scope → List Term → Bool
+  | .result _ _,[] => true
+  | .word _ tail, .natural _ :: fields => checkFields checkChild tail fields
+  | .recursive _ _ tail, child :: fields => checkChild child && checkFields checkChild tail fields
+  | _,_ => false
+
+/-- Recognize only the syntax needed by the indexed carrier construction.
+The stored signature fixes the schema and the eligible recursive fields.
+Actual index equalities are still derived by the typing theorem. -/
+def checkTree (family : Nat) (entry : CheckedFamily) : Nat → Term → Bool
+  | 0,_ => false
+  | fuel+1,.node (.con actual constructor arity) fields =>
+    if actual = family ∧ arity = fields.length then
+      match entry.signatures[constructor]? with
+      | none => false
+      | some signature =>
+        match parseSignature family signature with
+        | some schema => checkFields (checkTree family entry fuel) schema.val fields
+        | none => false
+    else false
+  | _+1,_ => false
+
+private theorem checkFields_sound (childSound : ∀ child, checkChild child = true → ConstructorTree family entry child)
+    {schema : Telescope scope}
+    (accepted : checkFields checkChild schema fields = true) : FieldTree family entry schema fields := by
+  induction schema generalizing fields with
+  | result indices valid =>
+    cases fields with
+    | nil => exact .result valid
+    | cons _ _ => cases accepted
+  | word erased tail ih =>
+    cases fields with
+    | nil => cases accepted
+    | cons field fields =>
+      cases field with
+      | var => cases accepted
+      | node op args =>
+        cases op <;> try cases accepted
+        case natural value =>
+          cases args with
+          | nil => exact .word (ih accepted)
+          | cons _ _ => cases accepted
+  | recursive indices valid tail ih =>
+    cases fields with
+    | nil => cases accepted
+    | cons child fields =>
+      have aligned := Bool.and_eq_true_iff.mp accepted
+      exact .recursive valid (childSound child aligned.1) (ih aligned.2)
+
+theorem checkTree_sound (accepted : checkTree family entry fuel term = true) : ConstructorTree family entry term := by
+  induction fuel generalizing term with
+  | zero => cases accepted
+  | succ fuel ih =>
+    cases term with
+    | var => simp [checkTree] at accepted
+    | node op fields =>
+      cases op <;> try simp [checkTree] at accepted
+      case con actual constructor arity =>
+        obtain ⟨⟨rfl,rfl⟩,accepted⟩ := accepted
+        split at accepted
+        · cases accepted
+        · rename_i signature read
+          split at accepted
+          · rename_i schema parsed
+            rw [←schema.property] at read
+            exact .constructor schema.val read (checkFields_sound (fun _ child => ih child) accepted)
+          · cases accepted
+
+/-- The byte checker supplies the value, and the signature parser and
+shape recognizer supply its indexed constructor tree. -/
+theorem checked_recognized_global_carrier {index : Nat} {declaration : GlobalDeclaration}
+    (accepted : LoanTyping.PureMixedAdmission.checkBytes limits bytes = some env)
+    (family : env.families[familyId]? = some entry) (found : env.globals[index]? = some declaration)
+    (recognized : checkTree familyId entry fuel declaration.value = true)
+    (requested : RawValue.Conv env declaration.type (indexType familyId indices)) :
+    Nonempty (Finite.Carrier (FamilyMeaning familyId entry (indicesAt indices (fun _ => 0)))) :=
+  checked_global_carrier accepted family found (checkTree_sound recognized) requested
+
+/-- The original checked proof may first compute by indexed elimination
+and typed beta. The replay keeps its declared type while the recognizer
+constructs the semantic witness from the selected constructor. -/
+theorem checked_replayed_global_carrier {index : Nat} {declaration : GlobalDeclaration}
+    (accepted : LoanTyping.PureMixedAdmission.checkBytes limits bytes = some env)
+    (family : env.families[familyId]? = some entry) (found : env.globals[index]? = some declaration)
+    (recognized : checkTree familyId entry treeFuel
+      (LoanTyping.PureFamilyProofs.replay env [] typingFuel depth steps declaration.value) = true)
+    (requested : RawValue.Conv env declaration.type (indexType familyId indices)) :
+    Nonempty (Finite.Carrier (FamilyMeaning familyId entry (indicesAt indices (fun _ => 0)))) := by
+  obtain ⟨_,_,_,_,_,history,_,_⟩ := LoanTyping.PureMixedAdmission.checkBytes_sound accepted
+  have typed := LoanTyping.PureFamilyProofs.replay_preserves (ScopedProgram.History.ofPureMixed history)
+    (history.global_value_and_reference found).1 typingFuel depth steps
+  exact ⟨⟨⟨(checkTree_sound recognized).pure_sound history family typed requested⟩⟩⟩
+
+/-- The same admitted example can be recognized directly from its stored
+signature and original constructor value. -/
+theorem recognizes_two_recursive_fields : checkTree 0 familyEntry 3 declaredValue.value = true := by cbv
+
+private def targetType : Term := indexType 0 [.literal 2,.literal 7]
+
+private def indexedMotive : Term := .lam false .u64 (.lam false .u64 targetType)
+
+private def inductionBranch : Term := .lam false .u64
+  (.lam true (indexType 0 [.var 0,.literal 7])
+    (.lam true (indexType 0 [.var 1,.literal 7])
+      (.lam true targetType (.lam true targetType (.var 0)))))
+
+private def inductionProof : Term :=
+  FamilyIota.elimTerm 0 indexedMotive [tree,inductionBranch] tree
+
+private def inductionDeclaration : GlobalDeclaration := ⟨targetType,inductionProof⟩
+private def inductionEnv : Environment := ⟨#[inductionDeclaration],#[familyEntry]⟩
+private def inductionLimits : LoanTyping.PureMixedAdmission.Limits := ⟨40,40,40,12000⟩
+
+/-- The checked source eliminates a constructor with two recursive proof
+fields. Its branch returns the second recursive hypothesis whose base
+case computes to the actual constructor at the original result vector. -/
+theorem checked_indexed_induction_replays_to_carrier :
+    LoanTyping.PureMixedAdmission.checkProgram inductionLimits [inductionDeclaration] [familyDeclaration] = some inductionEnv ∧
+      Nonempty (Finite.Carrier (FamilyMeaning 0 familyEntry [2,7])) := by
+  have admitted : LoanTyping.PureMixedAdmission.checkProgram inductionLimits [inductionDeclaration] [familyDeclaration] =
+      some inductionEnv := by cbv
+  have history := LoanTyping.PureMixedAdmission.checkProgram_sound admitted
+  have typed := LoanTyping.PureFamilyProofs.replay_preserves (ScopedProgram.History.ofPureMixed history)
+    (history.global_value_and_reference (index := 0) (declaration := inductionDeclaration) rfl).1 48 48 12
+  have replayed : LoanTyping.PureFamilyProofs.replay inductionEnv [] 48 48 12 inductionProof = tree := by cbv
+  change LoanTyping.PureTyping.HasType inductionEnv []
+    (LoanTyping.PureFamilyProofs.replay inductionEnv [] 48 48 12 inductionProof) targetType at typed
+  rw [replayed] at typed
+  exact ⟨admitted,⟨⟨⟨read_branch.pure_sound (indices := [.literal 2,.literal 7]) history rfl typed (.refl _)⟩⟩⟩⟩
+
 end Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope
