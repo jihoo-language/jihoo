@@ -4525,3 +4525,14 @@ binder scopes. Its checked value inhabits the fiber at `[2,7]` and
 every constructor in the family fixes the second index at seven.
 The focused build passed 372 jobs. The interpretation theorem covers
 constructor trees with these telescope codes.
+
+### Written recursive fields and formed family heads
+
+The earlier checked constructor supplies its written telescope,
+scopes and recursive markers. Substitution of formed word parameters
+preserves each marker and instantiates its indices under the original
+field binders. The recursive graph builder therefore returns the
+case type of this written signature. A separate formation theorem
+uses the actual ghost normalization to recover a family head's declared
+arity and the U64 typing of each index from the inferred type's
+independent formation derivation. The focused build passed 342 jobs.
