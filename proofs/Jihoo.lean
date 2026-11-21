@@ -1393,3 +1393,5 @@ import Jihoo.NativeLoanComparisonPathLookup
 import Jihoo.NativeCoreGhostViewInference
 import Jihoo.NativeCoreGhostViewInferenceExamples
 import Jihoo.NativeCoreViewStableHead
+import Jihoo.NativeCoreViewCaseExpansion
+import Jihoo.NativeCoreViewFieldAlignment

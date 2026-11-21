@@ -4745,3 +4745,23 @@ the expression converts to a numeral. This rules out `a + 1 = 0` in
 raw conversion for every term `a`. The Loan64 typing inversion for
 `ZeroLe` uses the bound to exclude a zero upper endpoint for any checked
 argument. The focused build passed 284 jobs and five axiom audits.
+
+### Aggregate check through numerical ZeroLe exclusion
+
+At `3c98ea7`, all 1,217 Lake jobs and generated fixtures passed. The
+axiom audit checked 10,940 declarations, including 533 without axioms.
+The other declarations use only `propext`, `Quot.sound`, or
+`Classical.choice`. Native checks passed 89 kernel fixtures and 31
+additional checks, 69 mixed source fixtures and 55 exact-byte checks,
+and 17 type-family controls and rejections. Pure mixed admission
+accepted the exact native snapshot bytes. The proof guard sampled
+5,013.6 MiB of peak process-tree RSS.
+
+### Conversion of the dependent View branch telescope
+
+With the same borrowing and recursion flags, the actual field scan and
+the specified case produce convertible scopes. Each retained borrow
+rewrites precisely its original field slot across later domains.
+Transparent expansion commutes with the reconstructed borrowed
+constructor, the weakened motive, and the recursive hypotheses. The
+focused build passed 442 jobs and four declaration audits.

@@ -10948,3 +10948,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.literalFloor_le_natural
 #print axioms Jihoo.NativeKernel.Environment.RawLend.Conv.successor_ne_zero
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.zeroLe_no_less_zero
+#print axioms Jihoo.NativeKernel.NativeCoreViewCaseExpansion.viewCaseResult_expand
+#print axioms Jihoo.NativeKernel.NativeCoreViewCaseExpansion.viewHypothesisTelescope_expand
+#print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.FieldLayout.matches_fields
+#print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.case_type_conversion
