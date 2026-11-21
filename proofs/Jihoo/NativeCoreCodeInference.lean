@@ -12,7 +12,8 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons
-  conditionOp inferConditional inferConditional_progress inferConditional_modeRefines)
+  conditionOp inferConditional inferConditional_progress inferConditional_modeRefines
+  inferSubtractWithProof inferSubtractWithProof_progress inferSubtractWithProof_modeRefines)
 open NativeCoreCodeScalarInference (enter enter_progress enter_success arithmetic arithmetic_progress
   arithmetic_refines strict strict_progress strict_refines)
 open NativeCoreBufferRelease (inferFree inferFree_progress)
@@ -29,6 +30,8 @@ def run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         arithmetic recur (normal depth) limit depth entered .i64 left right
     | some (.node .uadd [left,right]) => enter limit (depth+1) state root fun entered =>
         arithmetic recur (normal depth) limit depth entered .u64 left right
+    | some (.node .usub [left,right,proof]) => enter limit (depth+1) state root fun entered =>
+        inferSubtractWithProof recur (ghost depth bindings) (normal depth) limit depth entered left right proof
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
         strict recur entered first last
     | some (.node .ifLt [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
@@ -63,6 +66,8 @@ theorem run_progress
     split
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferSubtractWithProof_progress (fun _ _ => ih)
+        (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
         (fun _ _ _ => ih) (normalProgress depth) inside)
@@ -173,6 +178,24 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
+      case usub =>
+        have length : refs.length = 3 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons left rest =>
+          cases rest with
+          | cons right rest =>
+            cases rest with
+            | cons proof rest =>
+              cases rest
+              dsimp only at success ambient ⊢
+              obtain ⟨entered,inside⟩ := enter_success success
+              rw [entered] at success ambient ⊢
+              obtain ⟨kept,safe,typed⟩ := inferSubtractWithProof_modeRefines
+                (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
+                modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                onBase inside left right proof success ambient retained
+              exact ⟨kept,safe,typed⟩
       case ifLt | ifEq =>
         have length : refs.length = 4 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
@@ -308,5 +331,28 @@ theorem conditionals_match_native_erased_scope (equality : Bool) :
       rejected.state = ⟨conditionalArena equality true ++ conditionalExtra equality,10⟩ ∧
       rejected.result = .error (.outsideFragment 4) := by
   cases equality <;> cbv
+
+
+private def subtractionArena (invalid : Bool) : Arena := #[
+  .node (.natural 0) [],.node (.natural 1) [],.node .uadd [0,1],.node .lt [0,2],.var 0,
+  .node .usub [if invalid then 4 else 0,0,4]]
+
+private def subtractionRows : Arena := #[
+  .node .u64 [],.node .u64 [],.node .u64 [],.node (.natural 1) [],.node .uadd [0,9],.node .lt [0,10],
+  .node (.natural 1) [],.node .lt [0,12],.node (.natural 1) [],.node .lt [0,14],.node .u64 []]
+
+/-- A runtime subtraction reads its erased proof slot in ghost mode.
+Using the same slot for the first runtime operand is rejected after
+creating only the shared U64 annotation. -/
+theorem subtraction_proof_mode_matches_native :
+    let runAt := fun limit invalid =>
+      run (NativeCoreGhostLiteralAddition.run [] 0 limit) (NativeCoreGhostSpineInference.run [] 0 limit)
+        empty (fun _ => false) (fun _ => false) limit 16 [⟨3,true⟩] false ⟨subtractionArena invalid,0⟩ 5
+    let accepted := runAt 32 false
+    let rejected := runAt 2 true
+    accepted.state = ⟨subtractionArena false ++ subtractionRows,32⟩ ∧
+      accepted.result.map Inferred.typeRoot = .ok 16 ∧
+      rejected.state = ⟨subtractionArena true ++ #[.node .u64 []],2⟩ ∧
+      rejected.result = .error (.outsideFragment 4) := by cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

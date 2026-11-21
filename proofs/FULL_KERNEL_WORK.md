@@ -4824,3 +4824,14 @@ proof takes formation of the subject's inferred type and agreement of
 the observed branch classifications. Free neutral motive applications
 also agree with rigid normalized outputs on the mode when both visits
 succeed. The focused build passed 471 jobs and both declaration audits.
+
+### Native runtime subtraction checks its evidence in ghost mode
+
+The recursive runtime visitor checks both word operands in CODE and
+checks the actual upper-bound proof in ghost mode. It retains the
+original evidence type and the same graph comparison sequence. Lean
+and native Core agree on 32 ticks, 17 rows, and result root 16 when an
+erased variable provides the proof. Putting that variable in an operand
+fails after two ticks with seven rows committed. The focused build
+passed 487 jobs, the expanded native schedule, and three declaration
+audits.

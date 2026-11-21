@@ -156,6 +156,38 @@ fn subtract_bound_exhaustion() {
     assert(c.term(14) == core.Term.UAdd(zero, 13) && c.term(15) == core.Term.Lt(12, 14), "inferred subtraction bound")
 }
 
+fn code_subtraction_evidence() {
+    let span = diag.Span.nowhere()
+    for invalid in [false, true] {
+        var c = core.Core.new()
+        let zero = c.add(core.Term.Natural(0), span).unwrap()
+        let one = c.add(core.Term.Natural(1), span).unwrap()
+        let successor = c.add(core.Term.UAdd(zero, one), span).unwrap()
+        let bound = c.add(core.Term.Lt(zero, successor), span).unwrap()
+        let proof = c.add(core.Term.Var(0), span).unwrap()
+        let term = c.add(core.Term.USub(if invalid { proof } else { zero }, zero, proof), span).unwrap()
+        let context = [core.Binding { ty: bound, erased: true }]
+        if invalid {
+            spend(&c, 999998)
+            assert(match c.infer(term, context, false, 16) {
+                Err(e) => e.msg == "core: erased value used at runtime", _ => false
+            }, "runtime subtraction rejects an erased operand")
+            assert(c.node_count() == 7 && c.term(6) == core.Term.U64, "erased operand prefix")
+            assert_spent(&c, "erased subtraction operand used two ticks")
+        } else {
+            spend(&c, 999968)
+            let inferred = c.infer(term, context, false, 16).unwrap()
+            assert(inferred == 16 && c.node_count() == 17, "runtime subtraction result")
+            for i in [6, 7, 8, 16] { assert(c.term(i as u32) == core.Term.U64, "word type row") }
+            assert(c.term(9) == core.Term.Natural(1) && c.term(10) == core.Term.UAdd(zero, 9), "original successor")
+            assert(c.term(11) == core.Term.Lt(zero, 10), "original subtraction bound")
+            assert(c.term(12) == core.Term.Natural(1) && c.term(13) == core.Term.Lt(zero, 12), "normalized assumption")
+            assert(c.term(14) == core.Term.Natural(1) && c.term(15) == core.Term.Lt(zero, 14), "normalized expected bound")
+            assert_spent(&c, "runtime subtraction with ghost evidence used 32 ticks")
+        }
+    }
+}
+
 fn conditional_inference() {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1985,6 +2017,7 @@ fn main() -> i32 {
     decision_inference()
     zero_bound_inference()
     subtract_bound_exhaustion()
+    code_subtraction_evidence()
     conditional_inference()
     refinement_inference()
     pack_evidence_exhaustion()

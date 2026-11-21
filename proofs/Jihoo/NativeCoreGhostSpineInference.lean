@@ -308,12 +308,15 @@ private def checkSubtract (infer : Infer) (normal : Visit) (limit depth : Nat) (
   (subtractBound state numerator denominator).next fun assembled expected =>
     requireOperands infer normal limit depth expected assembled [proof]
 
-private def inferSubtract (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+def inferSubtractWithProof (infer inferProof : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (numerator denominator proof : Nat) : Outcome Inferred :=
   (checkFixed infer normal limit depth state .u64 [numerator, denominator]).next fun checked comparisons =>
-    (checkSubtract infer normal limit depth checked numerator denominator proof).next fun afterProof proofComparisons =>
+    (checkSubtract inferProof normal limit depth checked numerator denominator proof).next fun afterProof proofComparisons =>
       (append afterProof .u64 []).next fun after result =>
         ⟨after, .ok ⟨result, comparisons ++ proofComparisons⟩⟩
+
+private abbrev inferSubtract (infer : Infer) : Visit → Nat → Nat → State → Nat → Nat → Nat → Outcome Inferred :=
+  inferSubtractWithProof infer infer
 
 private def offsetBounds (state : State) (left right delta : Nat) : Outcome (Nat × Nat) :=
   (append state .uadd [left, delta]).next fun afterLeft shiftedLeft =>
@@ -993,16 +996,24 @@ private theorem checkSubtract_progress
   intro expected _ after
   exact requireOperands_progress infers (fun state root _ => normalizes state root) after
 
+theorem inferSubtractWithProof_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (proofInfers : ∀ state root, state.steps ≤ limit → Progress limit state (inferProof state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferSubtractWithProof infer inferProof normal limit depth state numerator denominator proof) := by
+  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
+  intro comparisons _ operandsRoom
+  apply next_progress (checkSubtract_progress proofInfers normalizes operandsRoom) operandsRoom
+  intro proofComparisons _ _
+  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
 private theorem inferSubtract_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (inferSubtract infer normal limit depth state numerator denominator proof) := by
-  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) room) room
-  intro comparisons _ operandsRoom
-  apply next_progress (checkSubtract_progress infers normalizes operandsRoom) operandsRoom
-  intro proofComparisons _ _
-  exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+    Progress limit state (inferSubtract infer normal limit depth state numerator denominator proof) :=
+  inferSubtractWithProof_progress infers infers normalizes room
 
 private theorem offsetBounds_progress (state : State) (left right delta : Nat) :
     Progress limit state (offsetBounds state left right delta) :=
@@ -2601,19 +2612,24 @@ private theorem checkSubtract_refines
     (onBase.trans assembledKept) assembledRoom (.cons (proofRep.frame assembledKept) .nil) expectedRep success ambient retained
   exact ⟨assembledKept.trans proofKept, proofBack ∘ assembledBack, typed _ List.mem_cons_self⟩
 
-private theorem inferSubtract_refines
+theorem inferSubtractWithProof_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env [] base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (proofSound : InferSound env base ctx limit inferProof)
+    (proofProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferProof state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (numeratorRep : Represents state.arena numerator a) (denominatorRep : Represents state.arena denominator b)
     (proofRep : Represents state.arena proof p)
-    (success : (inferSubtract infer normal limit depth state numerator denominator proof).result = .ok answer)
-    (ambient : Prefix (inferSubtract infer normal limit depth state numerator denominator proof).state.arena final)
+    (success : (inferSubtractWithProof infer inferProof normal limit depth state numerator denominator proof).result = .ok answer)
+    (ambient : Prefix (inferSubtractWithProof infer inferProof normal limit depth state numerator denominator proof).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.usub a b p) (inferSubtract infer normal limit depth state numerator denominator proof) answer := by
-  unfold inferSubtract at success ambient ⊢
+    let after := (inferSubtractWithProof infer inferProof normal limit depth state numerator denominator proof).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env [] ctx mode (expand env (.usub a b p)) (expand env type) := by
+  unfold inferSubtractWithProof at success ambient ⊢
   obtain ⟨comparisons, checkedOk, checkedNext⟩ := Outcome.next_success success
   rw [checkedNext] at success ambient ⊢
   obtain ⟨proofComparisons, proofOk, proofNext⟩ := Outcome.next_success success
@@ -2626,14 +2642,14 @@ private theorem inferSubtract_refines
   have checkedProgress := checkFixed_progress (operand := .u64) (args := [numerator, denominator]) (depth := depth)
     childProgress (fun state root _ => normalProgress state root) room
   have checkedRoom := checkedProgress.accepted room comparisons checkedOk
-  have proofProgress := checkSubtract_progress (state := checked.state) (depth := depth) (numerator := numerator)
-    (denominator := denominator) (proof := proof) childProgress normalProgress checkedRoom
-  let proofChecks := checkSubtract infer normal limit depth checked.state numerator denominator proof
+  have checkedProofProgress := checkSubtract_progress (state := checked.state) (depth := depth) (numerator := numerator)
+    (denominator := denominator) (proof := proof) proofProgress normalProgress checkedRoom
+  let proofChecks := checkSubtract inferProof normal limit depth checked.state numerator denominator proof
   have proofFinal := (append_progress (limit := limit) proofChecks.state .u64 []).kept.trans ambient
-  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+  obtain ⟨checkedKept, checkedBack, typedOperands⟩ := checkFixed_modeRefines normalSound normalProgress childSound childProgress
     onBase room (.cons numeratorRep (.cons denominatorRep .nil)) rfl checkedOk
-    (proofProgress.kept.trans proofFinal) (fun pair found => retained pair (List.mem_append_left _ found))
-  obtain ⟨proofKept, proofBack, typedProof⟩ := checkSubtract_refines normalSound normalProgress childSound childProgress
+    (checkedProofProgress.kept.trans proofFinal) (fun pair found => retained pair (List.mem_append_left _ found))
+  obtain ⟨proofKept, proofBack, typedProof⟩ := checkSubtract_refines normalSound normalProgress proofSound proofProgress
     (onBase.trans checkedKept) checkedRoom (numeratorRep.frame checkedKept) (denominatorRep.frame checkedKept)
     (proofRep.frame checkedKept) proofOk proofFinal (fun pair found => retained pair (List.mem_append_right _ found))
   obtain ⟨resultKept, resultBack, resultRep⟩ := append_refines .nil rfl selectedOk
@@ -2644,6 +2660,23 @@ private theorem inferSubtract_refines
   exact .usub (typedOperands _ List.mem_cons_self)
     (typedOperands _ (List.mem_cons_of_mem _ List.mem_cons_self)) typedProof
 
+
+private theorem inferSubtract_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (numeratorRep : Represents state.arena numerator a) (denominatorRep : Represents state.arena denominator b)
+    (proofRep : Represents state.arena proof p)
+    (success : (inferSubtract infer normal limit depth state numerator denominator proof).result = .ok answer)
+    (ambient : Prefix (inferSubtract infer normal limit depth state numerator denominator proof).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.usub a b p) (inferSubtract infer normal limit depth state numerator denominator proof) answer := by
+  obtain ⟨kept,backward,result⟩ := inferSubtractWithProof_modeRefines normalSound normalProgress
+    (ghost_as_mode childSound) childProgress childSound childProgress onBase room numeratorRep denominatorRep
+    proofRep success ambient retained
+  exact ⟨kept,backward,result⟩
 
 private theorem offsetBounds_refines
     (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)

@@ -10975,3 +10975,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_observed_usub_return
 #print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.run_checked_view_node
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveAgreement.normalized_motive_modes_agree
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferSubtractWithProof_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferSubtractWithProof_modeRefines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.subtraction_proof_mode_matches_native
