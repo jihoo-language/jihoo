@@ -1387,3 +1387,4 @@ import Jihoo.NativeCoreViewReading
 import Jihoo.NativeCoreViewCaseType
 import Jihoo.NativeCoreViewSubject
 import Jihoo.NativeCoreViewMotiveGate
+import Jihoo.NativeBindingMachineMutableConditionalDemand

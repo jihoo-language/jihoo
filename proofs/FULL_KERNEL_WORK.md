@@ -4638,3 +4638,16 @@ representation is fixed across all values it reads.
 The focused build passed 438 jobs and the 16-declaration axiom audit.
 The rebuilt compiler passed the expanded inference schedule with the
 same View rows and exact budgets.
+
+### Ownership at the runtime conditional handoff
+
+The ownership receipt of the original IfEq or IfLt determines both
+branch receipts and their equal demand for captured owners. At the
+actual comparison frame the machine enters the selected original body,
+retains the heap and pending readers, and preserves each active loan's
+zero ownership demand. The positive branch adds an erased proof slot
+while transferring the existing ownership units and their exclusivity.
+The ownership invariant is supplied at the end of operand evaluation.
+
+The focused build passed 390 jobs. The three new declarations use only
+`propext` and `Quot.sound`.

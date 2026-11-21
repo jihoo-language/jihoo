@@ -10916,3 +10916,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.runtimeResult_refines
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.OwnerDemandWorld.branch
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.conditional_receipts
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_handoff
