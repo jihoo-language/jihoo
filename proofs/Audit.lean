@@ -11027,3 +11027,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runCode_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runCode_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.generic_lend_matches_native_code
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.normalizedWord?_sound
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.computed_proof_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.closedProof?_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.closedProof?_excludes_zero_upper
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_global_computed_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_global_computed_excludes_zero_upper
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.admitted_computed_wide_proof

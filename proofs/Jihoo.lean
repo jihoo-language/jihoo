@@ -1402,6 +1402,7 @@ import Jihoo.NativeCoreViewMotiveAgreement
 import Jihoo.NativeLoanNumericalEvidence
 import Jihoo.NativeBindingMachineMutableObservedUnsigned
 import Jihoo.NativeCoreNumericalObservation
+import Jihoo.NativeLoanNumericProofExecution
 import Jihoo.NativeBindingMachineMutableUnsignedPhases
 import Jihoo.NativeCoreShiftedTypeFormation
 import Jihoo.NativeLoanObservedSubtractionConversion

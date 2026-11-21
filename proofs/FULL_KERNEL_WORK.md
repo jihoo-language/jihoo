@@ -4937,3 +4937,27 @@ For the generic allocation fixture, Lean and native Core return row 8
 after 126 ticks with 42 rows. With 125 ticks, the final gate fails and
 retains all earlier rows. The focused build passed 491 tasks, three
 declaration audits, and the native schedule for both Lend paths.
+
+The aggregate check at `2729382` passed 1,229 Lake tasks and an audit of
+11,019 declarations, including 535 with no axiom dependencies. The
+remaining audited declarations use only Lean's standard logical axioms.
+The native schedule matched both Lend paths. The correspondence suites
+passed 89 kernel fixtures and 31 additional checks, 69 mixed source
+fixtures and 55 exact-byte checks, and 8 type-family controls and 9 exact
+diagnostic rejections. Pure admission accepted the exact native snapshot
+bytes. Peak sampled process-tree RSS was 5,039.6 MiB.
+
+### Computed numerical evidence at its original type
+
+The executable evidence check reads the actual bounded normalization
+of each arithmetic operand and reconstructs its mathematical value
+from the returned tree. The original typing derivation then proves
+strict order at the written type. This works before rewriting the
+arithmetic proof itself, and the closed entry also handles evidence
+exposed by typed delta, beta, and family computation. A successful
+observation rules out a closed upper bound of zero.
+
+The mixed checker admits a proof with computed arguments whose upper
+bound is exactly `2^64`. The word reads recover the original operands
+and establish strict order with the full mathematical bound. The focused
+build passed 406 tasks and seven declaration audits.
