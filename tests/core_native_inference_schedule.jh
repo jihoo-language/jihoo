@@ -2211,6 +2211,43 @@ fn case_spine_application_inference() {
     }, "the top application rejects a remaining erased case argument")
 }
 
+fn dependent_comparison_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let u64_type = c.add(core.Term.U64, span).unwrap()
+    let first_proof = c.add(core.Term.Var(0), span).unwrap()
+    let predicate_body = c.add(core.Term.Eq(first_proof, first_proof), span).unwrap()
+    let predicate = c.add(core.Term.Lam(false, u64_type, predicate_body), span).unwrap()
+    let refined = c.add(core.Term.Refine(predicate), span).unwrap()
+    let universe = c.add(core.Term.Universe(0), span).unwrap()
+    c.add(core.Term.Pi(false, refined, universe), span).unwrap()
+    let zero = c.add(core.Term.Natural(0), span).unwrap()
+    c.add(core.Term.Eq(zero, zero), span).unwrap()
+    let second_proof = c.add(core.Term.Var(1), span).unwrap()
+    let family = c.add(core.Term.Var(2), span).unwrap()
+    let left = c.add(core.Term.Pack(predicate, zero, first_proof), span).unwrap()
+    let right = c.add(core.Term.Pack(predicate, zero, second_proof), span).unwrap()
+    c.add(core.Term.App(family, left), span).unwrap()
+    c.add(core.Term.App(family, right), span).unwrap()
+    c
+}
+
+fn dependent_proof_comparison() {
+    var formed = dependent_comparison_fixture()
+    let context = [core.Binding { ty: 6, erased: false },
+        core.Binding { ty: 8, erased: true }, core.Binding { ty: 8, erased: true }]
+    let left_sort = formed.infer(13, context, true, 32).unwrap()
+    let right_sort = formed.infer(14, context, true, 32).unwrap()
+    assert(formed.term(left_sort) == core.Term.Universe(0) && formed.term(right_sort) == core.Term.Universe(0),
+        "both annotations are types in the same checked context")
+
+    var compared = dependent_comparison_fixture()
+    spend(&compared, 999971)
+    assert(compared.equal(13, 14, 8).unwrap() && compared.node_count() == 15,
+        "the native comparison skips the two distinct erased local proofs")
+    assert_spent(&compared, "the proof comparison uses 29 ticks and reuses the entire graph")
+}
+
 fn main() -> i32 {
     code_conditional_inference(false)
     code_conditional_inference(true)
@@ -2279,6 +2316,7 @@ fn main() -> i32 {
     scalar_code_declaration()
     code_application_inference()
     case_spine_application_inference()
+    dependent_proof_comparison()
     runtime_partial_applications()
     loop_motive_inference()
     dependent_lend_callbacks()

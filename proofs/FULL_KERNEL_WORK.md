@@ -5093,3 +5093,18 @@ Recursive CODE admission and runtime ownership for this judgment remain
 separate obligations. The native regression accepts the saturated example
 and rejects its standalone and underapplied variants. The focused build
 passed 494 tasks and eleven declaration audits.
+
+### Typed evidence in the actual type comparison
+
+A successful type requirement now exposes both normalized operands, their
+preserved formation, and the original identity comparison on the shared
+graph and clock. At a retained path with compatible binder domains and
+retained operands, the checker recovers the common proposition of the
+omitted proof fields.
+
+The native and Lean fixtures compare a neutral dependent type family
+applied to two Pack values with distinct erased proof variables. Both
+annotations are formed in the same context. The comparison uses 29 ticks
+and keeps all 15 original rows and the original comparison roots. Both
+proofs inhabit the original predicate application. The focused build
+passed 441 tasks, four declaration audits, and the expanded native schedule.
