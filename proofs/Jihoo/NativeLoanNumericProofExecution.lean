@@ -22,15 +22,15 @@ theorem normalizedWord?_sound (accepted : normalizedWord? env budget fuel term =
   cases checked
   exact ⟨residual,RawLend.normalize?_sound normalized,witness.property⟩
 
-private def operand? (env : Environment) (budget fuel : Nat) (values : Nat → Term) (term : Term) :
-    Option (PLift (∃ value, Numeric env (term.subst values) value)) :=
-  match observed : normalizedWord? env budget fuel (term.subst values) with
+private def operand? (env : Environment) (budget fuel : Nat) (observe : Term → Term) (values : Nat → Term) (term : Term) :
+    Option (PLift (∃ value, Numeric env (observe (term.subst values)) value)) :=
+  match observed : normalizedWord? env budget fuel (observe (term.subst values)) with
   | some value => some ⟨⟨value,normalizedWord?_sound observed⟩⟩
   | none => none
 
 private theorem operand?_present
-    (accepted : normalizedWord? env budget fuel (term.subst values) = some value) :
-    (operand? env budget fuel values term).isSome = true := by
+    (accepted : normalizedWord? env budget fuel (observe (term.subst values)) = some value) :
+    (operand? env budget fuel observe values term).isSome = true := by
   unfold operand?
   split
   · rfl
@@ -40,52 +40,61 @@ private theorem operand?_present
 
 /-- Every accepted arithmetic node builds the proof of the original
 operand observations. Erased or effect-only prefixes need no values. -/
-def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term) :
-    (term : Term) → Option (PLift (ObservedEvidence env values term))
-  | .decide _ _ => some ⟨by simp only [ObservedEvidence,ObservedEvidenceUsing]⟩
-  | .zeroLe a => (operand? env budget fuel values a).map fun observed =>
+def observationsUsing? (env : Environment) (budget fuel : Nat) (observe : Term → Term) (values : Nat → Term) :
+    (term : Term) → Option (PLift (ObservedEvidenceUsing
+      (fun operand => ∃ value, Numeric env (observe (operand.subst values)) value) term))
+  | .decide _ _ => some ⟨by simp only [ObservedEvidenceUsing]⟩
+  | .zeroLe a => (operand? env budget fuel observe values a).map fun observed =>
     ⟨by
-      simp only [ObservedEvidence,ObservedEvidenceUsing]
+      simp only [ObservedEvidenceUsing]
       exact observed.down⟩
   | .ltAdd a b c proof => do
-    let first ← operand? env budget fuel values a
-    let second ← operand? env budget fuel values b
-    let offset ← operand? env budget fuel values c
-    let nested ← observations? env budget fuel values proof
+    let first ← operand? env budget fuel observe values a
+    let second ← operand? env budget fuel observe values b
+    let offset ← operand? env budget fuel observe values c
+    let nested ← observationsUsing? env budget fuel observe values proof
     pure ⟨by
-      simp only [ObservedEvidence,ObservedEvidenceUsing]
+      simp only [ObservedEvidenceUsing]
       exact ⟨first.down,second.down,offset.down,nested.down⟩⟩
   | .ltCancel a b c proof => do
-    let first ← operand? env budget fuel values a
-    let second ← operand? env budget fuel values b
-    let offset ← operand? env budget fuel values c
-    let nested ← observations? env budget fuel values proof
+    let first ← operand? env budget fuel observe values a
+    let second ← operand? env budget fuel observe values b
+    let offset ← operand? env budget fuel observe values c
+    let nested ← observationsUsing? env budget fuel observe values proof
     pure ⟨by
-      simp only [ObservedEvidence,ObservedEvidenceUsing]
+      simp only [ObservedEvidenceUsing]
       exact ⟨first.down,second.down,offset.down,nested.down⟩⟩
   | .ltLe a b c first second => do
-    let lower ← operand? env budget fuel values a
-    let middle ← operand? env budget fuel values b
-    let upper ← operand? env budget fuel values c
-    let first ← observations? env budget fuel values first
-    let second ← observations? env budget fuel values second
+    let lower ← operand? env budget fuel observe values a
+    let middle ← operand? env budget fuel observe values b
+    let upper ← operand? env budget fuel observe values c
+    let first ← observationsUsing? env budget fuel observe values first
+    let second ← observationsUsing? env budget fuel observe values second
     pure ⟨by
-      simp only [ObservedEvidence,ObservedEvidenceUsing]
+      simp only [ObservedEvidenceUsing]
       exact ⟨lower.down,middle.down,upper.down,first.down,second.down⟩⟩
   | .strict _ rest => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values rest
   | .free _ rest => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values rest
   | .node (.drop _) [_,rest] => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values rest
   | .ifLt _ _ _ rest => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values rest
   | .ifEq _ _ _ rest => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values rest
   | .absurd _ proof => by
-    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values proof
+    simpa only [ObservedEvidenceUsing] using observationsUsing? env budget fuel observe values proof
   | _ => none
 termination_by term => sizeOf term
+
+def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term) (term : Term) :
+    Option (PLift (ObservedEvidence env values term)) :=
+  observationsUsing? env budget fuel id values term
+
+def projectedObservations? (env : Environment) (budget fuel : Nat) (values : Nat → Term) (term : Term) :
+    Option (PLift (ProjectedObserved env values term)) :=
+  observationsUsing? env budget fuel (ValueErasure.Loan.project env) values term
 
 theorem computed_proof_order (wf : UnifiedProgram.EnvWellFormed env)
     (typed : LoanTyping.HasType env loans ctx mode term type)
@@ -94,6 +103,35 @@ theorem computed_proof_order (wf : UnifiedProgram.EnvWellFormed env)
   cases found : observations? env budget fuel values term with
   | none => simp only [found,Option.isSome_none,Bool.false_eq_true] at accepted
   | some checked => exact observed_evidence_order wf typed checked.down
+
+/-- A successful operand visit may use source value projection before
+normalization. The order statement keeps the pure interpretation of the
+original annotation. -/
+theorem computed_projected_order (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : LoanTyping.PureTyping.HasType env ctx term type)
+    (accepted : (projectedObservations? env budget fuel values term).isSome = true) :
+    Order env (ValueErasure.Loan.project env (type.subst values)) := by
+  cases found : projectedObservations? env budget fuel values term with
+  | none => simp only [found,Option.isSome_none,Bool.false_eq_true] at accepted
+  | some checked => exact projected_pure_evidence_order wf typed checked.down
+
+theorem computed_projected_excludes_zero (wf : UnifiedProgram.EnvWellFormed env)
+    (typed : LoanTyping.PureTyping.HasType env [] term (.lt left (.natural 0)))
+    (accepted : (projectedObservations? env budget fuel Term.var term).isSome = true) : False := by
+  cases found : projectedObservations? env budget fuel Term.var term with
+  | none => simp only [found,Option.isSome_none,Bool.false_eq_true] at accepted
+  | some checked => exact projected_closed_evidence_excludes_zero wf typed checked.down
+
+/-- The mixed history justifies the root computation at the original type.
+Projected operand visits then establish order even if an operand has a
+value-irrelevant prefix. -/
+theorem normalized_projected_proof_order (history : MixedProgram.History definitions declarations env)
+    (typed : LoanTyping.HasType env [] [] true term type)
+    (normalized : ProofNormalization.normalize? env budget reductionFuel term = some residual)
+    (accepted : (projectedObservations? env budget operandFuel Term.var residual).isSome = true) :
+    Order env (ValueErasure.Loan.project env type) := by
+  have preserved := ProofNormalization.normalize?_preserves history typed normalized
+  simpa only [Term.subst_id] using computed_projected_order history.wellFormed (.native preserved) accepted
 
 /-- A checked prefix can expose the proof head by typed delta, beta, or
 family computation. The arithmetic checker then observes the remaining
@@ -157,22 +195,44 @@ theorem admitted_computed_wide_proof :
   have zero : normalizedWord? world 200000 32 (applied 0) = some 0 := by cbv
   have one : normalizedWord? world 200000 32 (applied 1) = some 1 := by cbv
   have maximum : normalizedWord? world 200000 32 offset = some (2^64-1) := by cbv
-  have seenZero : (operand? world 200000 32 Term.var (applied 0)).isSome = true :=
-    operand?_present (by simpa only [Term.subst_id] using zero)
-  have seenOne : (operand? world 200000 32 Term.var (applied 1)).isSome = true :=
-    operand?_present (by simpa only [Term.subst_id] using one)
-  have seenMax : (operand? world 200000 32 Term.var offset).isSome = true :=
-    operand?_present (by simpa only [Term.subst_id] using maximum)
+  have seenZero : (operand? world 200000 32 id Term.var (applied 0)).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using zero)
+  have seenOne : (operand? world 200000 32 id Term.var (applied 1)).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using one)
+  have seenMax : (operand? world 200000 32 id Term.var offset).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using maximum)
   obtain ⟨_,zeroRead⟩ := Option.isSome_iff_exists.mp seenZero
   obtain ⟨_,oneRead⟩ := Option.isSome_iff_exists.mp seenOne
   obtain ⟨_,maxRead⟩ := Option.isSome_iff_exists.mp seenMax
   have checked : (observations? world 200000 32 Term.var wideProof.value).isSome = true := by
-    simp [wideProof,observations?,zeroRead,oneRead,maxRead]
+    simp [wideProof,observations?,observationsUsing?,zeroRead,oneRead,maxRead] <;> rfl
   have ordered : Order world wideProof.type := by
     simpa only [Term.subst_id] using computed_proof_order history.wellFormed typed checked
   have first : normalizedWord? world 200000 32 low = some (2^64-1) := by cbv
   have second : normalizedWord? world 200000 32 high = some (2^64) := by cbv
   exact ⟨ordered,ordered.reflect history.wellFormed.admissible
     (normalizedWord?_sound first) (normalizedWord?_sound second)⟩
+
+private def strictWord : Term := .strict (.integer 3) (.natural 0)
+private def strictDeclaration : GlobalDeclaration :=
+  ⟨.lt (.natural 0) (.uadd strictWord (.natural 1)),.zeroLe strictWord⟩
+private def strictWorld : Environment := ⟨#[strictDeclaration],#[]⟩
+
+/-- Actual computed observations follow the value projection of a Strict
+operand in a proof whose original type the mixed checker admitted. -/
+theorem observed_projected_strict_order :
+    (projectedObservations? strictWorld 200000 32 Term.var strictDeclaration.value).isSome = true ∧
+      Order strictWorld (ValueErasure.Loan.project strictWorld strictDeclaration.type) := by
+  have admitted : MixedProgram.checkProgram 64 64 [strictDeclaration] [] = some strictWorld := by cbv
+  have history := MixedProgram.checkProgram_sound admitted
+  obtain ⟨_,_,typed⟩ := history.global_typing (index := 0) (declaration := strictDeclaration) rfl
+  have read : normalizedWord? strictWorld 200000 32 (ValueErasure.Loan.project strictWorld strictWord) = some 0 := by cbv
+  have seen : (operand? strictWorld 200000 32 (ValueErasure.Loan.project strictWorld) Term.var strictWord).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id] using read)
+  obtain ⟨_,kept⟩ := Option.isSome_iff_exists.mp seen
+  have checked : (projectedObservations? strictWorld 200000 32 Term.var strictDeclaration.value).isSome = true := by
+    simp [strictDeclaration,projectedObservations?,observationsUsing?,kept] <;> rfl
+  exact ⟨checked,by
+    simpa only [Term.subst_id] using computed_projected_order history.wellFormed (.native (typed.ghost [])) checked⟩
 
 end Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic

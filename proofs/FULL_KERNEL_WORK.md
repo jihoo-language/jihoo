@@ -4992,3 +4992,12 @@ actual shifted result roots to the original checked formation. This
 supplies the subject-formation premise for View on those roots. The
 focused check passed 493 tasks, fifteen declaration audits, and the
 expanded native schedule.
+
+### Executable observations through value projection
+
+The same arithmetic proof walk now computes both direct and projected
+operand observations. Its projected branch proves order for the pure
+typing judgment and rules out observed closed bounds with upper zero.
+Typed source normalization can expose the arithmetic proof before this
+walk. The checked Strict example now executes the projected operand
+read. The focused build passed 408 tasks and four declaration audits.

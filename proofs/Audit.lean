@@ -11054,3 +11054,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.runtime_refinement_modes_match_native
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.boxed_drop_matches_native_code
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.formation_and_transport_share_ghost_visits
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.computed_projected_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.computed_projected_excludes_zero
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.normalized_projected_proof_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observed_projected_strict_order
