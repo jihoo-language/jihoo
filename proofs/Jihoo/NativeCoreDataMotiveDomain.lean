@@ -18,7 +18,7 @@ def parameters (limit depth count : Nat) : List Nat → State → Outcome (List 
       (parameters limit depth count rest shifted).next fun after suffix =>
         ⟨after,.ok (parameter :: suffix)⟩
 
-private def addVariable (state : State) (index : Nat) : Outcome Nat :=
+def addVariable (state : State) (index : Nat) : Outcome Nat :=
   match addNode state.arena (.var index) with
   | .error reason => ⟨state,.error (.add reason)⟩
   | .ok (arena,root) => ⟨{state with arena},.ok root⟩
@@ -35,7 +35,7 @@ def run (limit depth : Nat) (state : State) (family count arity : Nat) (params :
     (variables ((List.range indexCount).map fun j => indexCount-1-j) shifted).next fun formed indices =>
       append formed (.ind family arity) (roots ++ indices)
 
-private theorem variable_progress : Progress limit state (addVariable state index) := by
+theorem variable_progress : Progress limit state (addVariable state index) := by
   unfold addVariable
   split
   · exact Progress.atState _ _
@@ -80,7 +80,7 @@ theorem parameters_refines
       obtain ⟨restKept,restBack,restRep⟩ := ih (tail.frame liftKept) restOk
       exact ⟨liftKept.trans restKept,restBack ∘ liftBack,.cons (liftRep.frame restKept) restRep⟩
 
-private theorem variable_refines (success : (addVariable state index).result = .ok selected) :
+theorem variable_refines (success : (addVariable state index).result = .ok selected) :
     let after := (addVariable state index).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧ Represents after selected (.var index) := by
   unfold addVariable at success ⊢

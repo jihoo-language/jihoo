@@ -10846,3 +10846,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.runTable_progress
 #print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.runTable_refines
 #print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.Examples.two_recursive_fields_match_native_declaration
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.variable_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataMotiveDomain.variable_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.readPlan_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.hypotheses_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.hypotheses_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.build_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.build_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreDataRecursionCase.recursion_case_matches_native

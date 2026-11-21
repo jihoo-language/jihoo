@@ -1116,6 +1116,57 @@ fn proposition_case_telescope() {
     assert(budget-remaining_ticks(&sample) == 6, "the two hypotheses and result use six shift ticks")
 }
 
+fn recursive_case_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    c.add(core.Term.Var(0), span).unwrap()
+    var index = Vec(u32).new()
+    index.push(two)
+    let result = c.add(core.Term.Ind(0, index), span).unwrap()
+    let step = c.add(core.Term.Pi(false, result, result), span).unwrap()
+    c.push_family(core.Family { name: "RecursiveAtTwo".to_string(), data: true, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: result })
+    c.push_constructor(0, core.Constructor { name: "Step".to_string(), ty: step })
+    c.check().unwrap()
+    c
+}
+
+fn recursive_data_case_type() {
+    var baseline = recursive_case_fixture()
+    let budget = remaining_ticks(&baseline)
+    let span = diag.Span.nowhere()
+    for proof in [false, true] {
+        var c = recursive_case_fixture()
+        assert(c.node_count() == 10, "native checked constructor graph")
+        spend(&c, budget-9)
+        let selected = c.recursion_case_type(0, 1, 1, [], proof, span, 16).unwrap()
+        var direct = Vec(u32).new()
+        direct.push(12)
+        var shifted = Vec(u32).new()
+        shifted.push(18)
+        assert(selected == 26 && c.node_count() == 27 &&
+            c.term(10) == core.Term.Var(1) && c.term(11) == core.Term.App(10, 0) &&
+            c.term(12) == core.Term.Var(0) && c.term(13) == core.Term.Con(0, 1, direct) &&
+            c.term(14) == core.Term.App(11, 13) && c.term(15) == core.Term.Pi(false, 2, 14) &&
+            c.term(16) == core.Term.Var(2) && c.term(17) == core.Term.App(16, 0) &&
+            c.term(18) == core.Term.Var(1) && c.term(19) == core.Term.Con(0, 1, shifted) &&
+            c.term(20) == core.Term.App(17, 19) && c.term(21) == core.Term.Var(1) &&
+            c.term(22) == core.Term.App(21, 0) && c.term(23) == core.Term.Var(0) &&
+            c.term(24) == core.Term.App(22, 23) && c.term(25) == core.Term.Pi(proof, 24, 20) &&
+            c.term(26) == core.Term.Pi(true, 2, 25),
+            "recursive case erases the original field and keeps its native dependent hypothesis")
+        assert_spent(&c, "the recursive case spends nine ticks")
+    }
+    var short = recursive_case_fixture()
+    spend(&short, budget-8)
+    assert(match short.recursion_case_type(0, 1, 1, [], true, span, 16) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    } && short.node_count() == 22 && short.term(21) == core.Term.Var(1),
+        "the short budget retains the weakened motive for the last hypothesis")
+}
+
 fn open_sum_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1687,6 +1738,7 @@ fn main() -> i32 {
     family_index_inference()
     proposition_motive_telescope()
     proposition_case_telescope()
+    recursive_data_case_type()
     data_case_parameter_telescope()
     proposition_elimination_inference()
     indexed_data_elimination()

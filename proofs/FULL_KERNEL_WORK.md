@@ -4450,3 +4450,17 @@ earlier checking prefix. The binder and index checks supply progress and
 the normalizer supplies conversion for this theorem. A base constructor
 and a step with two erased recursive fields match the native 30 ticks and
 all six appended graph rows. The focused build passed 458 jobs.
+
+### Structural recursion branch construction
+
+The native builder starts with the raw data case, keeps each recursive
+field's original indices, and adds the corresponding hypothesis under
+the remaining fields and earlier hypotheses. It erases the recursive
+field in both elimination modes and uses the motive's sort to choose
+the hypothesis erasure. The graph theorem identifies the resulting
+telescope, including the weakened original motive and constructor
+application. The checked family fixture matches 9 ticks, root 26 and
+all 17 appended rows. With 8 ticks, both implementations retain the
+weakened motive before rejecting the last hypothesis. The focused
+build passed 334 jobs. Connecting the raw recursive markers to the
+checked declaration's signature remains a separate proof.

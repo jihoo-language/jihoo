@@ -1373,3 +1373,4 @@ import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport
 import Jihoo.NativeCorePropSignatureReplay
 import Jihoo.NativeCorePropSignatureReplayExamples
+import Jihoo.NativeCoreDataRecursionCase
