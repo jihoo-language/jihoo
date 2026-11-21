@@ -5016,3 +5016,21 @@ ghost mode, and an erased proposition field in CODE. The result retains
 local index 1. An erased variable in a CODE data field is rejected after
 18 ticks with the original 16 rows. The focused build passed 492 tasks
 and nine declaration audits.
+
+### CODE proposition elimination, ZeroLe, Load and Absurd
+
+The original family metadata selects proposition elimination's ghost
+premises, and their derivations replay at the caller's loan stack. The
+original `ZeroLe` operand is also visited in ghost mode, including through
+an erased local in CODE. Lean and native Core agree on 63 ticks for
+proposition elimination and on 5 or 6 ticks for the two `ZeroLe` fixtures.
+
+CODE `Load` uses the live buffer, index, and double-binder callback, with
+the bound checked in ghost mode. Its final result-head check uses the
+lowered original result. The open-length fixture uses 77 ticks and 37 rows;
+one tick less stops at the final check with the same stored graph. CODE
+`Absurd` checks the original target's head before reading the erased proof;
+the scalar fixture returns the original target after 12 ticks. The result
+head proofs cover retained variables and rigid nonfunction heads.
+The focused build passed 493 tasks, ten declaration audits, and the
+expanded native schedule.

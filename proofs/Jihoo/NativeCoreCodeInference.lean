@@ -17,6 +17,8 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons
+  inferAbsurdInMode inferAbsurdInMode_progress inferAbsurdInMode_modeRefines
+  inferLoadWithProof inferLoadWithProof_progress inferLoadWithProof_modeRefines
   inferDrop inferDrop_progress inferDrop_modeRefines
   inferPackWithEvidence inferPackWithEvidence_progress inferPackWithEvidence_modeRefines
   inferRefinementProjection inferRefinementProjection_progress inferRefinementProjection_modeRefines
@@ -36,6 +38,11 @@ private def familyShape (env : Environment) (family : Nat) : Option (Nat × Bool
 
 abbrev GhostAt := Nat → List GraphBinding → Infer
 
+private def runtimeHead (visitGhost : Infer) (env : Environment) (limit depth : Nat)
+    (bindings : List GraphBinding) (op : Op) : Infer :=
+  if LoanTyping.GhostInputMode.eligibleWithFamilies env op then visitGhost
+  else NativeCoreCodeHeadInference.run limit depth bindings
+
 def runWithConstructors (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
     (isData boxed : Nat → Bool) (constructorRoots : Nat → Nat → Option Nat) (limit : Nat) (snapshots : List Snapshot) : Nat → List GraphBinding → Bool → Infer
   | 0,bindings,_,state,root => NativeCoreCodeHeadInference.run limit 0 bindings state root
@@ -48,10 +55,14 @@ def runWithConstructors (normal : Nat → Visit) (ghost : GhostAt) (env : Enviro
         arithmetic recur (normal depth) limit depth entered .u64 left right
     | some (.node .usub [left,right,proof]) => enter limit (depth+1) state root fun entered =>
         inferSubtractWithProof recur (ghost depth bindings) (normal depth) limit depth entered left right proof
+    | some (.node .absurd [target,proof]) => enter limit (depth+1) state root fun entered =>
+        inferAbsurdInMode (ghost depth bindings) (normal depth) false entered target proof
     | some (.node .alloc [length,fill]) => enter limit (depth+1) state root fun entered =>
         inferAlloc recur (normal depth) limit depth entered length fill
     | some (.node (.elements length) elements) => enter limit (depth+1) state root fun entered =>
         inferElements recur (normal depth) limit depth entered root length elements
+    | some (.node .load [buffer,index,proof,continuation]) => enter limit (depth+1) state root fun entered =>
+        inferLoadWithProof recur (ghost depth bindings) (normal depth) false limit depth entered buffer index proof continuation
     | some (.node .store [buffer,index,value,proof]) => enter limit (depth+1) state root fun entered =>
         inferStoreWithProof recur (ghost depth bindings) (normal depth) limit depth entered buffer index value proof
     | some (.node .index [subject,index,proof]) => enter limit (depth+1) state root fun entered =>
@@ -95,9 +106,7 @@ def runWithConstructors (normal : Nat → Visit) (ghost : GhostAt) (env : Enviro
         NativeCoreGhostConstructorInference.runSelectedByMode env false
           (fun flag => if flag then ghost depth bindings else recur) (normal depth)
           limit depth root bindings.length constructorRoots entered family constructor fields
-    | some (.node op _) =>
-        if LoanTyping.GhostInputMode.eligible op then ghost (depth+1) bindings state root
-        else NativeCoreCodeHeadInference.run limit (depth+1) bindings state root
+    | some (.node op _) => runtimeHead (ghost (depth+1) bindings) env limit (depth+1) bindings op state root
     | _ => NativeCoreCodeHeadInference.run limit (depth+1) bindings state root
 
 theorem runWithConstructors_progress
@@ -114,8 +123,11 @@ theorem runWithConstructors_progress
     · exact enter_progress (fun _ inside => arithmetic_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferSubtractWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferAbsurdInMode_progress (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferAlloc_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferElements_progress (fun _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferLoadWithProof_progress (fun _ _ => ih)
+        (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferStoreWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferIndexWithProof_progress (fun _ _ => ih)
@@ -151,7 +163,8 @@ theorem runWithConstructors_progress
                         · exact fun _ _ => ih
                         · exact ghostProgress depth bindings)
         (normalProgress depth) inside
-    · split
+    · unfold runtimeHead
+      split
       · exact ghostProgress (depth+1) bindings _ _ room
       · exact NativeCoreCodeHeadInference.run_progress
     · exact NativeCoreCodeHeadInference.run_progress
@@ -164,6 +177,27 @@ private theorem headSound (wf : UnifiedProgram.EnvWellFormed env)
     NativeCoreCodeHeadInference.run_sound wf context onBase room source success ambient retained
   exact ⟨kept,safe,type,represented,typed.withAmbientLoans wf⟩
 
+private theorem runtimeHead_sound (wf : UnifiedProgram.EnvWellFormed env)
+    (context : ContextRep env base bindings ctx) (ghostSound : InferSound env base ctx limit visitGhost)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena root (.node op terms))
+    (success : (runtimeHead visitGhost env limit depth bindings op state root).result = .ok answer)
+    (ambient : Prefix (runtimeHead visitGhost env limit depth bindings op state root).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    let after := (runtimeHead visitGhost env limit depth bindings op state root).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx false (EnvironmentDelta.expand env (.node op terms))
+          (EnvironmentDelta.expand env type) := by
+  by_cases selected : LoanTyping.GhostInputMode.eligibleWithFamilies env op = true
+  · simp only [runtimeHead,selected,ite_true] at success ambient ⊢
+    obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onBase room source success ambient retained
+    exact ⟨kept,safe,type,annotation,
+      LoanTyping.GhostInputMode.recheckWithFamilies typed (LoanTyping.GhostInputMode.HeadWithFamilies.expanded selected)⟩
+  · simp only [runtimeHead,ite_eq_right selected] at success ambient ⊢
+    exact headSound wf context onBase room source success ambient retained
+
+set_option maxHeartbeats 360000 in
 /-- All recursive code branches share the original local annotations.
 The ghost callback handles annotations, erased arguments and ownership
 inspection. The application policy uses a normalizer that resolves
@@ -208,7 +242,7 @@ theorem runWithConstructors_sound (wf : UnifiedProgram.EnvWellFormed env)
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
-      case arith | uadd | alloc | strict | drop | free | app =>
+      case arith | uadd | alloc | strict | drop | free | app | absurd =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
         cases children with
@@ -234,6 +268,10 @@ theorem runWithConstructors_sound (wf : UnifiedProgram.EnvWellFormed env)
             | obtain ⟨kept,backward,typed⟩ := inferAlloc_modeRefines (state := {state with steps := state.steps+1})
                 (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside first second success ambient retained
               exact ⟨kept,backward,typed⟩
+            | obtain ⟨kept,safe,typed⟩ := inferAbsurdInMode_modeRefines (state := {state with steps := state.steps+1})
+                (normalLocal depth) (normalProgress depth) (ghostSound onStart context depth) (ghostProgress depth bindings)
+                onBase inside first second success ambient retained
+              exact ⟨kept,safe,typed⟩
             | apply arithmetic_refinesMode (state := {state with steps := state.steps+1}) (depth := depth)
                 (normalLocal depth) (normalProgress depth) modeSound childCost
                 onBase inside first second rfl _ success ambient retained
@@ -393,6 +431,26 @@ theorem runWithConstructors_sound (wf : UnifiedProgram.EnvWellFormed env)
                   modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
                   onBase inside buffer index value proof success ambient retained
                 exact ⟨kept,safe,typed⟩
+      case load =>
+        have length : refs.length = 4 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons buffer rest =>
+          cases rest with
+          | cons index rest =>
+            cases rest with
+            | cons value rest =>
+              cases rest with
+              | cons proof rest =>
+                cases rest
+                dsimp only at success ambient ⊢
+                obtain ⟨entered,inside⟩ := enter_success success
+                rw [entered] at success ambient ⊢
+                obtain ⟨kept,safe,typed⟩ := inferLoadWithProof_modeRefines
+                  (state := {state with steps := state.steps+1}) wf (normalLocal depth) (normalProgress depth)
+                  modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                  onBase inside buffer index value proof success ambient retained
+                exact ⟨kept,safe,typed⟩
       case ifLt | ifEq =>
         have length : refs.length = 4 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩⟩ <;> simp at length
@@ -473,13 +531,8 @@ theorem runWithConstructors_sound (wf : UnifiedProgram.EnvWellFormed env)
               (.refl _) inside domainRep bodyRep success ambient retained
             exact ⟨kept,safe,_,represented,by simpa only [Term.lam,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       all_goals
-        simp only [LoanTyping.GhostInputMode.eligible,Bool.false_eq_true,ite_false,ite_true] at success ambient ⊢
-        first
-        | exact headSound wf context onBase room (.node read arity children) success ambient retained
-        | obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onStart context (depth+1) onBase room
-            (.node read arity children) success ambient retained
-          exact ⟨kept,safe,type,annotation,
-            LoanTyping.GhostInputMode.recheck typed (LoanTyping.GhostInputMode.Head.expanded rfl)⟩
+        exact runtimeHead_sound wf context (ghostSound onStart context (depth+1))
+          onBase room (.node read arity children) success ambient retained
 
 abbrev runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
     (isData boxed : Nat → Bool) (limit : Nat) (snapshots : List Snapshot) : Nat → List GraphBinding → Bool → Infer :=
@@ -726,7 +779,7 @@ theorem generic_lend_matches_native_code :
 private def refinementInput : Arena := #[.node .u64 [],.var 0,.node .eq [1,1],
   .node (.lam false) [0,2],.node .refine [3],.node (.natural 7) [],.node .refl [5],.node .pack [3,5,6],.var 0]
 
-private def checkRefinement (arena : Arena) (limit root : Nat)
+private def checkCodeProbe (arena : Arena) (limit root : Nat)
     (bindings : List NativeCoreGhostSpineInference.GraphBinding) : Outcome Inferred :=
   let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
   run normal (NativeCoreGhostSpineInference.runWith normal [] 0 limit)
@@ -736,11 +789,11 @@ set_option maxRecDepth 4096 in
 /-- CODE Pack visits the word, and the two projections select different
 modes for the same written subject. -/
 theorem runtime_refinement_modes_match_native :
-    let packed := checkRefinement refinementInput 54 7 [⟨4,false⟩]
-    let read := checkRefinement (refinementInput.push (.node .witness [7])) 61 9 [⟨4,false⟩]
+    let packed := checkCodeProbe refinementInput 54 7 [⟨4,false⟩]
+    let read := checkCodeProbe (refinementInput.push (.node .witness [7])) 61 9 [⟨4,false⟩]
     let witness := refinementInput.push (.node .witness [8])
-    let denied := checkRefinement witness 2 9 [⟨4,true⟩]
-    let inspected := checkRefinement (refinementInput.push (.node .proof [8])) 14 9 [⟨4,true⟩]
+    let denied := checkCodeProbe witness 2 9 [⟨4,true⟩]
+    let inspected := checkCodeProbe (refinementInput.push (.node .proof [8])) 14 9 [⟨4,true⟩]
     packed.state.steps = 54 ∧ packed.state.arena.size = 24 ∧
       packed.result.map Inferred.typeRoot = .ok 23 ∧ packed.state.arena[23]? = some (.node .refine [3]) ∧
     read.state.steps = 61 ∧ read.state.arena.size = 26 ∧
@@ -786,8 +839,8 @@ set_option maxRecDepth 4096 in
 /-- Formation and Transport start their ordinary ghost entry once, with
 the same native tick and graph append order in CODE. -/
 theorem formation_and_transport_share_ghost_visits :
-    let formed := checkRefinement formationInput 24 4 []
-    let stopped := checkRefinement transportInput 32 6 []
+    let formed := checkCodeProbe formationInput 24 4 []
+    let stopped := checkCodeProbe transportInput 32 6 []
     formed.state.steps = 24 ∧ formed.state.arena.size = 14 ∧
       formed.result.map Inferred.typeRoot = .ok 13 ∧ formed.state.arena[13]? = some (.node (.universe 0) []) ∧
     stopped.state.steps = 33 ∧ stopped.state.arena.size = 19 ∧
@@ -832,5 +885,43 @@ theorem constructor_modes_preserve_actual_field_indices :
     completeLocalField (checkLocalConstructor false true false 54) ∧
     checkLocalConstructor true true false 18 =
       ⟨⟨(localConstructorInput true).arena,18⟩,.error (.outsideFragment 3)⟩ := by cbv
+
+/-- Even in CODE, ZeroLe checks its operand in ghost mode and retains the
+original word reference in the mathematical successor. -/
+theorem zero_bound_uses_ghost_operand :
+    let wide : Arena := #[.node (.natural (2^64-1)) [],.node .zeroLe [0],.node (.natural 0) [],
+      .node (.natural 1) [],.node .uadd [0,3],.node .lt [2,4]]
+    let accepted := checkCodeProbe wide 5 1 []
+    let erased : Arena := #[.node .u64 [],.var 0,.node .zeroLe [1]]
+    let throughErasure := checkCodeProbe erased 6 2 [⟨0,true⟩]
+    accepted.state.steps = 5 ∧ accepted.state.arena.size = 12 ∧
+      accepted.result.map Inferred.typeRoot = .ok 11 ∧ accepted.state.arena[10]? = some (.node .uadd [0,9]) ∧
+      accepted.state.arena[11]? = some (.node .lt [8,10]) ∧
+      throughErasure.state.steps = 6 ∧ throughErasure.state.arena.size = 8 ∧
+      throughErasure.result.map Inferred.typeRoot = .ok 7 ∧
+      throughErasure.state.arena[6]? = some (.node .uadd [1,5]) := by cbv
+
+private def loadInput : Arena := #[.node (.natural 0) [],.node .u64 [],.node .i64 [],
+  .var 0,.node .lt [0,3],.var 1,.node (.integer (-7)) [],.node .alloc [5,6],.var 2,.node .buffer [8],
+  .node .free [3,5],.node (.lam false) [9,10],.node (.lam false) [2,11],.node .load [7,0,3,12],
+  .node (.lam true) [4,13],.node (.lam false) [1,14],.node (.pi true) [4,2],.node (.pi false) [1,16]]
+
+set_option maxRecDepth 4096 in
+/-- CODE Load checks the erased bound and both live callback binders. The
+last normalization keeps the result and the previously compared owner rows. -/
+theorem load_retains_lowered_code_callback_result :
+    let bindings : List NativeCoreGhostSpineInference.GraphBinding := [⟨4,true⟩,⟨1,false⟩]
+    let full := checkCodeProbe loadInput 77 13 bindings
+    let short := checkCodeProbe loadInput 76 13 bindings
+    full.state.steps = 77 ∧ full.state.arena.size = 37 ∧ full.result.map Inferred.typeRoot = .ok 2 ∧
+      full.state.arena[24]? = some (.node .lt [0,5]) ∧ full.state.arena[36]? = some (.node .buffer [35]) ∧
+      short.state = full.state ∧ short.result = .error (.tick (.stepLimit 2)) := by cbv
+
+/-- CODE Absurd obtains its premise from a ghost slot after certifying the
+original target type's result head. -/
+theorem absurd_preserves_code_target_root :
+    let arena : Arena := #[.node (.natural 0) [],.node .lt [0,0],.node .u64 [],.var 0,.node .absurd [2,3]]
+    let checked := checkCodeProbe arena 12 4 [⟨1,true⟩]
+    checked.state.steps = 12 ∧ checked.result.map Inferred.typeRoot = .ok 2 := by cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

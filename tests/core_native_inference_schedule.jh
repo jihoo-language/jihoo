@@ -117,7 +117,7 @@ fn decision_inference() {
     assert_spent(&bad, "rejected decision used 11 ticks")
 }
 
-fn zero_bound_inference() {
+fn zero_bound_inference(ghost: bool) {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let maximum = c.add(core.Term.Natural(18446744073709551615), span).unwrap()
@@ -127,13 +127,27 @@ fn zero_bound_inference() {
     let successor = c.add(core.Term.UAdd(maximum, one), span).unwrap()
     c.add(core.Term.Lt(zero, successor), span).unwrap()
     spend(&c, 999995)
-    let inferred = c.infer(proof, [], true, 16).unwrap()
+    let inferred = c.infer(proof, [], ghost, 16).unwrap()
     assert(inferred == 11 && c.node_count() == 12, "zero bound result position")
     assert(c.term(6) == core.Term.U64 && c.term(7) == core.Term.U64, "zero bound operand check")
     assert(c.term(8) == core.Term.Natural(0) && c.term(9) == core.Term.Natural(1), "zero bound constants")
     assert(c.term(10) == core.Term.UAdd(maximum, 9), "successor remains a ghost sum")
     assert(c.term(inferred) == core.Term.Lt(8, 10), "zero bound keeps the wide successor")
     assert_spent(&c, "zero bound inference used five ticks")
+}
+
+fn code_zero_bound_erased() {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    c.add(core.Term.U64, span).unwrap()
+    let word = c.add(core.Term.Var(0), span).unwrap()
+    let proof = c.add(core.Term.ZeroLe(word), span).unwrap()
+    let scope = [core.Binding { ty: 0, erased: true }]
+    spend(&c, 999994)
+    let result = c.infer(proof, scope, false, 16).unwrap()
+    assert(result == 7 && c.node_count() == 8 && c.term(6) == core.Term.UAdd(word, 5),
+        "ZeroLe uses its original erased operand even in CODE")
+    assert_spent(&c, "ZeroLe through an erased variable uses six ticks")
 }
 
 fn subtract_bound_exhaustion() {
@@ -430,7 +444,7 @@ fn transitive_proof_inference() {
     assert_spent(&closed, "successful transitivity inference uses exactly 57 ticks")
 }
 
-fn absurd_inference() {
+fn absurd_inference(ghost: bool) {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let zero = c.add(core.Term.Natural(0), span).unwrap()
@@ -439,8 +453,8 @@ fn absurd_inference() {
     let evidence = c.add(core.Term.Var(0), span).unwrap()
     let impossible = c.add(core.Term.Absurd(target, evidence), span).unwrap()
     let context = [core.Binding { ty: bound, erased: true }]
-    spend(&c, 999989)
-    assert(c.infer(impossible, context, true, 24).unwrap() == target,
+    spend(&c, if ghost { 999989 } else { 999988 })
+    assert(c.infer(impossible, context, ghost, 24).unwrap() == target,
         "absurd returns the original target type")
     assert_spent(&c, "absurd normalizes the upper endpoint after exposing Lt")
 }
@@ -614,6 +628,24 @@ fn load_callback_inference() {
         completed.term(35) == core.Term.Var(2) && completed.term(36) == core.Term.Buffer(35),
         "load checks the original evidence and lifts the open buffer length into the callback")
     assert_spent(&completed, "load inference uses 67 ticks")
+}
+
+fn load_code_callback_inference() {
+    let context = [core.Binding { ty: 1, erased: false }, core.Binding { ty: 4, erased: true }]
+    var full = load_fixture()
+    spend(&full, 999923)
+    let result = full.infer(13, context, false, 32).unwrap()
+    assert(result == 2 && full.node_count() == 37 && full.term(24) == core.Term.Lt(0, 5) &&
+        full.term(35) == core.Term.Var(2) && full.term(36) == core.Term.Buffer(35),
+        "CODE load retains the lowered result and checks the ghost bound and both runtime binders")
+    assert_spent(&full, "CODE load inference uses 77 ticks")
+
+    var short = load_fixture()
+    spend(&short, 999924)
+    assert(match short.infer(13, context, false, 32) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    } && short.node_count() == 37 && short.term(36) == core.Term.Buffer(35),
+        "the last CODE normalization occurs after lowering and commits no new rows")
 }
 
 fn reference_fixture() -> core.Core {
@@ -1605,19 +1637,19 @@ fn proposition_elimination_fixture() -> core.Core {
     c
 }
 
-fn proposition_elimination_inference() {
+fn proposition_elimination_inference(ghost: bool) {
     var baseline = proposition_elimination_fixture()
     let budget = remaining_ticks(&baseline)
     var accepted = proposition_elimination_fixture()
     let start = accepted.node_count()
-    let result = accepted.infer(8, Vec(core.Binding).new().as_slice(), true, 32).unwrap()
+    let result = accepted.infer(8, Vec(core.Binding).new().as_slice(), ghost, 32).unwrap()
     let finish = accepted.node_count()
     let cost = budget-remaining_ticks(&accepted)
     assert(accepted.term(result) == core.Term.App(4, 0), "elimination result uses the original motive and evidence index")
     assert(start == 12 && result == 24 && finish == 25 && cost == 63, "indexed proposition induction schedule")
     var wrong = proposition_elimination_fixture()
     let before = wrong.node_count()
-    assert(!wrong.infer(9, Vec(core.Binding).new().as_slice(), true, 32).is_ok() && wrong.node_count() == before,
+    assert(!wrong.infer(9, Vec(core.Binding).new().as_slice(), ghost, 32).is_ok() && wrong.node_count() == before,
         "elimination rejects a missing case before constructing the motive")
     assert(budget-remaining_ticks(&wrong) == 1, "a missing branch uses only the entry tick")
 }
@@ -2152,7 +2184,9 @@ fn main() -> i32 {
     erased_lambda()
     impredicative_product()
     decision_inference()
-    zero_bound_inference()
+    zero_bound_inference(true)
+    zero_bound_inference(false)
+    code_zero_bound_erased()
     subtract_bound_exhaustion()
     code_subtraction_evidence()
     conditional_inference()
@@ -2166,7 +2200,8 @@ fn main() -> i32 {
     transport_evidence_exhaustion(false)
     offset_proof_inference()
     transitive_proof_inference()
-    absurd_inference()
+    absurd_inference(true)
+    absurd_inference(false)
     wide_ghost_sum()
     open_word_sums()
     array_and_allocation_inference(true)
@@ -2176,6 +2211,7 @@ fn main() -> i32 {
     array_and_borrowed_index_inference(true)
     array_and_borrowed_index_inference(false)
     load_callback_inference()
+    load_code_callback_inference()
     reference_inference()
     family_index_inference()
     proposition_motive_telescope()
@@ -2184,7 +2220,8 @@ fn main() -> i32 {
     recursive_code_inference()
     boxed_ghost_elimination()
     data_case_parameter_telescope()
-    proposition_elimination_inference()
+    proposition_elimination_inference(true)
+    proposition_elimination_inference(false)
     indexed_data_elimination()
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)

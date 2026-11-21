@@ -7,7 +7,7 @@ namespace Jihoo.NativeKernel.Environment.LoanTyping.GhostInputMode
 
 def eligible : Op → Bool
   | .array | .lt | .eq | .refl | .pi _ | .refine | .buffer | .ref | .ind _ _
-  | .transport | .ltAdd | .ltCancel | .ltLe | .decide => true
+  | .transport | .zeroLe | .ltAdd | .ltCancel | .ltLe | .decide => true
   | _ => false
 
 def Head : Term → Prop
@@ -18,6 +18,27 @@ theorem Head.expanded (eligibleHead : eligible op = true) :
     Head (EnvironmentDelta.expand env (.node op args)) := by
   cases op <;> simp_all only [EnvironmentDelta.expand,Head,eligible,Bool.false_eq_true]
 
+def eligibleWithFamilies (env : Environment) (op : Op) : Bool :=
+  eligible op || match op with
+  | .elim family _ => env.families[family]?.any (fun entry => !entry.declaration.data)
+  | _ => false
+
+def HeadWithFamilies (env : Environment) : Term → Prop
+  | .node op _ => eligibleWithFamilies env op = true
+  | .var _ => False
+
+theorem HeadWithFamilies.expanded (selected : eligibleWithFamilies env op = true) :
+    HeadWithFamilies env (EnvironmentDelta.expand env (.node op args)) := by
+  cases op <;> simp_all [EnvironmentDelta.expand,HeadWithFamilies,eligibleWithFamilies,eligible]
+
+private theorem Cases.inGhostStack (checked : Cases env old ctx motive signatures branches) :
+    Cases env target ctx motive signatures branches := by
+  induction branches generalizing signatures with
+  | nil => cases checked; exact .nil
+  | cons branch branches ih =>
+    cases checked with
+    | cons typed rest => exact .cons (typed.ghost target) (ih rest)
+
 private theorem ghostBinder (binder : Binder env old ctx erased type sort) :
     Binder env target ctx erased type sort := by
   cases binder with
@@ -25,23 +46,24 @@ private theorem ghostBinder (binder : Binder env old ctx erased type sort) :
 
 /-- The original type is preserved when only the outer mode changes.
 Each child derivation is replayed in ghost mode at the requested stack. -/
-theorem recheck (typed : HasType env old ctx original term type) (head : Head term) :
+theorem recheckWithFamilies (typed : HasType env old ctx original term type) (head : HeadWithFamilies env term) :
     HasType env target ctx mode term type := by
   revert head
   apply HasType.rec (t := typed)
     (motive_1 := fun _ _ _ _ _ _ => True)
-    (motive_2 := fun _ ctx _ term type _ => Head term → HasType env target ctx mode term type)
+    (motive_2 := fun _ ctx _ term type _ => HeadWithFamilies env term → HasType env target ctx mode term type)
     (motive_3 := fun _ _ _ _ _ _ _ _ => True)
     (motive_4 := fun _ _ _ _ _ _ => True)
     (motive_5 := fun _ _ _ _ _ _ => True)
   all_goals intros
   all_goals first | trivial | skip
-  all_goals try (next head => simp only [Head,eligible] at head; contradiction)
+  all_goals try (next head => simp [HeadWithFamilies,eligibleWithFamilies,eligible] at head; contradiction)
   case array bound ih head => exact .array (bound.ghost target)
   case lt left right ihLeft ihRight head => exact .lt (left.ghost target) (right.ghost target)
   case eq left right ihLeft ihRight head => exact .eq (left.ghost target) (right.ghost target)
   case pi domain body ihDomain ihBody head => exact .pi (ghostBinder domain) (body.ghost target)
   case refl value ih head => exact .refl (value.ghost target)
+  case zeroLe operand ih head => exact .zeroLe (operand.ghost target)
   case decide first second ordered head => exact .decide first second ordered
   case decideConverted left right first second firstFits secondFits ordered ihLeft ihRight head =>
     exact .decideConverted (left.ghost target) (right.ghost target) first second firstFits secondFits ordered
@@ -56,6 +78,8 @@ theorem recheck (typed : HasType env old ctx original term type) (head : Head te
   case «refine» predicate ih head => exact .refine (predicate.ghost target)
   case ind found arity size members ih head =>
     exact .ind found arity size (fun index member => (members index member).ghost target)
+  case propElim found prop motive branches scrutinee ihMotive ihBranches ihScrutinee head =>
+    exact .propElim found prop (motive.ghost target) (Cases.inGhostStack branches) (scrutinee.ghost target)
   case buffer bound ih head => exact .buffer (bound.ghost target)
   case refBuffer bound ih head => exact .refBuffer (bound.ghost target)
   case refOwned formation owned ih head => exact .refOwned (formation.ghost target) owned
@@ -63,6 +87,17 @@ theorem recheck (typed : HasType env old ctx original term type) (head : Head te
   case dataElim =>
     rename_i family entry analysis stack context motiveTerm proof ghost scrutineeTerm indices types cases
       found isData boxed size motive scrutinee generated branches allowed ihMotive ihScrutinee ihBranches head
-    cases analysis <;> simp [Head,eligible] at head
+    cases analysis
+    · simp [HeadWithFamilies,eligibleWithFamilies,eligible,found,isData] at head
+    · simp [HeadWithFamilies,eligibleWithFamilies,eligible] at head
+
+theorem recheck (typed : HasType env old ctx original term type) (head : Head term) :
+    HasType env target ctx mode term type := by
+  apply recheckWithFamilies typed
+  cases term with
+  | var => exact False.elim head
+  | node op arguments =>
+    change eligible op = true at head
+    simp [HeadWithFamilies,eligibleWithFamilies,head]
 
 end Jihoo.NativeKernel.Environment.LoanTyping.GhostInputMode
