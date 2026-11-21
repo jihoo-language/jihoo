@@ -74,7 +74,7 @@ private def continuationType (normal : Visit) (state : State) (type continuation
     | some (.node (.pi false) [owner,result]) => ⟨after,.ok (first.1,owner,result)⟩
     | _ => reject after continuation
 
-private def generic (infer : Infer) (normal : Visit) (isData : Nat → Bool) (limit depth : Nat) (state : State)
+private def genericWith (gate : State → Nat → Outcome Unit) (infer : Infer) (normal : Visit) (isData : Nat → Bool) (limit depth : Nat) (state : State)
     (ownerType borrow reader continuation : Nat) : Outcome Inferred :=
   (infer state reader).next fun inferred readType =>
     (exposeProduct normal inferred readType.typeRoot reader).next fun exposed product =>
@@ -86,8 +86,13 @@ private def generic (infer : Infer) (normal : Visit) (isData : Nat → Bool) (li
                 (shift limit depth after ownerType 1).next fun shifted again =>
                   (compare normal limit depth shifted head.1 value continuation).next fun matched valuePair =>
                     (compare normal limit depth matched head.2.1 again continuation).next fun checked resumeOwner =>
-                      (lowerResult normal limit depth checked head.2.2 (-2)).next fun final result =>
-                        ⟨final,.ok ⟨result,readType.compared ++ ([readDomain] ++ (afterType.compared ++ [valuePair,resumeOwner]))⟩⟩
+                      (lowerResult normal limit depth checked head.2.2 (-2)).next fun lowered result =>
+                        (gate lowered result).next fun final _ =>
+                          ⟨final,.ok ⟨result,readType.compared ++ ([readDomain] ++ (afterType.compared ++ [valuePair,resumeOwner]))⟩⟩
+
+private def generic (infer : Infer) (normal : Visit) (isData : Nat → Bool) (limit depth : Nat) (state : State)
+    (ownerType borrow reader continuation : Nat) : Outcome Inferred :=
+  genericWith (fun state _ => ⟨state,.ok ()⟩) infer normal isData limit depth state ownerType borrow reader continuation
 
 def run (infer : Infer) (normal : Visit) (isData isBoxed : Nat → Bool) (limit depth : Nat)
     (state : State) (owner reader continuation : Nat) : Outcome Inferred :=
@@ -159,11 +164,12 @@ private theorem continuationType_progress (normalizes : ∀ state root, Progress
   unfold continuationType
   exact (product_progress normalizes).next (fun _ => by split <;> exact Progress.atState _ _)
 
-private theorem generic_progress
+private theorem genericWith_progress
+    (gateProgress : ∀ state root, Progress limit state (gate state root))
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
-    Progress limit state (generic infer normal isData limit depth state ownerType borrow reader continuation) := by
-  unfold generic
+    Progress limit state (genericWith gate infer normal isData limit depth state ownerType borrow reader continuation) := by
+  unfold genericWith
   apply next_progress (infers _ _ room) room
   intro _ _ readRoom
   apply next_progress (product_progress normalizes) readRoom
@@ -184,7 +190,13 @@ private theorem generic_progress
   intro _ _ matchedValue
   apply next_progress (compare_progress normalizes matchedValue) matchedValue
   intro _ _ _
-  exact (lowerResult_progress normalizes).next (fun _ => Progress.atState _ _)
+  exact (lowerResult_progress normalizes).next (fun _ => (gateProgress _ _).next (fun _ => Progress.atState _ _))
+
+private theorem generic_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
+    Progress limit state (generic infer normal isData limit depth state ownerType borrow reader continuation) :=
+  genericWith_progress (fun _ _ => Progress.atState _ _) infers normalizes room
 
 theorem run_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
@@ -333,22 +345,30 @@ private theorem generic_result_weakening (type result : Term) :
   simp only [Term.pi,Term.rename,renameArgs,Op.binders,liftRenaming,Term.rename_comp]
   rfl
 
-private theorem generic_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
+private theorem genericWith_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (inferSound : InferSound env base ctx limit infer)
+    (gateProgress : ∀ state root, Progress limit state (gate state root))
+    (gateSound : ∀ {current root type}, Prefix base current.arena → Represents current.arena root type →
+      (gate current root).result = .ok () →
+      Prefix current.arena (gate current root).state.arena ∧
+        (Backward current.arena → Backward (gate current root).state.arena) ∧
+        LoanTyping.continuationAllowed env mode (expand env type))
+    (inferSound : NativeCoreBufferRelease.ModeSound env loans base ctx limit mode infer)
     (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (ownerRep : Represents state.arena ownerType T) (borrowRep : Represents state.arena borrow (.ref T))
     (readerRep : Represents state.arena reader readerTerm) (contRep : Represents state.arena continuation contTerm)
-    (ownerTyped : LoanTyping.HasType env [] ctx true (expand env ownerTerm) (expand env T))
+    (ownerTyped : LoanTyping.HasType env loans ctx mode (expand env ownerTerm) (expand env T))
     (owned : LoanTyping.Owned env (expand env T))
-    (success : (generic infer normal isData limit depth state ownerType borrow reader continuation).result = .ok answer)
-    (ambient : Prefix (generic infer normal isData limit depth state ownerType borrow reader continuation).state.arena final)
+    (success : (genericWith gate infer normal isData limit depth state ownerType borrow reader continuation).result = .ok answer)
+    (ambient : Prefix (genericWith gate infer normal isData limit depth state ownerType borrow reader continuation).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.lend ownerTerm readerTerm contTerm)
-      (generic infer normal isData limit depth state ownerType borrow reader continuation) answer := by
-  unfold generic at success ambient ⊢
+    let after := (genericWith gate infer normal isData limit depth state ownerType borrow reader continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.lend ownerTerm readerTerm contTerm)) (expand env type) := by
+  unfold genericWith at success ambient ⊢
   obtain ⟨readType,readOk,readNext⟩ := Outcome.next_success success
   rw [readNext] at success ambient ⊢
   obtain ⟨product,productOk,productNext⟩ := Outcome.next_success success
@@ -371,6 +391,8 @@ private theorem generic_refines (wf : UnifiedProgram.EnvWellFormed env) (metadat
   rw [ownerPairNext] at success ambient ⊢
   obtain ⟨result,resultOk,resultNext⟩ := Outcome.next_success success
   rw [resultNext] at success ambient ⊢
+  obtain ⟨⟨⟩,gateOk,gateNext⟩ := Outcome.next_success success
+  rw [gateNext] at success ambient ⊢
   simp only [Except.ok.injEq] at success
   subst answer
   let readRun := infer state reader
@@ -410,7 +432,9 @@ private theorem generic_refines (wf : UnifiedProgram.EnvWellFormed env) (metadat
     (expected := raised) (atRoot := continuation) normalProgress valueCompareRoom
   have finalCost := lowerResult_progress (limit := limit) (depth := depth) (state := ownerCompare.state)
     (root := head.2.2) (amount := -2) normalProgress
-  have afterOwner := finalCost.kept.trans ambient
+  let loweredRun := lowerResult normal limit depth ownerCompare.state head.2.2 (-2)
+  have afterLowering := (gateProgress loweredRun.state result).kept.trans ambient
+  have afterOwner := finalCost.kept.trans afterLowering
   have afterValueComparison := ownerCompareCost.kept.trans afterOwner
   have afterRaise := valueCompareCost.kept.trans afterValueComparison
   have afterHead := raiseCost.kept.trans afterRaise
@@ -467,13 +491,40 @@ private theorem generic_refines (wf : UnifiedProgram.EnvWellFormed env) (metadat
   have resultAligned := resultRenamed ▸ resultConverted
   have resumeCheck := resumeTyped.convert (resumeConverted.trans (.node (.pi false) (.cons firstConverted
     (.cons (.node (.pi false) (.cons again (.cons resultAligned .nil))) .nil))))
-  change LoanTyping.HasType env [] ctx true (expand env contTerm)
+  change LoanTyping.HasType env loans ctx mode (expand env contTerm)
     (.pi false (expand env A) (.pi false ((expand env T).rename Nat.succ) ((expand env R).rename (fun i => i+2)))) at resumeCheck
   rw [← generic_result_weakening] at resumeCheck
-  refine ⟨throughOwner.trans resultKept,resultBack ∘ ownerPairBack ∘ valuePairBack ∘ raiseBack ∘ headBack ∘
-    resumeBack ∘ valueBack ∘ outsideBack ∘ domainBack ∘ productBack ∘ readBack,R,finalRep,?_⟩
+  have throughResult := throughOwner.trans resultKept
+  obtain ⟨gateKept,gateBack,allowed⟩ := gateSound (onBase.trans throughResult) finalRep gateOk
+  refine ⟨throughResult.trans gateKept,gateBack ∘ resultBack ∘ ownerPairBack ∘ valuePairBack ∘ raiseBack ∘ headBack ∘
+    resumeBack ∘ valueBack ∘ outsideBack ∘ domainBack ∘ productBack ∘ readBack,R,finalRep.frame gateKept,?_⟩
   simpa only [Term.lend,expand,expandArgs] using
-    LoanTyping.HasType.lendGeneric ownerTyped owned outlives readerCheck resumeCheck (.inl rfl)
+    LoanTyping.HasType.lendGeneric ownerTyped owned outlives readerCheck resumeCheck allowed
+
+private theorem generic_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (ownerRep : Represents state.arena ownerType T) (borrowRep : Represents state.arena borrow (.ref T))
+    (readerRep : Represents state.arena reader readerTerm) (contRep : Represents state.arena continuation contTerm)
+    (ownerTyped : LoanTyping.HasType env [] ctx true (expand env ownerTerm) (expand env T))
+    (owned : LoanTyping.Owned env (expand env T))
+    (success : (generic infer normal isData limit depth state ownerType borrow reader continuation).result = .ok answer)
+    (ambient : Prefix (generic infer normal isData limit depth state ownerType borrow reader continuation).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.lend ownerTerm readerTerm contTerm)
+      (generic infer normal isData limit depth state ownerType borrow reader continuation) answer := by
+  have inferMode : NativeCoreBufferRelease.ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ onBase room represented accepted final retained
+    obtain ⟨kept,backward,typed⟩ := inferSound onBase room represented accepted final retained
+    exact ⟨kept,backward,typed⟩
+  obtain ⟨kept,backward,typed⟩ := genericWith_refines wf metadata normalSound normalProgress
+    (gate := fun state _ => ⟨state,.ok ()⟩) (fun _ _ => Progress.atState _ _)
+    (fun _ _ _ => ⟨.refl _,id,.inl rfl⟩) inferMode inferProgress
+    onBase room ownerRep borrowRep readerRep contRep ownerTyped owned success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 /-- When the source callbacks select the generic branch, completed native
 inference constructs a Loan64 Lend derivation at the returned outer type. -/
@@ -1162,6 +1213,147 @@ theorem runDependentCode_refines
       output,outputRep,?_⟩
     simpa only [Term.lend,Term.lam,expand,expandArgs] using LoanTyping.HasType.lendDependentCode sourceOwner owned
       formed readDomain typedRead outlived firstConverted againConverted typedRestore converted lowered allowed
+
+private def genericCode (infer : Infer) (normal : Visit) (isData isBoxed : Nat → Bool) (limit depth : Nat)
+    (state : State) (owner reader continuation : Nat) : Outcome Inferred :=
+  (infer state owner).next fun inferred ownerType =>
+    (requireOwned normal isBoxed inferred ownerType.typeRoot owner).next fun owns _ =>
+      (append owns .ref [ownerType.typeRoot]).next fun referenced borrow =>
+        (genericWith (fun after root => NativeCoreCodeLendGates.checkCanonical normal after root continuation)
+          infer normal isData limit depth referenced ownerType.typeRoot borrow reader continuation).next fun after result =>
+            ⟨after,.ok ⟨result.typeRoot,ownerType.compared ++ result.compared⟩⟩
+
+private theorem genericCode_progress
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (genericCode infer normal isData isBoxed limit depth state owner reader continuation) := by
+  unfold genericCode
+  apply next_progress (inferProgress _ _ room) room
+  intro _ _ visited
+  apply next_progress (requireOwned_progress normalProgress) visited
+  intro _ _ owned
+  apply next_progress (append_progress _ _ _) owned
+  intro _ _ borrowed
+  exact (genericWith_progress (fun _ _ => NativeCoreCodeLendGates.checkCanonical_progress normalProgress)
+    inferProgress normalProgress borrowed).next (fun _ => Progress.atState _ _)
+
+private theorem genericCode_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
+    (boxed : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : NativeCoreBufferRelease.ModeSound env loans base ctx limit false infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (ownerRep : Represents state.arena owner x) (readerRep : Represents state.arena reader f)
+    (contRep : Represents state.arena continuation g)
+    (success : (genericCode infer normal isData isBoxed limit depth state owner reader continuation).result = .ok answer)
+    (ambient : Prefix (genericCode infer normal isData isBoxed limit depth state owner reader continuation).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    let after := (genericCode infer normal isData isBoxed limit depth state owner reader continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx false (expand env (.lend x f g)) (expand env type) := by
+  unfold genericCode at success ambient ⊢
+  obtain ⟨ownerResult,ownerOk,ownerNext⟩ := Outcome.next_success success
+  rw [ownerNext] at success ambient ⊢
+  obtain ⟨⟨⟩,ownedOk,ownedNext⟩ := Outcome.next_success success
+  rw [ownedNext] at success ambient ⊢
+  obtain ⟨borrow,borrowOk,borrowNext⟩ := Outcome.next_success success
+  rw [borrowNext] at success ambient ⊢
+  obtain ⟨result,resultOk,resultNext⟩ := Outcome.next_success success
+  rw [resultNext] at success ambient ⊢
+  simp only [Except.ok.injEq] at success
+  subst answer
+  let visited := infer state owner
+  let owned := requireOwned normal isBoxed visited.state ownerResult.typeRoot owner
+  let referenced := append owned.state .ref [ownerResult.typeRoot]
+  let gate := fun state root => NativeCoreCodeLendGates.checkCanonical normal state root continuation
+  have gateProgress : ∀ state root, Progress limit state (gate state root) :=
+    fun _ _ => NativeCoreCodeLendGates.checkCanonical_progress normalProgress
+  have ownedRoom := (inferProgress state owner room).accepted room ownerResult ownerOk
+  have ownedCost := requireOwned_progress (state := visited.state) (isBoxed := isBoxed)
+    (root := ownerResult.typeRoot) (rejected := owner) normalProgress
+  have borrowRoom := ownedCost.accepted ownedRoom () ownedOk
+  have borrowCost := append_progress (limit := limit) owned.state .ref [ownerResult.typeRoot]
+  have startRoom := borrowCost.accepted borrowRoom borrow borrowOk
+  have genericCost := genericWith_progress (state := referenced.state) (isData := isData)
+    (depth := depth) (ownerType := ownerResult.typeRoot) (borrow := borrow) (reader := reader)
+    (continuation := continuation) gateProgress inferProgress normalProgress startRoom
+  obtain ⟨ownerKept,ownerBack,_,typeRep,typedOwner⟩ := inferSound onBase room ownerRep ownerOk
+    (ownedCost.kept.trans (borrowCost.kept.trans (genericCost.kept.trans ambient)))
+    (fun pair member => retained pair (List.mem_append_left _ member))
+  obtain ⟨ownedKept,ownedBack,owns⟩ := requireOwned_refines boxed normalSound
+    (onBase.trans ownerKept) typeRep ownedOk
+  obtain ⟨borrowKept,borrowBack,borrowRep⟩ := append_refines (.cons (typeRep.frame ownedKept) .nil) rfl borrowOk
+  have throughBorrow := ownerKept.trans (ownedKept.trans borrowKept)
+  obtain ⟨done,doneBack,inferred⟩ := genericWith_refines wf metadata normalSound normalProgress
+    gateProgress (NativeCoreCodeLendGates.checkCanonical_policy normalSound) inferSound inferProgress
+    (onBase.trans throughBorrow) startRoom (typeRep.frame (ownedKept.trans borrowKept)) borrowRep
+    (readerRep.frame throughBorrow) (contRep.frame throughBorrow) typedOwner owns resultOk ambient
+    (fun pair member => retained pair (List.mem_append_right _ member))
+  exact ⟨throughBorrow.trans done,doneBack ∘ borrowBack ∘ ownedBack ∘ ownerBack,inferred⟩
+
+/-- Both native Lend shapes share one CODE entry. The shape selector
+reads the original nodes that the owner visit leaves unchanged. -/
+def runCode (inferAnnotation : Infer) (inferCode : List NativeCoreCodeLeaseLookup.Snapshot → Infer)
+    (normal : Visit) (isData isBoxed : Nat → Bool) (limit depth width : Nat) (state : State)
+    (snapshots : List NativeCoreCodeLeaseLookup.Snapshot) (owner reader continuation : Nat) : Outcome Inferred :=
+  match NativeCoreDependentLendCallbacks.select state.arena owner reader continuation with
+  | some _ => runDependentCode inferAnnotation inferCode normal isData isBoxed limit depth width state
+      snapshots owner reader continuation
+  | none => genericCode (inferCode snapshots) normal isData isBoxed limit depth state owner reader continuation
+
+theorem runCode_progress
+    (annotationProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferAnnotation state root))
+    (codeProgress : ∀ snapshots state root, state.steps ≤ limit → Progress limit state (inferCode snapshots state root))
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (runCode inferAnnotation inferCode normal isData isBoxed limit depth width
+      state snapshots owner reader continuation) := by
+  unfold runCode
+  split
+  · exact runDependentCode_progress annotationProgress codeProgress normalProgress room
+  · exact genericCode_progress (codeProgress _) normalProgress room
+
+theorem runCode_refines
+    (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
+    (boxed : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (annotationSound : InferSound env base ctx limit inferAnnotation)
+    (annotationProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferAnnotation state root))
+    (codeSound : ∀ {arena saved active}, Prefix base arena →
+      NativeCoreCodeLeaseLookup.FramesRep arena saved active →
+      NativeCoreBufferRelease.ModeSound env active arena ctx limit false (inferCode saved))
+    (codeProgress : ∀ snapshots state root, state.steps ≤ limit → Progress limit state (inferCode snapshots state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (frames : NativeCoreCodeLeaseLookup.FramesRep state.arena snapshots loans)
+    (ownerRep : Represents state.arena owner x) (readerRep : Represents state.arena reader f)
+    (continuationRep : Represents state.arena continuation g)
+    (success : (runCode inferAnnotation inferCode normal isData isBoxed limit depth ctx.length state
+      snapshots owner reader continuation).result = .ok answer)
+    (ambient : Prefix (runCode inferAnnotation inferCode normal isData isBoxed limit depth ctx.length state
+      snapshots owner reader continuation).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    let after := (runCode inferAnnotation inferCode normal isData isBoxed limit depth ctx.length state
+      snapshots owner reader continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx false (expand env (.lend x f g)) (expand env type) := by
+  unfold runCode at success ambient ⊢
+  split at success
+  · rename_i route selected
+    simp only [selected] at ambient ⊢
+    exact runDependentCode_refines wf metadata boxed normalSound normalProgress annotationSound annotationProgress
+      codeSound codeProgress onBase room frames ownerRep readerRep continuationRep success ambient retained
+  · rename_i selected
+    simp only [selected] at ambient ⊢
+    have normalLocal : VisitsFrom state.arena (ExpandedNormalization env) normal := by
+      intro _ _ _ _ kept represented accepted
+      exact normalSound (onBase.trans kept) represented accepted
+    exact genericCode_refines wf metadata boxed normalLocal normalProgress (codeSound onBase frames) (codeProgress snapshots)
+      (.refl _) room ownerRep readerRep continuationRep success ambient retained
 
 private theorem dependent_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : DataFamilies env isData)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)

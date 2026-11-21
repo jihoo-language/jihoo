@@ -4924,3 +4924,16 @@ Lean and native Core both return row 8 after 112 ticks with 37 rows.
 With a budget of 111, the final head visit fails and all 37 earlier
 rows remain. The focused check passed 491 tasks, six declaration
 audits, and the native schedule.
+
+### Generic and dependent CODE Lend share a recursive entry
+
+The same CODE entry now selects either written callback shape. The
+generic path checks the owner and the original reader and continuation
+in the current loan stack. Both paths preserve the original type at
+canonical continuation heads. The shared generic traversal also
+preserves the ghost schedule.
+
+For the generic allocation fixture, Lean and native Core return row 8
+after 126 ticks with 42 rows. With 125 ticks, the final gate fails and
+retains all earlier rows. The focused build passed 491 tasks, three
+declaration audits, and the native schedule for both Lend paths.

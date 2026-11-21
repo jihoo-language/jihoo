@@ -52,7 +52,7 @@ def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         NativeCoreCodeBorrow.run boxed (ghost depth bindings) (normal depth)
           limit depth bindings.length entered snapshots root owner
     | some (.node .lend [owner,reader,continuation]) => enter limit (depth+1) state root fun entered =>
-        NativeCoreGhostLendInference.runDependentCode (ghost depth bindings)
+        NativeCoreGhostLendInference.runCode (ghost depth bindings)
           (fun saved => runWithLoans normal ghost env isData boxed limit saved depth bindings false)
           (normal depth) isData boxed limit depth bindings.length entered snapshots owner reader continuation
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
@@ -99,7 +99,7 @@ theorem runWithLoans_progress
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside =>
         NativeCoreCodeBorrow.run_progress (ghostProgress depth bindings) (normalProgress depth) inside)
-    · exact enter_progress (fun _ inside => NativeCoreGhostLendInference.runDependentCode_progress
+    · exact enter_progress (fun _ inside => NativeCoreGhostLendInference.runCode_progress
         (ghostProgress depth bindings) (fun _ _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
@@ -251,7 +251,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                   intro arena saved active later stack
                   exact ih (onStart.trans later) (context.frame later) stack
                 rw [context.length_eq] at success ambient ⊢
-                obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreGhostLendInference.runDependentCode_refines
+                obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreGhostLendInference.runCode_refines
                   (state := entered) wf metadata boxedMetadata (normalLocal depth) (normalProgress depth)
                   (ghostSound onStart context depth) (ghostProgress depth bindings) codeSound
                   (fun _ _ _ room => runWithLoans_progress ghostProgress normalProgress room)
@@ -568,21 +568,37 @@ theorem prepared_reader_borrow_matches_native :
       outside = ⟨⟨preparedReaderArena,2⟩,.error (.outsideFragment 15)⟩ := by
   cbv
 
-private def checkLend (limit : Nat) : Outcome Inferred :=
+private def checkLend (arena : Arena) (limit root : Nat) : Outcome Inferred :=
   let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
   run normal (NativeCoreGhostSpineInference.runWith normal [] 0 limit)
     empty (fun _ => false) (fun _ => false) limit 32 [⟨2,false⟩] false
-    ⟨lendCallbackInput.extract 0 14,0⟩ 13
+    ⟨arena,0⟩ root
 
 set_option maxRecDepth 4096 in
 /-- Recursive CODE Lend retains the signed result through the final
 native continuation gate. Exhaustion there retains every earlier row. -/
 theorem dependent_lend_matches_native_code :
-    let full := checkLend 112
-    let short := checkLend 111
+    let source := lendCallbackInput.extract 0 14
+    let full := checkLend source 112 13
+    let short := checkLend source 111 13
     full.state.steps = 112 ∧ full.state.arena.size = 37 ∧
       full.result.map Inferred.typeRoot = .ok 8 ∧ full.state.arena[8]? = some (.node .i64 []) ∧
       short.state.steps = 112 ∧ short.state.arena = full.state.arena ∧
+      short.result = .error (.tick (.stepLimit 8)) := by
+  cbv
+
+private def genericLendInput : Arena :=
+  lendCallbackInput.extract 0 14 ++ #[.node (.integer 6) [],.node .alloc [1,14],.node .lend [15,7,12]]
+
+set_option maxRecDepth 4096 in
+/-- The generic CODE path checks the concrete allocation and both
+original callbacks, then retains the lowered result across the last visit. -/
+theorem generic_lend_matches_native_code :
+    let full := checkLend genericLendInput 126 16
+    let short := checkLend genericLendInput 125 16
+    full.state.steps = 126 ∧ full.state.arena.size = 42 ∧
+      full.result.map Inferred.typeRoot = .ok 8 ∧ full.state.arena[8]? = some (.node .i64 []) ∧
+      short.state.steps = 126 ∧ short.state.arena = full.state.arena ∧
       short.result = .error (.tick (.stepLimit 8)) := by
   cbv
 

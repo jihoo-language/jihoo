@@ -1627,6 +1627,15 @@ fn dependent_lend_bindings() -> Vec(core.Binding) {
     rows
 }
 
+fn generic_lend_fixture() -> core.Core {
+    var c = dependent_lend_fixture()
+    let span = diag.Span.nowhere()
+    let initial = c.add(core.Term.Integer(6), span).unwrap()
+    let owner = c.add(core.Term.Alloc(1, initial), span).unwrap()
+    c.add(core.Term.Lend(owner, 7, 12), span).unwrap()
+    c
+}
+
 fn dependent_lend_callbacks() {
     var c = dependent_lend_fixture()
     let scope = dependent_lend_bindings()
@@ -1640,14 +1649,24 @@ fn dependent_lend_callbacks() {
     let budget = remaining_ticks(&baseline)
     assert(result == 8 && c.node_count() == 37 && budget-remaining_ticks(&c) == 104,
         "the specialized ghost reader returns the original signed type in 104 ticks")
-    var generic = dependent_lend_fixture()
-    let span = diag.Span.nowhere()
-    let initial = generic.add(core.Term.Integer(6), span).unwrap()
-    let owner = generic.add(core.Term.Alloc(1, initial), span).unwrap()
-    let generic_lend = generic.add(core.Term.Lend(owner, 7, 12), span).unwrap()
-    let generic_result = generic.infer(generic_lend, scope.as_slice(), true, 32).unwrap()
+    var generic = generic_lend_fixture()
+    let generic_result = generic.infer(16, scope.as_slice(), true, 32).unwrap()
     assert(generic_result == 8 && generic.node_count() == 42 && budget-remaining_ticks(&generic) == 110,
         "the generic ghost reader returns the original signed type in 110 ticks")
+    var generic_code = generic_lend_fixture()
+    let generic_typed = generic_code.infer(16, scope.as_slice(), false, 32).unwrap()
+    assert(generic_typed == 8 && generic_code.term(generic_typed) == core.Term.I64 &&
+        generic_code.node_count() == 42 && budget-remaining_ticks(&generic_code) == 126,
+        "the generic CODE lender checks both original callbacks and the returned signed type")
+    var generic_short = generic_lend_fixture()
+    spend(&generic_short, budget-125)
+    assert(match generic_short.infer(16, scope.as_slice(), false, 32) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    } && generic_short.node_count() == generic_code.node_count(),
+        "the generic CODE lender's last tick checks the already lowered result")
+    for row in 0..generic_code.node_count() {
+        assert(generic_short.term(row as u32) == generic_code.term(row as u32), "the final generic gate appends no row")
+    }
     var complete = dependent_lend_fixture()
     spend(&complete, budget-19)
     assert(!complete.infer(13, scope.as_slice(), true, 32).is_ok() && complete.node_count() == 21,
