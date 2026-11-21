@@ -123,4 +123,118 @@ theorem live_identity_path_common_proposition
     (.native first) (.native (second.ghostContext wf aligned)) firstKept secondKept projected
   exact ⟨same,⟨formed,leftEvidence⟩,rightEvidence⟩
 
+
+open ACU.Canonical (rank payload)
+
+def bindingShape (binding : Binding) : Bool × Shape := (binding.erased,project binding.ty)
+
+private def bindAt (index : Nat) : Shape → Option (Bool × Shape)
+  | .node head (domain :: _) =>
+    if index = 1 ∧ (head.1 = rank (.pi false) ∨ head.1 = rank (.lam false)) then
+      some (head.2 == payload (.pi true),domain)
+    else none
+  | .node _ [] => none
+
+/-- Comparison's shape contains the domain and erasure of each visited
+binder. The source traversal and shape traversal keep de Bruijn order. -/
+def followScope : Shape → List Nat → Option (List (Bool × Shape))
+  | _,[] => some []
+  | shape,index :: path => do
+    let child ← childAt index shape
+    let tail ← followScope child path
+    pure (tail ++ (bindAt index shape).toList)
+
+private theorem chosen_binding (found : chooseChild index term = some (child,binding)) :
+    bindAt index (project term) = binding.map bindingShape := by
+  fun_cases chooseChild index term <;> simp only [chooseChild,reduceCtorEq,Option.some.injEq,Prod.mk.injEq] at found
+  all_goals
+    obtain ⟨rfl,rfl⟩ := found
+    simp only [project,projectArgs,syntaxView,conversionChildren,reduceCtorEq,ite_false] <;> try rfl
+  all_goals
+    rename_i erased domain body
+    cases erased <;> rfl
+
+/-- Every binding created by following the selected source occurrence is
+present in the projected comparison shape with its original domain. -/
+theorem follow_scope (found : follow fuel term path = some (bindings,selected)) :
+    followScope (project term) path = some (bindings.map bindingShape) := by
+  induction fuel generalizing term path bindings selected with
+  | zero => cases found
+  | succ fuel ih =>
+    unfold follow at found
+    split at found
+    · rw [strict_project]
+      exact ih found
+    · cases path with
+      | nil => cases found; rfl
+      | cons index path =>
+        obtain ⟨⟨child,binding⟩,chosen,rest⟩ := Option.bind_eq_some_iff.mp found
+        obtain ⟨⟨entered,term⟩,read,returned⟩ := Option.bind_eq_some_iff.mp rest
+        cases returned
+        have body := (step_focus chosen).2
+        have scope := ih read
+        have optional : (binding.map bindingShape).toList = binding.toList.map bindingShape := by cases binding <;> rfl
+        simp [followScope,body,scope,List.map_append,chosen_binding chosen,optional,Bind.bind,Option.bind,Pure.pure]
+
+private theorem same_scope {left right : List Binding}
+    (shapes : left.map bindingShape = right.map bindingShape)
+    (keptLeft : ∀ binding ∈ left,FullyRetained binding.ty)
+    (keptRight : ∀ binding ∈ right,FullyRetained binding.ty) : left = right := by
+  induction left generalizing right with
+  | nil => cases right <;> simp at shapes ⊢
+  | cons before tail ih =>
+    cases right with
+    | nil => simp at shapes
+    | cons after rest =>
+      simp only [List.map_cons,List.cons.injEq] at shapes
+      have flags := (Prod.mk.inj shapes.1).1
+      have domain := NativeCoreCompare.project_injective_of_fully_retained
+        (keptLeft before (.head _)) (keptRight after (.head _)) (Prod.mk.inj shapes.1).2
+      have same : before = after := by
+        cases before
+        cases after
+        cases flags
+        cases domain
+        rfl
+      have tails := ih shapes.2 (fun b present => keptLeft b (.tail _ present))
+        (fun b present => keptRight b (.tail _ present))
+      rw [same,tails]
+
+/-- A single accepted live comparison derives equality of the dispatched
+source binder contexts when it retains every domain on that path in full. -/
+theorem live_identity_path_scope
+    (firstRep : Represents arena leftRoot left) (secondRep : Represents arena rightRoot right)
+    (compared : NativeCoreIdentical.runArena arena limit depth initial leftRoot rightRoot = (.ok true,steps))
+    (firstPath : follow firstFuel left path = some (leftBinders,first))
+    (secondPath : follow secondFuel right path = some (rightBinders,second))
+    (firstKept : ∀ binding ∈ leftBinders,FullyRetained binding.ty)
+    (secondKept : ∀ binding ∈ rightBinders,FullyRetained binding.ty) : leftBinders = rightBinders := by
+  have same := (NativeCoreIdentical.runArena_refines firstRep secondRep compared).mp rfl
+  have leftSeen := follow_scope firstPath
+  have rightSeen := follow_scope secondPath
+  rw [same] at leftSeen
+  exact same_scope (Option.some.inj (leftSeen.symm.trans rightSeen)) firstKept secondKept
+
+
+/-- With a common starting context, the accepted graph identity supplies
+both scope alignment and the common proposition for the omitted proofs. -/
+theorem live_identity_path_common_proposition_in_context
+    (wf : UnifiedProgram.EnvWellFormed env)
+    (firstRep : Represents arena leftRoot left) (secondRep : Represents arena rightRoot right)
+    (compared : NativeCoreIdentical.runArena arena limit depth initial leftRoot rightRoot = (.ok true,steps))
+    (firstPath : follow firstFuel left path = some (leftBinders,.node firstOp [a,b,firstProof]))
+    (secondPath : follow secondFuel right path = some (rightBinders,.node secondOp [a',b',secondProof]))
+    (firstTyped : HasType env leftLoans ctx leftMode left leftType)
+    (secondTyped : HasType env rightLoans ctx rightMode right rightType)
+    (leftDomains : ∀ binding ∈ leftBinders,FullyRetained binding.ty)
+    (rightDomains : ∀ binding ∈ rightBinders,FullyRetained binding.ty)
+    (firstField : IgnoredProposition firstOp a b A) (secondField : IgnoredProposition secondOp a' b' B)
+    (firstKept : FullyRetained a ∧ FullyRetained b) (secondKept : FullyRetained a' ∧ FullyRetained b') :
+    A = B ∧ HasEvidence env (leftBinders ++ ctx) A firstProof ∧
+      HasType env [] (leftBinders ++ ctx) true secondProof A := by
+  have shared := live_identity_path_scope firstRep secondRep compared firstPath secondPath leftDomains rightDomains
+  subst rightBinders
+  exact live_identity_path_common_proposition wf firstRep secondRep compared firstPath secondPath firstTyped secondTyped
+    (Ghost.ContextConversion.refl env _) firstField secondField firstKept secondKept
+
 end Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence

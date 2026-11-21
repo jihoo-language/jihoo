@@ -10936,3 +10936,7 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferConditional_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.inferConditional_modeRefines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.conditionals_match_native_erased_scope
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.follow_scope
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_scope
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_common_proposition_in_context
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_retains_loan_slots

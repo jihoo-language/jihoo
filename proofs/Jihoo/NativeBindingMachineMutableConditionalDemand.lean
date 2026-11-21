@@ -126,4 +126,34 @@ theorem checked_branch_handoff
   · rw [ite_eq_right taken] at ran
     exact ⟨code.child no,noReceipt,ran,noChecked,⟨noWorld.live_once,noWorld.exclusive⟩,noTotal,budgets.2⟩
 
+
+/-- The machine's selected branch also retains the physical owner slot and
+reader descriptor of every active source loan. The erased input shifts
+slot indices while leaving their lexical reader keys unchanged. -/
+theorem checked_branch_retains_loan_slots
+    (returning : state.control = .returned (.natural right))
+    (pendingComparison : state.stack = .branchRight equality left (code.child yes) (code.child no) first second :: stack)
+    (slots : LoanSlots code loans state.activeStack) (entered : Loans.Entered code.context.length loans) :
+    let next := if leftTaken equality left right then branchCode equality (code.child yes) first second else code.child no
+    let after : State := ⟨state.heap,.evaluate next,stack,state.pending⟩
+    step state = some (after,none) ∧ LoanSlots next loans after.activeStack := by
+  dsimp only
+  refine ⟨step_branch returning pendingComparison,?_⟩
+  have active : state.activeStack =
+      .branchRight equality left (code.child yes) (code.child no) first second ::
+        (stack ++ state.pending.flatMap Prod.snd) := by
+    simp only [State.activeStack,pendingComparison,List.cons_append]
+  rw [active] at slots
+  have suffix : LoanSlots code loans (stack ++ state.pending.flatMap Prod.snd) := by
+    intro index borrowed
+    obtain ⟨object,stored,frame,member,token,reader⟩ := slots index borrowed
+    rcases List.mem_cons.mp member with rfl | remains
+    · cases reader
+    · exact ⟨object,stored,frame,remains,token,reader⟩
+  split
+  · exact suffix.enter entered true (comparisonType equality first second) yes
+      (if equality then Term.refl (first.subst code.origins)
+       else Term.decide (first.subst code.origins) (second.subst code.origins)) none
+  · exact suffix.child no
+
 end Jihoo.NativeKernel.Environment.BindingMachine.Mutable

@@ -4713,3 +4713,14 @@ use 18 ticks when the positive branch reads a pre-existing runtime slot,
 and 10 ticks when runtime access to the proof slot is rejected. The
 focused build passed 485 jobs. The three audited declarations use only
 standard Lean axioms.
+
+### Lexical scope agreement in live comparison and execution
+
+The selected live comparison path reconstructs equal original binder
+lists whenever both sides retain their binder domains. Starting from one
+source context, the selected ignored terms have the same formed
+proposition in the resulting context. At runtime the comparison frame
+also preserves each active owner's slot and loan reader binding in the
+selected branch. The positive branch installs the erased proof slot
+while keeping the previous reader bindings. The focused build passed
+401 jobs. The four declarations use only standard Lean axioms.
