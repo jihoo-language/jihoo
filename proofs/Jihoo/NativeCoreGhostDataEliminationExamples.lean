@@ -21,11 +21,13 @@ private def fixture (proof : Bool) : Arena :=
 private def runFixture (limit : Nat) (proof : Bool) (branches : List Nat) : Outcome Inferred :=
   let depth := 31
   let normal := NativeCoreExpandedFamilies.raw empty [row] [] 0 limit
-  let infer := NativeCoreGhostSpineInference.runWithConstructors normal [] 0 limit (· == 0)
+  let visible : NativeCoreGhostFamilyElimination.FamilyTable := fun family =>
+    if family = 0 then some ⟨row,false,[]⟩ else none
+  let infer := NativeCoreGhostSpineInference.runWithFamilyElimination normal [] 0 limit (· == 0)
     (fun _ => false) (fun family => if family = 0 then some (2,true) else none)
-    (NativeCoreGhostConstructorInference.constructorAt [row] 1) depth []
+    (NativeCoreGhostConstructorInference.constructorAt [row] 1) visible (depth+1) []
   let root := if branches.isEmpty then 17 else 16
-  run infer (normal depth) limit depth ⟨fixture proof,1⟩ 0 13 9 root row branches
+  infer ⟨fixture proof,0⟩ root
 
 theorem indexed_motives_match_native :
     (let data := runFixture 171 false [15]

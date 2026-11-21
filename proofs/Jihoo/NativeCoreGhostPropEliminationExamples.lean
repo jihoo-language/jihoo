@@ -24,12 +24,15 @@ private def inferred (branches : List Nat) : Outcome Inferred :=
   let limit := 63
   let depth := 31
   let normal := NativeCoreExpandedFamilies.raw env snapshot.families [] 0 limit
-  let visit := NativeCoreGhostSpineInference.runWithConstructors normal [] 0 limit
+  let constructor : SignatureRoots := ⟨[],[],[0]⟩
+  let visible : NativeCoreGhostFamilyElimination.FamilyTable := fun family =>
+    (snapshot.families[family]?).map (fun row => ⟨row,false,[constructor]⟩)
+  let visit := NativeCoreGhostSpineInference.runWithFamilyElimination normal [] 0 limit
     (NativeCoreGhostSort.isDataAt env) (NativeCoreGhostReferenceTypes.isBoxedAt env)
     (NativeCoreGhostSpineInference.visibleFamilyShape env 0)
-    (NativeCoreGhostConstructorInference.constructorAt snapshot.families 0) depth []
-  let constructor : SignatureRoots := ⟨[],[],[0]⟩
-  NativeCoreGhostPropElimination.run visit (normal depth) limit depth ⟨snapshot.arena,1⟩ 0 1 4 7 9 [constructor] branches
+    (NativeCoreGhostConstructorInference.constructorAt snapshot.families 0) visible (depth+1) []
+  let root := if branches.isEmpty then 9 else 8
+  visit ⟨snapshot.arena,0⟩ root
 
 /-- The live checked signature supplies the original index. The motive,
 branch and evidence are all visited before the result is appended. -/

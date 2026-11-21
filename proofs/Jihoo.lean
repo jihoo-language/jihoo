@@ -1379,3 +1379,4 @@ import Jihoo.NativeCoreCodeInference
 import Jihoo.NativeLoanIndexedFamilyTelescopeModel
 import Jihoo.NativeCoreDataRecursiveFieldAlignment
 import Jihoo.NativeCoreFamilyHeadFormation
+import Jihoo.NativeCoreGhostFamilyElimination

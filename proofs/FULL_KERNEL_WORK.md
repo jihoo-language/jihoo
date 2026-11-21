@@ -4536,3 +4536,15 @@ case type of this written signature. A separate formation theorem
 uses the actual ghost normalization to recover a family head's declared
 arity and the U64 typing of each index from the inferred type's
 independent formation derivation. The focused build passed 342 jobs.
+
+### Ghost family elimination reentry
+
+One recursive ghost visitor now dispatches proposition elimination,
+flat data elimination and boxed one-level case analysis through the
+visible checked family information. The local refinement theorem
+authenticates the written family row and the stored proposition
+signatures, and uses the original scrutinee's declared arity. The
+existing native traces now enter through the recursive visitor.
+They retain 63 ticks for the proposition example, 171 and 200
+for the data result modes, and one tick for the missing case.
+The focused build passed 463 jobs.

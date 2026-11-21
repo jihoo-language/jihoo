@@ -10876,3 +10876,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyHeadFormation.typed_family_head
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyHeadFormation.normalized_family_head
 #print axioms Jihoo.NativeKernel.NativeCoreFamilyHeadFormation.normal_visit_family_head
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.TableRep.frame
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.runNode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyElimination.runNode_invisible
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyElimination_progress
