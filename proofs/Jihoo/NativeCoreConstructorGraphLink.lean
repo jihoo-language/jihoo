@@ -1,3 +1,4 @@
+import Jihoo.NativeCoreIdentical
 import Jihoo.NativeCoreConstructorTelescopeAlignment
 import Jihoo.NativeLoanMixedAdmission
 
@@ -61,6 +62,27 @@ theorem checked_family_layout {family : Nat} {row : FamilyRoots}
   exact ⟨entry,found,by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.1,
     by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.2.1,
     by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.2.2.1⟩
+
+/-- The checked family supplies the parameter width and exact case count. -/
+theorem checked_family_widths {family : Nat} {row : FamilyRoots}
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : RepresentsFamilies arena familyRows familyTerms)
+    (selected : familyRows[family]? = some row) (found : env.families[family]? = some entry) :
+    row.params ≤ row.arity ∧ row.constructors.length = entry.signatures.length := by
+  obtain ⟨source,foundSource,represented⟩ := family_root_lookup rows selected
+  have declared : (familyTerms.map NativeLoanMixedAdmission.declaration)[family]? =
+      some (NativeLoanMixedAdmission.declaration source) := by
+    simp only [List.getElem?_map,foundSource,Option.map_some]
+  obtain ⟨actual,actualFound,original⟩ := declared_family_lookup history declared
+  have same := Option.some.inj (actualFound.symm.trans found)
+  subst actual
+  obtain ⟨_,_,_,_,_,_,checked,_⟩ := history.family_prefix found
+  have metadata := checked.metadata.2.2.1
+  rw [← checked.declaration,original] at metadata
+  have signatures := FamilyEnvironment.RelList.length checked.signatures
+  rw [← checked.declaration,original] at signatures
+  exact ⟨by simpa only [NativeLoanMixedAdmission.declaration,represented.2.1,represented.2.2.1] using metadata,
+    (NativeCoreIdentical.represented_length represented.2.2.2.2).trans signatures⟩
 
 private theorem constructor_root_lookup {index root : Nat}
     (rows : RepresentsList arena refs terms) (selected : refs[index]? = some root) :

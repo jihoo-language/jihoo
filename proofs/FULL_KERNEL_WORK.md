@@ -4392,3 +4392,16 @@ sort of the exact admitted declaration. The fixtures cover type-level
 application and a proposition quantified over Type0 and Type31. The
 focused build passed 365 jobs and the four audited declarations use
 standard Lean axioms.
+
+### Nonrecursive ghost data elimination
+
+The first scrutinee visit recovers the original type's parameters and
+indices. The motive check chooses Prop or Type0, then each branch is
+checked against the declaration's constructor in source order. A second
+scrutinee visit shares the same clock before the original motive is
+applied to the actual nonparameter indices and the original value. The
+mixed history fixes the family width and case count. The general source
+theorem still takes the normalized scrutinee's declared arity as a
+premise. Lean and native Core agree on 171 ticks for Type0, 200 for Prop,
+and one tick when the matching branch is missing. The focused build
+passed 455 jobs and the audit covered ten declarations, one axiom-free.

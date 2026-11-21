@@ -1344,6 +1344,74 @@ fn proposition_elimination_inference() {
     assert(budget-remaining_ticks(&wrong) == 1, "a missing branch uses only the entry tick")
 }
 
+fn indexed_data_elimination_fixture(proof: bool) -> core.Core {
+    var c = core.Core.new()
+    let sp = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), sp).unwrap()
+    let word = c.add(core.Term.U64, sp).unwrap()
+    let signed = c.add(core.Term.I64, sp).unwrap()
+    let current = c.add(core.Term.Var(0), sp).unwrap()
+    let above = c.add(core.Term.Var(1), sp).unwrap()
+    var source_indices = Vec(u32).new()
+    source_indices.push(above)
+    source_indices.push(two)
+    let source_family = c.add(core.Term.Ind(0, source_indices), sp).unwrap()
+    let field = c.add(core.Term.Pi(false, signed, source_family), sp).unwrap()
+    let constructor = c.add(core.Term.Pi(true, word, field), sp).unwrap()
+    let signed_value = c.add(core.Term.Integer(0), sp).unwrap()
+    var fields = Vec(u32).new()
+    fields.push(two)
+    fields.push(signed_value)
+    let value = c.add(core.Term.Con(0, 0, fields), sp).unwrap()
+    var arg_indices = Vec(u32).new()
+    arg_indices.push(two)
+    arg_indices.push(current)
+    let motive_domain = c.add(core.Term.Ind(0, arg_indices), sp).unwrap()
+    let equality = c.add(core.Term.Eq(above, two), sp).unwrap()
+    let sort = if proof { equality } else { signed }
+    let result = c.add(core.Term.Lam(false, motive_domain, sort), sp).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, result), sp).unwrap()
+    let refl = c.add(core.Term.Refl(two), sp).unwrap()
+    let branch_body = if proof { refl } else { current }
+    let branch = c.add(core.Term.Lam(false, signed, branch_body), sp).unwrap()
+    var branches = Vec(u32).new()
+    branches.push(branch)
+    c.add(core.Term.Elim(0, motive, branches, value), sp).unwrap()
+    c.add(core.Term.Elim(0, motive, Vec(u32).new(), value), sp).unwrap()
+    c.push_family(core.Family { name: "IndexedData".to_string(), data: true, params: 1, arity: 2,
+        constructors: Vec(core.Constructor).new(), globals: 0, span: sp })
+    c.push_constructor(0, core.Constructor { name: "Field".to_string(), ty: constructor })
+    c.check().unwrap()
+    c
+}
+
+fn indexed_data_elimination() {
+    for proof in [false, true] {
+        var baseline = indexed_data_elimination_fixture(proof)
+        let budget = remaining_ticks(&baseline)
+        var sample = indexed_data_elimination_fixture(proof)
+        assert(sample.node_count() == 22, "checked indexed family input")
+        let cost = if proof { 200 } else { 171 }
+        spend(&sample, budget-cost)
+        let selected = sample.infer(16, [], true, 32).unwrap()
+        let expected: u32 = if proof { 58 } else { 52 }
+        assert(selected == expected && sample.node_count() == expected as i64+1 &&
+            sample.term(selected-1) == core.Term.App(13, 0) &&
+            sample.term(selected) == core.Term.App(selected-1, 9),
+            "indexed elimination retains its original motive, result index and scrutinee")
+        assert_spent(&sample, "indexed elimination follows the exact data or proposition clock")
+    }
+    var wrong = indexed_data_elimination_fixture(false)
+    let before = wrong.node_count()
+    let budget = remaining_ticks(&wrong)
+    var short = indexed_data_elimination_fixture(false)
+    spend(&short, budget-1)
+    assert(match short.infer(17, [], true, 32) {
+        Err(e) => e.msg == "core: induction needs one case per constructor", _ => false
+    } && short.node_count() == before, "missing data case rejects before the scrutinee visit")
+    assert_spent(&short, "missing data case costs the entry tick")
+}
+
 fn dependent_lend_fixture() -> core.Core {
     var c = core.Core.new()
     let sp = diag.Span.nowhere()
@@ -1578,6 +1646,7 @@ fn main() -> i32 {
     proposition_case_telescope()
     data_case_parameter_telescope()
     proposition_elimination_inference()
+    indexed_data_elimination()
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)
     dependent_constructor_inference()

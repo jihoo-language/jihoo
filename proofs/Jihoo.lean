@@ -1355,7 +1355,11 @@ import Jihoo.NativeCoreDataCaseAlignment
 import Jihoo.NativeCorePropSignatureConversion
 import Jihoo.NativeCorePropSignatureAuthentication
 import Jihoo.NativeCoreGhostPropCases
+import Jihoo.NativeCoreGhostFamilyEvidence
 import Jihoo.NativeCoreGhostPropElimination
+import Jihoo.NativeCoreGhostDataCases
+import Jihoo.NativeCoreGhostDataElimination
+import Jihoo.NativeCoreGhostDataEliminationExamples
 import Jihoo.NativeCoreGhostPropEliminationExamples
 import Jihoo.NativeCoreDependentLendCallbacks
 import Jihoo.NativeCoreGhostBinderCheck

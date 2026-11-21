@@ -10811,3 +10811,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.checked_reconstruction
 #print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.reconstructed_type_application
 #print axioms Jihoo.NativeKernel.Environment.Semantics.MultiUniverse.DependentCodes.reconstructed_quantified_false
+#print axioms Jihoo.NativeKernel.NativeCoreConstructorTelescopeAlignment.checked_family_widths
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyEvidence.evidence_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyEvidence.evidence_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostFamilyEvidence.expand_spine
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.families_frame
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.indexed_motives_match_native
