@@ -5048,3 +5048,16 @@ fixtures and 55 exact-byte checks, and 20 family fixtures and 18 additional
 checks. Pure mixed admission accepted the exact native snapshot bytes.
 Type-family safety passed eight controls and nine exact diagnostic rejections
 across checking and optimization levels.
+
+### Executable arithmetic bounds for an owned Load
+
+A reachable typed `Load` can now use the bounded observation of its actual
+closed erased proof for the physical read guard. The original owner type
+still determines the allocation length. The stored index's width follows
+from the machine's reachable-value invariant. The load and the two callback
+bindings keep the original typed result and captured source context.
+
+The accepted example offsets and cancels a bound supplied by an erased
+branch slot. The observed proof justifies the read at index 1, which returns
+17 in the typed callback. The focused build passed 455 tasks and three
+new declaration audits.

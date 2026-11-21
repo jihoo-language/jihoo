@@ -96,6 +96,27 @@ def projectedObservations? (env : Environment) (budget fuel : Nat) (values : Nat
     Option (PLift (ProjectedObserved env values term)) :=
   observationsUsing? env budget fuel (ValueErasure.Loan.project env) values term
 
+/-- Offsetting a checked inequality and then cancelling the same offset
+uses the same three original word observations throughout. -/
+theorem observes_added_and_cancelled_bound
+    (left : normalizedWord? env budget fuel a = some leftValue)
+    (right : normalizedWord? env budget fuel b = some rightValue)
+    (offset : normalizedWord? env budget fuel c = some offsetValue)
+    (evidence : (observations? env budget fuel Term.var proof).isSome = true) :
+    (observations? env budget fuel Term.var (.ltCancel a b c (.ltAdd a b c proof))).isSome = true := by
+  have leftSeen : (operand? env budget fuel id Term.var a).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using left)
+  have rightSeen : (operand? env budget fuel id Term.var b).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using right)
+  have offsetSeen : (operand? env budget fuel id Term.var c).isSome = true :=
+    operand?_present (by simpa only [Term.subst_id,id_eq] using offset)
+  obtain ⟨_,keptLeft⟩ := Option.isSome_iff_exists.mp leftSeen
+  obtain ⟨_,keptRight⟩ := Option.isSome_iff_exists.mp rightSeen
+  obtain ⟨_,keptOffset⟩ := Option.isSome_iff_exists.mp offsetSeen
+  obtain ⟨_,keptEvidence⟩ := Option.isSome_iff_exists.mp evidence
+  change observationsUsing? env budget fuel id Term.var proof = _ at keptEvidence
+  simp [observations?,observationsUsing?,keptLeft,keptRight,keptOffset,keptEvidence] <;> rfl
+
 theorem computed_proof_order (wf : UnifiedProgram.EnvWellFormed env)
     (typed : LoanTyping.HasType env loans ctx mode term type)
     (accepted : (observations? env budget fuel values term).isSome = true) :

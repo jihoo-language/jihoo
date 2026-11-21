@@ -11077,3 +11077,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.load_retains_lowered_code_callback_result
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.absurd_preserves_code_target_root
 #print axioms Jihoo.NativeKernel.NativeCoreGhostPropEliminationExamples.code_elimination_keeps_ghost_operands
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observes_added_and_cancelled_bound
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_typed_variable_load_from_proof
+#print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.Examples.computed_load_evidence_reads

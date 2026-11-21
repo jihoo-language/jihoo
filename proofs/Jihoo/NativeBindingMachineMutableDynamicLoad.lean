@@ -1,8 +1,9 @@
 import Jihoo.NativeBindingMachineMutableLoad
 import Jihoo.NativeBindingMachineMutableAlignment
+import Jihoo.NativeLoanNumericProofExecution
 
 /-! The retained U64 index slot agrees with its canonical source meaning.
-Closed Decide evidence then supplies the physical bound for an owned read. -/
+Closed arithmetic evidence then supplies the physical bound for an owned read. -/
 namespace Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity
 open Jihoo.Quantity NativeQuantity
 
@@ -36,6 +37,8 @@ end Jihoo.NativeKernel.Environment.LoanTyping.ResourceQuantity
 
 namespace Jihoo.NativeKernel.Environment.BindingMachine.Mutable
 open CodeKinds
+open Semantics.LoanArithmetic (Order Numeric closedProof? closedProof?_order observed_evidence_order
+  normalizedWord? observations? observes_added_and_cancelled_bound)
 
 private theorem variable_load_steps (state : State) (evaluating : state.control = .evaluate code)
     (shape : code.term = .load (.var owner) (.var index) evidence
@@ -82,11 +85,7 @@ theorem load_retained_closing (wf : UnifiedProgram.EnvWellFormed env)
   rw [Term.subst_rename]
   exact converted
 
-/-- Actual Load through a captured U64 slot. The closed erased proof may
-come from a source branch binder, and its operands may themselves convert
-to numerals. The actual slot, width, read bound, and callback result typing
-follow from the canonical context and the original Loan64 derivation. -/
-theorem reachable_typed_variable_load (term : Term) (fuel : Nat)
+private theorem reachable_typed_variable_load_with_order (term : Term) (fuel : Nat)
     (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
     (evaluating : (run fuel (initial term)).state.control = .evaluate actual)
     (view : CanonicalView actual source indices)
@@ -97,7 +96,8 @@ theorem reachable_typed_variable_load (term : Term) (fuel : Nat)
       (lookup source.context (indices index)).map (·.erased))
     (shape : actual.term = .load (.var owner) (.var index) evidence
       (.lam false first (.lam false again body)))
-    (decideEvidence : evidence.subst (meanings ∘ indices) = .decide left right)
+    (boundSound : ∀ {offset length}, LoanTyping.HasType env [] [] true (evidence.subst (meanings ∘ indices))
+      (.lt (.natural offset) length) → Order env (.lt (.natural offset) length))
     (storedOwner : actual.values[owner]? = some (some (.owner object)))
     (live : (run fuel (initial term)).state.heap.metadata.heap.live object = true)
     (coverage : LoanCoverage source loans (run fuel (initial term)).state.activeStack)
@@ -161,17 +161,17 @@ theorem reachable_typed_variable_load (term : Term) (fuel : Nat)
     simpa only [Term.subst,substArgs,Op.binders,liftSub] using
       sizes.typed_variable history ownerTyped sourceOwnerStored
   have physical := physicalTyped.buffer_length history
-  change evidence.subst (fun slot => meanings (indices slot)) = .decide left right at decideEvidence
   have closedEvidence : LoanTyping.HasType env [] [] true
-      (.decide left right) (.lt (.natural offset) (size.subst meanings)) := by
-    simpa only [Term.subst_rename,decideEvidence,Term.subst,substArgs,Op.binders,liftSub,indexMeaning]
+      (evidence.subst (meanings ∘ indices)) (.lt (.natural offset) (size.subst meanings)) := by
+    simpa only [Term.subst_rename,Term.subst,substArgs,Op.binders,liftSub,indexMeaning,Function.comp_def]
       using bound.ghostSubstitution history.wellFormed closing
-  obtain ⟨comparedOffset,comparedLength,leftNumber,rightNumber,leftWidth,_,ordered⟩ := closedEvidence.decide_truth
-  have arguments := closedEvidence.principalView.lt_injective history.wellFormed.admissible
-  have offsetEq := (arguments.1.symm.trans leftNumber).natural_injective history.wellFormed.admissible
-  have lengthEq := ((physical.trans arguments.2.symm).trans rightNumber).natural_injective history.wellFormed.admissible
-  have width : offset < 2^64 := offsetEq ▸ leftWidth
-  have within : offset < state.heap.metadata.length object := offsetEq ▸ lengthEq ▸ ordered
+  have arithmetic := boundSound closedEvidence
+  have within : offset < state.heap.metadata.length object := arithmetic.reflect history.wellFormed.admissible
+    (Numeric.natural env offset) ((Numeric.natural env (state.heap.metadata.length object)).convert physical)
+  have numeric := numbers.legacy.2.1
+  change ControlNumbers state.control at numeric
+  rw [evaluating] at numeric
+  have width := (ValuesNumbers.valueAt (show CodeNumbers actual from numeric) actualIndexStored).naturalBound
   have inactive := LoanTyping.ResourceQuantity.projectRaw_named_load_inactive checked budget
   have guard := (invariant.2.free_guard_iff invariant.1).mpr (coverage.inactive sourceOwnerStored inactive)
   have read : state.heap.load object offset = some (state.heap.cell object offset) := by
@@ -205,18 +205,117 @@ theorem reachable_typed_variable_load (term : Term) (fuel : Nat)
     | succ index => cases index <;> rfl)]
   exact resumed.closed history
 
+/-- Actual Load through a captured U64 slot. The closed erased proof may
+come from a source branch binder, and its operands may themselves convert
+to numerals. The actual slot, width, read bound, and callback result typing
+follow from the canonical context and the original Loan64 derivation. -/
+theorem reachable_typed_variable_load (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run fuel (initial term)).state.control = .evaluate actual)
+    (view : CanonicalView actual source indices)
+    (typed : LoanClosingTyped env loans false source meanings type)
+    (context : ValueContext env source meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap.metadata source meanings)
+    (indexErasure : (lookup actual.context index).map (·.erased) =
+      (lookup source.context (indices index)).map (·.erased))
+    (shape : actual.term = .load (.var owner) (.var index) evidence
+      (.lam false first (.lam false again body)))
+    (decideEvidence : evidence.subst (meanings ∘ indices) = .decide left right)
+    (storedOwner : actual.values[owner]? = some (some (.owner object)))
+    (live : (run fuel (initial term)).state.heap.metadata.heap.live object = true)
+    (coverage : LoanCoverage source loans (run fuel (initial term)).state.activeStack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+2) env loans source.context
+      source.term = some resource)
+    (budget : LoanTyping.ResourceQuantity.LoanBudget source.context.length loans resource) :
+    let state := (run fuel (initial term)).state
+    ∃ offset,
+      actual.values[index]? = some (some (.natural offset)) ∧
+      meanings (indices index) = .natural offset ∧ offset < 2^64 ∧
+      offset < state.heap.metadata.length object ∧
+      let payload := state.heap.cell object offset
+      let value := Term.integer (decodeInteger payload)
+      let origin := (actual.child (.var owner)).origin
+      let next := restoredContinuation actual first again body origin value object (.integer (decodeInteger payload))
+      let nextMeanings := consValues (meanings (indices owner)) (consValues value (meanings ∘ indices))
+      let sourceNext := restoredContinuation source (first.rename indices) (again.rename (liftRenaming 1 indices))
+        (body.rename (liftRenaming 2 indices)) origin value object (.integer (decodeInteger payload))
+      let sourceMeanings := consValues (meanings (indices owner)) (consValues value meanings)
+      state.heap.load object offset = some payload ∧
+      run 9 state = ⟨⟨state.heap,.evaluate next,state.stack,state.pending⟩,
+        [.load object offset payload,.legacy (.activate false (.lam false again body) value),
+          .legacy (.activate false body origin)],9⟩ ∧
+      CanonicalView next sourceNext (liftRenaming 2 indices) ∧
+      LoanClosingTyped env loans false sourceNext sourceMeanings type ∧
+      LoanTyping.HasType env [] [] true (next.term.subst nextMeanings) type := by
+  apply reachable_typed_variable_load_with_order term fuel history evaluating view typed context sizes
+    indexErasure shape _ storedOwner live coverage checked budget
+  intro offset length evidenceTyped
+  rw [decideEvidence] at evidenceTyped
+  have order := observed_evidence_order (values := Term.var) history.wellFormed evidenceTyped (by
+    simp only [Semantics.LoanArithmetic.ObservedEvidence,Semantics.LoanArithmetic.ObservedEvidenceUsing])
+  simpa only [Term.subst_id] using order
+
+/-- Bounded normalization of the actual closed erased proof supplies the
+physical safety guard. The proof can include arithmetic rules and checked
+computations. The executable word width follows from the retained slot. -/
+theorem reachable_typed_variable_load_from_proof (term : Term) (fuel : Nat)
+    (history : LoanTyping.MixedProgram.History definitions familyDeclarations env)
+    (evaluating : (run fuel (initial term)).state.control = .evaluate actual)
+    (view : CanonicalView actual source indices)
+    (typed : LoanClosingTyped env loans false source meanings type)
+    (context : ValueContext env source meanings)
+    (sizes : OwnerSizes env (run fuel (initial term)).state.heap.metadata source meanings)
+    (indexErasure : (lookup actual.context index).map (·.erased) =
+      (lookup source.context (indices index)).map (·.erased))
+    (shape : actual.term = .load (.var owner) (.var index) evidence
+      (.lam false first (.lam false again body)))
+    (observed : closedProof? env observationBudget reductionFuel operandFuel
+      (evidence.subst (meanings ∘ indices)) = some residual)
+    (storedOwner : actual.values[owner]? = some (some (.owner object)))
+    (live : (run fuel (initial term)).state.heap.metadata.heap.live object = true)
+    (coverage : LoanCoverage source loans (run fuel (initial term)).state.activeStack)
+    (checked : LoanTyping.ResourceQuantity.projectRaw (resourceFuel+2) env loans source.context
+      source.term = some resource)
+    (budget : LoanTyping.ResourceQuantity.LoanBudget source.context.length loans resource) :
+    let state := (run fuel (initial term)).state
+    ∃ offset,
+      actual.values[index]? = some (some (.natural offset)) ∧
+      meanings (indices index) = .natural offset ∧ offset < 2^64 ∧
+      offset < state.heap.metadata.length object ∧
+      let payload := state.heap.cell object offset
+      let value := Term.integer (decodeInteger payload)
+      let origin := (actual.child (.var owner)).origin
+      let next := restoredContinuation actual first again body origin value object (.integer (decodeInteger payload))
+      let nextMeanings := consValues (meanings (indices owner)) (consValues value (meanings ∘ indices))
+      let sourceNext := restoredContinuation source (first.rename indices) (again.rename (liftRenaming 1 indices))
+        (body.rename (liftRenaming 2 indices)) origin value object (.integer (decodeInteger payload))
+      let sourceMeanings := consValues (meanings (indices owner)) (consValues value meanings)
+      state.heap.load object offset = some payload ∧
+      run 9 state = ⟨⟨state.heap,.evaluate next,state.stack,state.pending⟩,
+        [.load object offset payload,.legacy (.activate false (.lam false again body) value),
+          .legacy (.activate false body origin)],9⟩ ∧
+      CanonicalView next sourceNext (liftRenaming 2 indices) ∧
+      LoanClosingTyped env loans false sourceNext sourceMeanings type ∧
+      LoanTyping.HasType env [] [] true (next.term.subst nextMeanings) type := by
+  apply reachable_typed_variable_load_with_order term fuel history evaluating view typed context sizes
+    indexErasure shape _ storedOwner live coverage checked budget
+  intro offset length evidenceTyped
+  exact closedProof?_order history evidenceTyped observed
+
 namespace Examples
 
 set_option maxRecDepth 4096
 
-private def dynamic_load : Term :=
+private def loadUsing (evidence : Term) : Term :=
   .app (.lam false .u64
     (.ifLt (.var 0) (.natural 2)
       (.app (.lam false (.buffer (.natural 2))
-        (.load (.var 0) (.var 2) (.var 1)
+        (.load (.var 0) (.var 2) evidence
           (.lam false .i64 (.lam false (.buffer (.natural 2)) (.free (.var 0) (.var 1))))))
         (.alloc (.natural 2) (.integer 17)))
       (.integer 0))) (.natural 1)
+
+private def dynamic_load : Term := loadUsing (.var 1)
 
 theorem dynamic_load_admitted : LoanTyping.MixedProgram.checkDeclaration 32 64 .empty
     ⟨.i64,dynamic_load⟩ = some ⟨.i64,dynamic_load⟩ := by cbv
@@ -227,6 +326,45 @@ theorem dynamic_load_reads : (run 60 (initial dynamic_load)).events.filterMap
       | _ => none) = [(0,1,encodeInteger 17)] := by rfl
 
 theorem dynamic_load_returns : observe (run 60 (initial dynamic_load)) = .integer 17 := by rfl
+
+private def computedBound : Term :=
+  .ltCancel (.var 2) (.natural 2) (.natural 1)
+    (.ltAdd (.var 2) (.natural 2) (.natural 1) (.var 1))
+
+private def branchValues : Nat → Term
+  | 1 => .decide (.natural 1) (.natural 2)
+  | 2 => .natural 1
+  | index => .var index
+
+/-- The accepted Load keeps the original index and really reads the same
+cell when its bound is arithmetic evidence using the erased branch slot. -/
+theorem computed_load_evidence_reads :
+    let term := loadUsing computedBound
+    LoanTyping.MixedProgram.checkDeclaration 64 128 .empty ⟨.i64,term⟩ = some ⟨.i64,term⟩ ∧
+    (closedProof? .empty 4096 64 64 (computedBound.subst branchValues)).isSome = true ∧
+    (run 60 (initial term)).events.filterMap
+      (fun event => match event with
+        | .load object index value => some (object,index,value)
+        | _ => none) = [(0,1,encodeInteger 17)] ∧
+    observe (run 60 (initial term)) = .integer 17 := by
+  refine ⟨by cbv,?_,rfl,rfl⟩
+  let one := Term.natural 1
+  let two := Term.natural 2
+  let branch := Term.decide one two
+  let closed := Term.ltCancel one two one (.ltAdd one two one branch)
+  have substitution : computedBound.subst branchValues = closed := by cbv
+  have normal : LoanTyping.ProofNormalization.normalize? .empty 4096 64 closed = some closed := by cbv
+  have numberOne : normalizedWord? .empty 4096 64 one = some 1 := by cbv
+  have numberTwo : normalizedWord? .empty 4096 64 two = some 2 := by cbv
+  have proof : (observations? .empty 4096 64 Term.var branch).isSome = true := by cbv
+  have observed : (observations? .empty 4096 64 Term.var closed).isSome = true :=
+    observes_added_and_cancelled_bound numberOne numberTwo numberOne proof
+  rw [substitution]
+  unfold closedProof?
+  rw [normal]
+  change (if (observations? .empty 4096 64 Term.var closed).isSome then some closed else none).isSome = true
+  exact congrArg Option.isSome (ite_eq_left observed)
+
 
 end Examples
 
