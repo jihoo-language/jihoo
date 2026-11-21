@@ -10837,3 +10837,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.finish_backward
 #print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization.run_refines
+#print axioms Jihoo.NativeKernel.NativeCoreConstructorTelescopeAlignment.checked_constructor_source
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.run_progress
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.field_observes
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.observes_checked_telescope
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.observed_signature
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.checked_signature_at
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.runTable_progress
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.runTable_refines
+#print axioms Jihoo.NativeKernel.NativeCorePropSignatureReplay.Examples.two_recursive_fields_match_native_declaration

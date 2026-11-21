@@ -98,6 +98,35 @@ private theorem constructor_root_lookup {index root : Nat}
       exact ⟨_,rfl,first⟩
     | succ index => exact ih selected
 
+/-- The original graph row selects the checked source telescope from
+the family's actual earlier prefix. -/
+theorem checked_constructor_source {family constructor root : Nat} {row : FamilyRoots}
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : RepresentsFamilies arena familyRows familyTerms)
+    (selected : familyRows[family]? = some row)
+    (read : row.constructors[constructor]? = some root) :
+    ∃ entry signature source prior declaration,
+      env.families[family]? = some entry ∧ entry.signatures[constructor]? = some signature ∧
+        entry.declaration.constructors[constructor]? = some source ∧ entry.declaration.data = row.data ∧
+        Represents arena root source ∧ prior.Extends env ∧
+        UnifiedProgram.Families.TelescopeChecked prior family declaration [] source signature := by
+  obtain ⟨familySource,foundSource,represented⟩ := family_root_lookup rows selected
+  have declared : (familyTerms.map NativeLoanMixedAdmission.declaration)[family]? =
+      some (NativeLoanMixedAdmission.declaration familySource) := by
+    simp only [List.getElem?_map,foundSource,Option.map_some]
+  obtain ⟨entry,found,original⟩ := declared_family_lookup history declared
+  obtain ⟨source,constructorFound,sourceRep⟩ := constructor_root_lookup represented.2.2.2.2 read
+  have written : entry.declaration.constructors[constructor]? = some source := by
+    simpa only [original,NativeLoanMixedAdmission.declaration] using constructorFound
+  obtain ⟨_,_,prior,declaration,_,place,checked,extension⟩ := history.family_prefix found
+  have sourceFound : declaration.constructors[constructor]? = some source := by
+    simpa only [checked.declaration] using written
+  obtain ⟨signature,signatureFound,telescope⟩ := checked.signatures.left sourceFound
+  rw [place] at telescope
+  exact ⟨entry,signature,source,prior,declaration,found,signatureFound,written,
+    by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.1,
+    sourceRep,extension,telescope⟩
+
 theorem checked_constructor_root {family constructor root : Nat} {row : FamilyRoots}
     (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
     (rows : RepresentsFamilies arena familyRows familyTerms)
@@ -107,23 +136,9 @@ theorem checked_constructor_root {family constructor root : Nat} {row : FamilyRo
       env.families[family]? = some entry ∧ entry.signatures[constructor]? = some signature ∧
         entry.declaration.data = row.data ∧ Represents arena root source ∧
         RawLend.Conv env (expand env source) (signatureTerm family signature) := by
-  obtain ⟨familySource,foundSource,represented⟩ := family_root_lookup rows selected
-  have declared : (familyTerms.map NativeLoanMixedAdmission.declaration)[family]? =
-      some (NativeLoanMixedAdmission.declaration familySource) := by
-    simp only [List.getElem?_map,foundSource,Option.map_some]
-  obtain ⟨entry,found,original⟩ := declared_family_lookup history declared
-  obtain ⟨source,constructorFound,sourceRep⟩ := constructor_root_lookup represented.2.2.2.2 read
-  have written : entry.declaration.constructors[constructor]? = some source := by
-    simpa only [original,NativeLoanMixedAdmission.declaration] using constructorFound
-  obtain ⟨_,_,_,actual,_,_,checked,_⟩ := history.family_prefix found
-  have length := FamilyEnvironment.RelList.length checked.signatures
-  rw [← checked.declaration] at length
-  have bound := (List.getElem?_eq_some_iff.mp written).1
-  have within : constructor < entry.signatures.length := by omega
-  let signature := entry.signatures[constructor]
-  have signatureFound : entry.signatures[constructor]? = some signature := List.getElem?_eq_getElem within
-  exact ⟨entry,signature,source,found,signatureFound,
-    by simpa only [original,NativeLoanMixedAdmission.declaration] using represented.1,
-    sourceRep,admitted_constructor_signature_conversion history found written signatureFound⟩
+  obtain ⟨entry,signature,source,_,_,found,signatureFound,written,data,sourceRep,_,_⟩ :=
+    checked_constructor_source history rows selected read
+  exact ⟨entry,signature,source,found,signatureFound,data,sourceRep,
+    admitted_constructor_signature_conversion history found written signatureFound⟩
 
 end Jihoo.NativeKernel.NativeCoreConstructorTelescopeAlignment

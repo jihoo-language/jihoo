@@ -4430,3 +4430,23 @@ segment runs the ownership scan and retains its comparison receipts.
 Both the typing theorem and the native correspondence fixture return
 the original instantiated codomain reference. The focused build passed
 455 jobs and the four new audited declarations use standard Lean axioms.
+
+### Aggregate check through code application finalization
+
+At `b3eedb2`, 1,195 Lake jobs and the generated fixtures passed. The
+audit covered 10,829 declarations, with 533 axiom-free and only standard
+Lean axioms elsewhere. Native checks passed 89 kernel fixtures and 31
+additional checks, 69 mixed fixtures and 55 exact-byte checks, and all
+eight positive and nine rejection cases for type families. Peak
+sampled process-tree RSS was 4,935.9 MiB.
+
+### Proposition signatures from checked constructor declarations
+
+The replay reads each written constructor from the original graph in
+declaration order. It keeps the normalized recursive indices separately
+from the normalized field domains. Successful replay gives a complete
+signature table related to the constructor telescopes in the actual
+earlier checking prefix. The binder and index checks supply progress and
+the normalizer supplies conversion for this theorem. A base constructor
+and a step with two erased recursive fields match the native 30 ticks and
+all six appended graph rows. The focused build passed 458 jobs.

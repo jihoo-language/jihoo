@@ -1371,3 +1371,5 @@ import Jihoo.NativeCoreGhostLendInference
 import Jihoo.NativeCoreGhostLendExamples
 import Jihoo.NativeCoreFamilyStrict
 import Jihoo.NativeLoanOpenDependentTransport
+import Jihoo.NativeCorePropSignatureReplay
+import Jihoo.NativeCorePropSignatureReplayExamples

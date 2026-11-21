@@ -1093,6 +1093,11 @@ fn proposition_case_telescope() {
     let budget = remaining_ticks(&baseline)
     var sample = proposition_case_fixture()
     let first = sample.node_count() as u32
+    assert(budget == 999970 && first == 18, "the two signatures complete in 30 ticks")
+    assert(sample.term(12) == core.Term.U64 && sample.term(13) == core.Term.U64 &&
+        sample.term(14) == core.Term.Universe(0) && sample.term(15) == core.Term.U64 &&
+        sample.term(16) == core.Term.U64 && sample.term(17) == core.Term.U64,
+        "the signature checker preserves the native binder and index append order")
     let span = diag.Span.nowhere()
     let result = sample.case_type(0, 1, 2, span, 16).unwrap()
     assert(result == first+13 && sample.node_count() == first as i64+14, "recursive case graph size")
