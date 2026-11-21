@@ -1512,6 +1512,44 @@ fn code_application_inference() {
         "a relevant function domain rejects the erased local at the start of its argument visit")
 }
 
+fn partial_application_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let n = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let signed = c.add(core.Term.I64, span).unwrap()
+    let buffer = c.add(core.Term.Buffer(n), span).unwrap()
+    let result = c.add(core.Term.Pi(false, signed, signed), span).unwrap()
+    c.add(core.Term.Pi(false, word, result), span).unwrap()
+    c.add(core.Term.Pi(true, word, result), span).unwrap()
+    c.add(core.Term.Pi(false, buffer, result), span).unwrap()
+    let f = c.add(core.Term.Var(1), span).unwrap()
+    let a = c.add(core.Term.Var(0), span).unwrap()
+    c.add(core.Term.App(f, a), span).unwrap()
+    c
+}
+
+fn runtime_partial_applications() {
+    for input in 5..7 {
+        var c = partial_application_fixture()
+        let erased = input == 6
+        let scope = [core.Binding { ty: input as u32, erased: false },
+            core.Binding { ty: 1, erased }]
+        let budget = if erased { 35 } else { 37 }
+        spend(&c, 1000000-budget)
+        assert(c.infer(10, scope, false, 32).unwrap() == 4 && c.node_count() == 11,
+            "the partial application returns its original function type")
+        assert_spent(&c, "erasure skips the two ownership visits")
+    }
+    var c = partial_application_fixture()
+    let scope = [core.Binding { ty: 7, erased: false }, core.Binding { ty: 3, erased: false }]
+    spend(&c, 999952)
+    assert(match c.infer(10, scope, false, 32) {
+        Err(e) => e.msg == "core: a partial application cannot take an owned value", _ => false
+    } && c.node_count() == 11, "the first retained buffer argument prevents partial application")
+    assert_spent(&c, "rejecting a captured buffer costs forty-eight ticks")
+}
+
 fn main() -> i32 {
     primitive_inference()
     erased_lambda()
@@ -1550,6 +1588,7 @@ fn main() -> i32 {
     scalar_code_inference()
     scalar_code_declaration()
     code_application_inference()
+    runtime_partial_applications()
     loop_motive_inference()
     dependent_lend_callbacks()
     code_word_definition()

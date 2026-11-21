@@ -10802,3 +10802,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.run_refines
 #print axioms Jihoo.NativeKernel.NativeCoreCodeLambda.checked_scalar_and_owner_lambdas_match_native
+#print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.scan_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.scan_visits
+#print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.run_visits
+#print axioms Jihoo.NativeKernel.NativeCoreCodePartialApplication.Examples.partial_application_matches_native_meter

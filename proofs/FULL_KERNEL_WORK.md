@@ -4360,3 +4360,23 @@ two buffer releases, and returning the owner pair once. Lean matches the
 native result rows and exact meter for the scalar and direct owner paths.
 The focused build passed 452 jobs and the fourteen audited declarations
 use standard Lean axioms.
+
+### Aggregate check through runtime lambda inference
+
+At `dc216b6`, 1,184 Lake jobs and the generated fixtures passed. The
+audit covered 10,794 declarations, with 531 axiom-free and only standard
+Lean axioms elsewhere. The native suite passed 89 fixtures and 31 extra
+cases. Mixed checking passed 69 source fixtures and 55 exact-byte checks.
+The type-family suite passed all eight positive and nine rejection cases.
+Peak sampled process-tree RSS was 4,917.9 MiB.
+
+### Runtime partial-application ownership scan
+
+The native scan walks the original application spine from its outermost
+call to the head. It revisits each callee in ghost mode, skips ownership
+classification for erased parameters, and rejects a retained linear
+argument. The successful trace identifies the live domains that passed
+that check. Native and Lean agree on 37 ticks for an ordinary partial
+call, 35 for an erased argument, and rejection at 48 for a buffer.
+The focused build passed 452 jobs and the five audited declarations use
+standard Lean axioms.

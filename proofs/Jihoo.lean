@@ -1328,6 +1328,8 @@ import Jihoo.NativeCoreCodeApplication
 import Jihoo.NativeCoreCodeLinearity
 import Jihoo.NativeCoreCodeUses
 import Jihoo.NativeCoreCodeLambda
+import Jihoo.NativeCoreCodePartialApplication
+import Jihoo.NativeCoreCodePartialApplicationExamples
 import Jihoo.NativeCoreCodeLeaseLookup
 import Jihoo.NativeCoreCodeBorrow
 import Jihoo.NativeCoreGhostBackMotive
