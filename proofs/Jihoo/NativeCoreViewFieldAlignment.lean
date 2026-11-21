@@ -1,3 +1,5 @@
+import Jihoo.NativeCoreGhostViewInference
+import Jihoo.NativeCoreViewCheckedPlan
 import Jihoo.NativeCoreViewCaseExpansion
 import Jihoo.NativeCoreViewCaseType
 import Jihoo.NativeCoreDataCaseAlignment
@@ -156,5 +158,75 @@ theorem case_type_conversion (wf : UnifiedProgram.EnvWellFormed env)
   rw [closeFields_expand,viewHypothesisTelescope_expand wf.admissible,viewCaseResult_expand wf.admissible,
     width,positions,borrow_bits shapes]
   exact closeFields_conv fieldsRelated (.refl _)
+
+
+open NativeFamilyWire
+open NativeCoreGhostViewInference (CaseReplay)
+open NativeCoreBinderTraversal (VisitsFrom)
+open NativeCorePureComputationNormal (ExpandedNormalization)
+open NativeCoreGhostSpineInference (Visit)
+
+private theorem familyRows_frame (rows : RepresentsFamilies arena familyRows familyTerms)
+    (kept : Prefix arena after) : RepresentsFamilies after familyRows familyTerms := by
+  induction rows with
+  | nil => exact .nil
+  | cons represented _ ih =>
+    exact .cons ⟨represented.1,represented.2.1,represented.2.2.1,represented.2.2.2.1,
+      represented.2.2.2.2.frame kept⟩ ih
+
+/-- Relate the exact constructor selected by the graph to its checked source
+signature. Shape evidence concerns the recorded field normalizations and
+the motive mode used by this branch builder. -/
+theorem checked_case_replay
+    {entry : Environment.CheckedFamily} {row : FamilyRoots}
+    (history : ScopedProgram.History definitions (familyTerms.map NativeLoanMixedAdmission.declaration) env)
+    (rows : RepresentsFamilies base familyRows familyTerms)
+    (familyRow : familyRows[family]? = some row) (entryFound : env.families[family]? = some entry)
+    (data : entry.declaration.data = true)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (motiveRep : Represents base motive M) (parameterRep : RepresentsList base parameters values)
+    (width : values.length = entry.declaration.params)
+    (classification : ∀ {arena : Arena} {constructor : Nat} {signature : Environment.Signature}
+      {telescope : Term} {roots : List FieldRoot} {fields : List Environment.Field} {motiveShape : Term} {plans : List ViewFieldPlan},
+      entry.signatures[constructor]? = some signature →
+      viewPlan env family (signature.fields.drop entry.declaration.params) = some plans →
+      FieldLayout env family arena telescope roots fields →
+      ExpandedNormalization env M motiveShape →
+      roots.map fieldFlags = plans.map planFlags ∧ LoanTyping.Checker.viewDependent motiveShape = dependent) :
+    CaseReplay env base ctx normal limit depth family motive row entry parameters values M recursive dependent := by
+  intro start constructor written selected onBase chosen success
+  obtain ⟨actual,signature,source,found,signatureFound,_,sourceRep,conversion⟩ :=
+    NativeCoreConstructorTelescopeAlignment.checked_constructor_root history (familyRows_frame rows onBase) familyRow chosen
+  have sameEntry := Option.some.inj (found.symm.trans entryFound)
+  subst actual
+  obtain ⟨scope,_,parameterBounds⟩ := LoanTyping.FamilyIota.signature_metadata history entryFound signatureFound
+  obtain ⟨kept,safe,telescope,fields,roots,motiveShape,opened,layout,motiveChanged,observed⟩ :=
+    NativeCoreViewCaseType.run_refines normalSound onBase sourceRep (motiveRep.frame onBase)
+      (parameterRep.frame onBase) success
+  obtain ⟨plans,planned⟩ := NativeCoreViewCheckedPlan.checked_constructor_plan history entryFound signatureFound data
+  obtain ⟨flags,mode⟩ := classification signatureFound planned layout motiveChanged
+  have expandedWidth : (expandArgs env values).length = entry.declaration.params := by
+    simpa only [EnvironmentDelta.expandArgs_map,List.length_map] using width
+  let finalIndices := signature.result.map (Term.subst
+    (parameterAt ctx.length (signature.fields.length - entry.declaration.params) (expandArgs env values)))
+  let ending := Term.node (.ind family signature.result.length) finalIndices
+  have openedPlan : ParametersInstantiated (expandArgs env values) (signatureTerm family signature)
+      (ClosedFields ctx.length (expandArgs env values) 0 plans ending) := by
+    have instantiated := NativeCoreDataCaseAlignment.checked_opened_telescope (depth := ctx.length)
+      (family := family) scope expandedWidth parameterBounds.1
+    simpa only [ClosedFields,viewPlan_source planned,List.length_drop,ending,finalIndices] using instantiated
+  have expandedOpened := NativeCoreDataCaseAlignment.expanded_parameters history.wellFormed
+    (instantiateParameters_sound opened)
+  have telescopes := NativeCoreDataCaseAlignment.parameters_preserve_conversion history.wellFormed
+    expandedOpened openedPlan conversion
+  let positions := if recursive then viewPositions plans else []
+  let expected := closeDataFields (viewInstFields ctx.length (expandArgs env values) [] plans)
+    (viewHypothesisTelescope plans.length 0 positions (expand env M) dependent
+      (viewCaseResult family constructor plans.length positions.length (expandArgs env values)
+        (expand env M) (plans.map ViewFieldPlan.borrowed) dependent))
+  rw [mode] at observed
+  refine ⟨kept,safe,signature,expected,_,signatureFound,?_,observed,?_⟩
+  · simp [viewCaseType,expandedWidth,Nat.not_lt_of_ge parameterBounds.1,planned,expected,positions]
+  · exact case_type_conversion history.wellFormed recursive layout flags telescopes
 
 end Jihoo.NativeKernel.NativeCoreViewFieldAlignment

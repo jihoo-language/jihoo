@@ -283,4 +283,88 @@ theorem run_refines
       (sortRep.frame classKept) sortOk
     exact ⟨classKept.trans kept,back ∘ classBack,by simpa only [viewMotiveType,Bool.false_eq_true,ite_false] using converter⟩
 
+private theorem isLambda_refines (represented : Represents arena selected shape) :
+    isLambda arena selected = LoanTyping.Checker.viewDependent shape := by
+  cases represented with
+  | var read => simp only [isLambda,read,LoanTyping.Checker.viewDependent]
+  | @node _ op refs terms read arity children =>
+    cases op <;> simp only [isLambda,read,LoanTyping.Checker.viewDependent] <;> try rfl
+    case lam erased =>
+      cases children with
+      | nil => cases arity
+      | cons first rest =>
+        cases rest with
+        | nil => cases arity
+        | cons second rest => cases rest <;> first | rfl | cases arity
+
+/-- The first successful normalization of the original motive supplies
+the actual mode used by the retained checking gate. -/
+theorem run_mode_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (onBase : Prefix base state.arena) (source : Represents state.arena motive M)
+    (success : (run normal limit depth state motive inferred referenceType).result = .ok answer) :
+    ∃ selected shape, (normal state motive).result = .ok selected ∧
+      Represents (normal state motive).state.arena selected shape ∧ ExpandedNormalization env M shape ∧
+      answer.dependent = LoanTyping.Checker.viewDependent shape := by
+  unfold run at success
+  obtain ⟨selected,classOk,classNext⟩ := Outcome.next_success success
+  rw [classNext] at success
+  obtain ⟨_,_,shape,represented,converted⟩ := normalSound onBase source classOk
+  refine ⟨selected,shape,classOk,represented,converted,?_⟩
+  have classified := isLambda_refines represented
+  split at success
+  · rename_i dependent
+    obtain ⟨product,productOk,productNext⟩ := Outcome.next_success success
+    rw [productNext] at success
+    split at success
+    · obtain ⟨compared,comparison,comparisonNext⟩ := Outcome.next_success success
+      rw [comparisonNext] at success
+      obtain ⟨⟨⟩,sortOk,sortNext⟩ := Outcome.next_success success
+      rw [sortNext] at success
+      obtain ⟨⟨⟩,resultOk,resultNext⟩ := Outcome.next_success success
+      rw [resultNext] at success
+      cases success
+      exact dependent.symm.trans classified
+    · cases success
+  · rename_i constant
+    obtain ⟨⟨⟩,sortOk,sortNext⟩ := Outcome.next_success success
+    rw [sortNext] at success
+    cases success
+    exact (Bool.eq_false_iff.mpr constant).symm.trans classified
+
+private def lambdaOp : Op → Bool
+  | .lam _ => true
+  | _ => false
+
+private theorem mode_of_represented_node (represented : Represents arena root (.node op terms)) :
+    LoanTyping.Checker.viewDependent (.node op terms) = lambdaOp op := by
+  cases represented with
+  | @node _ _ refs _ read arity children =>
+    cases op <;> try rfl
+    case lam erased =>
+      cases children with
+      | nil => cases arity
+      | cons first rest =>
+        cases rest with
+        | nil => cases arity
+        | cons second rest => cases rest <;> first | rfl | cases arity
+
+/-- Two actual normalized motive results with rigid heads choose the same
+case mode, even if their children or arena references differ. -/
+theorem rigid_normal_motive_agrees
+    (admissible : EnvironmentDelta.Admissible env)
+    (left : Represents before first (.node firstOp inputs))
+    (right : Represents after second (.node secondOp outputs))
+    (firstChange : ExpandedNormalization env M (.node firstOp inputs))
+    (secondChange : ExpandedNormalization env M (.node secondOp outputs))
+    (firstHead : RawLend.rigid firstOp = true) (secondHead : RawLend.rigid secondOp = true) :
+    LoanTyping.Checker.viewDependent (.node firstOp inputs) =
+      LoanTyping.Checker.viewDependent (.node secondOp outputs) := by
+  have ordinary {op} (rigid : RawLend.rigid op = true) : GlobalEnvironment.ordinary op = true := by
+    cases op <;> first | rfl | cases rigid
+  have comparable := firstChange.converted.symm.trans secondChange.converted
+  rw [EnvironmentDelta.expand_ordinary (ordinary firstHead),EnvironmentDelta.expand_ordinary (ordinary secondHead)] at comparable
+  have same := (comparable.full_rigid_node_injective firstHead secondHead admissible).1
+  rw [mode_of_represented_node left,mode_of_represented_node right,same]
+
 end Jihoo.NativeKernel.NativeCoreViewMotiveGate

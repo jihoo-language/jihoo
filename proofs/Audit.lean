@@ -10955,3 +10955,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.ValueContext.enter_erased
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_branch_closing
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.reachable_checked_branch_handoff
+#print axioms Jihoo.NativeKernel.NativeCoreViewCheckedPlan.checked_constructor_plan
+#print axioms Jihoo.NativeKernel.NativeCoreViewStableHead.converted_head_matches_view_plan
+#print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.run_mode_refines
+#print axioms Jihoo.NativeKernel.NativeCoreViewMotiveGate.rigid_normal_motive_agrees
+#print axioms Jihoo.NativeKernel.NativeCoreViewFieldAlignment.checked_case_replay

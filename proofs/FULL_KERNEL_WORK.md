@@ -4776,3 +4776,14 @@ bindings. The same step transfers the exact branch resource receipt,
 owner demand, loan budget, and physical reader slots. Operand value
 interpretations and the post-operand ownership world are premises.
 The focused build passed 390 jobs and three declaration audits.
+
+### View branch types from the checked constructor history
+
+The live graph lookup selects the original constructor in the checked
+family table. Its written and stored telescopes stay convertible after
+opening the same word parameters. Checked data fields supply the View
+borrowing plan in the actual earlier prefix. The branch type replay
+uses that plan and the observed field flags and motive mode to get the
+specified case type. Separately, a converted rigid field head fixes its
+borrow classification, and two rigid motive results select the same
+mode. The focused build passed 467 jobs and five declaration audits.

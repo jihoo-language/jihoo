@@ -150,4 +150,42 @@ theorem normal_matches_view_plan
       cases out with
       | var found | node found => exact ⟨_,found,rfl⟩
 
+private theorem Stable.rigid (known : Stable op) : RawLend.rigid op = true := by
+  cases known <;> rfl
+
+private theorem rigid_ordinary (known : RawLend.rigid op = true) : GlobalEnvironment.ordinary op = true := by
+  cases op <;> first | rfl | cases known
+
+/-- Reading a dependent field under earlier borrows can change all its
+arguments. A rigid normalized head still has the same ownership flags as
+the checked field, by conversion of the opened domains. -/
+theorem converted_head_matches_view_plan
+    (admissible : EnvironmentDelta.Admissible env)
+    (represented : Represents arena selected shape) (read : arena[selected]? = some row)
+    (planned : viewFieldPlan env family field = some plan)
+    (related : RawLend.Conv env (expand env shape) (viewRead previous (field.domain.subst values)))
+    (rigid : field.erased = false → ∃ op args, shape = .node op args ∧ RawLend.rigid op = true) :
+    NativeCoreViewShape.classify env family field.erased row = (plan.borrowed,plan.self) := by
+  cases field with
+  | mk erased domain recursive =>
+    cases erased
+    · obtain ⟨expected,written,rfl,stable⟩ := relevant_plan_head planned
+      obtain ⟨observed,args,rfl,head⟩ := rigid rfl
+      have opening : ∃ terms, viewRead previous ((Term.node expected written).subst values) =
+          .node expected terms := by
+        simp only [viewRead,Term.subst]
+        exact ⟨_,rfl⟩
+      obtain ⟨terms,opened⟩ := opening
+      rw [EnvironmentDelta.expand_ordinary (rigid_ordinary head),opened] at related
+      have agrees := (related.full_rigid_node_injective head stable.rigid admissible).1
+      subst observed
+      cases represented with
+      | node found arity children =>
+        rw [read] at found
+        cases found
+        exact classify_relevant stable planned
+    · change some (⟨⟨true,domain,recursive⟩,false,false⟩ : ViewFieldPlan) = some plan at planned
+      cases planned
+      rfl
+
 end Jihoo.NativeKernel.NativeCoreViewStableHead

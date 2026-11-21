@@ -1395,3 +1395,4 @@ import Jihoo.NativeCoreGhostViewInferenceExamples
 import Jihoo.NativeCoreViewStableHead
 import Jihoo.NativeCoreViewCaseExpansion
 import Jihoo.NativeCoreViewFieldAlignment
+import Jihoo.NativeCoreViewCheckedPlan
