@@ -5125,3 +5125,17 @@ after 36 ticks. The Take callback releases its original owner and returns
 the I64 at root 38, using 111 ticks and 41 rows. One tick less leaves the
 same graph at the final result check. The focused build passed 496 tasks,
 eleven declaration audits, and the expanded native schedule.
+
+### Aggregate check through CODE owner returns
+
+At `b87fcf6`, the rootless Nix proof shell built 1,234 Lake jobs and
+audited 11,106 declarations. Of those, 535 required no axioms. The
+remaining declarations used only Lean's standard logical axioms. All
+five generated proof fixtures matched their sources. The guarded run
+sampled a peak of 5,087.8 MiB across its process tree.
+
+The same checkout passed 89 native kernel fixtures and 31 additional
+checks, 69 mixed-program source fixtures and 55 exact-byte comparisons,
+eight type-family controls and nine exact-diagnostic rejections, and
+20 native family fixtures with 18 additional checks. The independent
+pure admission check accepted the exact native mixed-program bytes.
