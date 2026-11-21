@@ -171,7 +171,7 @@ private def ownerFamily (infer : Infer) (normal : Visit) (state : State) (owner 
           if actual = family then ⟨after,.ok type.compared⟩ else discard after owner
       | _ => discard after owner
 
-private def inferDrop (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool)
+def inferDrop (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool)
     (shapeTable : Nat → Option (Nat × Bool)) (state : State) (root family owner rest : Nat) : Outcome Inferred :=
   if (shapeTable family).isSome && isBoxed family then
     (ownerFamily infer normal state owner family).next fun retained pairs =>
@@ -393,20 +393,23 @@ private def checkPredicateEvidence (infer : Infer) (normal : Visit) (limit depth
   (append state .app [predicate, word]).next fun applied expected =>
     requireOperands infer normal limit depth expected applied [evidence]
 
-private def inferPack (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State)
+def inferPackWithEvidence (inferWord inferGhost : Infer) (normal : Visit) (limit depth : Nat) (state : State)
     (predicate word evidence : Nat) : Outcome Inferred :=
-  (checkPredicate infer normal limit depth state predicate).next fun predicateState predicatePairs =>
-    (checkFixed infer normal limit depth predicateState .u64 [word]).next fun wordState wordPairs =>
-      (checkPredicateEvidence infer normal limit depth wordState predicate word evidence).next fun proofState proofPairs =>
+  (checkPredicate inferGhost normal limit depth state predicate).next fun predicateState predicatePairs =>
+    (checkFixed inferWord normal limit depth predicateState .u64 [word]).next fun wordState wordPairs =>
+      (checkPredicateEvidence inferGhost normal limit depth wordState predicate word evidence).next fun proofState proofPairs =>
         (append proofState .refine [predicate]).next fun after root =>
           ⟨after, .ok ⟨root, predicatePairs ++ wordPairs ++ proofPairs⟩⟩
+
+private abbrev inferPack (infer : Infer) :=
+  inferPackWithEvidence infer infer
 
 private def refinementProjectionType (state : State) (evidence : Bool) (predicate subject : Nat) : Outcome Nat :=
   if evidence then
     (append state .witness [subject]).next fun after witness => append after .app [predicate, witness]
   else append state .u64 []
 
-private def inferRefinementProjection (infer : Infer) (normal : Visit) (state : State)
+def inferRefinementProjection (infer : Infer) (normal : Visit) (state : State)
     (evidence : Bool) (subject : Nat) : Outcome Inferred :=
   (infer state subject).next fun inferred sourceType =>
     (normal inferred sourceType.typeRoot).next fun exposed typeRoot =>
@@ -776,7 +779,7 @@ private theorem ownerFamily_progress
   · split <;> exact Progress.atState _ _
   · exact Progress.atState _ _
 
-private theorem inferDrop_progress
+theorem inferDrop_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
     Progress limit state (inferDrop infer normal isBoxed shapeTable state root family owner rest) := by
@@ -1136,18 +1139,26 @@ private theorem checkPredicateEvidence_progress
   intro expected _ expectedRoom
   exact requireOperands_progress infers (fun state root _ => normalizes state root) expectedRoom
 
-private theorem inferPack_progress
+theorem inferPackWithEvidence_progress
+    (wordProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferWord state root))
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (inferPack infer normal limit depth state predicate word evidence) := by
+    Progress limit state (inferPackWithEvidence inferWord infer normal limit depth state predicate word evidence) := by
   apply next_progress (checkPredicate_progress infers normalizes room) room
   intro predicatePairs _ predicateRoom
-  apply next_progress (checkFixed_progress infers (fun state root _ => normalizes state root) predicateRoom) predicateRoom
+  apply next_progress (checkFixed_progress wordProgress (fun state root _ => normalizes state root) predicateRoom) predicateRoom
   intro wordPairs _ wordRoom
   apply next_progress (checkPredicateEvidence_progress infers normalizes wordRoom) wordRoom
   intro proofPairs _ _
   exact (append_progress _ _ _).next (fun _ => Progress.atState _ _)
+
+private theorem inferPack_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (inferPack infer normal limit depth state predicate word evidence) :=
+  inferPackWithEvidence_progress infers infers normalizes room
 
 private theorem refinementProjectionType_progress (state : State) (evidence : Bool) (predicate subject : Nat) :
     Progress limit state (refinementProjectionType state evidence predicate subject) := by
@@ -1156,7 +1167,7 @@ private theorem refinementProjectionType_progress (state : State) (evidence : Bo
   · simp only [refinementProjectionType, ite_true]
     exact (append_progress _ _ _).next (fun _ => append_progress _ _ _)
 
-private theorem inferRefinementProjection_progress
+theorem inferRefinementProjection_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
@@ -1903,7 +1914,7 @@ private theorem bufferLength_refines
 private theorem ownerFamily_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (source : Represents state.arena owner written)
     (success : (ownerFamily infer normal state owner family).result = .ok compared)
@@ -1911,7 +1922,7 @@ private theorem ownerFamily_refines
     (retained : ∀ pair ∈ compared, PairRetained final pair) :
     let after := (ownerFamily infer normal state owner family).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      ∃ arity indices, LoanTyping.HasType env [] ctx true (expand env written) (.node (.ind family arity) indices) := by
+      ∃ arity indices, LoanTyping.HasType env loans ctx mode (expand env written) (.node (.ind family arity) indices) := by
   unfold ownerFamily at success ambient ⊢
   obtain ⟨inferred,inferredOk,inferredNext⟩ := Outcome.next_success success
   rw [inferredNext] at success ambient ⊢
@@ -1940,19 +1951,21 @@ private theorem ownerFamily_refines
     · simp [discard] at success
   · simp [discard] at success
 
-private theorem inferDrop_refines
+theorem inferDrop_modeRefines
     (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (source : Represents state.arena owner x) (continued : Represents state.arena rest r)
     (success : (inferDrop infer normal isBoxed shapeTable state root family owner rest).result = .ok answer)
     (ambient : Prefix (inferDrop infer normal isBoxed shapeTable state root family owner rest).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.node (.drop family) [x,r])
-      (inferDrop infer normal isBoxed shapeTable state root family owner rest) answer := by
+    let after := (inferDrop infer normal isBoxed shapeTable state root family owner rest).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.node (.drop family) [x,r])) (expand env type) := by
   unfold inferDrop at success ambient ⊢
   split at success
   · rename_i allowed
@@ -1975,6 +1988,23 @@ private theorem inferDrop_refines
     refine ⟨ownerKept.trans tailKept,tailBack ∘ ownerBack,_,resultRep,?_⟩
     simpa only [expand,expandArgs] using LoanTyping.HasType.drop found boxed typedOwner typedTail
   · simp [discard] at success
+
+private theorem inferDrop_refines
+    (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (source : Represents state.arena owner x) (continued : Represents state.arena rest r)
+    (success : (inferDrop infer normal isBoxed shapeTable state root family owner rest).result = .ok answer)
+    (ambient : Prefix (inferDrop infer normal isBoxed shapeTable state root family owner rest).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.node (.drop family) [x,r])
+      (inferDrop infer normal isBoxed shapeTable state root family owner rest) answer := by
+  obtain ⟨kept,backward,typed⟩ := inferDrop_modeRefines metadata normalSound normalProgress
+    (ghost_as_mode childSound) childProgress onBase room source continued success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 private theorem inferFree_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -3187,19 +3217,24 @@ private theorem checkPredicateEvidence_refines
   refine ⟨expectedKept.trans checkedKept, checkedBack ∘ expectedBack, ?_⟩
   simpa only [Term.app, expand, expandArgs] using typed q List.mem_cons_self
 
-private theorem inferPack_refines
+theorem inferPackWithEvidence_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (wordSound : ModeSound env loans base ctx limit mode inferWord)
+    (wordCost : ∀ state root, state.steps ≤ limit → Progress limit state (inferWord state root))
     (childSound : InferSound env base ctx limit infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (predicateRep : Represents state.arena predicate p) (wordRep : Represents state.arena word a)
     (evidenceRep : Represents state.arena evidence q)
-    (success : (inferPack infer normal limit depth state predicate word evidence).result = .ok answer)
-    (ambient : Prefix (inferPack infer normal limit depth state predicate word evidence).state.arena final)
+    (success : (inferPackWithEvidence inferWord infer normal limit depth state predicate word evidence).result = .ok answer)
+    (ambient : Prefix (inferPackWithEvidence inferWord infer normal limit depth state predicate word evidence).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.pack p a q) (inferPack infer normal limit depth state predicate word evidence) answer := by
-  unfold inferPack at success ambient ⊢
+    let after := (inferPackWithEvidence inferWord infer normal limit depth state predicate word evidence).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.pack p a q)) (expand env type) := by
+  unfold inferPackWithEvidence at success ambient ⊢
   obtain ⟨predicatePairs, predicateOk, predicateNext⟩ := Outcome.next_success success
   rw [predicateNext] at success ambient ⊢
   obtain ⟨wordPairs, wordOk, wordNext⟩ := Outcome.next_success success
@@ -3213,9 +3248,9 @@ private theorem inferPack_refines
   let predicateCheck := checkPredicate infer normal limit depth state predicate
   have predicateProgress := checkPredicate_progress (depth := depth) (predicate := predicate) childProgress normalProgress room
   have predicateRoom := predicateProgress.accepted room predicatePairs predicateOk
-  let wordCheck := checkFixed infer normal limit depth predicateCheck.state .u64 [word]
+  let wordCheck := checkFixed inferWord normal limit depth predicateCheck.state .u64 [word]
   have wordProgress := checkFixed_progress (operand := .u64) (args := [word]) (depth := depth)
-    childProgress (fun state root _ => normalProgress state root) predicateRoom
+    wordCost (fun state root _ => normalProgress state root) predicateRoom
   have wordRoom := wordProgress.accepted predicateRoom wordPairs wordOk
   let proofCheck := checkPredicateEvidence infer normal limit depth wordCheck.state predicate word evidence
   have proofProgress := checkPredicateEvidence_progress (depth := depth) (predicate := predicate) (word := word)
@@ -3226,7 +3261,7 @@ private theorem inferPack_refines
   obtain ⟨predicateKept, predicateBack, predicateTyped⟩ := checkPredicate_refines normalSound normalProgress childSound
     childProgress onBase room predicateRep predicateOk predicateFinal
     (fun pair found => retained pair (List.mem_append_left _ (List.mem_append_left _ found)))
-  obtain ⟨wordKept, wordBack, wordTyped⟩ := checkFixed_refines normalSound normalProgress childSound childProgress
+  obtain ⟨wordKept, wordBack, wordTyped⟩ := checkFixed_modeRefines normalSound normalProgress wordSound wordCost
     (onBase.trans predicateKept) predicateRoom (.cons (wordRep.frame predicateKept) .nil) rfl wordOk wordFinal
     (fun pair found => retained pair (List.mem_append_left _ (List.mem_append_right _ found)))
   have throughWord := predicateKept.trans wordKept
@@ -3238,7 +3273,24 @@ private theorem inferPack_refines
   refine ⟨throughProof.trans outputKept, outputBack ∘ proofBack ∘ wordBack ∘ predicateBack, _, outputRep, ?_⟩
   simp only [expand, expandArgs] at wordTyped
   simp only [Term.pack, expand, expandArgs]
-  exact .pack predicateTyped (wordTyped a List.mem_cons_self) proofTyped
+  exact .pack (predicateTyped.ghost loans) (wordTyped a List.mem_cons_self) (proofTyped.ghost loans)
+
+private theorem inferPack_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (predicateRep : Represents state.arena predicate p) (wordRep : Represents state.arena word a)
+    (evidenceRep : Represents state.arena evidence q)
+    (success : (inferPack infer normal limit depth state predicate word evidence).result = .ok answer)
+    (ambient : Prefix (inferPack infer normal limit depth state predicate word evidence).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.pack p a q) (inferPack infer normal limit depth state predicate word evidence) answer := by
+  obtain ⟨kept,backward,typed⟩ := inferPackWithEvidence_modeRefines normalSound normalProgress
+    (ghost_as_mode childSound) childProgress childSound childProgress
+    onBase room predicateRep wordRep evidenceRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 private theorem refinement_type_read (represented : Represents arena root type)
     (read : arena[root]? = some (.node .refine [predicate])) :
@@ -3260,18 +3312,20 @@ private theorem refinementProjectionType_refines (predicateRep : Represents stat
       (.cons (predicateRep.frame witnessKept) (.cons witnessRep .nil)) rfl success
     exact ⟨witnessKept.trans resultKept, resultBack ∘ witnessBack, resultRep⟩
 
-private theorem inferRefinementProjection_refines
+theorem inferRefinementProjection_modeRefines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit (mode || evidence) infer)
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (subjectRep : Represents state.arena subject s)
     (success : (inferRefinementProjection infer normal state evidence subject).result = .ok answer)
     (ambient : Prefix (inferRefinementProjection infer normal state evidence subject).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (if evidence then .proof s else .witness s)
-      (inferRefinementProjection infer normal state evidence subject) answer := by
+    let after := (inferRefinementProjection infer normal state evidence subject).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx mode
+        (expand env (if evidence then .proof s else .witness s)) (expand env type) := by
   unfold inferRefinementProjection at success ambient ⊢
   obtain ⟨sourceType, inferredOk, inferredNext⟩ := Outcome.next_success success
   rw [inferredNext] at success ambient ⊢
@@ -3297,14 +3351,30 @@ private theorem inferRefinementProjection_refines
     have throughType := subjectProgress.kept.trans typeKept
     obtain ⟨resultKept, resultBack, resultRep⟩ := refinementProjectionType_refines predicateRep
       (subjectRep.frame throughType) outputOk
-    have refinementTyped : LoanTyping.HasType env [] ctx true (expand env s) (.refine (expand env p)) := by
+    have refinementTyped : LoanTyping.HasType env loans ctx (mode || evidence) (expand env s) (.refine (expand env p)) := by
       simpa only [shape, Term.refine, expand, expandArgs] using typed.convert converted.converted
     refine ⟨throughType.trans resultKept, resultBack ∘ typeBack ∘ sourceBack, _, resultRep, ?_⟩
     cases evidence
     · simp only [Bool.false_eq_true, ite_false, Term.witness, Term.u64, expand, expandArgs]
-      exact .witness refinementTyped
+      exact .witness (by simpa only [Bool.or_false] using refinementTyped)
     · simp only [ite_true, Term.proof, Term.app, Term.witness, expand, expandArgs]
-      exact .proof refinementTyped
+      exact .proof (by simpa only [Bool.or_true] using refinementTyped)
+
+private theorem inferRefinementProjection_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (subjectRep : Represents state.arena subject s)
+    (success : (inferRefinementProjection infer normal state evidence subject).result = .ok answer)
+    (ambient : Prefix (inferRefinementProjection infer normal state evidence subject).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (if evidence then .proof s else .witness s)
+      (inferRefinementProjection infer normal state evidence subject) answer := by
+  obtain ⟨kept,backward,typed⟩ := inferRefinementProjection_modeRefines normalSound normalProgress
+    (mode := true) (ghost_as_mode childSound) childProgress onBase room subjectRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 private theorem inferTransport_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -3578,6 +3648,54 @@ private theorem global_refines (history : LoanTyping.MixedProgram.History defini
   rw [EnvironmentDelta.expand_global checked, EnvironmentDelta.expand_renaming history.wellFormed.admissible,
     expanded, Environment.closed_rename closed]
   exact history.delta_preserves checked original
+
+private theorem shifted_inference_selected
+    (success : (shiftInferred limit depth state root amount).result = .ok answer) :
+    let shifted := NativeCoreTransformExact.run limit depth state root (.shift amount) 0
+    shifted.result = .ok answer.typeRoot ∧
+      shifted.state = (shiftInferred limit depth state root amount).state ∧ answer.compared = [] := by
+  obtain ⟨selected,shifted,shape⟩ := plain_success
+    (original := shiftType limit depth state root amount) success
+  subst answer
+  exact ⟨liftTransform_success shifted,rfl,rfl⟩
+
+/-- Successful local inference returns exactly the binding annotation
+shifted by its distance from the newest binder. -/
+theorem runVisitsWithViews_local_annotation
+    (read : state.arena[root]? = some (.var index))
+    (found : bindings[index]? = some binding)
+    (success : (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots
+      familyEliminations viewEnv (visits+1) (depth+1) bindings state root).result = .ok answer) :
+    let output := runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots
+      familyEliminations viewEnv (visits+1) (depth+1) bindings state root
+    let shifted := NativeCoreTransformExact.run limit depth {state with steps := state.steps+1}
+      binding.typeRoot (.shift (Int.ofNat (index+1))) 0
+    shifted.result = .ok answer.typeRoot ∧ shifted.state = output.state ∧ answer.compared = [] := by
+  simp only [runVisitsWithViews] at success ⊢
+  obtain ⟨entered,_⟩ := tick_success success
+  rw [entered] at success ⊢
+  dsimp only at success ⊢
+  simp only [read,found] at success ⊢
+  exact shifted_inference_selected success
+
+/-- Successful visible-global inference shifts the original stored
+annotation by the current depth. -/
+theorem runVisitsWithViews_global_annotation
+    (read : state.arena[root]? = some (.node (.global index) []))
+    (visibleGlobal : index < visible) (found : roots[index]? = some declaration)
+    (success : (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots
+      familyEliminations viewEnv (visits+1) (depth+1) bindings state root).result = .ok answer) :
+    let output := runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots
+      familyEliminations viewEnv (visits+1) (depth+1) bindings state root
+    let shifted := NativeCoreTransformExact.run limit depth {state with steps := state.steps+1}
+      declaration.typeRoot (.shift (Int.ofNat bindings.length)) 0
+    shifted.result = .ok answer.typeRoot ∧ shifted.state = output.state ∧ answer.compared = [] := by
+  simp only [runVisitsWithViews] at success ⊢
+  obtain ⟨entered,_⟩ := tick_success success
+  rw [entered] at success ⊢
+  dsimp only at success ⊢
+  simp only [read,visibleGlobal,ite_true,found] at success ⊢
+  exact shifted_inference_selected success
 
 /-- Every supported successful ghost inference derives the represented
 result type in the original expanded context. -/

@@ -214,14 +214,14 @@ fn refinement_predicate(inout c: core.Core) -> u32 {
     c.add(core.Term.Lam(false, word, equality), span).unwrap()
 }
 
-fn refinement_inference() {
+fn refinement_inference(ghost: bool) {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let predicate = refinement_predicate(&c)
     let refinement = c.add(core.Term.Refine(predicate), span).unwrap()
     c.add(core.Term.Universe(0), span).unwrap()
     spend(&c, 999976)
-    let inferred = c.infer(refinement, [], true, 24).unwrap()
+    let inferred = c.infer(refinement, [], ghost, 24).unwrap()
     assert(inferred == 13 && c.node_count() == 14, "refinement result position")
     assert(c.term(6) == core.Term.U64 && c.term(7) == core.Term.Prop, "required predicate domain and range")
     assert(c.term(8) == core.Term.Pi(false, 6, 7), "required predicate arrow")
@@ -295,7 +295,55 @@ fn refinement_projection() {
     assert_spent(&c, "proof projection used 14 ticks")
 }
 
-fn transport_evidence_exhaustion() {
+fn code_refinement_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let predicate = refinement_predicate(&c)
+    c.add(core.Term.Refine(predicate), span).unwrap()
+    let word = c.add(core.Term.Natural(7), span).unwrap()
+    let evidence = c.add(core.Term.Refl(word), span).unwrap()
+    c.add(core.Term.Pack(predicate, word, evidence), span).unwrap()
+    c.add(core.Term.Var(0), span).unwrap()
+    c
+}
+
+fn code_refinement_modes() {
+    let sp = diag.Span.nowhere()
+    let relevant = [core.Binding { ty: 4, erased: false }]
+    let erased = [core.Binding { ty: 4, erased: true }]
+    var packed = code_refinement_fixture()
+    spend(&packed, 999946)
+    assert(packed.infer(7, relevant, false, 24).unwrap() == 23 &&
+        packed.node_count() == 24 && packed.term(23) == core.Term.Refine(3),
+        "CODE packing retains its original predicate and inferred refinement")
+    assert_spent(&packed, "CODE Pack costs 54 ticks")
+
+    var read = code_refinement_fixture()
+    let result = read.add(core.Term.Witness(7), sp).unwrap()
+    spend(&read, 999939)
+    assert(read.infer(result, relevant, false, 24).unwrap() == 25 &&
+        read.node_count() == 26 && read.term(25) == core.Term.U64,
+        "CODE Witness recursively checks the packed word")
+    assert_spent(&read, "CODE Witness of Pack costs 61 ticks")
+
+    var denied = code_refinement_fixture()
+    let result = denied.add(core.Term.Witness(8), sp).unwrap()
+    spend(&denied, 999998)
+    assert(match denied.infer(result, erased, false, 24) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    } && denied.node_count() == 10, "Witness rejects the erased lookup before shifting its type")
+    assert_spent(&denied, "CODE Witness rejects an erased slot in two ticks")
+
+    var inspected = code_refinement_fixture()
+    let result = inspected.add(core.Term.Proof(8), sp).unwrap()
+    spend(&inspected, 999986)
+    assert(inspected.infer(result, erased, false, 24).unwrap() == 11 && inspected.node_count() == 12 &&
+        inspected.term(10) == core.Term.Witness(8) && inspected.term(11) == core.Term.App(3, 10),
+        "Proof reads the same erased slot and keeps the original dependent type")
+    assert_spent(&inspected, "CODE Proof uses the ghost subject in 14 ticks")
+}
+
+fn transport_evidence_exhaustion(ghost: bool) {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
     let predicate = refinement_predicate(&c)
@@ -304,7 +352,7 @@ fn transport_evidence_exhaustion() {
     let transport = c.add(core.Term.Transport(predicate, proof, proof), span).unwrap()
     c.add(core.Term.Eq(seven, seven), span).unwrap()
     spend(&c, 999968)
-    assert(match c.infer(transport, [], true, 24) {
+    assert(match c.infer(transport, [], ghost, 24) {
         Err(e) => e.msg == "core: checking step limit reached", _ => false
     }, "transport runs out of budget entering the source proof")
     assert(c.node_count() == 19, "exposed equality and required fiber survive exhaustion")
@@ -778,14 +826,14 @@ fn ghost_definition_body_checking() {
     program.extend().unwrap()
 }
 
-fn boxed_drop_inference() {
+fn boxed_drop_inference(ghost: bool) {
     let span = diag.Span.nowhere()
     let context = [core.Binding { ty: 1, erased: false }]
     var boxed = family_reference_fixture(true)
     let tail = boxed.add(core.Term.Integer(-3), span).unwrap()
     let drop = boxed.add(core.Term.Drop(0, 4, tail), span).unwrap()
     spend(&boxed, 999994)
-    let result = boxed.infer(drop, context, true, 32).unwrap()
+    let result = boxed.infer(drop, context, ghost, 32).unwrap()
     assert(result == 12 && boxed.term(result) == core.Term.I64, "Drop retains the original signed tail type")
     assert_spent(&boxed, "Drop checks the boxed owner and tail in five ticks")
 
@@ -793,7 +841,7 @@ fn boxed_drop_inference() {
     let tail = flat.add(core.Term.Integer(-3), span).unwrap()
     let invalid = flat.add(core.Term.Drop(0, 4, tail), span).unwrap()
     spend(&flat, 999996)
-    assert(match flat.infer(invalid, context, true, 32) {
+    assert(match flat.infer(invalid, context, ghost, 32) {
         Err(e) => e.msg == "core: drop frees heap data", _ => false
     }, "Drop rejects a flat family before inferring the owner")
     assert(flat.node_count() == 12, "the flat-family rejection appends no graph row")
@@ -2067,11 +2115,14 @@ fn main() -> i32 {
     subtract_bound_exhaustion()
     code_subtraction_evidence()
     conditional_inference()
-    refinement_inference()
+    refinement_inference(true)
+    refinement_inference(false)
     pack_evidence_exhaustion()
     proof_irrelevance_under_type_family()
     refinement_projection()
-    transport_evidence_exhaustion()
+    code_refinement_modes()
+    transport_evidence_exhaustion(true)
+    transport_evidence_exhaustion(false)
     offset_proof_inference()
     transitive_proof_inference()
     absurd_inference()
@@ -2097,7 +2148,8 @@ fn main() -> i32 {
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)
     dependent_constructor_inference()
-    boxed_drop_inference()
+    boxed_drop_inference(true)
+    boxed_drop_inference(false)
     declaration_annotation_inference()
     ghost_definition_body_checking()
     code_local_inference()

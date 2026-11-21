@@ -4,6 +4,7 @@ import Jihoo.NativeCoreGhostLendInference
 import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodeScalarInference
+import Jihoo.NativeLoanGhostInputMode
 
 /-! Scalar operands, runtime function bodies and both application
 positions call the same recursive code visitor. The ghost visitor is
@@ -15,6 +16,9 @@ open NativeCoreTransformExact (State)
 open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (GraphBinding ContextRep Infer Visit Inferred InferSound RetainedComparisons
+  inferDrop inferDrop_progress inferDrop_modeRefines
+  inferPackWithEvidence inferPackWithEvidence_progress inferPackWithEvidence_modeRefines
+  inferRefinementProjection inferRefinementProjection_progress inferRefinementProjection_modeRefines
   conditionOp inferConditional inferConditional_progress inferConditional_modeRefines
   inferSubtractWithProof inferSubtractWithProof_progress inferSubtractWithProof_modeRefines
   inferAlloc inferAlloc_progress inferAlloc_modeRefines
@@ -25,6 +29,9 @@ open NativeCoreCodeScalarInference (enter enter_progress enter_success arithmeti
   arithmetic_refinesMode strict strict_progress strict_refinesMode)
 open NativeCoreBufferRelease (ModeSound inferFree inferFree_progress)
 open NativeCoreCodeLeaseLookup (Snapshot FramesRep)
+
+private def familyShape (env : Environment) (family : Nat) : Option (Nat × Bool) :=
+  env.families[family]?.map fun entry => (entry.declaration.arity,entry.declaration.data)
 
 abbrev GhostAt := Nat → List GraphBinding → Infer
 
@@ -48,6 +55,12 @@ def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         inferStoreWithProof recur (ghost depth bindings) (normal depth) limit depth entered buffer index value proof
     | some (.node .index [subject,index,proof]) => enter limit (depth+1) state root fun entered =>
         inferIndexWithProof recur (ghost depth bindings) (normal depth) limit depth entered subject index proof
+    | some (.node .pack [predicate,word,proof]) => enter limit (depth+1) state root fun entered =>
+        inferPackWithEvidence recur (ghost depth bindings) (normal depth) limit depth entered predicate word proof
+    | some (.node .witness [subject]) => enter limit (depth+1) state root fun entered =>
+        inferRefinementProjection recur (normal depth) entered false subject
+    | some (.node .proof [subject]) => enter limit (depth+1) state root fun entered =>
+        inferRefinementProjection (ghost depth bindings) (normal depth) entered true subject
     | some (.node .borrow [owner]) => enter limit (depth+1) state root fun entered =>
         NativeCoreCodeBorrow.run boxed (ghost depth bindings) (normal depth)
           limit depth bindings.length entered snapshots root owner
@@ -63,6 +76,8 @@ def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
     | some (.node .ifEq [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
         inferConditional recur (fun assumption => runWithLoans normal ghost env isData boxed limit snapshots depth
           (⟨assumption,true⟩ :: bindings) false) (normal depth) limit depth entered true left right yes no
+    | some (.node (.drop family) [owner,tail]) => enter limit (depth+1) state root fun entered =>
+        inferDrop recur (normal depth) boxed (familyShape env) entered root family owner tail
     | some (.node .free [buffer,tail]) => enter limit (depth+1) state root fun entered =>
         inferFree recur (normal depth) entered buffer tail
     | some (.node (.lam erased) [domain,body]) => enter limit (depth+1) state root fun entered =>
@@ -75,6 +90,9 @@ def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
         let argumentInfer := fun flag => if flag then erased else recur
         NativeCoreCodeApplicationFinalization.run callee argumentInfer erased normal env boxed
           limit depth entered root function argument head
+    | some (.node op _) =>
+        if LoanTyping.GhostInputMode.eligible op then ghost (depth+1) bindings state root
+        else NativeCoreCodeHeadInference.run limit (depth+1) bindings state root
     | _ => NativeCoreCodeHeadInference.run limit (depth+1) bindings state root
 
 theorem runWithLoans_progress
@@ -97,6 +115,12 @@ theorem runWithLoans_progress
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferIndexWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferPackWithEvidence_progress (fun _ _ => ih)
+        (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferRefinementProjection_progress (fun _ _ => ih)
+        (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferRefinementProjection_progress (ghostProgress depth bindings)
+        (normalProgress depth) inside)
     · exact enter_progress (fun _ inside =>
         NativeCoreCodeBorrow.run_progress (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => NativeCoreGhostLendInference.runCode_progress
@@ -106,6 +130,7 @@ theorem runWithLoans_progress
         (fun _ _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
         (fun _ _ _ => ih) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => inferDrop_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferFree_progress (fun _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside =>
         NativeCoreCodeLambda.run_progress (ghostProgress depth bindings) (fun _ _ => ih) (normalProgress depth) inside)
@@ -116,6 +141,9 @@ theorem runWithLoans_progress
       cases mode
       · exact fun _ _ => ih
       · exact ghostProgress depth bindings
+    · split
+      · exact ghostProgress (depth+1) bindings _ _ room
+      · exact NativeCoreCodeHeadInference.run_progress
     · exact NativeCoreCodeHeadInference.run_progress
 
 private theorem headSound (wf : UnifiedProgram.EnvWellFormed env)
@@ -156,6 +184,11 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
     have childCost : ∀ state root, state.steps ≤ limit → Progress limit state (recur state root) :=
       fun _ _ inside => runWithLoans_progress ghostProgress normalProgress inside
     have modeSound : ModeSound env loans start ctx limit false recur := ih onStart context frames
+    have erasedSound : ModeSound env loans start ctx limit true (ghost depth bindings) := by
+      intro _ _ _ _ _ held cost represented succeeded finalPrefix comparisons
+      obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onStart context depth held cost
+        represented succeeded finalPrefix comparisons
+      exact ⟨kept,safe,type,annotation,typed.ghost loans⟩
     unfold runWithLoans at success ambient ⊢
     cases source with
     | var read =>
@@ -164,7 +197,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
-      case arith | uadd | alloc | strict | free | app =>
+      case arith | uadd | alloc | strict | drop | free | app =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
         cases children with
@@ -179,6 +212,10 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
             | obtain ⟨kept,safe,typed⟩ := strict_refinesMode (state := {state with steps := state.steps+1})
                 modeSound childCost onBase inside first second success ambient retained
               exact ⟨kept,safe,typed⟩
+            | obtain ⟨kept,backward,typed⟩ := inferDrop_modeRefines (state := {state with steps := state.steps+1})
+                boxedMetadata (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside
+                first second success ambient retained
+              exact ⟨kept,backward,typed⟩
             | obtain ⟨kept,backward,typed⟩ := NativeCoreBufferRelease.inferFree_refines
                 (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
                 modeSound childCost onBase inside first second success ambient retained
@@ -204,10 +241,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                 intro mode
                 cases mode
                 · exact modeSound
-                · intro _ _ _ _ _ held cost represented succeeded finalPrefix comparisons
-                  obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onStart context depth held cost
-                    represented succeeded finalPrefix comparisons
-                  exact ⟨kept,safe,type,annotation,typed.ghost loans⟩
+                · exact erasedSound
               have operandProgress : ∀ (mode : Bool) state root, state.steps ≤ limit →
                   Progress limit state ((if mode then erased else recur) state root) := by
                 intro mode
@@ -220,7 +254,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
-      case usub | index | lend =>
+      case usub | index | pack | lend =>
         have length : refs.length = 3 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩ <;> simp at length
         cases children with
@@ -244,6 +278,11 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                   modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
                   onBase inside left right proof success ambient retained
                 exact ⟨kept,safe,typed⟩
+              | obtain ⟨kept,safe,typed⟩ := inferPackWithEvidence_modeRefines
+                  (state := {state with steps := state.steps+1}) (normalLocal depth) (normalProgress depth)
+                  modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
+                  onBase inside left right proof success ambient retained
+                exact ⟨kept,safe,typed⟩
               | let entered := {state with steps := state.steps+1}
                 let visitCode := fun saved => runWithLoans normal ghost env isData boxed limit saved depth bindings false
                 have codeSound : ∀ {arena saved active}, Prefix start arena →
@@ -258,6 +297,25 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                   onBase inside (frames.frame onBase) left right proof success ambient retained
                 exact ⟨kept,safe,type,represented,by
                   simpa only [Term.lend,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
+      case witness | proof =>
+        have length : refs.length = 1 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
+        cases children with
+        | cons subject rest =>
+          cases rest
+          dsimp only at success ambient ⊢
+          obtain ⟨entered,inside⟩ := enter_success success
+          rw [entered] at success ambient ⊢
+          first
+          | obtain ⟨kept,safe,type,represented,typed⟩ := inferRefinementProjection_modeRefines
+              (state := {state with steps := state.steps+1}) (mode := false) (evidence := false)
+              (normalLocal depth) (normalProgress depth) modeSound childCost onBase inside subject success ambient retained
+            exact ⟨kept,safe,type,represented,typed⟩
+          | obtain ⟨kept,safe,type,represented,typed⟩ := inferRefinementProjection_modeRefines
+              (state := {state with steps := state.steps+1}) (mode := false) (evidence := true)
+              (normalLocal depth) (normalProgress depth) erasedSound (ghostProgress depth bindings)
+              onBase inside subject success ambient retained
+            exact ⟨kept,safe,type,represented,typed⟩
       case borrow =>
         have length : refs.length = 1 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
@@ -383,8 +441,13 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
               (.refl _) inside domainRep bodyRep success ambient retained
             exact ⟨kept,safe,_,represented,by simpa only [Term.lam,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       all_goals
-        exact headSound wf context onBase room (.node read arity children)
-          success ambient retained
+        simp only [LoanTyping.GhostInputMode.eligible,Bool.false_eq_true,ite_false,ite_true] at success ambient ⊢
+        first
+        | exact headSound wf context onBase room (.node read arity children) success ambient retained
+        | obtain ⟨kept,safe,type,annotation,typed⟩ := ghostSound onStart context (depth+1) onBase room
+            (.node read arity children) success ambient retained
+          exact ⟨kept,safe,type,annotation,
+            LoanTyping.GhostInputMode.recheck typed (LoanTyping.GhostInputMode.Head.expanded rfl)⟩
 
 abbrev run (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
     (isData boxed : Nat → Bool) (limit : Nat) : Nat → List GraphBinding → Bool → Infer :=
@@ -601,5 +664,76 @@ theorem generic_lend_matches_native_code :
       short.state.steps = 126 ∧ short.state.arena = full.state.arena ∧
       short.result = .error (.tick (.stepLimit 8)) := by
   cbv
+
+private def refinementInput : Arena := #[.node .u64 [],.var 0,.node .eq [1,1],
+  .node (.lam false) [0,2],.node .refine [3],.node (.natural 7) [],.node .refl [5],.node .pack [3,5,6],.var 0]
+
+private def checkRefinement (arena : Arena) (limit root : Nat)
+    (bindings : List NativeCoreGhostSpineInference.GraphBinding) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  run normal (NativeCoreGhostSpineInference.runWith normal [] 0 limit)
+    empty (fun _ => false) (fun _ => false) limit 24 bindings false ⟨arena,0⟩ root
+
+set_option maxRecDepth 4096 in
+/-- CODE Pack visits the word, and the two projections select different
+modes for the same written subject. -/
+theorem runtime_refinement_modes_match_native :
+    let packed := checkRefinement refinementInput 54 7 [⟨4,false⟩]
+    let read := checkRefinement (refinementInput.push (.node .witness [7])) 61 9 [⟨4,false⟩]
+    let witness := refinementInput.push (.node .witness [8])
+    let denied := checkRefinement witness 2 9 [⟨4,true⟩]
+    let inspected := checkRefinement (refinementInput.push (.node .proof [8])) 14 9 [⟨4,true⟩]
+    packed.state.steps = 54 ∧ packed.state.arena.size = 24 ∧
+      packed.result.map Inferred.typeRoot = .ok 23 ∧ packed.state.arena[23]? = some (.node .refine [3]) ∧
+    read.state.steps = 61 ∧ read.state.arena.size = 26 ∧
+      read.result.map Inferred.typeRoot = .ok 25 ∧ read.state.arena[25]? = some (.node .u64 []) ∧
+    denied = ⟨⟨witness,2⟩,.error (.outsideFragment 8)⟩ ∧
+    inspected.state.steps = 14 ∧ inspected.state.arena.size = 12 ∧
+      inspected.result.map Inferred.typeRoot = .ok 11 ∧ inspected.state.arena[10]? = some (.node .witness [8]) ∧
+      inspected.state.arena[11]? = some (.node .app [3,10]) := by cbv
+
+private def dropInput (recursive : Bool) : NativeFamilyWire.Snapshot where
+  definitions := []
+  families := [⟨true,0,0,0,[1,3]⟩]
+  arena := #[.node (.natural 0) [],.node (.ind 0 0) [],.node .u64 [],
+    .node (.pi false) [if recursive then 1 else 2,1],.var 0,.node .borrow [4],.node .deref [5],
+    .node .u64 [],.node .u64 [],.node .u64 [],.node (.integer (-3)) [],.node (.drop 0) [4,10]]
+
+private def checkDrop (recursive : Bool) (limit : Nat) : Outcome Inferred :=
+  let snapshot := dropInput recursive
+  let checked : Option Environment := do
+    let (definitions,families) ← NativeFamilyWire.decodeProgram snapshot
+    LoanTyping.MixedProgram.checkProgram 64 128 definitions (families.map NativeLoanMixedAdmission.declaration)
+  let env := checked.getD empty
+  let normal := NativeCoreExpandedFamilies.raw env snapshot.families [] 0 limit
+  run normal (NativeCoreGhostSpineInference.runWith normal [] 0 limit) env
+    (NativeCoreGhostSort.isDataAt env) (NativeCoreGhostReferenceTypes.isBoxedAt env)
+    limit 32 [⟨1,false⟩] false ⟨snapshot.arena,0⟩ 11
+
+/-- Boxed Drop visits the original owner and code tail. A flat family is
+rejected at the first visit, before the owner can allocate any rows. -/
+theorem boxed_drop_matches_native_code :
+    (let released := checkDrop true 5
+     released.state.steps = 5 ∧ released.result.map Inferred.typeRoot = .ok 12 ∧
+       released.state.arena[12]? = some (.node .i64 [])) ∧
+    checkDrop false 1 = ⟨⟨(dropInput false).arena,1⟩,.error (.outsideFragment 11)⟩ := by cbv
+
+private def formationInput : Arena :=
+  (refinementInput.extract 0 5).push (.node (.universe 0) [])
+
+private def transportInput : Arena := (refinementInput.extract 0 4) ++
+  #[.node (.natural 7) [],.node .refl [4],.node .transport [3,5,5],.node .eq [4,4]]
+
+set_option maxRecDepth 4096 in
+/-- Formation and Transport start their ordinary ghost entry once, with
+the same native tick and graph append order in CODE. -/
+theorem formation_and_transport_share_ghost_visits :
+    let formed := checkRefinement formationInput 24 4 []
+    let stopped := checkRefinement transportInput 32 6 []
+    formed.state.steps = 24 ∧ formed.state.arena.size = 14 ∧
+      formed.result.map Inferred.typeRoot = .ok 13 ∧ formed.state.arena[13]? = some (.node (.universe 0) []) ∧
+    stopped.state.steps = 33 ∧ stopped.state.arena.size = 19 ∧
+      stopped.state.arena[17]? = some (.node .eq [4,4]) ∧ stopped.state.arena[18]? = some (.node .app [3,4]) ∧
+      stopped.result = .error (.tick (.stepLimit 5)) := by cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples

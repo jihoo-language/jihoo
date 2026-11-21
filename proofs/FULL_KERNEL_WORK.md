@@ -4971,3 +4971,24 @@ while retaining order at the written type. A mixed declaration with a
 Strict prefix inside a word operand now has its original bound proved
 at the projected value. The focused check passed 408 tasks and five
 declaration audits.
+
+### Refinement modes, boxed release, and formed annotation roots
+
+Recursive CODE now visits the Pack word in CODE and checks its original
+predicate and evidence in ghost mode. Witness visits its subject in CODE.
+Proof visits the same subject in ghost mode and retains the dependent
+type at the original witness reference. Formation and evidence heads
+whose premises are all ghost use the original ghost traversal. The proof
+replays those premises at the caller's loan stack and outer mode.
+
+Boxed Drop checks the visible layout before visiting its owner. Lean and
+native Core agree on 5 ticks for boxed release and on the first-tick
+rejection of a flat family. The exact refinement fixtures also match:
+54 ticks for Pack, 61 for Witness of that Pack, 14 for Proof through an
+erased slot, and 2 for the rejected Witness of the same slot.
+
+Successful local and visible-global ghost visits now connect their
+actual shifted result roots to the original checked formation. This
+supplies the subject-formation premise for View on those roots. The
+focused check passed 493 tasks, fifteen declaration audits, and the
+expanded native schedule.
