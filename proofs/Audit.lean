@@ -11130,3 +11130,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.CheckedSignatureFormation.source_signature_formed
 #print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorFields.runByErasure_refines_formed
 #print axioms Jihoo.NativeKernel.NativeCoreGhostConstructorInference.constructorAt_annotation_formed
+
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.ProofLoop.lower_lift
+#print axioms Jihoo.NativeKernel.Environment.LoanTyping.FoldUnrolling.unroll_preserves

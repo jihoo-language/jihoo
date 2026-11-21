@@ -5169,3 +5169,14 @@ observed normalization. The result holds at the original graph type root
 selected from the declared constructor table. The focused build passed
 480 tasks and four declaration audits, including the existing native
 constructor schedule examples in Lean.
+
+### Typed prefixes of a finite Fold
+
+For a checked Fold and a count that converts to an in-range U64 numeral,
+every finite unrolled prefix has the original requested accumulator type
+in ghost mode. At each step the proof builds the actual bound evidence
+and instantiates the three callback binders. The theorem covers signed
+and owned accumulators, including an open dependent accumulator type.
+Fold and Loop share the substitution lemma for removing an outer binder
+beneath the remaining callback binders. The focused build passed 286
+tasks and two declaration audits.

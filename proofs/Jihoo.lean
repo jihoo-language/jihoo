@@ -1158,6 +1158,7 @@ import Jihoo.NativeBindingMachineMutableCompatibility
 import Jihoo.NativeLoanCodeBetaBoundary
 import Jihoo.NativeLoanCodeRenaming
 import Jihoo.NativeLoanProofLoopUnrolling
+import Jihoo.NativeLoanFoldUnrolling
 import Jihoo.NativeLoanProofNormalization
 import Jihoo.NativeLoanProofLoopObservation
 import Jihoo.NativeLoanProofObservation

@@ -38,7 +38,8 @@ private theorem iteration_view (typed : HasType env loans ctx mode term type) :
   case dataElim => split <;> trivial
   case convert typed converted ih => exact ih.convert converted
 
-private theorem lower_lift (term argument : Term) (depth : Nat) :
+/-- Substitution beneath a lifted prefix removes the extra outer shift. -/
+theorem lower_lift (term argument : Term) (depth : Nat) :
     (term.rename (fun index => index+(depth+1))).subst (liftSub depth (single argument)) =
       term.rename (fun index => index+depth) := by
   have raised : term.rename (fun index => index+(depth+1)) =
