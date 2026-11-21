@@ -11018,3 +11018,9 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReader_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReturn_progress
 #print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReturn_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runCanonicalReturn_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runCanonicalReturn_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runCanonicalReturn_native
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runDependentCode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runDependentCode_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.dependent_lend_matches_native_code

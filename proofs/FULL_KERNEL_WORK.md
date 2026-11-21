@@ -4910,3 +4910,17 @@ canonical variable or rigid nonfunction head supplies the positive source
 continuation policy with the same native graph and cost. These phase
 theorems supply the pieces for recursive Lend inference. The focused
 build passed 339 tasks and eleven declaration audits.
+
+### Recursive dependent CODE Lend
+
+The recursive CODE entry now performs the named-owner Lend path from
+the original owner visit to the final continuation result. The live
+callback builder supplies the reader and restored continuation. The
+recursive proof passes the new snapshot to the reader alone and derives
+the written source Lend rule at the lowered result type. The supported
+continuation heads use the canonical source policy.
+
+Lean and native Core both return row 8 after 112 ticks with 37 rows.
+With a budget of 111, the final head visit fails and all 37 earlier
+rows remain. The focused check passed 491 tasks, six declaration
+audits, and the native schedule.

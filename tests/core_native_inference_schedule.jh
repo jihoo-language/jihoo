@@ -1675,6 +1675,15 @@ fn dependent_lend_callbacks() {
     let typed = code.infer(13, scope.as_slice(), false, 32).unwrap()
     assert(typed == 8 && code.term(typed) == core.Term.I64 && code.node_count() == 37,
         "the active CODE reader borrows the named owner and returns the original signed type")
+    var final_short = dependent_lend_fixture()
+    spend(&final_short, budget-111)
+    assert(match final_short.infer(13, scope.as_slice(), false, 32) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    } && final_short.node_count() == code.node_count(),
+        "the last tick checks the already lowered signed return")
+    for row in 0..code.node_count() {
+        assert(final_short.term(row as u32) == code.term(row as u32), "the final gate appends no row")
+    }
     assert(match code.infer(16, scope.as_slice(), false, 31) {
         Err(e) => e.msg == "core: a borrow of a value is evidence only", _ => false
     } && code.node_count() == 37, "the same specialized reader is rejected after its scope exits")

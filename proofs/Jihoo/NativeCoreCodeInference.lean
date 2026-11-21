@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreCodeBorrow
 import Jihoo.NativeCoreDependentLendCallbacks
+import Jihoo.NativeCoreGhostLendInference
 import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodeScalarInference
@@ -50,6 +51,10 @@ def runWithLoans (normal : Nat → Visit) (ghost : GhostAt) (env : Environment)
     | some (.node .borrow [owner]) => enter limit (depth+1) state root fun entered =>
         NativeCoreCodeBorrow.run boxed (ghost depth bindings) (normal depth)
           limit depth bindings.length entered snapshots root owner
+    | some (.node .lend [owner,reader,continuation]) => enter limit (depth+1) state root fun entered =>
+        NativeCoreGhostLendInference.runDependentCode (ghost depth bindings)
+          (fun saved => runWithLoans normal ghost env isData boxed limit saved depth bindings false)
+          (normal depth) isData boxed limit depth bindings.length entered snapshots owner reader continuation
     | some (.node .strict [first,last]) => enter limit (depth+1) state root fun entered =>
         strict recur entered first last
     | some (.node .ifLt [left,right,yes,no]) => enter limit (depth+1) state root fun entered =>
@@ -77,7 +82,7 @@ theorem runWithLoans_progress
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
     Progress limit state (runWithLoans normal ghost env isData boxed limit snapshots depth bindings head state root) := by
-  induction depth generalizing bindings head state root with
+  induction depth generalizing snapshots bindings head state root with
   | zero => exact NativeCoreCodeHeadInference.run_progress
   | succ depth ih =>
     unfold runWithLoans
@@ -94,6 +99,8 @@ theorem runWithLoans_progress
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside =>
         NativeCoreCodeBorrow.run_progress (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => NativeCoreGhostLendInference.runDependentCode_progress
+        (ghostProgress depth bindings) (fun _ _ _ => ih) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => strict_progress (fun _ _ => ih) inside)
     · exact enter_progress (fun _ inside => inferConditional_progress (fun _ _ => ih)
         (fun _ _ _ => ih) (normalProgress depth) inside)
@@ -135,7 +142,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
     (onStart : Prefix base start) (context : ContextRep env start bindings ctx)
     (frames : FramesRep start snapshots loans) :
     ModeSound env loans start ctx limit false (runWithLoans normal ghost env isData boxed limit snapshots depth bindings head) := by
-  induction depth generalizing head start bindings ctx with
+  induction depth generalizing snapshots loans head start bindings ctx with
   | zero => exact headSound wf context
   | succ depth ih =>
     intro state root term answer final onBase room source success ambient retained
@@ -213,7 +220,7 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                 operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
                 (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
-      case usub | index =>
+      case usub | index | lend =>
         have length : refs.length = 3 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩ <;> simp at length
         cases children with
@@ -237,6 +244,20 @@ theorem runWithLoans_sound (wf : UnifiedProgram.EnvWellFormed env)
                   modeSound childCost (ghostSound onStart context depth) (ghostProgress depth bindings)
                   onBase inside left right proof success ambient retained
                 exact ⟨kept,safe,typed⟩
+              | let entered := {state with steps := state.steps+1}
+                let visitCode := fun saved => runWithLoans normal ghost env isData boxed limit saved depth bindings false
+                have codeSound : ∀ {arena saved active}, Prefix start arena →
+                    FramesRep arena saved active → ModeSound env active arena ctx limit false (visitCode saved) := by
+                  intro arena saved active later stack
+                  exact ih (onStart.trans later) (context.frame later) stack
+                rw [context.length_eq] at success ambient ⊢
+                obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreGhostLendInference.runDependentCode_refines
+                  (state := entered) wf metadata boxedMetadata (normalLocal depth) (normalProgress depth)
+                  (ghostSound onStart context depth) (ghostProgress depth bindings) codeSound
+                  (fun _ _ _ room => runWithLoans_progress ghostProgress normalProgress room)
+                  onBase inside (frames.frame onBase) left right proof success ambient retained
+                exact ⟨kept,safe,type,represented,by
+                  simpa only [Term.lend,EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       case borrow =>
         have length : refs.length = 1 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
@@ -545,6 +566,24 @@ theorem prepared_reader_borrow_matches_native :
       .node .u64 [],.node .u64 [],.node .u64 [],.node .lt [4,1],.node .i64 []],38⟩ ∧
       active.result.map Inferred.typeRoot = .ok 29 ∧
       outside = ⟨⟨preparedReaderArena,2⟩,.error (.outsideFragment 15)⟩ := by
+  cbv
+
+private def checkLend (limit : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  run normal (NativeCoreGhostSpineInference.runWith normal [] 0 limit)
+    empty (fun _ => false) (fun _ => false) limit 32 [⟨2,false⟩] false
+    ⟨lendCallbackInput.extract 0 14,0⟩ 13
+
+set_option maxRecDepth 4096 in
+/-- Recursive CODE Lend retains the signed result through the final
+native continuation gate. Exhaustion there retains every earlier row. -/
+theorem dependent_lend_matches_native_code :
+    let full := checkLend 112
+    let short := checkLend 111
+    full.state.steps = 112 ∧ full.state.arena.size = 37 ∧
+      full.result.map Inferred.typeRoot = .ok 8 ∧ full.state.arena[8]? = some (.node .i64 []) ∧
+      short.state.steps = 112 ∧ short.state.arena = full.state.arena ∧
+      short.result = .error (.tick (.stepLimit 8)) := by
   cbv
 
 end Jihoo.NativeKernel.NativeCoreCodeInference.Examples
