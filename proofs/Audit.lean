@@ -11007,3 +11007,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithLoans_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithLoans_sound
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.prepared_reader_borrow_matches_native
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.ownerOnce_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.openedOwnerOnce_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.checkResult_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.checkResult_refines
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.checkCanonical_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.checkCanonical_native
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLendGates.checkCanonical_policy
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReader_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReader_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReturn_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostLendInference.runScopedReturn_refines

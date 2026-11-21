@@ -4894,3 +4894,19 @@ and Index visits. The full native Lend takes 112 ticks and returns its
 written signed type. Both visitors reject the reader after its scope exits
 in two ticks with zero appended rows. The focused build passed 490 tasks,
 seven declaration audits, and the native schedule.
+
+### Scoped reader and continuation checks for dependent CODE Lend
+
+The prepared reader checks its written domain against the owner's actual
+reference type before an extended snapshot list goes to the CODE visit.
+The typing proof obtains the extended loan stack from the represented
+owner and proves the normalized reader result outlives the scope.
+
+The continuation phase exposes its checked product, counts the returned
+owner at the slot lifted by the restored result binder, lowers the result,
+and runs the final native head check. The proof retains the exact result
+root and the one-use observation from the metered demand traversal. A
+canonical variable or rigid nonfunction head supplies the positive source
+continuation policy with the same native graph and cost. These phase
+theorems supply the pieces for recursive Lend inference. The focused
+build passed 339 tasks and eleven declaration audits.
