@@ -1212,6 +1212,62 @@ fn recursive_code_inference() {
     assert_spent(&partial, "the partial call uses 44 ticks")
 }
 
+fn boxed_elimination_fixture() -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let two = c.add(core.Term.Natural(2), span).unwrap()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let bound = c.add(core.Term.Var(0), span).unwrap()
+    var literal_indices = Vec(u32).new()
+    literal_indices.push(two)
+    let constant_type = c.add(core.Term.Ind(0, literal_indices), span).unwrap()
+    let step_type = c.add(core.Term.Pi(false, constant_type, constant_type), span).unwrap()
+    let base = c.add(core.Term.Con(0, 0, Vec(u32).new()), span).unwrap()
+    var bound_indices = Vec(u32).new()
+    bound_indices.push(bound)
+    let bound_type = c.add(core.Term.Ind(0, bound_indices), span).unwrap()
+    let inner = c.add(core.Term.Lam(false, bound_type, word), span).unwrap()
+    let motive = c.add(core.Term.Lam(false, word, inner), span).unwrap()
+    let answer = c.add(core.Term.Natural(0), span).unwrap()
+    let induction_result = c.add(core.Term.Lam(false, word, answer), span).unwrap()
+    let induction_step = c.add(core.Term.Lam(true, constant_type, induction_result), span).unwrap()
+    let case_step = c.add(core.Term.Lam(false, constant_type, answer), span).unwrap()
+    var induction_cases = Vec(u32).new()
+    induction_cases.push(answer)
+    induction_cases.push(induction_step)
+    c.add(core.Term.Elim(0, motive, induction_cases, base), span).unwrap()
+    var ordinary_cases = Vec(u32).new()
+    ordinary_cases.push(answer)
+    ordinary_cases.push(case_step)
+    c.add(core.Term.Case(0, motive, ordinary_cases, base), span).unwrap()
+    c.push_family(core.Family { name: "BoxedAtTwo".to_string(), data: true, params: 0, arity: 1,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: constant_type })
+    c.push_constructor(0, core.Constructor { name: "Step".to_string(), ty: step_type })
+    c.check().unwrap()
+    c
+}
+
+fn boxed_ghost_elimination() {
+    var baseline = boxed_elimination_fixture()
+    assert(baseline.node_count() == 21, "boxed example's checked constructor rows")
+    let budget = remaining_ticks(&baseline)
+    var induction = boxed_elimination_fixture()
+    spend(&induction, budget-174)
+    let induction_result = induction.infer(13, [], true, 32).unwrap()
+    assert(induction_result == 62 && induction.node_count() == 63 &&
+        induction.term(61) == core.Term.App(8, 0) &&
+        induction.term(62) == core.Term.App(61, 5), "boxed induction uses the original motive and scrutinee")
+    assert_spent(&induction, "boxed induction uses 174 ticks")
+    var analysis = boxed_elimination_fixture()
+    spend(&analysis, budget-115)
+    let analysis_result = analysis.infer(14, [], true, 32).unwrap()
+    assert(analysis_result == 49 && analysis.node_count() == 50 &&
+        analysis.term(48) == core.Term.App(8, 0) &&
+        analysis.term(49) == core.Term.App(48, 5), "one-level matching uses the original motive and scrutinee")
+    assert_spent(&analysis, "one-level matching uses 115 ticks")
+}
+
 fn open_sum_fixture() -> core.Core {
     var c = core.Core.new()
     let span = diag.Span.nowhere()
@@ -1785,6 +1841,7 @@ fn main() -> i32 {
     proposition_case_telescope()
     recursive_data_case_type()
     recursive_code_inference()
+    boxed_ghost_elimination()
     data_case_parameter_telescope()
     proposition_elimination_inference()
     indexed_data_elimination()

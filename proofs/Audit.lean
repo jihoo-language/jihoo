@@ -10886,3 +10886,6 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreProductSpine.folded_spineLength
 #print axioms Jihoo.NativeKernel.NativeCoreDataCaseAlignment.expand_data_case_type
 #print axioms Jihoo.NativeKernel.NativeCoreDataRecursiveFieldAlignment.run_matches_checked_case
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.runWithMode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataCases.runWithMode_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.boxed_induction_and_case_match_native

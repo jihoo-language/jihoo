@@ -4559,3 +4559,15 @@ share the bound on the number of rows in a represented product spine,
 so the case proof also works without an arena-wide ordering premise.
 It preserves backwardness when the arena already has that property.
 The focused build passed 443 jobs.
+
+### Boxed induction through the recursive ghost visitor
+
+The boxed data path checks every branch against the authenticated
+recursive case type, including the hypothesis for each recursive field.
+One-level Case uses the written field telescope alone. Both paths
+return the motive at the original scrutinee and its recovered index.
+The source refinement uses the normalized scrutinee's declared arity
+and, for recursive branches, the word typing of its parameters.
+Native Core and Lean match 174 ticks and 63 rows for induction,
+and 115 ticks and 50 rows for one-level analysis. The focused build
+passed 468 jobs.

@@ -4,7 +4,7 @@ import Jihoo.NativeCoreGhostPropElimination
 /-! The two elimination heads use the same family visibility test. An
 Elim on a proposition reads the stored constructor signature table, a
 flat data Elim uses the written data cases, and a boxed Case requests the
-one-level branch types. The boxed recursive branch is handled separately. -/
+one-level branch types. A boxed data Elim adds one hypothesis per recursive field. -/
 namespace Jihoo.NativeKernel.NativeCoreGhostFamilyElimination
 
 open NativeArena NativeFamilyWire Environment
@@ -36,8 +36,7 @@ def run (visibleTable : FamilyTable) (infer : Infer) (normal : Visit) (limit dep
         NativeCoreGhostDataElimination.run infer normal limit depth state family motive subject root row.source branches
       else reject state root
     else if row.source.data then
-      if row.boxed then reject state root
-      else NativeCoreGhostDataElimination.run infer normal limit depth state family motive subject root row.source branches
+      NativeCoreGhostDataElimination.run infer normal limit depth state family motive subject root row.source branches row.boxed
     else
       NativeCoreGhostPropElimination.run infer normal limit depth state family row.source.arity motive subject root row.signatures branches
 
@@ -53,9 +52,7 @@ theorem run_progress
       · exact NativeCoreGhostDataElimination.run_progress childProgress normalProgress room
       · exact Progress.atState _ _
     · split
-      · split
-        · exact Progress.atState _ _
-        · exact NativeCoreGhostDataElimination.run_progress childProgress normalProgress room
+      · exact NativeCoreGhostDataElimination.run_progress childProgress normalProgress room
       · exact NativeCoreGhostPropElimination.run_progress childProgress normalProgress room
 
 /-- The graph metadata and signature table are justified by the original
@@ -88,6 +85,10 @@ theorem run_refines
     (branchReps : RepresentsList state.arena branches cases)
     (subjectArity : ∀ {entry count values}, env.families[family]? = some entry →
       LoanTyping.HasType env [] ctx true (expand env X) (.node (.ind family count) values) → count = entry.declaration.arity)
+    (subjectWords : ∀ {entry count indices}, analysis = false → entry.boxed = true →
+      env.families[family]? = some entry →
+      LoanTyping.HasType env [] ctx true (expand env X) (.node (.ind family count) indices) →
+      ∀ index ∈ indices, LoanTyping.HasType env [] ctx true index .u64)
     (success : (run visibleTable infer normal limit depth state analysis root family motive subject branches).result = .ok answer)
     (ambient : Prefix (run visibleTable infer normal limit depth state analysis root family motive subject branches).state.arena final)
     (retained : RetainedComparisons final answer) :
@@ -114,14 +115,14 @@ theorem run_refines
           (fun typed conversion => subjectArity found (typed.convert conversion)) success ambient retained
       | true =>
         simp only [dataRow,ite_true] at success ambient ⊢
-        cases boxedRow : row.boxed with
-        | true => simp [boxedRow,reject] at success
-        | false =>
-          simp only [boxedRow,Bool.false_eq_true,ite_false] at success ambient ⊢
-          exact NativeCoreGhostDataElimination.run_refines (analysis := false)
-            history inferSound normalSound childProgress normalProgress onBase room rows written dataRow found
-            (by intro impossible; cases impossible) (by simp [←boxed,boxedRow])
-            (fun typed => (subjectArity found typed).trans arity) motiveRep subjectRep branchReps success ambient retained
+        exact NativeCoreGhostDataElimination.run_refines (analysis := false)
+          history inferSound normalSound childProgress normalProgress onBase room rows written dataRow found
+          (by intro impossible; cases impossible) (by simp [boxed])
+          (fun typed => (subjectArity found typed).trans arity)
+          (by
+            intro recursing indices count typed
+            exact subjectWords rfl (boxed.symm.trans recursing) found typed)
+          motiveRep subjectRep branchReps success ambient retained
     · simp only [ite_true] at success ambient ⊢
       split at success
       · rename_i allowed
@@ -130,7 +131,8 @@ theorem run_refines
         exact NativeCoreGhostDataElimination.run_refines (analysis := true)
           history inferSound normalSound childProgress normalProgress onBase room rows written dataRow found
           (fun _ => boxed.symm.trans boxedRow) (by simp)
-          (fun typed => (subjectArity found typed).trans arity) motiveRep subjectRep branchReps success ambient retained
+          (fun typed => (subjectArity found typed).trans arity) (by intro impossible; cases impossible)
+          motiveRep subjectRep branchReps success ambient retained
       · cases success
 
 /-- In the arena the motive precedes the branch list, and the subject is

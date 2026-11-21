@@ -39,4 +39,39 @@ theorem indexed_motives_match_native :
     runFixture 200 false [] = ⟨⟨fixture false,1⟩,.error (.outsideFragment 17)⟩ := by
   exact ⟨by cbv,by cbv,by cbv⟩
 
+
+private def boxedRow : FamilyRoots := ⟨true,0,1,0,[3,4]⟩
+
+private def boxedFixture : Arena :=
+  #[.node (.natural 2) [],.node .u64 [],.var 0,.node (.ind 0 1) [0],.node (.pi false) [3,3],
+    .node (.con 0 0 0) [],.node (.ind 0 1) [2],.node (.lam false) [6,1],.node (.lam false) [1,7],
+    .node (.natural 0) [],.node (.lam false) [1,9],.node (.lam true) [3,10],
+    .node (.lam false) [3,9],.node (.elim 0 2) [8,9,11,5],.node (.caseOf 0 2) [8,9,12,5],
+    .node .u64 [],.node .u64 [],.node .u64 [],.node .u64 [],.node .u64 [],.node .u64 []]
+
+private def boxedRun (limit root : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [boxedRow] [] 0 limit
+  let visible : NativeCoreGhostFamilyElimination.FamilyTable := fun family =>
+    if family = 0 then some ⟨boxedRow,true,[]⟩ else none
+  let infer := NativeCoreGhostSpineInference.runWithFamilyElimination normal [] 0 limit (· == 0) (· == 0)
+    (fun family => if family = 0 then some (1,true) else none)
+    (NativeCoreGhostConstructorInference.constructorAt [boxedRow] 1) visible 32 []
+  infer ⟨boxedFixture,0⟩ root
+
+/-- Boxed induction checks a recursive field and its hypothesis, while
+one-level analysis checks only the original field. Both uses return the
+motive applied to the first scrutinee type's index and the original value. -/
+theorem boxed_induction_and_case_match_native :
+    (let induction := boxedRun 174 13
+     induction.state.steps = 174 ∧ induction.state.arena.size = 63 ∧
+       induction.result.map Inferred.typeRoot = .ok 62 ∧
+       induction.state.arena[61]? = some (.node .app [8,0]) ∧
+       induction.state.arena[62]? = some (.node .app [61,5])) ∧
+    (let analysis := boxedRun 115 14
+     analysis.state.steps = 115 ∧ analysis.state.arena.size = 50 ∧
+       analysis.result.map Inferred.typeRoot = .ok 49 ∧
+       analysis.state.arena[48]? = some (.node .app [8,0]) ∧
+       analysis.state.arena[49]? = some (.node .app [48,5])) := by
+  exact ⟨by cbv,by cbv⟩
+
 end Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples

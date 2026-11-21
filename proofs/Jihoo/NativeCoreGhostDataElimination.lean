@@ -18,7 +18,7 @@ open NativeCoreCaseStrict (append append_progress append_refines)
 open EnvironmentDelta (expand expandArgs)
 
 def run (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State) (family motive subject root : Nat)
-    (row : FamilyRoots) (branches : List Nat) : Outcome Inferred :=
+    (row : FamilyRoots) (branches : List Nat) (recursive : Bool := false) : Outcome Inferred :=
   if branches.length = row.constructors.length then
     (evidence infer normal state family subject).next fun scrutinized original =>
       let indices := original.2.2
@@ -26,8 +26,8 @@ def run (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State) (fa
       (infer scrutinized motive).next fun inferred motiveType =>
         (NativeCoreDataMotiveInference.run normal limit depth inferred family row.params row.arity
           motive motiveType.typeRoot parameters).next fun checkedMotive chosen =>
-          (NativeCoreGhostDataCases.run infer normal limit depth family motive root row parameters
-            branches 0 checkedMotive).next fun checkedCases compared =>
+          (NativeCoreGhostDataCases.runWithMode infer normal limit depth family motive root row parameters
+            recursive chosen.proof branches 0 checkedMotive).next fun checkedCases compared =>
             (infer checkedCases subject).next fun checkedSubject checked =>
               (appendApplications checkedSubject motive (indices.drop row.params)).next fun applied body =>
                 (append applied .app [body,subject]).next fun after selected =>
@@ -43,7 +43,7 @@ theorem run_progress
     (childProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (run infer normal limit depth state family motive subject root row branches) := by
+    Progress limit state (run infer normal limit depth state family motive subject root row branches recursive) := by
   unfold run
   split
   · apply next_progress (evidence_progress childProgress normalProgress room) room
@@ -52,7 +52,7 @@ theorem run_progress
     intro motiveType _ inferredRoom
     apply next_progress (NativeCoreDataMotiveInference.run_progress normalProgress inferredRoom) inferredRoom
     intro chosen _ motiveRoom
-    apply next_progress (NativeCoreGhostDataCases.run_progress childProgress normalProgress motiveRoom) motiveRoom
+    apply next_progress (NativeCoreGhostDataCases.runWithMode_progress childProgress normalProgress motiveRoom) motiveRoom
     intro _ _ casesRoom
     apply next_progress (childProgress _ _ casesRoom) casesRoom
     intro _ _ _
@@ -97,17 +97,19 @@ theorem run_refines
     (rows : RepresentsFamilies state.arena familyRows familyTerms) (rowFound : familyRows[family]? = some row)
     (data : row.data = true) (found : env.families[family]? = some entry)
     (analysisAllowed : analysis = true → entry.boxed = true)
-    (nonrecursive : (entry.boxed && !analysis) = false)
+    (recursionMatches : recursive = (entry.boxed && !analysis))
     (chosenWidth : ∀ {values count}, LoanTyping.HasType env [] ctx true (expand env X)
       (.node (.ind family count) values) → count = row.arity)
+    (wordIndices : recursive = true → ∀ {values count}, LoanTyping.HasType env [] ctx true (expand env X)
+      (.node (.ind family count) values) → ∀ value ∈ values, LoanTyping.HasType env [] ctx true value .u64)
     (motiveRep : Represents state.arena motive M) (subjectRep : Represents state.arena subject X)
     (branchesRep : RepresentsList state.arena branches cases)
-    (success : (run infer normal limit depth state family motive subject root row branches).result = .ok answer)
-    (ambient : Prefix (run infer normal limit depth state family motive subject root row branches).state.arena final)
+    (success : (run infer normal limit depth state family motive subject root row branches recursive).result = .ok answer)
+    (ambient : Prefix (run infer normal limit depth state family motive subject root row branches recursive).state.arena final)
     (retained : RetainedComparisons final answer) :
     Refines env state.arena ctx
       (.node (if analysis then .caseOf family cases.length else .elim family cases.length) (M :: (cases ++ [X])))
-      (run infer normal limit depth state family motive subject root row branches) answer := by
+      (run infer normal limit depth state family motive subject root row branches recursive) answer := by
   obtain ⟨bound,width⟩ := NativeCoreConstructorTelescopeAlignment.checked_family_widths history rows rowFound found
   unfold run at success ambient ⊢
   split at success
@@ -135,7 +137,8 @@ theorem run_refines
     let inferredMotive := infer first.state motive
     let checkedMotive := NativeCoreDataMotiveInference.run normal limit depth inferredMotive.state
       family row.params row.arity motive motiveType.typeRoot ps
-    let checkedCases := NativeCoreGhostDataCases.run infer normal limit depth family motive root row ps branches 0 checkedMotive.state
+    let checkedCases := NativeCoreGhostDataCases.runWithMode infer normal limit depth family motive root row ps
+      recursive chosen.proof branches 0 checkedMotive.state
     let checkedSubject := infer checkedCases.state subject
     let spine := appendApplications checkedSubject.state motive (indices.drop row.params)
     have firstCost := evidence_progress (state := state) (family := family) (subject := subject)
@@ -147,9 +150,9 @@ theorem run_refines
       (family := family) (params := row.params) (arity := row.arity) (motive := motive) (inferred := motiveType.typeRoot)
       (values := ps) normalProgress inferredRoom
     have casesRoom := motiveCheckCost.accepted inferredRoom chosen motiveCheck
-    have casesCost := NativeCoreGhostDataCases.run_progress (state := checkedMotive.state) (depth := depth)
+    have casesCost := NativeCoreGhostDataCases.runWithMode_progress (state := checkedMotive.state) (depth := depth)
       (family := family) (motive := motive) (root := root) (row := row) (parameters := ps) (branches := branches)
-      (constructor := 0) childProgress normalProgress casesRoom
+      (constructor := 0) (recursive := recursive) (proof := chosen.proof) childProgress normalProgress casesRoom
     have againRoom := casesCost.accepted casesRoom branchPairs branchesOk
     have againCost := childProgress checkedCases.state subject againRoom
     have spineCost := applications_progress (limit := limit) (state := checkedSubject.state)
@@ -181,10 +184,16 @@ theorem run_refines
         motiveTypeRep parameterRep count bound motiveCheck afterMotiveCheck
         (retained chosen.compared (by simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false,true_or,or_true]))
     have beforeCases := beforeMotiveCheck.trans motiveCheckKept
+    have wordParameters (recursing : recursive = true) :
+        ∀ parameter ∈ values.take row.params, LoanTyping.HasType env [] ctx true (expand env parameter) .u64 := by
+      intro parameter member
+      apply wordIndices recursing typedSubject
+      rw [EnvironmentDelta.expandArgs_map]
+      exact List.mem_map.mpr ⟨parameter,List.mem_of_mem_take member,rfl⟩
     obtain ⟨casesKept,casesBack,types,expectedTypes,typedCases⟩ :=
-      NativeCoreGhostDataCases.run_refines (proof := chosen.proof) history normalSound normalProgress inferSound childProgress
+      NativeCoreGhostDataCases.runWithMode_refines (proof := chosen.proof) history normalSound normalProgress inferSound childProgress
         (onBase.trans beforeCases) casesRoom (NativeCoreGhostDataCases.families_frame rows beforeCases) rowFound data found paramWidth
-        (motiveRep.frame beforeCases) (parameterRep.frame motiveCheckKept) (branchesRep.frame beforeCases)
+        (motiveRep.frame beforeCases) (parameterRep.frame motiveCheckKept) wordParameters (branchesRep.frame beforeCases)
         List.drop_zero (correct.trans width) branchesOk afterCases
         (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _
           (List.mem_append_right _ (List.mem_append_left _ member)))))
@@ -212,7 +221,7 @@ theorem run_refines
     have typed := LoanTyping.HasType.dataElim (analysis := analysis) (ghost := true)
       found (dataFamily.trans data) analysisAllowed indicesLength typedMotive
       (by simpa only [Bool.true_or] using typedSubject)
-      (by simpa only [dataCaseTypes,nonrecursive] using expectedTypes)
+      (by simpa only [dataCaseTypes,←recursionMatches] using expectedTypes)
       (by simpa only [Bool.true_or] using typedCases) (.inl (by simp))
     cases analysis <;> simpa only [Bool.false_eq_true,ite_false,ite_true,Term.app,EnvironmentDelta.expand_node_cons,
       expand,EnvironmentDelta.expandArgs_map,List.map_append,List.map_cons,List.map_nil,List.length_map,←paramWidth,
