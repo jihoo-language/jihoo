@@ -42,10 +42,10 @@ private theorem operand?_present
 operand observations. Erased or effect-only prefixes need no values. -/
 def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term) :
     (term : Term) → Option (PLift (ObservedEvidence env values term))
-  | .decide _ _ => some ⟨by simp only [ObservedEvidence]⟩
+  | .decide _ _ => some ⟨by simp only [ObservedEvidence,ObservedEvidenceUsing]⟩
   | .zeroLe a => (operand? env budget fuel values a).map fun observed =>
     ⟨by
-      simp only [ObservedEvidence]
+      simp only [ObservedEvidence,ObservedEvidenceUsing]
       exact observed.down⟩
   | .ltAdd a b c proof => do
     let first ← operand? env budget fuel values a
@@ -53,7 +53,7 @@ def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term
     let offset ← operand? env budget fuel values c
     let nested ← observations? env budget fuel values proof
     pure ⟨by
-      simp only [ObservedEvidence]
+      simp only [ObservedEvidence,ObservedEvidenceUsing]
       exact ⟨first.down,second.down,offset.down,nested.down⟩⟩
   | .ltCancel a b c proof => do
     let first ← operand? env budget fuel values a
@@ -61,7 +61,7 @@ def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term
     let offset ← operand? env budget fuel values c
     let nested ← observations? env budget fuel values proof
     pure ⟨by
-      simp only [ObservedEvidence]
+      simp only [ObservedEvidence,ObservedEvidenceUsing]
       exact ⟨first.down,second.down,offset.down,nested.down⟩⟩
   | .ltLe a b c first second => do
     let lower ← operand? env budget fuel values a
@@ -70,20 +70,20 @@ def observations? (env : Environment) (budget fuel : Nat) (values : Nat → Term
     let first ← observations? env budget fuel values first
     let second ← observations? env budget fuel values second
     pure ⟨by
-      simp only [ObservedEvidence]
+      simp only [ObservedEvidence,ObservedEvidenceUsing]
       exact ⟨lower.down,middle.down,upper.down,first.down,second.down⟩⟩
   | .strict _ rest => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values rest
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
   | .free _ rest => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values rest
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
   | .node (.drop _) [_,rest] => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values rest
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
   | .ifLt _ _ _ rest => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values rest
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
   | .ifEq _ _ _ rest => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values rest
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values rest
   | .absurd _ proof => by
-    simpa only [ObservedEvidence] using observations? env budget fuel values proof
+    simpa only [ObservedEvidence,ObservedEvidenceUsing] using observations? env budget fuel values proof
   | _ => none
 termination_by term => sizeOf term
 

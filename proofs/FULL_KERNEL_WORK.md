@@ -4961,3 +4961,13 @@ The mixed checker admits a proof with computed arguments whose upper
 bound is exactly `2^64`. The word reads recover the original operands
 and establish strict order with the full mathematical bound. The focused
 build passed 406 tasks and seven declaration audits.
+
+### Arithmetic evidence after value projection
+
+The arithmetic interpretation also follows the proved source value
+projection. Its order proof respects raw Loan64 conversions, and the
+pure typing judgment can use its additional value-conversion rule
+while retaining order at the written type. A mixed declaration with a
+Strict prefix inside a word operand now has its original bound proved
+at the projected value. The focused check passed 408 tasks and five
+declaration audits.

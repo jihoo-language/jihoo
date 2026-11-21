@@ -11034,3 +11034,8 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_global_computed_order
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_global_computed_excludes_zero_upper
 #print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.admitted_computed_wide_proof
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.observed_evidence_order_in
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.projected_evidence_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.projected_pure_evidence_order
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.projected_closed_evidence_excludes_zero
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.admitted_projected_strict_order
