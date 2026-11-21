@@ -5034,3 +5034,17 @@ the scalar fixture returns the original target after 12 ticks. The result
 head proofs cover retained variables and rigid nonfunction heads.
 The focused build passed 493 tasks, ten declaration audits, and the
 expanded native schedule.
+
+### Aggregate and native correspondence on `6e86e05`
+
+The guarded rootless-Nix check passed 1,231 Lake tasks and 11,069 audited
+declarations, including 535 with no axioms. All audited dependencies were
+standard Lean axioms. Generated source, model, and MIR fixtures matched.
+Peak sampled process-tree RSS for the proof suite was 5,054 MiB.
+
+The expanded inference schedule also passed. The executable correspondence
+checks passed 89 kernel fixtures and 31 additional checks, 69 mixed source
+fixtures and 55 exact-byte checks, and 20 family fixtures and 18 additional
+checks. Pure mixed admission accepted the exact native snapshot bytes.
+Type-family safety passed eight controls and nine exact diagnostic rejections
+across checking and optimization levels.
