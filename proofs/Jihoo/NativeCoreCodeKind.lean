@@ -12,42 +12,130 @@ open NativeCorePureComputationNormal (Outcome Progress ExpandedNormalization)
 open NativeCoreBinderTraversal (VisitsFrom)
 open EnvironmentDelta (expand expandArgs)
 
-def sortAt (arena : Arena) (root : Nat) : Bool :=
-  match arena[root]? with
-  | some (.node (.universe _) []) => true
-  | some (.node (.pi _) [_,body]) => if body < root then sortAt arena body else false
-  | _ => false
-termination_by root
+private def walk (arena : Arena) : Nat → Nat → Bool
+  | 0,_ => false
+  | fuel+1,root =>
+    match arena[root]? with
+    | some (.node (.universe _) []) => true
+    | some (.node (.pi _) [_,body]) => walk arena fuel body
+    | _ => false
 
-/-- Following the codomain edges of the checked arena adds no meter charges.
-Backward references make the bounded representation of the native loop exact. -/
-theorem sortAt_represents (represented : Represents arena root term) (backward : Backward arena) :
-    sortAt arena root = kindOf term := by
-  cases represented with
-  | var read =>
-    rw [sortAt,read]
-    simp only [kindOf]
-  | @node _ op refs terms read arity children =>
-    rw [sortAt,read]
+private def spineLength : Term → Nat
+  | .pi _ _ body => spineLength body+1
+  | _ => 1
+
+private def PathRep (arena : Arena) (term : Term) (refs : List Nat) : Prop :=
+  refs.length = spineLength term ∧ refs.Nodup ∧
+    ∀ root ∈ refs, ∃ represented, Represents arena root represented ∧ sizeOf represented ≤ sizeOf term
+
+private theorem one_row (source : Represents arena root term) (one : spineLength term = 1) :
+    PathRep arena term [root] := by
+  refine ⟨one.symm,by simp,?_⟩
+  intro selected member
+  have same := List.mem_singleton.mp member
+  subst selected
+  exact ⟨term,source,Nat.le_refl _⟩
+
+private theorem body_smaller (erased : Bool) (domain body : Term) :
+    sizeOf body < sizeOf (Term.pi erased domain body) := by
+  simp [Term.pi]
+  omega
+
+private theorem add_row (source : Represents arena root (.pi erased domain body))
+    (tail : PathRep arena body refs) :
+    PathRep arena (.pi erased domain body) (root :: refs) := by
+  obtain ⟨size,distinct,members⟩ := tail
+  have smaller := body_smaller erased domain body
+  have fresh : root ∉ refs := by
+    intro duplicate
+    obtain ⟨other,represented,bounded⟩ := members root duplicate
+    have same := represented.unique source
+    rw [same] at bounded
+    omega
+  refine ⟨congrArg Nat.succ size,List.nodup_cons.mpr ⟨fresh,distinct⟩,?_⟩
+  intro selected found
+  rcases List.mem_cons.mp found with rfl | tail
+  · exact ⟨_,source,Nat.le_refl _⟩
+  · obtain ⟨term,represented,smallerThanBody⟩ := members selected tail
+    exact ⟨term,represented,by omega⟩
+
+private theorem path (source : Represents arena root term) : ∃ refs, PathRep arena term refs := by
+  cases source with
+  | var read => exact ⟨_,one_row (.var read) rfl⟩
+  | @node root op refs terms read width children =>
     cases op
     case pi erased =>
-      have width : refs.length = 2 := arity
-      rcases refs with _ | ⟨_,_ | ⟨body,_ | ⟨_,_⟩⟩⟩ <;> simp at width
+      have size : refs.length = 2 := width
+      rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at size
       cases children with
-      | cons domain tail =>
+      | cons first tail =>
         cases tail with
-        | cons codomain tail =>
-          cases tail
-          have smaller : body < root := backward _ _ read _ (by simp [Node.references])
-          simp only [ite_eq_left smaller,kindOf]
-          exact sortAt_represents codomain backward
-    case «universe» level =>
-      have width := List.length_eq_zero_iff.mp (show refs.length = 0 from arity)
-      subst refs
-      cases children
-      rfl
-    all_goals rfl
-termination_by root
+        | cons body rest =>
+          cases rest
+          obtain ⟨refs,replayed⟩ := path body
+          exact ⟨_,add_row (.node read width (.cons first (.cons body .nil))) replayed⟩
+    all_goals exact ⟨_,one_row (.node read width children) rfl⟩
+termination_by sizeOf term
+decreasing_by
+  subst_vars
+  exact body_smaller _ _ _
+
+private theorem source_inside (source : Represents arena root term) : root < arena.size := by
+  cases source with
+  | var read | node read => exact (Array.getElem?_eq_some_iff.mp read).1
+
+private theorem length_fits (source : Represents arena root term) : spineLength term ≤ arena.size := by
+  obtain ⟨refs,length,distinct,members⟩ := path source
+  have subset : refs ⊆ List.range arena.size := by
+    intro ref member
+    obtain ⟨_,represented,_⟩ := members ref member
+    exact List.mem_range.mpr (source_inside represented)
+  rw [←length,←List.length_range (n := arena.size)]
+  exact distinct.length_le_of_subset subset
+
+private theorem walk_shape (source : Represents arena root term) (room : spineLength term ≤ fuel) :
+    walk arena fuel root = kindOf term := by
+  induction fuel generalizing root term with
+  | zero =>
+    have positive : spineLength term > 0 := by
+      unfold spineLength
+      split <;> omega
+    omega
+  | succ fuel ih =>
+    cases source with
+    | var read => simp only [walk,read,kindOf]
+    | @node root op refs terms read width children =>
+      simp only [walk,read]
+      cases op
+      case pi erased =>
+        have size : refs.length = 2 := width
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at size
+        cases children with
+        | cons first tail =>
+          cases tail with
+          | cons body rest =>
+            cases rest
+            simp only [kindOf]
+            apply ih body
+            change spineLength (.pi erased _ _) ≤ fuel+1 at room
+            rw [spineLength] at room
+            omega
+      case «universe» level =>
+        have empty := List.length_eq_zero_iff.mp (show refs.length = 0 from width)
+        subst refs
+        cases children
+        rfl
+      all_goals rfl
+
+def sortAt (arena : Arena) (root : Nat) : Bool :=
+  walk arena arena.size root
+
+/-- The product's codomain path cannot revisit a row, since each codomain
+is a proper subterm and a represented row denotes a unique term. The
+arena size therefore bounds native Core's unmetered traversal. -/
+theorem sortAt_represents (source : Represents arena root term) :
+    sortAt arena root = kindOf term :=
+  walk_shape source (length_fits source)
 
 def classify (normal : State → Nat → Outcome Nat) (state : State) (domain : Nat) : Outcome Bool :=
   (normal state domain).next fun after root => ⟨after,.ok (sortAt after.arena root)⟩
@@ -57,18 +145,18 @@ theorem classify_progress (normalProgress : ∀ state root, Progress limit state
   (normalProgress _ _).next fun _ => Progress.atState _ _
 
 theorem classify_refines (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
-    (onBase : Prefix base state.arena) (backward : Backward state.arena)
+    (onBase : Prefix base state.arena)
     (source : Represents state.arena domain D) (success : (classify normal state domain).result = .ok typeArgument) :
     let after := (classify normal state domain).state.arena
-    Prefix state.arena after ∧ Backward after ∧
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ residual, RawLend.Conv env (expand env D) (expand env residual) ∧ kindOf residual = typeArgument := by
   unfold classify at success ⊢
   obtain ⟨root,rootOk,next⟩ := Outcome.next_success success
   rw [next] at success ⊢
   obtain ⟨kept,safe,residual,represented,converted⟩ := normalSound onBase source rootOk
   simp only [Except.ok.injEq] at success
-  rw [sortAt_represents represented (safe backward)] at success
-  exact ⟨kept,safe backward,residual,converted.converted,success⟩
+  rw [sortAt_represents represented] at success
+  exact ⟨kept,safe,residual,converted.converted,success⟩
 
 /-- The expected kind must end in a universe and every domain inspected by
 the walk must normalize to U64. After failure the last state is retained. -/

@@ -48,18 +48,18 @@ def GlobalFreeOutputs (normal : Nat → State → Nat → Outcome Nat) : Prop :=
 
 private theorem classify_false_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) (normal depth))
-    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena) (backward : Backward state.arena)
+    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena)
     (source : Represents state.arena domain D)
     (success : (NativeCoreCodeKind.classify (normal depth) state domain).result = .ok false) :
     ∃ residual, RawLend.Conv env (expand env D) residual ∧ globalFree residual = true ∧ kindOf residual = false := by
   unfold NativeCoreCodeKind.classify at success
   obtain ⟨selected,selectedOk,next⟩ := Outcome.next_success success
   rw [next] at success
-  obtain ⟨_,shape,residual,represented,converted⟩ := normalSound onBase source selectedOk
+  obtain ⟨_,_,residual,represented,converted⟩ := normalSound onBase source selectedOk
   have freeResidual := free selectedOk represented
   have conversion := converted.converted
   rw [EnvironmentDelta.expand_globalFree ((globalFree_correct _).mp freeResidual)] at conversion
-  have head := NativeCoreCodeKind.sortAt_represents represented (shape backward)
+  have head := NativeCoreCodeKind.sortAt_represents represented
   rw [head,Except.ok.injEq] at success
   exact ⟨_,conversion,freeResidual,success⟩
 
@@ -67,7 +67,7 @@ private theorem classify_false_refines
 kind witness and the normalized plain argument come from the actual scan. -/
 theorem run_refines (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
-    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena) (backward : Backward state.arena)
+    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena)
     (domainRep : Represents state.arena domain D) (argRep : Represents state.arena argument A)
     (success : (run normal env limit depth state domain argument).result = .ok ()) :
     LoanTyping.applicationAllowed env false (expand env D) (expand env A) := by
@@ -77,7 +77,7 @@ theorem run_refines (normalSound : ∀ depth, VisitsFrom base (ExpandedNormaliza
   cases typeArgument with
   | false =>
     obtain ⟨residual,conversion,global,ordinary⟩ :=
-      classify_false_refines (normalSound depth) free onBase backward domainRep classified
+      classify_false_refines (normalSound depth) free onBase domainRep classified
     exact .inr ⟨residual,conversion,global,.inl ordinary⟩
   | true =>
     simp only [ite_true] at success
@@ -126,9 +126,9 @@ theorem run_backward (normalSound : ∀ depth, VisitsFrom base (ExpandedNormaliz
   obtain ⟨typeArgument,classified,next⟩ := Outcome.next_success success
   rw [next] at success ⊢
   obtain ⟨classKept,classBack,_,_,_⟩ :=
-    NativeCoreCodeKind.classify_refines (normalSound depth) onBase backward domainRep classified
+    NativeCoreCodeKind.classify_refines (normalSound depth) onBase domainRep classified
   cases typeArgument with
-  | false => exact classBack
+  | false => exact classBack backward
   | true =>
     simp only [ite_true] at success ⊢
     obtain ⟨kind,checked,nextKind⟩ := Outcome.next_success success
@@ -149,6 +149,6 @@ theorem run_backward (normalSound : ∀ depth, VisitsFrom base (ExpandedNormaliz
         unfold NativeCoreCodePlain.run at observed ⊢
         obtain ⟨_,normalized,after⟩ := Outcome.next_success observed
         rw [after,NativeCoreCodePlain.scan_arena]
-        exact (normalSound depth (onBase.trans kept) (argRep.frame kept) normalized).2.1 (kindBack classBack)
+        exact (normalSound depth (onBase.trans kept) (argRep.frame kept) normalized).2.1 (kindBack (classBack backward))
 
 end Jihoo.NativeKernel.NativeCoreCodeArgumentPolicy

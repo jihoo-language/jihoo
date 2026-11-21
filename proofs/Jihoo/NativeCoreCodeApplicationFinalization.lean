@@ -125,7 +125,7 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
       Backward state.arena → Backward (ghost state root).state.arena)
     (normalBackward : ∀ {state root answer}, (normal depth state root).result = .ok answer →
       Backward state.arena → Backward (normal depth state root).state.arena)
-    (onBase : Prefix base state.arena) (room : state.steps ≤ limit) (backward : Backward state.arena)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (fn : Represents state.arena function f) (arg : Represents state.arena argument a)
     (success : (run functionInfer argumentInfer ghost normal env boxed limit depth state root function argument head).result =
       .ok answer)
@@ -133,7 +133,7 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
       (run functionInfer argumentInfer ghost normal env boxed limit depth state root function argument head).state.arena final)
     (retained : RetainedComparisons final answer) :
     let after := (run functionInfer argumentInfer ghost normal env boxed limit depth state root function argument head).state.arena
-    Prefix state.arena after ∧ Backward after ∧ ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx false
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧ ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx false
       (.app (EnvironmentDelta.expand env f) (EnvironmentDelta.expand env a)) (EnvironmentDelta.expand env type) := by
   unfold run at success ambient ⊢
   obtain ⟨initial,initialOk,initialNext⟩ := Outcome.next_success success
@@ -150,9 +150,9 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
   have finishCost := finish_progress (state := instantiated.state) (candidate := initial.typeRoot)
     (root := root) (head := head) (boxed := boxed) ghostProgress (normalProgress depth) within
   obtain ⟨kept,initialBackward,type,represented,typed⟩ := NativeCoreCodeApplication.run_refines wf free normalSound normalProgress
-    calleeSound argumentSound calleeProgress argumentProgress onBase room backward fn arg initialOk
+    calleeSound argumentSound calleeProgress argumentProgress onBase room fn arg initialOk
     (finishCost.kept.trans ambient) (fun pair member => retained pair (List.mem_append_left _ member))
-  exact ⟨kept.trans finishCost.kept,finish_backward ghostBackward normalBackward checked initialBackward,
+  exact ⟨kept.trans finishCost.kept,finish_backward ghostBackward normalBackward checked ∘ initialBackward,
     type,represented.frame finishCost.kept,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreCodeApplicationFinalization

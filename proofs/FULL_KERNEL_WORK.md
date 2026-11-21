@@ -4464,3 +4464,14 @@ all 17 appended rows. With 8 ticks, both implementations retain the
 weakened motive before rejecting the last hypothesis. The focused
 build passed 334 jobs. Connecting the raw recursive markers to the
 checked declaration's signature remains a separate proof.
+
+### Runtime kind classification on represented graphs
+
+The codomain walk terminates within the arena size for every represented
+product. Each codomain is a proper subterm, so a repeated row would
+contradict uniqueness of representation. The unmetered classification
+therefore gives the syntax's kind without a whole-arena ordering
+hypothesis. Code application and its result inspection propagate
+backwardness when it holds on entry. Their source typing derivations
+only require representation of the operands. The focused build passed
+454 jobs, including the existing code kind and application fixtures.

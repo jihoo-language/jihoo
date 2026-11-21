@@ -149,13 +149,13 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
     (argumentSound : ∀ mode, Sound env loans base ctx limit mode (argumentInfer mode))
     (functionProgress : ∀ state root, state.steps ≤ limit → Progress limit state (functionInfer state root))
     (argumentProgress : ∀ mode state root, state.steps ≤ limit → Progress limit state (argumentInfer mode state root))
-    (onBase : Prefix base state.arena) (room : state.steps ≤ limit) (backward : Backward state.arena)
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (fn : Represents state.arena function f) (arg : Represents state.arena argument a)
     (success : (run functionInfer argumentInfer normal env limit depth state root function argument head).result = .ok answer)
     (ambient : Prefix (run functionInfer argumentInfer normal env limit depth state root function argument head).state.arena final)
     (retained : RetainedComparisons final answer) :
     let after := (run functionInfer argumentInfer normal env limit depth state root function argument head).state.arena
-    Prefix state.arena after ∧ Backward after ∧
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
       ∃ type, Represents after answer.typeRoot type ∧ LoanTyping.HasType env loans ctx false
         (.app (expand env f) (expand env a)) (expand env type) := by
   unfold run at success ambient ⊢
@@ -222,9 +222,10 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
     have domainBeforePolicy := domainRep.frame sinceProduct
     have argumentBeforePolicy := arg.frame throughComparison
     have allowed := NativeCoreCodeArgumentPolicy.run_refines normalSound normalProgress free (onBase.trans throughComparison)
-      (comparedBack (argumentBack (productBack (functionBack backward)))) domainBeforePolicy argumentBeforePolicy policyOk
-    have policyBack := NativeCoreCodeArgumentPolicy.run_backward normalSound (onBase.trans throughComparison)
-      (comparedBack (argumentBack (productBack (functionBack backward)))) domainBeforePolicy argumentBeforePolicy policyOk
+      domainBeforePolicy argumentBeforePolicy policyOk
+    have policyBack (backward : Backward state.arena) := NativeCoreCodeArgumentPolicy.run_backward normalSound
+      (onBase.trans throughComparison) (comparedBack (argumentBack (productBack (functionBack backward))))
+      domainBeforePolicy argumentBeforePolicy policyOk
     have throughPolicy := throughComparison.trans policyCost.kept
     obtain ⟨instantiationKept,instantiationBack,instantiationRep⟩ := NativeCoreTransformExact.substitute_refines
       (resultRep.frame (sinceProduct.trans policyCost.kept)) (arg.frame throughPolicy) (instantiated_success substitutedOk)
@@ -234,7 +235,7 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
     have selectedType : RawLend.Conv env (expand env rawFunctionType) (.pi erased (expand env D) (expand env R)) := by
       simpa only [shape,Term.pi,expand,expandArgs] using converted.converted
     have typed := LoanTyping.HasType.app (typedFunction.convert selectedType) (typedArgument.convert equalDomain) allowed
-    refine ⟨throughInstantiation.trans finishKept,finishBack (instantiationBack policyBack),_,finishedRep,?_⟩
+    refine ⟨throughInstantiation.trans finishKept,finishBack ∘ instantiationBack ∘ policyBack,_,finishedRep,?_⟩
     rw [expand_instantiation wf]
     exact typed
   · cases success
