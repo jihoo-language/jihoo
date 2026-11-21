@@ -5108,3 +5108,20 @@ annotations are formed in the same context. The comparison uses 29 ticks
 and keeps all 15 original rows and the original comparison roots. Both
 proofs inhabit the original predicate application. The focused build
 passed 441 tasks, four declaration audits, and the expanded native schedule.
+
+### CODE owner returns and Take callbacks
+
+`Back` and `Give` now reflect the actual normalized motive's fixed result
+representation, including the checked boxed layout of a family. `Give`
+checks the owner in CODE, the motive in ghost mode, and its original
+result in the mode selected by erasure. `Take` checks the original two
+callback annotations, visits both live binders, and lowers the resulting
+annotation before the final result-head check. The same metered result
+policy is shared by Load, Absurd, data elimination, and Take.
+
+The native and Lean fixtures agree on 65 ticks and 31 rows for Give with
+an erased local proof. A runtime read of an erased result slot is rejected
+after 36 ticks. The Take callback releases its original owner and returns
+the I64 at root 38, using 111 ticks and 41 rows. One tick less leaves the
+same graph at the final result check. The focused build passed 496 tasks,
+eleven declaration audits, and the expanded native schedule.

@@ -158,4 +158,27 @@ theorem checkCanonical_policy
   · rw [ite_eq_right known] at success
     cases success
 
+/-- Owned continuations check the normalized result once in CODE. Ghost
+visits keep the already lowered annotation and do no additional work. -/
+def checkInMode (normal : Visit) (mode : Bool) (state : State) (result continuation : Nat) : Outcome Unit :=
+  if mode then ⟨state,.ok ()⟩ else checkCanonical normal state result continuation
+
+theorem checkInMode_progress
+    (normalProgress : ∀ state root, Progress limit state (normal state root)) :
+    Progress limit state (checkInMode normal mode state result continuation) := by
+  cases mode
+  · exact checkCanonical_progress normalProgress
+  · exact Progress.atState _ _
+
+theorem checkInMode_policy
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (onBase : Prefix base state.arena) (original : Represents state.arena result type)
+    (accepted : (checkInMode normal mode state result continuation).result = .ok ()) :
+    let after := (checkInMode normal mode state result continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.continuationAllowed env mode (expand env type) := by
+  cases mode
+  · exact checkCanonical_policy normalSound onBase original accepted
+  · exact ⟨Prefix.refl _,id,Or.inl rfl⟩
+
 end Jihoo.NativeKernel.NativeCoreCodeLendGates

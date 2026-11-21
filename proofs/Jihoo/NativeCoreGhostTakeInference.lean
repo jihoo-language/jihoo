@@ -1,4 +1,6 @@
 import Jihoo.NativeCoreGhostTypeRequirement
+import Jihoo.NativeCoreCodeLendGates
+import Jihoo.NativeCoreBufferRelease
 
 /-! The native Take branch first exposes the value's owner-return type.
 It checks the original continuation annotations before inferring its body,
@@ -13,6 +15,8 @@ open NativeCoreGhostSpineInference (Infer Visit Inferred InferSound Refines Pair
   requireTypes requireTypes_progress requireTypes_refines next_progress)
 open NativeCoreCaseStrict (append append_progress append_refines)
 open EnvironmentDelta (expand expandArgs)
+open NativeCoreBufferRelease (ModeSound)
+open NativeCoreCodeLendGates (checkInMode checkInMode_progress checkInMode_policy)
 
 private def reject (state : State) (root : Nat) : Outcome α := ⟨state,.error (.outsideFragment root)⟩
 
@@ -69,13 +73,17 @@ private def finish (normal : Visit) (limit depth : Nat) (state : State) (type co
       | _ => reject exposed continuation
     | _ => reject exposed continuation
 
-def run (infer : Infer) (normal : Visit) (limit depth : Nat) (state : State) (subject continuation : Nat) : Outcome Inferred :=
+def runInMode (infer : Infer) (normal : Visit) (mode : Bool) (limit depth : Nat) (state : State) (subject continuation : Nat) : Outcome Inferred :=
   (infer state subject).next fun inferred value =>
     (exposeGiven normal inferred value.typeRoot subject).next fun exposed expected =>
       (checkCallback normal limit depth exposed expected continuation).next fun checked binderPairs =>
         (infer checked continuation).next fun afterCallback callback =>
           (finish normal limit depth afterCallback callback.typeRoot continuation).next fun after result =>
-            ⟨after,.ok ⟨result,value.compared ++ (binderPairs ++ callback.compared)⟩⟩
+            (checkInMode normal mode after result continuation).next fun finished _ =>
+              ⟨finished,.ok ⟨result,value.compared ++ (binderPairs ++ callback.compared)⟩⟩
+
+abbrev run (infer : Infer) (normal : Visit) : Nat → Nat → State → Nat → Nat → Outcome Inferred :=
+  runInMode infer normal true
 
 private theorem shift_answer (accepted : (shift limit depth state root amount).result = .ok selected) :
     (NativeCoreTransformExact.run limit depth state root (.shift amount) 0).result = .ok selected := by
@@ -122,11 +130,11 @@ private theorem finish_progress (normalizes : ∀ state root, Progress limit sta
     · exact Progress.atState _ _
   · exact Progress.atState _ _
 
-theorem run_progress
+theorem runInMode_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
-    Progress limit state (run infer normal limit depth state subject continuation) := by
-  unfold run
+    Progress limit state (runInMode infer normal mode limit depth state subject continuation) := by
+  unfold runInMode
   apply next_progress (infers _ _ room) room
   intro _ _ inferredRoom
   have exposed : ∀ state type, Progress limit state (exposeGiven normal state type subject) := by
@@ -139,7 +147,13 @@ theorem run_progress
   intro _ _ checkedRoom
   apply next_progress (infers _ _ checkedRoom) checkedRoom
   intro _ _ _
-  exact (finish_progress normalizes).next (fun _ => Progress.atState _ _)
+  exact (finish_progress normalizes).next (fun _ => (checkInMode_progress normalizes).next (fun _ => Progress.atState _ _))
+
+theorem run_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
+    Progress limit state (run infer normal limit depth state subject continuation) :=
+  runInMode_progress infers normalizes room
 
 private theorem binary_read (represented : Represents arena root term) (read : arena[root]? = some (.node op [a,b])) :
     ∃ first second, term = .node op [first,second] ∧ Represents arena a first ∧ Represents arena b second := by
@@ -324,18 +338,21 @@ private theorem checkCallback_refines (wf : UnifiedProgram.EnvWellFormed env)
 
 /-- The checked continuation receives the actual owner and dependent result.
 The selected type lives in the original context after both binders are lowered. -/
-theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
+theorem runInMode_refines (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
-    (inferSound : InferSound env base ctx limit infer)
+    (inferSound : ModeSound env loans base ctx limit mode infer)
     (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (subjectRep : Represents state.arena subject x) (callbackRep : Represents state.arena continuation k)
-    (success : (run infer normal limit depth state subject continuation).result = .ok answer)
-    (ambient : Prefix (run infer normal limit depth state subject continuation).state.arena final)
+    (success : (runInMode infer normal mode limit depth state subject continuation).result = .ok answer)
+    (ambient : Prefix (runInMode infer normal mode limit depth state subject continuation).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.take x k) (run infer normal limit depth state subject continuation) answer := by
-  unfold run at success ambient ⊢
+    let after := (runInMode infer normal mode limit depth state subject continuation).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.take x k)) (expand env type) := by
+  unfold runInMode at success ambient ⊢
   obtain ⟨value,valueOk,valueNext⟩ := Outcome.next_success success
   rw [valueNext] at success ambient ⊢
   obtain ⟨package,exposedOk,exposedNext⟩ := Outcome.next_success success
@@ -346,6 +363,8 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
   rw [callbackNext] at success ambient ⊢
   obtain ⟨result,resultOk,resultNext⟩ := Outcome.next_success success
   rw [resultNext] at success ambient ⊢
+  obtain ⟨⟨⟩,gateOk,gateNext⟩ := Outcome.next_success success
+  rw [gateNext] at success ambient ⊢
   simp only [Except.ok.injEq] at success
   subst answer
   let inferred := infer state subject
@@ -364,7 +383,9 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
   have callbackCost := inferProgress checked.state continuation callbackRoom
   have resultCost := finish_progress (state := inferredCallback.state) (depth := depth)
     (type := callback.typeRoot) (continuation := continuation) normalProgress
-  have afterCallback := resultCost.kept.trans ambient
+  have resultGate := checkInMode_progress (mode := mode) (result := result) (continuation := continuation)
+    (state := (finish normal limit depth inferredCallback.state callback.typeRoot continuation).state) normalProgress
+  have afterCallback := resultCost.kept.trans (resultGate.kept.trans ambient)
   have afterCheck := callbackCost.kept.trans afterCallback
   obtain ⟨valueKept,valueBack,_,valueRep,valueTyped⟩ := inferSound onBase room subjectRep valueOk
     (exposition.kept.trans (comparisonCost.kept.trans afterCheck))
@@ -383,12 +404,34 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
   have throughCallback := throughCheck.trans callbackKept
   obtain ⟨finished,finishBack,_,_,_,_,_,_,outsideRep,callbackConv,tailConv,lowered⟩ := finish_refines wf normalSound
     (onBase.trans throughCallback) callbackType resultOk
+  have throughFinish := throughCallback.trans finished
+  obtain ⟨gateKept,gateBack,policy⟩ := checkInMode_policy normalSound
+    (onBase.trans throughFinish) outsideRep gateOk
   rw [callbackShape] at callbackTyped ⊢
   simp only [Term.lam,expand,expandArgs] at callbackTyped
-  refine ⟨throughCallback.trans finished,finishBack ∘ callbackBack ∘ checkedBack ∘ exposedBack ∘ valueBack,
-    _,outsideRep,?_⟩
+  refine ⟨throughFinish.trans gateKept,gateBack ∘ finishBack ∘ callbackBack ∘ checkedBack ∘ exposedBack ∘ valueBack,
+    _,outsideRep.frame gateKept,?_⟩
   simpa only [Term.take,Term.lam,expand,expandArgs] using
     LoanTyping.HasType.take (valueTyped.convert valueConv) (callbackTyped.convert callbackConv)
-      ownerConv resultConv tailConv lowered (.inl rfl)
+      ownerConv resultConv tailConv lowered policy
+
+theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (subjectRep : Represents state.arena subject x) (callbackRep : Represents state.arena continuation k)
+    (success : (run infer normal limit depth state subject continuation).result = .ok answer)
+    (ambient : Prefix (run infer normal limit depth state subject continuation).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.take x k) (run infer normal limit depth state subject continuation) answer := by
+  have ghost : ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ start cost represented accepted future tape
+    obtain ⟨kept,safe,typed⟩ := inferSound start cost represented accepted future tape
+    exact ⟨kept,safe,typed⟩
+  obtain ⟨kept,backward,typed⟩ := runInMode_refines wf normalSound normalProgress ghost inferProgress
+    onBase room subjectRep callbackRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostTakeInference

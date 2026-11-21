@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreGhostTakeInference
 import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreCodeInference
 
 /-! The fixture uses the full ghost driver for Give and for both binders of
 the written Take callback. The branch starts just after the entry tick. -/
@@ -44,5 +45,23 @@ private def recursive (limit root : Nat) : Outcome Inferred :=
 all of the standalone checking schedule and rejection state. -/
 theorem recursive_dispatch_checks_schedule :
     recursive 95 16 = take 95 15 ∧ recursive 256 21 = take 256 20 ∧ recursive 256 24 = take 256 23 := by cbv
+
+private def codeInput : Arena := (input.extract 0 14) ++ #[.var 1,.node .free [14,5],
+  .node (.lam false) [2,15],.node (.lam false) [1,16],.node .take [7,17]]
+
+private def takeInCode (limit : Nat) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  let ghost := NativeCoreGhostSpineInference.runWith normal [] 0 limit
+  NativeCoreCodeInference.run normal ghost empty (fun _ => false) (fun _ => false) limit 32 [] false ⟨codeInput,0⟩ 18
+
+set_option maxRecDepth 4096 in
+/-- Both native callback binders are visited in CODE. The callback really
+frees the original owner and the last tick checks the lowered I64 result. -/
+theorem runtime_take_keeps_returned_result :
+    let full := takeInCode 111
+    let short := takeInCode 110
+    full.state.steps = 111 ∧ full.state.arena.size = 41 ∧ full.result.map Inferred.typeRoot = .ok 38 ∧
+      full.state.arena[38]? = some (.node .i64 []) ∧ short.state = full.state ∧
+      short.result = .error (.tick (.stepLimit 38)) := by cbv
 
 end Jihoo.NativeKernel.NativeCoreGhostTakeExamples

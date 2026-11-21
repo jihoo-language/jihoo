@@ -16,30 +16,10 @@ open NativeCoreBinderTraversal (VisitsFrom)
 open NativeCoreGhostSpineInference (Infer Visit InferSound Inferred Refines RetainedComparisons PairRetained next_progress)
 open NativeCoreGhostFamilyEvidence (evidence evidence_progress evidence_trace expand_spine)
 open NativeCoreBufferRelease (ModeSound)
+open NativeCoreCodeLendGates (checkInMode checkInMode_progress checkInMode_policy)
 open NativeCoreCaseNormal (appendApplications appendApplications_progress appendApplications_refines)
 open NativeCoreCaseStrict (append append_progress append_refines)
 open EnvironmentDelta (expand expandArgs)
-
-private def resultGate (normal : Visit) (erased : Bool) (state : State) (selected motive : Nat) : Outcome Unit :=
-  if erased then ⟨state,.ok ()⟩ else NativeCoreCodeLendGates.checkCanonical normal state selected motive
-
-private theorem resultGate_progress
-    (normalProgress : ∀ state root, Progress limit state (normal state root)) :
-    Progress limit state (resultGate normal erased state selected motive) := by
-  cases erased
-  · exact NativeCoreCodeLendGates.checkCanonical_progress normalProgress
-  · exact Progress.atState _ _
-
-private theorem resultGate_refines
-    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
-    (onBase : Prefix base state.arena) (source : Represents state.arena selected type)
-    (accepted : (resultGate normal erased state selected motive).result = .ok ()) :
-    let after := (resultGate normal erased state selected motive).state.arena
-    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.continuationAllowed env erased (expand env type) := by
-  cases erased
-  · exact NativeCoreCodeLendGates.checkCanonical_policy normalSound onBase source accepted
-  · exact ⟨Prefix.refl _,id,Or.inl rfl⟩
 
 def runInMode (inferGhost : Infer) (inferMode : Bool → Infer) (normal : Visit) (mode : Bool) (limit depth : Nat) (state : State) (family motive subject root : Nat)
     (row : FamilyRoots) (branches : List Nat) (recursive : Bool := false) : Outcome Inferred :=
@@ -57,7 +37,7 @@ def runInMode (inferGhost : Infer) (inferMode : Bool → Infer) (normal : Visit)
             (inferSelected checkedCases subject).next fun checkedSubject checked =>
               (appendApplications checkedSubject motive (indices.drop row.params)).next fun applied body =>
                 (append applied .app [body,subject]).next fun after selected =>
-                  (resultGate normal erased after selected motive).next fun finished _ =>
+                  (checkInMode normal erased after selected motive).next fun finished _ =>
                     ⟨finished,.ok ⟨selected,original.1.compared ++ (motiveType.compared ++
                       ([chosen.compared] ++ (compared ++ checked.compared)))⟩⟩
   else ⟨state,.error (.outsideFragment root)⟩
@@ -89,7 +69,7 @@ theorem runInMode_progress
     apply next_progress (modeProgress _ _ _ casesRoom) casesRoom
     intro _ _ _
     exact applications_progress.next (fun _ => (append_progress _ _ _).next (fun _ =>
-      (resultGate_progress normalProgress).next (fun _ => Progress.atState _ _)))
+      (checkInMode_progress normalProgress).next (fun _ => Progress.atState _ _)))
   · exact Progress.atState _ _
 
 theorem run_progress
@@ -209,7 +189,7 @@ theorem runInMode_refines_using
     have againCost := modeProgress erased checkedCases.state subject againRoom
     have spineCost := applications_progress (limit := limit) (state := checkedSubject.state)
       (motive := motive) (indices := indices.drop row.params)
-    have gateCost := resultGate_progress (limit := limit) (erased := erased) (selected := selected) (motive := motive)
+    have gateCost := checkInMode_progress (limit := limit) (mode := erased) (result := selected) (continuation := motive)
       (state := (append spine.state .app [body,subject]).state) normalProgress
     have afterSpine := (append_progress (limit := limit) spine.state .app [body,subject]).kept.trans
       (gateCost.kept.trans ambient)
@@ -265,7 +245,7 @@ theorem runInMode_refines_using
     have beforeOutput := beforeSpine.trans spineKept
     obtain ⟨outputKept,outputBack,outputRep⟩ := append_refines (.cons spineRep
       (.cons (subjectRep.frame beforeOutput) .nil)) rfl selectedOk
-    obtain ⟨gateKept,gateBack,allowed⟩ := resultGate_refines normalSound
+    obtain ⟨gateKept,gateBack,allowed⟩ := checkInMode_policy normalSound
       (onBase.trans (beforeOutput.trans outputKept)) outputRep gateOk
     refine ⟨beforeOutput.trans (outputKept.trans gateKept),
       gateBack ∘ outputBack ∘ spineBack ∘ againBack ∘ casesBack ∘ motiveCheckBack ∘ motiveBack ∘ firstBack,

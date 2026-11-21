@@ -6,6 +6,8 @@ import Jihoo.NativeCoreCodeApplicationFinalization
 import Jihoo.NativeCoreCodeLambda
 import Jihoo.NativeCoreCodeScalarInference
 import Jihoo.NativeLoanGhostInputMode
+import Jihoo.NativeCoreGhostOwnerReturns
+import Jihoo.NativeCoreGhostTakeInference
 
 /-! Scalar operands, runtime function bodies and both application
 positions call the same recursive code visitor. The ghost visitor is
@@ -67,6 +69,13 @@ def runWithConstructors (normal : Nat → Visit) (ghost : GhostAt) (env : Enviro
         inferStoreWithProof recur (ghost depth bindings) (normal depth) limit depth entered buffer index value proof
     | some (.node .index [subject,index,proof]) => enter limit (depth+1) state root fun entered =>
         inferIndexWithProof recur (ghost depth bindings) (normal depth) limit depth entered subject index proof
+    | some (.node (.back erased) [owner,motive]) => enter limit (depth+1) state root fun entered =>
+        NativeCoreGhostOwnerReturns.runBack (ghost depth bindings) (normal depth) boxed limit depth entered erased owner motive
+    | some (.node (.give erased) [motive,owner,result]) => enter limit (depth+1) state root fun entered =>
+        NativeCoreGhostOwnerReturns.runGiveWithModes recur (ghost depth bindings)
+          (if erased then ghost depth bindings else recur) (normal depth) boxed limit depth entered erased motive owner result
+    | some (.node .take [owner,continuation]) => enter limit (depth+1) state root fun entered =>
+        NativeCoreGhostTakeInference.runInMode recur (normal depth) false limit depth entered owner continuation
     | some (.node .pack [predicate,word,proof]) => enter limit (depth+1) state root fun entered =>
         inferPackWithEvidence recur (ghost depth bindings) (normal depth) limit depth entered predicate word proof
     | some (.node .witness [subject]) => enter limit (depth+1) state root fun entered =>
@@ -132,6 +141,18 @@ theorem runWithConstructors_progress
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferIndexWithProof_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => NativeCoreGhostOwnerReturns.runBack_progress
+        (ghostProgress depth bindings) (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => NativeCoreGhostOwnerReturns.runGiveWithModes_progress
+        (fun _ _ room => ih room) (ghostProgress depth bindings)
+        (by
+          intro current root room
+          split
+          · exact ghostProgress depth bindings current root room
+          · exact ih room)
+        (normalProgress depth) inside)
+    · exact enter_progress (fun _ inside => NativeCoreGhostTakeInference.runInMode_progress
+        (fun _ _ room => ih room) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferPackWithEvidence_progress (fun _ _ => ih)
         (ghostProgress depth bindings) (normalProgress depth) inside)
     · exact enter_progress (fun _ inside => inferRefinementProjection_progress (fun _ _ => ih)
@@ -242,6 +263,64 @@ theorem runWithConstructors_sound (wf : UnifiedProgram.EnvWellFormed env)
     | @node _ op refs terms read arity children =>
       simp only [read] at success ambient ⊢
       cases op
+      case back erased =>
+        have length : refs.length = 2 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons owner rest =>
+          cases rest with
+          | cons motive rest =>
+            cases rest
+            dsimp only at success ambient ⊢
+            obtain ⟨entered,inside⟩ := enter_success success
+            rw [entered] at success ambient ⊢
+            obtain ⟨kept,safe,typed⟩ := NativeCoreGhostOwnerReturns.runBack_modeRefines
+              (state := {state with steps := state.steps+1}) boxedMetadata (normalLocal depth) (normalProgress depth)
+              (ghostSound onStart context depth) (ghostProgress depth bindings)
+              onBase inside owner motive success ambient retained
+            exact ⟨kept,safe,typed⟩
+      case take =>
+        have length : refs.length = 2 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons owner rest =>
+          cases rest with
+          | cons continuation rest =>
+            cases rest
+            dsimp only at success ambient ⊢
+            obtain ⟨entered,inside⟩ := enter_success success
+            rw [entered] at success ambient ⊢
+            obtain ⟨kept,safe,typed⟩ := NativeCoreGhostTakeInference.runInMode_refines
+              (state := {state with steps := state.steps+1}) wf (normalLocal depth) (normalProgress depth)
+              modeSound childCost onBase inside owner continuation success ambient retained
+            exact ⟨kept,safe,typed⟩
+      case give erased =>
+        have length : refs.length = 3 := arity
+        rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩⟩ <;> simp at length
+        cases children with
+        | cons motive rest =>
+          cases rest with
+          | cons owner rest =>
+            cases rest with
+            | cons result rest =>
+              cases rest
+              dsimp only at success ambient ⊢
+              obtain ⟨entered,inside⟩ := enter_success success
+              rw [entered] at success ambient ⊢
+              let visitResult : Infer := if erased then ghost depth bindings else recur
+              have resultSound : ModeSound env loans start ctx limit (false || erased) visitResult := by
+                cases erased
+                · exact modeSound
+                · exact erasedSound
+              have resultCost : ∀ state root, state.steps ≤ limit → Progress limit state (visitResult state root) := by
+                cases erased
+                · exact childCost
+                · exact ghostProgress depth bindings
+              obtain ⟨kept,safe,typed⟩ := NativeCoreGhostOwnerReturns.runGiveWithModes_refines
+                (state := {state with steps := state.steps+1}) boxedMetadata (normalLocal depth) (normalProgress depth)
+                modeSound (ghostSound onStart context depth) resultSound
+                childCost (ghostProgress depth bindings) resultCost onBase inside motive owner result success ambient retained
+              exact ⟨kept,safe,typed⟩
       case arith | uadd | alloc | strict | drop | free | app | absurd =>
         have length : refs.length = 2 := arity
         rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length

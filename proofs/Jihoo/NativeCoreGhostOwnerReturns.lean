@@ -1,4 +1,6 @@
 import Jihoo.NativeCoreGhostBackMotive
+import Jihoo.NativeCoreBufferRelease
+import Jihoo.NativeLoanGhostPromotion
 
 /-! Live arena checks for forming an owner-return type and giving back a
 value. The result requirement uses a freshly formed application of the
@@ -14,6 +16,7 @@ open NativeCoreGhostSpineInference (Infer Visit InferSound Inferred Refines Pair
 open NativeCoreCaseStrict (append append_progress append_refines)
 open NativeCoreGhostReferenceTypes (BoxedFamilies requireOwned requireOwned_progress requireOwned_refines)
 open EnvironmentDelta (expand expandArgs)
+open NativeCoreBufferRelease (ModeSound)
 
 private def reject (state : State) (root : Nat) : Outcome α := ⟨state,.error (.outsideFragment root)⟩
 
@@ -37,14 +40,17 @@ private def requireResult (infer : Infer) (normal : Visit) (limit depth : Nat) (
       (requireTypes normal limit depth inferred answer.typeRoot expectedRoot result).next fun checked pair =>
         ⟨checked,.ok (answer.compared ++ [pair])⟩
 
-def runGive (infer : Infer) (normal : Visit) (isBoxed : Nat → Bool) (limit depth : Nat)
+def runGiveWithModes (infer inferGhost inferResult : Infer) (normal : Visit) (isBoxed : Nat → Bool) (limit depth : Nat)
     (state : State) (erased : Bool) (motive owner result : Nat) : Outcome Inferred :=
   (infer state owner).next fun inferred ownerType =>
     (requireOwned normal isBoxed inferred ownerType.typeRoot owner).next fun owned _ =>
-      (NativeCoreGhostBackMotive.run infer normal isBoxed limit depth owned erased ownerType.typeRoot motive).next fun formed pairs =>
-        (requireResult infer normal limit depth formed motive owner result).next fun checked resultPairs =>
+      (NativeCoreGhostBackMotive.run inferGhost normal isBoxed limit depth owned erased ownerType.typeRoot motive).next fun formed pairs =>
+        (requireResult inferResult normal limit depth formed motive owner result).next fun checked resultPairs =>
           (append checked (.back erased) [ownerType.typeRoot,motive]).next fun after root =>
             ⟨after,.ok ⟨root,ownerType.compared ++ (pairs ++ resultPairs)⟩⟩
+
+abbrev runGive (infer : Infer) : Visit → (Nat → Bool) → Nat → Nat → State → Bool → Nat → Nat → Nat → Outcome Inferred :=
+  runGiveWithModes infer infer infer
 
 private theorem ownedFormation_progress (normalizes : ∀ state root, Progress limit state (normal state root)) :
     Progress limit state (ownedFormation normal isBoxed state owner inferred) := by
@@ -78,19 +84,27 @@ private theorem requireResult_progress
   exact (requireTypes_progress (fun after root _ => normalizes after root) inferredRoom).next
     (fun _ => Progress.atState _ _)
 
-theorem runGive_progress
+theorem runGiveWithModes_progress
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (ghostProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferGhost state root))
+    (resultProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferResult state root))
     (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
-    Progress limit state (runGive infer normal isBoxed limit depth state erased motive owner result) := by
-  unfold runGive
+    Progress limit state (runGiveWithModes infer inferGhost inferResult normal isBoxed limit depth state erased motive owner result) := by
+  unfold runGiveWithModes
   apply next_progress (infers _ _ room) room
   intro _ _ ownerRoom
   apply next_progress (requireOwned_progress normalizes) ownerRoom
   intro _ _ ownedRoom
-  apply next_progress (NativeCoreGhostBackMotive.run_progress infers normalizes ownedRoom) ownedRoom
+  apply next_progress (NativeCoreGhostBackMotive.run_progress ghostProgress normalizes ownedRoom) ownedRoom
   intro _ _ formedRoom
-  exact (requireResult_progress infers normalizes formedRoom).next
+  exact (requireResult_progress resultProgress normalizes formedRoom).next
     (fun _ => (append_progress _ _ _).next (fun _ => Progress.atState _ _))
+
+theorem runGive_progress
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (normalizes : ∀ state root, Progress limit state (normal state root)) (room : state.steps ≤ limit) :
+    Progress limit state (runGive infer normal isBoxed limit depth state erased motive owner result) :=
+  runGiveWithModes_progress infers infers infers normalizes room
 
 private theorem ownedFormation_refines (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
@@ -112,7 +126,7 @@ private theorem ownedFormation_refines (metadata : BoxedFamilies env isBoxed)
     exact ⟨sortKept.trans kept,backward ∘ sortBack,converted,owned⟩
   · simp [reject] at success
 
-theorem runBack_refines (metadata : BoxedFamilies env isBoxed)
+theorem runBack_modeRefines (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (childSound : InferSound env base ctx limit infer)
@@ -122,7 +136,10 @@ theorem runBack_refines (metadata : BoxedFamilies env isBoxed)
     (success : (runBack infer normal isBoxed limit depth state erased owner motive).result = .ok answer)
     (ambient : Prefix (runBack infer normal isBoxed limit depth state erased owner motive).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.back erased A M) (runBack infer normal isBoxed limit depth state erased owner motive) answer := by
+    let after := (runBack infer normal isBoxed limit depth state erased owner motive).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.back erased A M)) (expand env type) := by
   unfold runBack at success ambient ⊢
   obtain ⟨type,typeOk,typeNext⟩ := Outcome.next_success success
   rw [typeNext] at success ambient ⊢
@@ -149,17 +166,37 @@ theorem runBack_refines (metadata : BoxedFamilies env isBoxed)
   obtain ⟨formedKept,formedBack,sort,owned⟩ := ownedFormation_refines metadata normalSound
     (onBase.trans ownerKept) (ownerRep.frame ownerKept) typeRep formedOk
   have throughFormation := ownerKept.trans formedKept
-  obtain ⟨checkedKept,checkedBack,motiveTyped⟩ := NativeCoreGhostBackMotive.run_refines normalSound normalizes childSound infers
+  obtain ⟨checkedKept,checkedBack,motiveTyped,representation⟩ := NativeCoreGhostBackMotive.run_refinesWithPolicy normalSound normalizes childSound infers
     (onBase.trans throughFormation) formedRoom (ownerRep.frame throughFormation) (motiveRep.frame throughFormation)
     checkedOk afterCheck (fun pair member => retained pair (List.mem_append_right _ member))
   obtain ⟨addedKept,addedBack,kindRep⟩ := append_refines .nil rfl appended
   refine ⟨throughFormation.trans (checkedKept.trans addedKept),addedBack ∘ checkedBack ∘ formedBack ∘ ownerBack,_,kindRep,?_⟩
-  simpa only [expand,expandArgs] using LoanTyping.HasType.back (ownerTyped.convert sort) owned motiveTyped (.inl rfl)
+  have allowed : LoanTyping.BackRepresentation env mode erased (expand env M) := by
+    cases mode
+    · exact representation metadata
+    · exact .inl rfl
+  simpa only [expand,expandArgs] using LoanTyping.HasType.back
+    ((ownerTyped.convert sort).ghost loans) owned (motiveTyped.ghost loans) allowed
 
-private theorem requireResult_refines
+theorem runBack_refines (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (childSound : InferSound env base ctx limit infer)
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (ownerRep : Represents state.arena owner A) (motiveRep : Represents state.arena motive M)
+    (success : (runBack infer normal isBoxed limit depth state erased owner motive).result = .ok answer)
+    (ambient : Prefix (runBack infer normal isBoxed limit depth state erased owner motive).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.back erased A M) (runBack infer normal isBoxed limit depth state erased owner motive) answer := by
+  obtain ⟨kept,backward,typed⟩ := runBack_modeRefines metadata normalSound normalizes childSound infers
+    onBase room ownerRep motiveRep success ambient retained
+  exact ⟨kept,backward,typed⟩
+
+private theorem requireResult_modeRefines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (childSound : ModeSound env loans base ctx limit mode infer)
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (motiveRep : Represents state.arena motive M) (ownerRep : Represents state.arena owner x)
@@ -169,7 +206,7 @@ private theorem requireResult_refines
     (retained : ∀ pair ∈ pairs, PairRetained final pair) :
     let after := (requireResult infer normal limit depth state motive owner result).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.HasType env [] ctx true (expand env a) (.app (expand env M) (expand env x)) := by
+      LoanTyping.HasType env loans ctx mode (expand env a) (.app (expand env M) (expand env x)) := by
   unfold requireResult at success ambient ⊢
   obtain ⟨expected,expectedOk,expectedNext⟩ := Outcome.next_success success
   rw [expectedNext] at success ambient ⊢
@@ -194,19 +231,26 @@ private theorem requireResult_refines
   refine ⟨formedKept.trans (inferredKept.trans requiredKept),requiredBack ∘ inferredBack ∘ formedBack,?_⟩
   simpa only [Term.app,expand,expandArgs] using typed.convert converted
 
-theorem runGive_refines (metadata : BoxedFamilies env isBoxed)
+theorem runGiveWithModes_refines (metadata : BoxedFamilies env isBoxed)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalizes : ∀ state root, Progress limit state (normal state root))
-    (childSound : InferSound env base ctx limit infer)
+    (childSound : ModeSound env loans base ctx limit mode infer)
+    (ghostSound : InferSound env base ctx limit inferGhost)
+    (resultSound : ModeSound env loans base ctx limit (mode || erased) inferResult)
     (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (ghostProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferGhost state root))
+    (resultProgress : ∀ state root, state.steps ≤ limit → Progress limit state (inferResult state root))
     (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
     (motiveRep : Represents state.arena motive M) (ownerRep : Represents state.arena owner x)
     (resultRep : Represents state.arena result a)
-    (success : (runGive infer normal isBoxed limit depth state erased motive owner result).result = .ok answer)
-    (ambient : Prefix (runGive infer normal isBoxed limit depth state erased motive owner result).state.arena final)
+    (success : (runGiveWithModes infer inferGhost inferResult normal isBoxed limit depth state erased motive owner result).result = .ok answer)
+    (ambient : Prefix (runGiveWithModes infer inferGhost inferResult normal isBoxed limit depth state erased motive owner result).state.arena final)
     (retained : RetainedComparisons final answer) :
-    Refines env state.arena ctx (.give erased M x a) (runGive infer normal isBoxed limit depth state erased motive owner result) answer := by
-  unfold runGive at success ambient ⊢
+    let after := (runGiveWithModes infer inferGhost inferResult normal isBoxed limit depth state erased motive owner result).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      ∃ type, Represents after answer.typeRoot type ∧
+        LoanTyping.HasType env loans ctx mode (expand env (.give erased M x a)) (expand env type) := by
+  unfold runGiveWithModes at success ambient ⊢
   obtain ⟨type,typeOk,typeNext⟩ := Outcome.next_success success
   rw [typeNext] at success ambient ⊢
   obtain ⟨⟨⟩,ownedOk,ownedNext⟩ := Outcome.next_success success
@@ -220,29 +264,29 @@ theorem runGive_refines (metadata : BoxedFamilies env isBoxed)
   simp only [Except.ok.injEq] at success
   subst answer
   let accepted := requireOwned normal isBoxed (infer state owner).state type.typeRoot owner
-  let formed := NativeCoreGhostBackMotive.run infer normal isBoxed limit depth accepted.state erased type.typeRoot motive
-  let checked := requireResult infer normal limit depth formed.state motive owner result
+  let formed := NativeCoreGhostBackMotive.run inferGhost normal isBoxed limit depth accepted.state erased type.typeRoot motive
+  let checked := requireResult inferResult normal limit depth formed.state motive owner result
   have ownerRoom := (infers _ _ room).accepted room type typeOk
   have ownershipProgress := requireOwned_progress (state := (infer state owner).state) (isBoxed := isBoxed)
     (root := type.typeRoot) (rejected := owner) normalizes
   have ownedRoom := ownershipProgress.accepted ownerRoom () ownedOk
   have motiveProgress := NativeCoreGhostBackMotive.run_progress (state := accepted.state) (isBoxed := isBoxed)
-    (depth := depth) (erased := erased) (ownerType := type.typeRoot) (motive := motive) infers normalizes ownedRoom
+    (depth := depth) (erased := erased) (ownerType := type.typeRoot) (motive := motive) ghostProgress normalizes ownedRoom
   have formedRoom := motiveProgress.accepted ownedRoom pairs formedOk
-  have resultProgress := requireResult_progress (state := formed.state) (depth := depth) (motive := motive)
-    (owner := owner) (result := result) infers normalizes formedRoom
+  have resultCost := requireResult_progress (state := formed.state) (depth := depth) (motive := motive)
+    (owner := owner) (result := result) resultProgress normalizes formedRoom
   have afterResult := (append_progress (limit := limit) checked.state (.back erased) [type.typeRoot,motive]).kept.trans ambient
-  have afterMotive := resultProgress.kept.trans afterResult
+  have afterMotive := resultCost.kept.trans afterResult
   obtain ⟨ownerKept,ownerBack,_,typeRep,ownerTyped⟩ := childSound onBase room ownerRep typeOk
     (ownershipProgress.kept.trans (motiveProgress.kept.trans afterMotive))
     (fun pair member => retained pair (List.mem_append_left _ member))
   obtain ⟨ownedKept,ownedBack,owned⟩ := requireOwned_refines metadata normalSound (onBase.trans ownerKept) typeRep ownedOk
   have throughOwner := ownerKept.trans ownedKept
-  obtain ⟨formedKept,formedBack,motiveTyped⟩ := NativeCoreGhostBackMotive.run_refines normalSound normalizes childSound infers
+  obtain ⟨formedKept,formedBack,motiveTyped,representation⟩ := NativeCoreGhostBackMotive.run_refinesWithPolicy normalSound normalizes ghostSound ghostProgress
     (onBase.trans throughOwner) ownedRoom (typeRep.frame ownedKept) (motiveRep.frame throughOwner)
     formedOk afterMotive (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_left _ member)))
   have throughMotive := throughOwner.trans formedKept
-  obtain ⟨resultKept,resultBack,resultTyped⟩ := requireResult_refines normalSound normalizes childSound infers
+  obtain ⟨resultKept,resultBack,resultTyped⟩ := requireResult_modeRefines normalSound normalizes resultSound resultProgress
     (onBase.trans throughMotive) formedRoom (motiveRep.frame throughMotive) (ownerRep.frame throughMotive)
     (resultRep.frame throughMotive) resultOk afterResult
     (fun pair member => retained pair (List.mem_append_right _ (List.mem_append_right _ member)))
@@ -250,6 +294,30 @@ theorem runGive_refines (metadata : BoxedFamilies env isBoxed)
   obtain ⟨outputKept,outputBack,outputRep⟩ := append_refines
     (.cons (typeRep.frame later) (.cons (motiveRep.frame (ownerKept.trans later)) .nil)) rfl outputOk
   refine ⟨ownerKept.trans (later.trans outputKept),outputBack ∘ resultBack ∘ formedBack ∘ ownedBack ∘ ownerBack,_,outputRep,?_⟩
-  simpa only [expand,expandArgs] using LoanTyping.HasType.give ownerTyped owned motiveTyped (.inl rfl) resultTyped
+  have allowed : LoanTyping.BackRepresentation env mode erased (expand env M) := by
+    cases mode
+    · exact representation metadata
+    · exact .inl rfl
+  simpa only [expand,expandArgs] using LoanTyping.HasType.give ownerTyped owned (motiveTyped.ghost loans) allowed resultTyped
+
+theorem runGive_refines (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalizes : ∀ state root, Progress limit state (normal state root))
+    (childSound : InferSound env base ctx limit infer)
+    (infers : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (motiveRep : Represents state.arena motive M) (ownerRep : Represents state.arena owner x)
+    (resultRep : Represents state.arena result a)
+    (success : (runGive infer normal isBoxed limit depth state erased motive owner result).result = .ok answer)
+    (ambient : Prefix (runGive infer normal isBoxed limit depth state erased motive owner result).state.arena final)
+    (retained : RetainedComparisons final answer) :
+    Refines env state.arena ctx (.give erased M x a) (runGive infer normal isBoxed limit depth state erased motive owner result) answer := by
+  have ghost : ModeSound env [] base ctx limit true infer := by
+    intro _ _ _ _ _ start cost represented accepted future tape
+    obtain ⟨kept,safe,typed⟩ := childSound start cost represented accepted future tape
+    exact ⟨kept,safe,typed⟩
+  obtain ⟨kept,backward,typed⟩ := runGiveWithModes_refines metadata normalSound normalizes ghost childSound ghost
+    infers infers infers onBase room motiveRep ownerRep resultRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostOwnerReturns

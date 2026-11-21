@@ -1,5 +1,6 @@
 import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostSpineInference
+import Jihoo.NativeCoreCodeInference
 
 /-! The owner-return cases share the live recursive operand visitors. -/
 namespace Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples
@@ -51,5 +52,26 @@ meter as the checked Back and Give branches after their entry tick. -/
 theorem recursive_owner_return_schedule :
     recursive 32 4 = form 32 false 3 ∧ recursive 36 13 = form 36 true 12 ∧
       recursive 128 10 = form 128 false 9 ∧ recursive 48 7 = give 48 := by cbv
+
+private def inCode (arena : Arena) (limit root : Nat)
+    (bindings : List NativeCoreGhostSpineInference.GraphBinding := []) : Outcome Inferred :=
+  let normal := NativeCoreExpandedFamilies.raw empty [] [] 0 limit
+  let ghost := NativeCoreGhostSpineInference.runWith normal [] 0 limit
+  NativeCoreCodeInference.run normal ghost empty (fun _ => false) (fun _ => false) limit 32 bindings false ⟨arena,0⟩ root
+
+private def localResult (erased : Bool) : Arena :=
+  (input.push (.var 0)).push (.node (.give erased) [if erased then 12 else 3,6,14])
+
+set_option maxRecDepth 4096 in
+/-- Runtime Give visits the owner and selects the result visitor from the
+original erasure flag. Back still checks its motive representation. -/
+theorem owner_returns_use_the_original_modes :
+    (inCode input 32 4 = form 32 false 3 ∧ inCode input 36 13 = form 36 true 12 ∧
+      inCode input 48 7 = give 48 ∧ inCode input 128 10 = form 128 false 9) ∧
+    (let proved := inCode (localResult true) 65 15 [⟨11,true⟩]
+     proved.state.steps = 65 ∧ proved.state.arena.size = 31 ∧ proved.result.map Inferred.typeRoot = .ok 30) ∧
+    (let denied := inCode (localResult false) 36 15 [⟨2,true⟩]
+     denied.state.steps = 36 ∧ denied.state.arena.size = 27 ∧ denied.result = .error (.outsideFragment 14)) := by
+  exact ⟨by cbv,by cbv,by cbv⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples

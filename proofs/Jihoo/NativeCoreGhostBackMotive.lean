@@ -139,13 +139,76 @@ theorem representation_refines
     · simp [reject] at success
   · simp [reject] at success
 
-private theorem result_refines
+private theorem fixedHead_refines
+    (metadata : BoxedFamilies env isBoxed) (represented : Represents arena root term)
+    (accepted : fixedHead isBoxed allowBack arena[root]? = true) :
+    fixedRepresentation env (expand env term) = true := by
+  cases represented with
+  | var read => simp [read,fixedHead] at accepted
+  | @node _ op refs terms read width children =>
+    simp only [read] at accepted
+    cases op <;> try solve | simp [fixedHead] at accepted
+    case u64 | i64 =>
+      have empty : refs = [] := List.length_eq_zero_iff.mp width
+      subst refs
+      cases children
+      simp only [expand,expandArgs,fixedRepresentation]
+    case refine | buffer =>
+      have length : refs.length = 1 := width
+      rcases refs with _ | ⟨_,_ | ⟨_,_⟩⟩ <;> simp at length
+      cases children with
+      | cons body tail => cases tail; simp only [expand,expandArgs,fixedRepresentation]
+    case back flag =>
+      have length : refs.length = 2 := width
+      rcases refs with _ | ⟨_,_ | ⟨_,_ | ⟨_,_⟩⟩⟩ <;> simp at length
+      cases children with
+      | cons owner tail =>
+        cases tail with
+        | cons motive tail => cases tail; simp only [expand,expandArgs,fixedRepresentation]
+    case ind family count =>
+      have boxed : isBoxed family = true := by simpa only [fixedHead] using accepted
+      obtain ⟨entry,found,layout⟩ := metadata family boxed
+      simp only [expand,fixedRepresentation,found,Option.any_some,layout]
+
+/-- Native representation checks record the actual normalized motive lambda
+and classify its written body using the authenticated family layout. -/
+theorem representation_policy
+    (metadata : BoxedFamilies env isBoxed)
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
+    (represented : Represents state.arena motive written)
+    (success : (checkRepresentation normal isBoxed state motive allowBack).result = .ok ()) :
+    LoanTyping.BackRepresentation env false false (expand env written) := by
+  unfold checkRepresentation at success
+  obtain ⟨selected,normalized,next⟩ := Outcome.next_success success
+  rw [next] at success
+  obtain ⟨_,_,_,normalRep,conversion⟩ := normalSound onBase represented normalized
+  split at success
+  · rename_i flag domain body read
+    split at success
+    · rename_i good
+      cases normalRep with
+      | var lookup => rw [read] at lookup; cases lookup
+      | node lookup _ children =>
+        rw [read] at lookup
+        cases lookup
+        cases children with
+        | cons domainRep rest =>
+          cases rest with
+          | cons bodyRep rest =>
+            cases rest
+            exact .inr (.inr ⟨flag,_,_,by simpa only [Term.lam,expand,expandArgs] using conversion.converted,
+              fixedHead_refines metadata bodyRep good⟩)
+    · cases success
+  · cases success
+
+private theorem result_refinesWithPolicy
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal) (onBase : Prefix base state.arena)
     (levelRep : Represents state.arena level kind) (motiveRep : Represents state.arena motive written)
     (success : (checkResult normal isBoxed state erased level motive).result = .ok ()) :
     let after := (checkResult normal isBoxed state erased level motive).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.Conversion.Conv env (expand env kind) (loopSortTerm erased) := by
+      LoanTyping.Conversion.Conv env (expand env kind) (loopSortTerm erased) ∧
+      (BoxedFamilies env isBoxed → LoanTyping.BackRepresentation env false erased (expand env written)) := by
   unfold checkResult at success ⊢
   obtain ⟨sort,selected,next⟩ := Outcome.next_success success
   rw [next] at success ⊢
@@ -159,16 +222,19 @@ private theorem result_refines
     split at success
     · rename_i isErased
       simp only [ite_eq_left isErased]
-      exact ⟨kept,backward,kindConversion⟩
+      exact ⟨kept,backward,kindConversion,fun _ => .inr (.inl isErased)⟩
     · rename_i isRelevant
       simp only [ite_eq_right isRelevant]
       obtain ⟨checked,checkedBack⟩ := representation_refines normalSound (onBase.trans kept) (motiveRep.frame kept) success
-      exact ⟨kept.trans checked,checkedBack ∘ backward,kindConversion⟩
+      refine ⟨kept.trans checked,checkedBack ∘ backward,kindConversion,fun metadata => ?_⟩
+      have live : erased = false := Bool.eq_false_iff.mpr isRelevant
+      subst erased
+      exact representation_policy metadata normalSound (onBase.trans kept) (motiveRep.frame kept) success
   · simp [reject] at success
 
 /-- Successful motive checking yields the original source function at the
 Pi type over the authenticated owner and the sort selected by erasure. -/
-theorem run_refines
+theorem run_refinesWithPolicy
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
     (normalProgress : ∀ state root, Progress limit state (normal state root))
     (inferSound : InferSound env base ctx limit infer)
@@ -180,7 +246,8 @@ theorem run_refines
     (retained : ∀ pair ∈ compared, PairRetained final pair) :
     let after := (run infer normal isBoxed limit depth state erased ownerType motive).state.arena
     Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.HasType env [] ctx true (expand env written) (.pi false (expand env owner) (loopSortTerm erased)) := by
+      LoanTyping.HasType env [] ctx true (expand env written) (.pi false (expand env owner) (loopSortTerm erased)) ∧
+      (BoxedFamilies env isBoxed → LoanTyping.BackRepresentation env false erased (expand env written)) := by
   unfold run at success ambient ⊢
   obtain ⟨inferred,inferOk,inferNext⟩ := Outcome.next_success success
   rw [inferNext] at success ambient ⊢
@@ -212,9 +279,26 @@ theorem run_refines
   obtain ⟨equalKept,equalBack,domainConversion⟩ := requireTypes_refines normalSound (onBase.trans throughProduct)
     domainRep (ownerRep.frame throughProduct) equalOk equalityFinal (retained pair (by simp))
   have throughEqual := throughProduct.trans equalKept
-  obtain ⟨resultKept,resultBack,levelConversion⟩ := result_refines normalSound (onBase.trans throughEqual)
+  obtain ⟨resultKept,resultBack,levelConversion,representation⟩ := result_refinesWithPolicy normalSound (onBase.trans throughEqual)
     (levelRep.frame equalKept) (motiveRep.frame throughEqual) resultOk
   exact ⟨throughEqual.trans resultKept,resultBack ∘ equalBack ∘ productBack ∘ inferBack,
-    typed.convert (converted.trans (.node (.pi false) (.cons domainConversion (.cons levelConversion .nil))))⟩
+    typed.convert (converted.trans (.node (.pi false) (.cons domainConversion (.cons levelConversion .nil)))),representation⟩
+
+theorem run_refines
+    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
+    (normalProgress : ∀ state root, Progress limit state (normal state root))
+    (inferSound : InferSound env base ctx limit infer)
+    (inferProgress : ∀ state root, state.steps ≤ limit → Progress limit state (infer state root))
+    (onBase : Prefix base state.arena) (room : state.steps ≤ limit)
+    (ownerRep : Represents state.arena ownerType owner) (motiveRep : Represents state.arena motive written)
+    (success : (run infer normal isBoxed limit depth state erased ownerType motive).result = .ok compared)
+    (ambient : Prefix (run infer normal isBoxed limit depth state erased ownerType motive).state.arena final)
+    (retained : ∀ pair ∈ compared, PairRetained final pair) :
+    let after := (run infer normal isBoxed limit depth state erased ownerType motive).state.arena
+    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
+      LoanTyping.HasType env [] ctx true (expand env written) (.pi false (expand env owner) (loopSortTerm erased)) := by
+  obtain ⟨kept,backward,typed,_⟩ := run_refinesWithPolicy normalSound normalProgress inferSound inferProgress
+    onBase room ownerRep motiveRep success ambient retained
+  exact ⟨kept,backward,typed⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostBackMotive

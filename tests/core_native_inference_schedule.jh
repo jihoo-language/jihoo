@@ -978,16 +978,16 @@ fn owner_return_fixture() -> core.Core {
     c
 }
 
-fn owner_return_inference() {
+fn owner_return_inference(ghost: bool) {
     var back = owner_return_fixture()
     spend(&back, 999968)
-    let kind = back.infer(4, [], true, 32).unwrap()
+    let kind = back.infer(4, [], ghost, 32).unwrap()
     assert(kind == 22 && back.term(kind) == core.Term.Universe(0), "Back forms a Type0")
     assert_spent(&back, "Back checks the result representation in thirty-two ticks")
 
     var given = owner_return_fixture()
     spend(&given, 999952)
-    let ty = given.infer(7, [], true, 32).unwrap()
+    let ty = given.infer(7, [], ghost, 32).unwrap()
     assert(ty == 26 && given.node_count() == 27, "Give appends its checked return type last")
     let core.Term.Back(false, owner_type, 3) = given.term(ty) else {
         panic("Give keeps the original motive")
@@ -997,12 +997,12 @@ fn owner_return_inference() {
 
     var evidence = owner_return_fixture()
     spend(&evidence, 999964)
-    let kind = evidence.infer(13, [], true, 32).unwrap()
+    let kind = evidence.infer(13, [], ghost, 32).unwrap()
     assert(kind == 25 && evidence.term(kind) == core.Term.Universe(0), "an erased motive forms Back at Type0")
     assert_spent(&evidence, "erased Back skips the result representation check and spends thirty-six ticks")
 
     var rejected = owner_return_fixture()
-    assert(match rejected.infer(10, [], true, 32) {
+    assert(match rejected.infer(10, [], ghost, 32) {
         Err(e) => e.msg == "core: the result after giving back has one representation and holds no borrow", _ => false
     }, "Back rejects a borrowed result even in ghost inference")
 }
@@ -2248,6 +2248,58 @@ fn dependent_proof_comparison() {
     assert_spent(&compared, "the proof comparison uses 29 ticks and reuses the entire graph")
 }
 
+fn give_mode_fixture(erased: bool) -> core.Core {
+    var c = owner_return_fixture()
+    let at = diag.Span.nowhere()
+    let result = c.add(core.Term.Var(0), at).unwrap()
+    c.add(core.Term.Give(erased, if erased { 12 } else { 3 }, 6, result), at).unwrap()
+    c
+}
+
+fn give_result_mode_inference() {
+    var proved = give_mode_fixture(true)
+    let evidence = [core.Binding { ty: 11, erased: true }]
+    spend(&proved, 999935)
+    assert(proved.infer(15, evidence, false, 32).unwrap() == 30 && proved.node_count() == 31,
+        "Give checks the original erased proof without treating it as a runtime value")
+    assert_spent(&proved, "Give with erased evidence uses 65 ticks")
+
+    var denied = give_mode_fixture(false)
+    let erased_word = [core.Binding { ty: 2, erased: true }]
+    spend(&denied, 999964)
+    assert(match denied.infer(15, erased_word, false, 32) {
+        Err(e) => e.msg == "core: erased value used at runtime", _ => false
+    } && denied.node_count() == 27, "Give refuses an erased slot in its executable result")
+    assert_spent(&denied, "the erased runtime result is rejected after 36 ticks")
+}
+
+fn code_take_fixture() -> core.Core {
+    var c = owner_return_fixture()
+    let span = diag.Span.nowhere()
+    let owner = c.add(core.Term.Var(1), span).unwrap()
+    let release = c.add(core.Term.Free(owner, 5), span).unwrap()
+    let after_result = c.add(core.Term.Lam(false, 2, release), span).unwrap()
+    let callback = c.add(core.Term.Lam(false, 1, after_result), span).unwrap()
+    c.add(core.Term.Take(7, callback), span).unwrap()
+    c
+}
+
+fn take_code_callback_inference() {
+    var full = code_take_fixture()
+    spend(&full, 999889)
+    let result = full.infer(18, [], false, 32).unwrap()
+    assert(result == 38 && full.node_count() == 41 && full.term(result) == core.Term.I64,
+        "the CODE callback frees its actual owner and returns the lowered I64 root")
+    assert_spent(&full, "the CODE Take uses 111 ticks")
+
+    var short = code_take_fixture()
+    spend(&short, 999890)
+    assert(match short.infer(18, [], false, 32) {
+        Err(e) => e.msg == "core: checking step limit reached", _ => false
+    } && short.node_count() == 41 && short.term(38) == core.Term.I64,
+        "the final native result check follows lowering and adds no rows")
+}
+
 fn main() -> i32 {
     code_conditional_inference(false)
     code_conditional_inference(true)
@@ -2321,9 +2373,12 @@ fn main() -> i32 {
     loop_motive_inference()
     dependent_lend_callbacks()
     code_word_definition()
-    owner_return_inference()
+    owner_return_inference(true)
+    owner_return_inference(false)
+    give_result_mode_inference()
     runtime_lambda_linearity()
     take_continuation_inference()
+    take_code_callback_inference()
     iteration_callback_types()
     fold_accumulator_inference()
     println("Native Core.infer matched primitive, binder, evidence, conditional, refinement and transport graph traces and checking costs")

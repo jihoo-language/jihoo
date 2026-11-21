@@ -31,6 +31,7 @@ open NativeCoreCompare (FullyRetained)
 open NativeCoreBinderTraversal (VisitsFrom)
 open EnvironmentDelta (expand expandArgs)
 open NativeCoreGhostSort (DataFamilies)
+open NativeCoreCodeLendGates (checkInMode checkInMode_progress checkInMode_policy)
 open NativeCoreGhostBinderCheck
 open NativeCoreGlobalAnnotation (checked_type_at)
 open NativeCoreBufferRelease (bufferLength inferFree bufferLength_progress inferFree_progress unary_read ModeSound)
@@ -252,10 +253,6 @@ private def checkLoadDomains (normal : Visit) (limit depth : Nat) (state : State
           (requireTypes normal limit depth afterFirst ownerDomain buffer continuation).next fun after second =>
             ⟨after,.ok (first,second)⟩
 
-private def codeResultPolicy (normal : Visit) (mode : Bool) (state : State)
-    (result continuation : Nat) : Outcome Unit :=
-  if mode then ⟨state,.ok ()⟩ else NativeCoreCodeLendGates.checkCanonical normal state result continuation
-
 private def finishLoad (normal : Visit) (mode : Bool) (limit depth : Nat) (state : State)
     (length continuation typeRoot : Nat) : Outcome Inferred :=
   (normal state typeRoot).next fun exposed root =>
@@ -267,7 +264,7 @@ private def finishLoad (normal : Visit) (mode : Bool) (limit depth : Nat) (state
           fun afterCheck pairs =>
             (normal afterCheck result).next fun normalized normalRoot =>
               (lowerLoadType limit depth normalized normalRoot).next fun after outside =>
-                (codeResultPolicy normal mode after outside continuation).next fun finished _ =>
+                (checkInMode normal mode after outside continuation).next fun finished _ =>
                   ⟨finished,.ok ⟨outside,[pairs.1,pairs.2]⟩⟩
       | _ => discard exposed continuation
     | _ => discard exposed continuation
@@ -454,7 +451,7 @@ private def exposeImpossibleBound (normal : Visit) (state : State) (proof typeRo
 def inferAbsurdInMode (infer : Infer) (normal : Visit) (mode : Bool) (state : State) (target proof : Nat) : Outcome Inferred :=
   (infer state target).next fun formed targetType =>
     (NativeCoreGhostSort.sort normal formed targetType.typeRoot).next fun afterSort _ =>
-      (codeResultPolicy normal mode afterSort target target).next fun allowed _ =>
+      (checkInMode normal mode afterSort target target).next fun allowed _ =>
         (infer allowed proof).next fun inferred proofType =>
           (exposeImpossibleBound normal inferred proof proofType.typeRoot).next fun after _ =>
             ⟨after,.ok ⟨target,targetType.compared ++ proofType.compared⟩⟩
@@ -924,13 +921,6 @@ private theorem checkLoadDomains_progress
   intro _ _ firstRoom
   exact (requireTypes_progress (fun state ref _ => normalizes state ref) firstRoom).next (fun _ => Progress.atState _ _)
 
-private theorem codeResultPolicy_progress
-    (normalizes : ∀ state root, Progress limit state (normal state root)) :
-    Progress limit state (codeResultPolicy normal mode state result continuation) := by
-  cases mode
-  · exact NativeCoreCodeLendGates.checkCanonical_progress normalizes
-  · exact Progress.atState _ _
-
 private theorem finishLoad_progress
     (normalizes : ∀ state root, Progress limit state (normal state root))
     (room : state.steps ≤ limit) :
@@ -943,7 +933,7 @@ private theorem finishLoad_progress
     · apply next_progress (checkLoadDomains_progress normalizes exposedRoom) exposedRoom
       intro _ _ checkedRoom
       exact (normalizes _ _).next (fun _ => (lowerLoadType_progress _ _ _ _).next (fun _ =>
-        (codeResultPolicy_progress normalizes).next (fun _ => Progress.atState _ _)))
+        (checkInMode_progress normalizes).next (fun _ => Progress.atState _ _)))
     · exact Progress.atState _ _
   · exact Progress.atState _ _
 
@@ -1267,7 +1257,7 @@ theorem inferAbsurdInMode_progress
   intro _ _ formedRoom
   apply next_progress (NativeCoreGhostSort.sort_progress normalizes) formedRoom
   intro _ _ sortRoom
-  apply next_progress (codeResultPolicy_progress normalizes) sortRoom
+  apply next_progress (checkInMode_progress normalizes) sortRoom
   intro _ _ allowedRoom
   apply next_progress (infers _ _ allowedRoom) allowedRoom
   intro _ _ _
@@ -2229,17 +2219,6 @@ private theorem checkLoadDomains_refines
   · simpa only [Term.i64,expand,expandArgs] using valueConv
   · simpa only [Term.buffer,EnvironmentDelta.expand_node_cons,expandArgs,EnvironmentDelta.expand_renaming wf.admissible] using ownerConv
 
-private theorem codeResultPolicy_refines
-    (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
-    (onBase : Prefix base state.arena) (represented : Represents state.arena result outside)
-    (success : (codeResultPolicy normal mode state result continuation).result = .ok ()) :
-    let after := (codeResultPolicy normal mode state result continuation).state.arena
-    Prefix state.arena after ∧ (Backward state.arena → Backward after) ∧
-      LoanTyping.continuationAllowed env mode (expand env outside) := by
-  cases mode
-  · exact NativeCoreCodeLendGates.checkCanonical_policy normalSound onBase represented success
-  · exact ⟨Prefix.refl _,id,Or.inl rfl⟩
-
 private theorem finishLoad_refines
     (wf : UnifiedProgram.EnvWellFormed env)
     (normalSound : VisitsFrom base (ExpandedNormalization env) normal)
@@ -2284,7 +2263,7 @@ private theorem finishLoad_refines
       have exposedRoom := (normalProgress state typeRoot).accepted room root exposedOk
       have resultProgress := normalProgress checked.state result
       have lowerProgress := lowerLoadType_progress limit depth normalized.state normalRoot
-      have policyProgress := codeResultPolicy_progress (mode := mode) (result := outside)
+      have policyProgress := checkInMode_progress (mode := mode) (result := outside)
         (continuation := continuation) (state := (lowerLoadType limit depth normalized.state normalRoot).state) normalProgress
       obtain ⟨exposedPrefix,exposedBack,exposedType,exposedRep,typeConv⟩ := normalSound onBase typeRep exposedOk
       obtain ⟨x,tail,shape,valueRep,tailRep⟩ := binary_read exposedRep outer
@@ -2305,7 +2284,7 @@ private theorem finishLoad_refines
         rw [← weakened,EnvironmentDelta.expand_renaming wf.admissible]
         exact load_result_shifted (expand env residual)
       have throughLower := throughCheck.trans (normalizedPrefix.trans lowerPrefix)
-      obtain ⟨policyKept,policyBack,allowed⟩ := codeResultPolicy_refines normalSound
+      obtain ⟨policyKept,policyBack,allowed⟩ := checkInMode_policy normalSound
         (onBase.trans throughLower) outsideRep policyOk
       refine ⟨throughLower.trans policyKept,
         policyBack ∘ lowerBack ∘ normalizedBack ∘ checkedBack ∘ exposedBack,_,_,_,_,residual,
@@ -3583,14 +3562,14 @@ theorem inferAbsurdInMode_modeRefines
   subst answer
   let targetCheck := infer state target
   let sortCheck := NativeCoreGhostSort.sort normal targetCheck.state targetTy.typeRoot
-  let policyCheck := codeResultPolicy normal mode sortCheck.state target target
+  let policyCheck := checkInMode normal mode sortCheck.state target target
   let proofCheck := infer policyCheck.state proof
   have targetProgress := childProgress state target room
   have targetRoom := targetProgress.accepted room targetTy targetOk
   have sortProgress := NativeCoreGhostSort.sort_progress (state := targetCheck.state)
     (typeRoot := targetTy.typeRoot) normalProgress
   have sortRoom := sortProgress.accepted targetRoom sort sortOk
-  have policyProgress := codeResultPolicy_progress (state := sortCheck.state) (mode := mode)
+  have policyProgress := checkInMode_progress (state := sortCheck.state) (mode := mode)
     (result := target) (continuation := target) normalProgress
   have policyRoom := policyProgress.accepted sortRoom () policyOk
   have proofProgress := childProgress policyCheck.state proof policyRoom
@@ -3603,7 +3582,7 @@ theorem inferAbsurdInMode_modeRefines
   obtain ⟨sortKept,sortBack,targetSort⟩ := NativeCoreGhostSort.sort_refines normalSound
     (onBase.trans targetKept) heldTarget sortOk
   have throughSort := targetKept.trans sortKept
-  obtain ⟨policyKept,policyBack,allowed⟩ := codeResultPolicy_refines normalSound
+  obtain ⟨policyKept,policyBack,allowed⟩ := checkInMode_policy normalSound
     (onBase.trans throughSort) (targetRep.frame throughSort) policyOk
   have throughPolicy := throughSort.trans policyKept
   obtain ⟨proofKept,proofBack,_,heldProof,proofTyped⟩ := childSound (onBase.trans throughPolicy) policyRoom
