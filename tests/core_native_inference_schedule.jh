@@ -1896,10 +1896,52 @@ fn view_case_builder(dependent: bool, recursion: bool) {
     assert_spent(&c, "view case construction uses the exact checking budget")
 }
 
+fn view_inference_fixture(dependent: bool, recursive: bool) -> core.Core {
+    var c = core.Core.new()
+    let span = diag.Span.nowhere()
+    let word = c.add(core.Term.U64, span).unwrap()
+    let owned = c.add(core.Term.Ind(0, Vec(u32).new()), span).unwrap()
+    let step = c.add(core.Term.Pi(false, owned, owned), span).unwrap()
+    let reference = c.add(core.Term.Ref(owned), span).unwrap()
+    let dependent_motive = c.add(core.Term.Lam(false, reference, word), span).unwrap()
+    let base = c.add(core.Term.Natural(0), span).unwrap()
+    let hypothesis = c.add(core.Term.Lam(false, word, base), span).unwrap()
+    let step_plain = c.add(core.Term.Lam(false, reference, base), span).unwrap()
+    let step_recursive = c.add(core.Term.Lam(false, reference, hypothesis), span).unwrap()
+    let owner = c.add(core.Term.Con(0, 0, Vec(u32).new()), span).unwrap()
+    let subject = c.add(core.Term.Borrow(owner), span).unwrap()
+    var cases = Vec(u32).new()
+    cases.push(base)
+    cases.push(if recursive { step_recursive } else { step_plain })
+    c.add(core.Term.View(recursive, 0, if dependent { dependent_motive } else { word }, cases, subject), span).unwrap()
+    c.push_family(core.Family { name: "ViewInference".to_string(), data: true, params: 0, arity: 0,
+        constructors: Vec(core.Constructor).new(), globals: 0, span })
+    c.push_constructor(0, core.Constructor { name: "Base".to_string(), ty: owned })
+    c.push_constructor(0, core.Constructor { name: "Step".to_string(), ty: step })
+    c.check().unwrap()
+    c
+}
+
+fn ghost_view_inference(dependent: bool, recursive: bool) {
+    var c = view_inference_fixture(dependent, recursive)
+    assert(c.node_count() == 15, "checked ghost view starts with fifteen rows")
+    let ticks = if dependent { if recursive { 114 } else { 94 } } else { if recursive { 51 } else { 41 } }
+    let rows = if dependent { if recursive { 47 } else { 41 } } else { if recursive { 30 } else { 27 } }
+    let root: u32 = if dependent { if recursive { 46 } else { 40 } } else { 0 }
+    spend(&c, 999999 - ticks)
+    assert(c.infer(11, [], true, 16).unwrap() == root && c.node_count() == rows, "ghost view inferred the expected root")
+    assert(c.term(root) == (if dependent { core.Term.App(4, 10) } else { core.Term.U64 }),
+        "the view returns the written motive applied to the original borrow")
+    assert_spent(&c, "ghost view uses the exact checking budget")
+}
+
 fn main() -> i32 {
     view_reading_scope()
     for dependent in [false, true] {
-        for recursion in [false, true] { view_case_builder(dependent, recursion) }
+        for recursion in [false, true] {
+            view_case_builder(dependent, recursion)
+            ghost_view_inference(dependent, recursion)
+        }
     }
     primitive_inference()
     erased_lambda()

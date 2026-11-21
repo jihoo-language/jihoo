@@ -10923,3 +10923,13 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.follow_sound
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_typed_occurrences
 #print axioms Jihoo.NativeKernel.Environment.LoanTyping.ComparisonEvidence.live_identity_path_common_proposition
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.checkCases_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.finish_refines
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.runNode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.runNode_disabled
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runVisitsWithViews_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostSpineInference.runWithFamilyViews_progress
+#print axioms Jihoo.NativeKernel.NativeCoreGhostViewInference.Examples.recursive_ghost_view_matches_native
+#print axioms Jihoo.NativeKernel.NativeCoreViewStableHead.run_keeps_head
+#print axioms Jihoo.NativeKernel.NativeCoreViewStableHead.normal_matches_view_plan

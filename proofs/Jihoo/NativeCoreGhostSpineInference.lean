@@ -3,6 +3,7 @@ import Jihoo.NativeCoreBufferRelease
 import Jihoo.NativeCoreGhostTypeRequirement
 import Jihoo.NativeCoreGhostConstructorInference
 import Jihoo.NativeCoreGhostFamilyElimination
+import Jihoo.NativeCoreGhostViewInference
 import Jihoo.NativeCoreGhostOwnerReturns
 import Jihoo.NativeCoreGhostTakeInference
 import Jihoo.NativeCoreGhostFoldInference
@@ -486,9 +487,10 @@ private def inferFamily (infer : Infer) (normal : Visit) (limit : Nat)
 /-- The list reverses the compiler's physical list of bindings so that
 de Bruijn index zero looks up the newest binding. Visibility is shared
 by inference and all type normalization visits. -/
-def runVisitsWithFamilies (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
+def runVisitsWithViews (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
     (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
-    (constructorRoots : Nat → Nat → Option Nat) (familyEliminations : NativeCoreGhostFamilyElimination.FamilyTable) :
+    (constructorRoots : Nat → Nat → Option Nat) (familyEliminations : NativeCoreGhostFamilyElimination.FamilyTable)
+    (viewEnv : Option Environment) :
     Nat → Nat → List GraphBinding → Infer
   | 0, depth, _, state, root => tick limit depth state root (fun entered => discard entered root)
   | _ + 1, 0, _, state, root => tick limit 0 state root (fun entered => discard entered root)
@@ -515,140 +517,150 @@ def runVisitsWithFamilies (normal : NormalAt) (roots : List Roots) (visible limi
             if -(2^63 : Int) ≤ value ∧ value < (2^63 : Int) then emit entered .i64 else discard entered root
         | some (.node (.con family constructor _) fields) =>
             NativeCoreGhostConstructorInference.runSelected
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth root ctx.length constructorRoots entered family constructor fields
         | some (.node (.elim family _) args) =>
             NativeCoreGhostFamilyElimination.runNode familyEliminations
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth entered false root family args
         | some (.node (.caseOf family _) args) =>
             NativeCoreGhostFamilyElimination.runNode familyEliminations
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth entered true root family args
+        | some (.node (.view recursive family _) args) =>
+            NativeCoreGhostViewInference.runNode viewEnv familyEliminations
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
+              (normal depth) limit depth entered recursive root family args
         | some (.node (.ind family count) indices) =>
-            inferFamily (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits indexCheckDepth ctx)
+            inferFamily (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits indexCheckDepth ctx)
               (normal indexCheckDepth) limit shapeTable entered root family count indices
         | some (.node .array [n]) | some (.node .buffer [n]) =>
-            inferFixed (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               .u64 [n] (.universe 0) []
         | some (.node (.elements count) elements) =>
-            inferElements (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferElements (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               root count elements
         | some (.node .alloc [n, fill]) =>
-            inferAlloc (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered n fill
+            inferAlloc (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered n fill
         | some (.node (.drop family) [owner, tail]) =>
-            inferDrop (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+            inferDrop (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isBoxed shapeTable entered root family owner tail
         | some (.node .free [buffer, tail]) =>
-            inferFree (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) entered buffer tail
+            inferFree (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) entered buffer tail
         | some (.node .store [buffer, index, value, proof]) =>
-            inferStore (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferStore (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               buffer index value proof
         | some (.node .load [buffer, index, proof, continuation]) =>
-            inferLoad (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferLoad (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               buffer index proof continuation
         | some (.node .ref [owner]) =>
-            inferReference (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+            inferReference (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isBoxed entered owner
         | some (.node (.back erased) [owner, motive]) =>
             NativeCoreGhostOwnerReturns.runBack
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isBoxed limit depth entered erased owner motive
         | some (.node (.give erased) [motive, owner, result]) =>
             NativeCoreGhostOwnerReturns.runGive
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isBoxed limit depth entered erased motive owner result
         | some (.node .take [subject, continuation]) =>
             NativeCoreGhostTakeInference.run
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth entered subject continuation
         | some (.node .fold [count, initial, body]) =>
             let familyLayouts := fun family => (shapeTable family).map fun _ => isBoxed family
             NativeCoreGhostFoldInference.runWith isBoxed (CoreEffectAnalysis.graphMemoryFreeWith familyLayouts)
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth entered count initial body
         | some (.node .loop [count, motive, initial, body]) =>
             let familyLayouts := fun family => (shapeTable family).map fun _ => isBoxed family
             NativeCoreGhostLoopInference.run isBoxed (CoreEffectAnalysis.graphMemoryFreeWith familyLayouts)
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) limit depth entered count motive initial body
         | some (.node .lend [owner, reader, continuation]) =>
             NativeCoreGhostLendInference.run
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isData isBoxed limit depth entered owner reader continuation
         | some (.node .borrow [owner]) =>
-            inferBorrow (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+            inferBorrow (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) isBoxed entered owner
         | some (.node .deref [reference]) =>
-            inferDeref (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
+            inferDeref (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
               (normal depth) entered reference
         | some (.node .index [subject, index, proof]) =>
-            inferIndex (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferIndex (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               subject index proof
         | some (.node .eq [a, b]) | some (.node .lt [a, b]) =>
-            inferFixed (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .prop []
         | some (.node .refl [a]) =>
-            inferFixed (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               .u64 [a] .eq [a, a]
         | some (.node .uadd [a, b]) =>
-            inferFixed (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               .u64 [a, b] .u64 []
         | some (.node (.arith _) [a, b]) =>
-            inferFixed (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferFixed (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               .i64 [a, b] .i64 []
         | some (.node .decide [a, b]) =>
-            inferDecide (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferDecide (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               root a b
         | some (.node .strict [a, b]) =>
-            inferStrict (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) entered a b
+            inferStrict (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) entered a b
         | some (.node .zeroLe [a]) =>
-            inferZeroLe (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered a
+            inferZeroLe (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered a
         | some (.node .usub [a, b, proof]) =>
-            inferSubtract (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferSubtract (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               a b proof
         | some (.node .ltAdd [a, b, delta, proof]) =>
-            inferOffsetProof (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               true a b delta proof
         | some (.node .ltCancel [a, b, delta, proof]) =>
-            inferOffsetProof (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferOffsetProof (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               false a b delta proof
         | some (.node .ltLe [a, b, c, lower, upper]) =>
-            inferTransitiveProof (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferTransitiveProof (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               a b c lower upper
         | some (.node .ifEq [a, b, yes, no]) =>
-            inferConditional (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
-              (fun assumption => runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
+              (fun assumption => runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered true a b yes no
         | some (.node .ifLt [a, b, yes, no]) =>
-            inferConditional (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
-              (fun assumption => runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth (⟨assumption, true⟩ :: ctx))
+            inferConditional (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
+              (fun assumption => runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth (⟨assumption, true⟩ :: ctx))
               (normal depth) limit depth entered false a b yes no
         | some (.node .refine [predicate]) =>
-            inferRefine (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered predicate
+            inferRefine (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered predicate
         | some (.node .pack [predicate, word, evidence]) =>
-            inferPack (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferPack (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               predicate word evidence
         | some (.node .transport [predicate, equality, payload]) =>
-            inferTransport (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered
+            inferTransport (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered
               predicate equality payload
         | some (.node .absurd [target, proof]) =>
-            inferAbsurd (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) entered target proof
+            inferAbsurd (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) entered target proof
         | some (.node .witness [subject]) =>
-            inferRefinementProjection (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) entered false subject
+            inferRefinementProjection (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) entered false subject
         | some (.node .proof [subject]) =>
-            inferRefinementProjection (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) entered true subject
+            inferRefinementProjection (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) entered true subject
         | some (.node (.pi erased) [a, b]) =>
-            inferBinding (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered true erased a b
         | some (.node (.lam erased) [a, b]) =>
-            inferBinding (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx)
-              (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth (⟨a, erased⟩ :: ctx))
+            inferBinding (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx)
+              (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth (⟨a, erased⟩ :: ctx))
               (normal depth) isData entered false erased a b
         | some (.node .app [f, a]) =>
-            inferApp (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth ctx) (normal depth) limit depth entered f a
+            inferApp (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth ctx) (normal depth) limit depth entered f a
         | _ => discard entered root
+
+def runVisitsWithFamilies (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
+    (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
+    (constructorRoots : Nat → Nat → Option Nat) (familyEliminations : NativeCoreGhostFamilyElimination.FamilyTable) :
+    Nat → Nat → List GraphBinding → Infer :=
+  runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations none
 
 /-- The scalar and constructor entry retains the original family-free
 elimination policy. -/
@@ -663,6 +675,16 @@ def runWithFamilyElimination (normal : NormalAt) (roots : List Roots) (visible l
     (familyEliminations : NativeCoreGhostFamilyElimination.FamilyTable) (depth : Nat) (ctx : List GraphBinding) : Infer :=
   fun state root =>
     runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations (limit+1-state.steps) depth ctx state root
+
+/-- Enable borrowed View along with the checked family's elimination table.
+The same recursive ghost visitor checks its scrutinee, motive and branches. -/
+def runWithFamilyViews (normal : NormalAt) (env : Environment) (roots : List Roots) (visible limit : Nat)
+    (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
+    (constructorRoots : Nat → Nat → Option Nat)
+    (familyEliminations : NativeCoreGhostFamilyElimination.FamilyTable) (depth : Nat) (ctx : List GraphBinding) : Infer :=
+  fun state root =>
+    runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations
+      (some env) (limit+1-state.steps) depth ctx state root
 
 def runWithConstructors (normal : NormalAt) (roots : List Roots) (visible limit : Nat)
     (isData isBoxed : Nat → Bool) (shapeTable : Nat → Option (Nat × Bool))
@@ -1214,17 +1236,17 @@ private theorem tick_progress
 
 /-- Progress is a statement about the executable graph path, including
 rejected steps and failures before the eventual type has been instantiated. -/
-theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
+theorem runVisitsWithViews_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (room : state.steps ≤ limit) :
-    Progress limit state (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth bindings state root) := by
+    Progress limit state (runVisitsWithViews normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations viewEnv visits depth bindings state root) := by
   induction visits generalizing depth state root bindings with
   | zero => exact tick_progress (fun _ _ => Progress.atState _ _)
   | succ visits ih =>
     cases depth with
     | zero => exact tick_progress (fun _ _ => Progress.atState _ _)
     | succ depth =>
-      simp only [runVisitsWithFamilies]
+      simp only [runVisitsWithViews]
       apply tick_progress
       intro entered within
       split
@@ -1252,6 +1274,8 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
         | exact inferFixed_progress (fun _ _ room => ih room)
             (fun state ref _ => normalProgress depth state ref) within
         | exact NativeCoreGhostFamilyElimination.runNode_progress
+            (fun _ _ room => ih room) (normalProgress depth) within
+        | exact NativeCoreGhostViewInference.runNode_progress
             (fun _ _ room => ih room) (normalProgress depth) within
         | exact NativeCoreGhostConstructorInference.runSelected_progress
             (fun _ _ room => ih room) (normalProgress depth) within
@@ -1292,6 +1316,19 @@ theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : 
             (fun state ref _ => normalProgress depth state ref) within
         | simpa only [discard] using (Progress.atState (limit := limit) entered
             (.error (.outsideFragment root) : Except NativeCorePureComputationNormal.Error Inferred))
+
+theorem runVisits_progress {normal : NormalAt} {roots : List Roots} {bindings : List GraphBinding}
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots familyEliminations visits depth bindings state root) :=
+  runVisitsWithViews_progress normalProgress room
+
+theorem runWithFamilyViews_progress
+    (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
+    (room : state.steps ≤ limit) :
+    Progress limit state (runWithFamilyViews normal env roots visible limit isData isBoxed shapeTable
+      constructorRoots familyEliminations depth bindings state root) :=
+  runVisitsWithViews_progress normalProgress room
 
 theorem runWithFamilyElimination_progress
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
@@ -3358,7 +3395,7 @@ theorem runVisits_sound {normal : NormalAt}
   induction visits generalizing depth base bindings ctx with
   | zero =>
       intro state root term answer final _ _ _ success _ _
-      simp only [runVisitsWithFamilies] at success
+      simp only [runVisitsWithFamilies,runVisitsWithViews] at success
       have entered := (tick_success success).1
       rw [entered] at success
       exact False.elim (by simp [discard] at success)
@@ -3367,7 +3404,7 @@ theorem runVisits_sound {normal : NormalAt}
     | zero =>
       intro state root term answer final _ _ _ success _ _
       by_cases exhausted : limit < state.steps + 1 <;>
-        simp [runVisitsWithFamilies, tick, NativeCoreUnsignedCancellation.tick, exhausted] at success
+        simp [runVisitsWithFamilies, runVisitsWithViews, tick, NativeCoreUnsignedCancellation.tick, exhausted] at success
     | succ depth =>
       have child {later nextRows nextCtx nextDepth} (kept : Prefix base later) (represented : ContextRep env later nextRows nextCtx) :
           InferSound env later nextCtx limit (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots (fun _ => none) visits nextDepth nextRows) :=
@@ -3376,7 +3413,7 @@ theorem runVisits_sound {normal : NormalAt}
       have sameContext : InferSound env base ctx limit (runVisitsWithFamilies normal roots visible limit isData isBoxed shapeTable constructorRoots (fun _ => none) visits depth bindings) :=
         child (.refl _) context
       intro state root term answer final onBase room source success ambient retained
-      simp only [runVisitsWithFamilies] at success ambient ⊢
+      simp only [runVisitsWithFamilies,runVisitsWithViews] at success ambient ⊢
       obtain ⟨entered, within⟩ := tick_success success
       rw [entered] at success ambient ⊢
       cases source with
@@ -3394,7 +3431,9 @@ theorem runVisits_sound {normal : NormalAt}
             rw [NativeCoreGhostFamilyElimination.runNode_invisible (visibleTable := fun _ => none) rfl] at success
             cases success
           case view =>
-            simp only [discard, reduceCtorEq] at success
+            dsimp only at success
+            rw [NativeCoreGhostViewInference.runNode_disabled] at success
+            cases success
           all_goals try
             have empty := List.length_eq_zero_iff.mp arity
             subst refs

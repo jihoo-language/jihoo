@@ -4672,3 +4672,21 @@ ignored proofs the same formed proposition when the binder contexts are
 compatible and the operands at that occurrence are fully retained. The
 focused build passed 293 jobs. The four declarations use only `propext`
 and `Quot.sound`.
+
+### Borrowed View through the recursive ghost visitor
+
+The visible family entry drives a recursive View visit. It checks the
+original scrutinee and motive, then checks each actual branch in order.
+The result is either the original constant type or the original motive
+applied to the original scrutinee. Native Core and Lean agree on 41 and
+51 ticks for constant motives and 94 and 114 ticks for dependent motives,
+respectively for one-level and recursive View. Both dependent examples
+retain the original motive and borrow in the resulting application.
+
+The literal ghost normalizer now proves head preservation through actual
+transparent aliases. When the expanded field domain exposes the checked
+field's outer constructor, its live classification agrees with the
+checked view plan even if its subterms change. The focused View build
+passed 474 jobs. Native tests passed the expanded inference schedule,
+paired source and Core dependent View execution, counted releases, and
+all 11 source and 15 Core rejections.

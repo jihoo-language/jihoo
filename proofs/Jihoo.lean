@@ -1389,3 +1389,6 @@ import Jihoo.NativeCoreViewSubject
 import Jihoo.NativeCoreViewMotiveGate
 import Jihoo.NativeBindingMachineMutableConditionalDemand
 import Jihoo.NativeLoanComparisonPathLookup
+import Jihoo.NativeCoreGhostViewInference
+import Jihoo.NativeCoreGhostViewInferenceExamples
+import Jihoo.NativeCoreViewStableHead
