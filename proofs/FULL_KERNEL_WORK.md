@@ -4509,3 +4509,19 @@ Native and Lean agree on 26 ticks for a lambda call with an unsigned
 addition body, 28 for that call under Strict, and 44 for a partial
 application that leaves a signed binder and an unsigned result.
 The focused build passed 458 jobs.
+
+### Indexed proposition constructor trees
+
+The finite interpretation accepts a telescope with any sequence of
+word fields and erased recursive fields and any vector of affine
+indices. The type of each recursive child follows from its original
+checked constructor argument. The same word assignment interprets
+those child indices and the instantiated result vector. The exact-byte
+admission theorem obtains the proof value and its type from the
+checked global declaration.
+
+The two-index fixture has two recursive arguments under different
+binder scopes. Its checked value inhabits the fiber at `[2,7]` and
+every constructor in the family fixes the second index at seven.
+The focused build passed 372 jobs. The interpretation theorem covers
+constructor trees with these telescope codes.

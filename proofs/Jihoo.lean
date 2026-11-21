@@ -1376,3 +1376,4 @@ import Jihoo.NativeCorePropSignatureReplayExamples
 import Jihoo.NativeCoreDataRecursionCase
 import Jihoo.NativeCoreDataSignatureConversion
 import Jihoo.NativeCoreCodeInference
+import Jihoo.NativeLoanIndexedFamilyTelescopeModel

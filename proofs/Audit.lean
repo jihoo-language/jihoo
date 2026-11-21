@@ -10860,3 +10860,10 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.run_progress
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.run_sound
 #print axioms Jihoo.NativeKernel.NativeCoreCodeInference.Examples.nested_runtime_calls_match_native
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.index_conversion
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.ConstructorTree.sound
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.ConstructorTree.pure_sound
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.checked_global_carrier
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.Fiber.original_result_indices
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.two_index_constructor_tree_checked
+#print axioms Jihoo.NativeKernel.Environment.Semantics.IndexedFamilyTelescope.two_index_family_excludes_other_second_index
