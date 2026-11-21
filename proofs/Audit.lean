@@ -11114,3 +11114,14 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeInference.runInMode_refines
 #print axioms Jihoo.NativeKernel.NativeCoreGhostOwnerReturnExamples.owner_returns_use_the_original_modes
 #print axioms Jihoo.NativeKernel.NativeCoreGhostTakeExamples.runtime_take_keeps_returned_result
+
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.run_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.run_refines_formed
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.runNode_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.runNode_invisible
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.runNode_refines_formed
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.empty_sound
+#print axioms Jihoo.NativeKernel.NativeCoreCodeDataDispatch.sound_of_formed_annotations
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithFamilies_progress
+#print axioms Jihoo.NativeKernel.NativeCoreCodeInference.runWithFamilies_sound
+#print axioms Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples.nested_code_elimination_matches_native

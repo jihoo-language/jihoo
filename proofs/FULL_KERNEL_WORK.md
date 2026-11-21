@@ -5139,3 +5139,18 @@ checks, 69 mixed-program source fixtures and 55 exact-byte comparisons,
 eight type-family controls and nine exact-diagnostic rejections, and
 20 native family fixtures with 18 additional checks. The independent
 pure admission check accepted the exact native mixed-program bytes.
+
+### Recursive CODE data elimination
+
+The recursive CODE checker now dispatches ordinary data Elim and boxed
+Case from the original graph node. The visible family entry selects its
+layout and branch count. The ground motive selects the branch and second
+scrutinee modes. Formation of the first scrutinee annotation supplies
+the declared arity and original word indices through the normalization
+that the checker already performs.
+
+The checked native and Lean example puts the indexed elimination under
+Strict. It consumes 201 ticks, leaves 57 rows, and returns the dependent
+type at root 54 with the original motive, index and scrutinee. A hidden
+family row fails after the entry tick. The focused build passed 496
+tasks and ten declaration audits. The expanded native schedule passed.

@@ -1723,6 +1723,19 @@ fn indexed_data_elimination(ghost: bool) {
     assert_spent(&short, "missing data case costs the entry tick")
 }
 
+fn nested_code_data_elimination() {
+    var baseline = indexed_data_elimination_fixture(false)
+    let budget = remaining_ticks(&baseline)
+    var sample = indexed_data_elimination_fixture(false)
+    let nested = sample.add(core.Term.Strict(8, 16), diag.Span.nowhere()).unwrap()
+    spend(&sample, budget-201)
+    let selected = sample.infer(nested, [], false, 32).unwrap()
+    assert(selected == 54 && sample.node_count() == 57 &&
+        sample.term(53) == core.Term.App(13, 0) && sample.term(54) == core.Term.App(53, 9),
+        "a recursive CODE elimination retains its dependent result under Strict")
+    assert_spent(&sample, "the recursive CODE elimination under Strict uses 201 ticks")
+}
+
 fn dependent_lend_fixture() -> core.Core {
     var c = core.Core.new()
     let sp = diag.Span.nowhere()
@@ -2354,6 +2367,7 @@ fn main() -> i32 {
     proposition_elimination_inference(false)
     indexed_data_elimination(true)
     indexed_data_elimination(false)
+    nested_code_data_elimination()
     parametric_data_motive_domain(false)
     parametric_data_motive_domain(true)
     dependent_constructor_inference()

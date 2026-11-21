@@ -75,8 +75,9 @@ theorem boxed_induction_and_case_match_native :
        analysis.state.arena[49]? = some (.node .app [48,5])) := by
   exact ⟨by cbv,by cbv⟩
 
-private def runCodeFixture (limit : Nat) (proof : Bool) : Outcome Inferred :=
-  let arena := fixture proof
+private def runCodeFixture (limit : Nat) (proof : Bool) (root : Nat := 16)
+    (isVisible : Bool := true) : Outcome Inferred :=
+  let arena := if root = 22 then (fixture proof).push (.node .strict [8,16]) else fixture proof
   let snapshot : Snapshot := { definitions := [], families := [row], arena := arena }
   let audited : Option Environment := do
     let (definitions,families) ← decodeProgram snapshot
@@ -91,10 +92,8 @@ private def runCodeFixture (limit : Nat) (proof : Bool) : Outcome Inferred :=
   let constructors := NativeCoreGhostConstructorInference.constructorAt [row] 1
   let ghost := NativeCoreGhostSpineInference.runWithFamilyElimination normal [] 0 limit kind boxed
     (NativeCoreGhostSpineInference.visibleFamilyShape env 1) constructors visible
-  let children := fun erased =>
-    if erased then ghost depth []
-    else NativeCoreCodeInference.runWithConstructors normal ghost env kind boxed constructors limit [] depth [] false
-  runInMode (ghost depth []) children (normal depth) false limit depth ⟨arena,1⟩ 0 13 9 16 row [15] false
+  let table := if isVisible then visible else fun _ => none
+  NativeCoreCodeInference.runWithFamilies normal ghost env kind boxed constructors table limit [] (depth+1) [] false ⟨arena,0⟩ root
 
 set_option maxRecDepth 4096 in
 /-- The actual motive sort controls CODE branch and subject checks. A data
@@ -105,6 +104,18 @@ theorem indexed_code_elimination_matches_native :
      data.state.steps = 199 ∧ data.state.arena.size = 55 ∧ data.result.map Inferred.typeRoot = .ok 52 ∧
        data.state.arena[51]? = some (.node .app [13,0]) ∧ data.state.arena[52]? = some (.node .app [51,9])) ∧
     runCodeFixture 200 true = runFixture 200 true [15] := by
+  exact ⟨by cbv,by cbv⟩
+
+set_option maxRecDepth 4096 in
+/-- Strict recursively checks the native elimination and keeps the inferred
+dependent result at its original motive and subject roots. Invisible rows
+reject immediately after the entry tick. -/
+theorem nested_code_elimination_matches_native :
+    (let result := runCodeFixture 201 false 22
+     result.state.steps = 201 ∧ result.state.arena.size = 57 ∧ result.result.map Inferred.typeRoot = .ok 54 ∧
+       result.state.arena[53]? = some (.node .app [13,0]) ∧
+       result.state.arena[54]? = some (.node .app [53,9])) ∧
+    runCodeFixture 199 false 16 false = ⟨⟨fixture false,1⟩,.error (.outsideFragment 16)⟩ := by
   exact ⟨by cbv,by cbv⟩
 
 end Jihoo.NativeKernel.NativeCoreGhostDataElimination.Examples
