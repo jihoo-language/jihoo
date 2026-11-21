@@ -4651,3 +4651,13 @@ The ownership invariant is supplied at the end of operand evaluation.
 
 The focused build passed 390 jobs. The three new declarations use only
 `propext` and `Quot.sound`.
+
+### Backward references after runtime application inference
+
+Finalizing a runtime application now proves graph preservation directly
+from its represented original root. Each partial-application scan recovers
+the original callee, the real inferred type, and the exposed product domain
+used by its ownership check. The same inference and normalization proofs
+preserve backward references through every scan step. The recursive CODE
+soundness theorem uses these represented visits. The focused build passed
+480 jobs and the three rechecked declarations use only standard Lean axioms.

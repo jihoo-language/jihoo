@@ -82,10 +82,6 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
     (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
     (ghostSound : ∀ {arena bindings ctx}, Prefix base arena → ContextRep env arena bindings ctx →
       ∀ depth, InferSound env arena ctx limit (ghost depth bindings))
-    (ghostBackward : ∀ {depth bindings state root answer}, (ghost depth bindings state root).result = .ok answer →
-      Backward state.arena → Backward (ghost depth bindings state root).state.arena)
-    (normalBackward : ∀ {depth state root answer}, (normal depth state root).result = .ok answer →
-      Backward state.arena → Backward (normal depth state root).state.arena)
     (onStart : Prefix base start) (context : ContextRep env start bindings ctx) :
     NativeCoreCodeHeadInference.Sound env start ctx limit (run normal ghost env isData boxed limit depth bindings head) := by
   induction depth generalizing head start bindings ctx with
@@ -163,8 +159,8 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
               obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreCodeApplicationFinalization.run_refines
                 (state := {state with steps := state.steps+1}) wf normalLocalFree normalLocal normalProgress
                 calleeTyped operandTyped (fun _ _ inside => run_progress ghostProgress normalProgress inside)
-                operandProgress (ghostProgress depth bindings) ghostBackward normalBackward onBase inside
-                first second success ambient retained
+                operandProgress (ghostProgress depth bindings) (ghostSound onStart context depth) boxedMetadata onBase inside
+                (.node read arity (.cons first (.cons second .nil))) first second success ambient retained
               exact ⟨kept,safe,type,represented,by simpa only [EnvironmentDelta.expand,EnvironmentDelta.expandArgs] using typed⟩
       case lam flag =>
         have length : refs.length = 2 := arity
