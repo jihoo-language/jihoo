@@ -10982,3 +10982,12 @@ import Jihoo
 #print axioms Jihoo.NativeKernel.NativeCoreNumericalObservation.literal_visit_numeric
 #print axioms Jihoo.NativeKernel.NativeCoreNumericalObservation.wide_normalized_sum_has_exact_observation
 #print axioms Jihoo.NativeKernel.Environment.BindingMachine.Mutable.checked_observed_usub_phases
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedTypeFormation.lookup_annotation_formed
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedTypeFormation.shifted_local_annotation_formed
+#print axioms Jihoo.NativeKernel.NativeCoreShiftedTypeFormation.shifted_global_annotation_formed
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.Numeric.to_literal
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_subtraction_to_literal
+#print axioms Jihoo.NativeKernel.Environment.Semantics.LoanArithmetic.checked_subtractions_ignore_observed_evidence
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.FramesRep.frame
+#print axioms Jihoo.NativeKernel.NativeCoreCodeLeaseLookup.FramesRep.enter
+#print axioms Jihoo.NativeKernel.NativeCoreCodeBorrow.accepted_owner_named

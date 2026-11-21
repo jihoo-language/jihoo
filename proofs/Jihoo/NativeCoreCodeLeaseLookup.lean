@@ -93,12 +93,19 @@ theorem run_progress (room : state.steps ≤ limit) :
   · exact visit_progress room
   · exact Progress.atState _ _
 
-private theorem FramesRep.frame (represented : FramesRep arena snapshots loans) (kept : Prefix arena after) :
+theorem FramesRep.frame (represented : FramesRep arena snapshots loans) (kept : Prefix arena after) :
     FramesRep after snapshots loans := by
   unfold FramesRep at represented ⊢
   induction represented with
   | nil => exact .nil
   | cons represented _ ih => exact .cons ⟨represented.1,represented.2.frame kept⟩ ih
+
+/-- A new reader saves the owner in its current lexical context. Older
+snapshots retain their saved binder depths and graph roots. -/
+theorem FramesRep.enter (frames : FramesRep arena snapshots loans)
+    (owner : Represents arena root (.var index)) :
+    FramesRep arena (⟨current,root⟩ :: snapshots) (Loans.enter current index loans) :=
+  .cons ⟨rfl,owner⟩ frames
 
 private theorem raised_rep (represented : Represents state.arena root (.var original))
     (success : (raiseOwner limit depth state root amount).result = .ok selected) :

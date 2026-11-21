@@ -105,4 +105,14 @@ theorem run_refines (wf : UnifiedProgram.EnvWellFormed env) (metadata : BoxedFam
     intro backward
     exact appendBack (ownedBack (childBack (NativeCoreCodeLeaseLookup.run_backward frames ownerRep authorizedOk backward)))
 
+/-- Only a named owner can pass the permission query and reach the
+original ghost annotation check. -/
+theorem accepted_owner_named (ownerRep : Represents state.arena owner sourceTerm)
+    (accepted : (run boxed infer normal limit depth current state snapshots source owner).result = .ok answer) :
+    ∃ index, sourceTerm = .var index := by
+  cases ownerRep with
+  | var => exact ⟨_,rfl⟩
+  | node read arity children =>
+    simp [run,NativeCoreCodeLeaseLookup.run,Outcome.next,read] at accepted
+
 end Jihoo.NativeKernel.NativeCoreCodeBorrow

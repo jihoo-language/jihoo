@@ -4846,3 +4846,16 @@ ordered effects of both and restoring the saved stack at the typed
 return. The original erased evidence justifies that return through the
 checked numeric observations. The focused build passed 418 jobs and
 four declaration audits.
+
+### Checked annotation formation and loan entry
+
+A local type root returned by a shift has the sort supplied by its
+checked binder. A global type root preserves the sort recorded in the
+earlier checked declaration. Entering a reader records its original
+owner root at the current binder depth, and a successful native code
+Borrow requires a named owner in that snapshot query.
+
+For a checked subtraction of observed words, the original evidence
+gives the bound of the actual literal contraction. Two proof terms
+with the same observed operands therefore yield convertible
+subtractions. The focused check verified nine declarations.

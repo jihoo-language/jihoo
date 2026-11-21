@@ -1402,3 +1402,5 @@ import Jihoo.NativeLoanNumericalEvidence
 import Jihoo.NativeBindingMachineMutableObservedUnsigned
 import Jihoo.NativeCoreNumericalObservation
 import Jihoo.NativeBindingMachineMutableUnsignedPhases
+import Jihoo.NativeCoreShiftedTypeFormation
+import Jihoo.NativeLoanObservedSubtractionConversion
