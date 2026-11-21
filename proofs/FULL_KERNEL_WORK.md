@@ -4594,3 +4594,13 @@ interprets it at the original declared index vector. An admitted
 elimination over two recursive fields selects the second hypothesis and
 replays to a constructor in the original `[2, 7]` fiber. The module and
 these computations passed a focused Lean check.
+
+### Transparent global resolution for runtime application policy
+
+A successful metered literal normalizer resolves every global reference
+in its represented output. The proof uses the concrete alias visitor and
+checked definition history. It preserves the result through beta
+substitution, literal folding, selected branches, and ordinary congruence.
+The runtime application policy consumes this fact for the represented
+original domain and argument, and the recursive CODE visitor carries it
+across arena extension. The focused build passed 480 jobs.

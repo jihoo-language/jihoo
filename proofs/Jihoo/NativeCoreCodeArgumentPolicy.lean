@@ -1,4 +1,5 @@
 import Jihoo.NativeCoreCodeKind
+import Jihoo.NativeLoanMixedProgram
 import Jihoo.NativeCoreCodePlain
 import Jihoo.NativeCoreGhostLiteralAddition
 
@@ -42,13 +43,21 @@ theorem run_progress
 
 /-- The domain and argument normalizer has discharged transparent global
 references before the graph inspectors read the retained terms. -/
-def GlobalFreeOutputs (normal : Nat → State → Nat → Outcome Nat) : Prop :=
-  ∀ {depth state root selected term}, (normal depth state root).result = .ok selected →
-    Represents (normal depth state root).state.arena selected term → globalFree term = true
+def GlobalFreeOutputs (base : Arena) (normal : Nat → State → Nat → Outcome Nat) : Prop :=
+  ∀ {depth state root selected source term}, Prefix base state.arena → Represents state.arena root source →
+    (normal depth state root).result = .ok selected →
+      Represents (normal depth state root).state.arena selected term → globalFree term = true
+
+theorem literal_normalizer_resolves
+    (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : NativeProgramWire.RepresentsDefinitions base roots definitions) :
+    GlobalFreeOutputs base (NativeCoreGhostLiteralAddition.run roots visible limit) := by
+  intro _ _ _ _ _ _ onBase input ran output
+  exact NativeCoreGhostLiteralAddition.run_resolves history aligned onBase input ran output
 
 private theorem classify_false_refines
     (normalSound : VisitsFrom base (ExpandedNormalization env) (normal depth))
-    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena)
+    (free : GlobalFreeOutputs base normal) (onBase : Prefix base state.arena)
     (source : Represents state.arena domain D)
     (success : (NativeCoreCodeKind.classify (normal depth) state domain).result = .ok false) :
     ∃ residual, RawLend.Conv env (expand env D) residual ∧ globalFree residual = true ∧ kindOf residual = false := by
@@ -56,7 +65,7 @@ private theorem classify_false_refines
   obtain ⟨selected,selectedOk,next⟩ := Outcome.next_success success
   rw [next] at success
   obtain ⟨_,_,residual,represented,converted⟩ := normalSound onBase source selectedOk
-  have freeResidual := free selectedOk represented
+  have freeResidual := free onBase source selectedOk represented
   have conversion := converted.converted
   rw [EnvironmentDelta.expand_globalFree ((globalFree_correct _).mp freeResidual)] at conversion
   have head := NativeCoreCodeKind.sortAt_represents represented
@@ -67,7 +76,7 @@ private theorem classify_false_refines
 kind witness and the normalized plain argument come from the actual scan. -/
 theorem run_refines (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
-    (free : GlobalFreeOutputs normal) (onBase : Prefix base state.arena)
+    (free : GlobalFreeOutputs base normal) (onBase : Prefix base state.arena)
     (domainRep : Represents state.arena domain D) (argRep : Represents state.arena argument A)
     (success : (run normal env limit depth state domain argument).result = .ok ()) :
     LoanTyping.applicationAllowed env false (expand env D) (expand env A) := by
@@ -99,7 +108,8 @@ theorem run_refines (normalSound : ∀ depth, VisitsFrom base (ExpandedNormaliza
           NativeCoreCodeKind.firstOrder_refines normalSound (onBase.trans first.kept) (domainRep.frame first.kept) checked
         obtain ⟨val,argConv,valPlain⟩ := NativeCoreCodePlain.run_refines (normalSound depth)
           (onBase.trans (first.kept.trans kept)) (argRep.frame (first.kept.trans kept))
-          (fun _ _ done held => free done held) observed
+          (fun _ _ done held => free (onBase.trans (first.kept.trans kept))
+            (argRep.frame (first.kept.trans kept)) done held) observed
         exact .inr ⟨normalKind,kindConverted,kindFree,.inr ⟨kindAccepted,val,argConv,valPlain⟩⟩
 
 /-- Ordinary values bypass the type-argument checks. A higher kind is

@@ -142,7 +142,7 @@ private theorem expand_instantiation (wf : UnifiedProgram.EnvWellFormed env) (ty
 /-- The checked code callee and mode-selected argument produce source
 application typing at the original dependent codomain instantiation. -/
 theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
-    (free : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs normal)
+    (free : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs base normal)
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (functionSound : Sound env loans base ctx limit false functionInfer)

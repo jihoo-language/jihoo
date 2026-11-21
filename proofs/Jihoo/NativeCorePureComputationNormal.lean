@@ -1720,4 +1720,193 @@ theorem neutral_transport_retains_row :
     run 10 4 ⟨arena, 0⟩ 7 = ⟨⟨arena, 10⟩, .ok 7⟩ :=
   rfl
 
+
+abbrev ResolvesGlobals (_ : Term) (output : Term) : Prop :=
+  GlobalEnvironment.GlobalFree output
+
+private theorem free_children (resolved : ListRel ResolvesGlobals original outputs) :
+    ∀ term ∈ outputs, GlobalEnvironment.GlobalFree term := by
+  induction resolved with
+  | nil => simp
+  | cons first _ ih =>
+    intro term found
+    rcases List.mem_cons.mp found with rfl | found
+    · exact first
+    · exact ih term found
+
+private theorem conditionalPost_resolves
+    (onBase : Prefix base state.arena)
+    (read : state.arena[root]? = some (.node (conditionalOp equal) before))
+    (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
+    (leftFree : GlobalEnvironment.GlobalFree a) (rightFree : GlobalEnvironment.GlobalFree b)
+    (yesRep : Represents state.arena yes p) (noRep : Represents state.arena no q)
+    (visitResolves : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor ResolvesGlobals state term (visit state ref) selected)
+    (success : (conditionalPost visit limit depth root state equal before left right yes no).result = .ok selected) :
+    RefinesFor ResolvesGlobals state (.node (conditionalOp equal) [a,b,p,q])
+      (conditionalPost visit limit depth root state equal before left right yes no) selected := by
+  have keepArms (branch : conditionalPost visit limit depth root state equal before left right yes no =
+      (children visit state [yes,no]).next fun next arms =>
+        nodeResult next root (conditionalOp equal) before (left :: right :: arms)) :
+      RefinesFor ResolvesGlobals state (.node (conditionalOp equal) [a,b,p,q])
+        (conditionalPost visit limit depth root state equal before left right yes no) selected := by
+    rw [branch] at success ⊢
+    obtain ⟨arms,accepted,next⟩ := Outcome.next_success success
+    rw [next] at success ⊢
+    obtain ⟨kept,safe,width,_,terms,represented,free⟩ :=
+      children_refines (property := fun _ => True) onBase (.cons yesRep (.cons noRep .nil))
+        (fun prior child done => ⟨visitResolves prior child done,True.intro⟩) accepted
+    have arity : (left :: right :: arms).length = (conditionalOp equal).arity := by
+      cases equal <;> simp [conditionalOp,width,Op.arity]
+    obtain ⟨suffix,later,output⟩ := nodeResult_exact (kept.lookup read)
+      (.cons (leftRep.frame kept) (.cons (rightRep.frame kept) represented)) arity success
+    have residualFree : GlobalEnvironment.GlobalFree (.node (conditionalOp equal) (a :: b :: terms)) := by
+      rw [GlobalEnvironment.GlobalFree]
+      refine ⟨by cases equal <;> rfl,?_⟩
+      intro term found
+      rcases List.mem_cons.mp found with rfl | found
+      · exact leftFree
+      · rcases List.mem_cons.mp found with rfl | found
+        · exact rightFree
+        · exact free_children free term found
+    exact ⟨kept.trans suffix,later ∘ safe,_,output,residualFree⟩
+  cases leftNumber : numberAt state.arena left <;> cases rightNumber : numberAt state.arena right
+  case none.none => exact keepArms (by simp [conditionalPost,leftNumber,rightNumber])
+  case none.some => exact keepArms (by simp [conditionalPost,leftNumber,rightNumber])
+  case some.none => exact keepArms (by simp [conditionalPost,leftNumber,rightNumber])
+  rename_i aValue bValue
+  by_cases chosen : compareNumbers equal aValue bValue = true
+  · simp only [conditionalPost,leftNumber,rightNumber,ite_eq_left chosen] at success ⊢
+    cases equal
+    · have built := openTrue_refines onBase yesRep (.cons leftRep (.cons rightRep .nil)) rfl visitResolves success
+      exact ⟨built.kept,built.backward,built.value⟩
+    · have built := openTrue_refines onBase yesRep (.cons leftRep .nil) rfl visitResolves success
+      exact ⟨built.kept,built.backward,built.value⟩
+  · simp only [conditionalPost,leftNumber,rightNumber,ite_eq_right chosen] at success ⊢
+    have built := visitResolves onBase noRep success
+    exact ⟨built.kept,built.backward,built.value⟩
+
+private theorem conditional_resolves
+    (onBase : Prefix base state.arena)
+    (read : state.arena[root]? = some (.node (conditionalOp equal) [left,right,yes,no]))
+    (leftRep : Represents state.arena left a) (rightRep : Represents state.arena right b)
+    (yesRep : Represents state.arena yes p) (noRep : Represents state.arena no q)
+    (visitResolves : ∀ {state ref term selected}, Prefix base state.arena → Represents state.arena ref term →
+      (visit state ref).result = .ok selected → RefinesFor ResolvesGlobals state term (visit state ref) selected)
+    (success : (conditional visit limit depth root state equal left right yes no).result = .ok selected) :
+    RefinesFor ResolvesGlobals state (.node (conditionalOp equal) [a,b,p,q])
+      (conditional visit limit depth root state equal left right yes no) selected := by
+  unfold conditional at success ⊢
+  obtain ⟨operands,accepted,next⟩ := Outcome.next_success success
+  rw [next] at success ⊢
+  obtain ⟨kept,safe,width,_,terms,represented,free⟩ :=
+    children_refines (property := fun _ => True) onBase (.cons leftRep (.cons rightRep .nil))
+      (fun prior child done => ⟨visitResolves prior child done,True.intro⟩) accepted
+  obtain ⟨newLeft,newRight,normalizedLeft,normalizedRight,rfl,rfl,newLeftRep,newRightRep⟩ :=
+    child_binary represented width
+  obtain ⟨suffix,later,value,held,resolved⟩ :=
+    conditionalPost_resolves (onBase.trans kept) (kept.lookup read) newLeftRep newRightRep
+      (free_children free _ (.head _)) (free_children free _ (.tail _ (.head _)))
+      (yesRep.frame kept) (noRep.frame kept) visitResolves success
+  exact ⟨kept.trans suffix,later ∘ safe,value,held,resolved⟩
+
+private theorem runCore_resolves
+    (postRules : Rules (fun a b => GlobalEnvironment.GlobalFree a → GlobalEnvironment.GlobalFree b))
+    (canResolve : extension.SoundFrom base ResolvesGlobals) (earlyResolves : early.SoundFrom base ResolvesGlobals)
+    (onBase : Prefix base state.arena) (source : Represents state.arena root term)
+    (success : (runCore extension early conditionals limit depth state root).result = .ok selected) :
+    RefinesFor ResolvesGlobals state term (runCore extension early conditionals limit depth state root) selected := by
+  induction depth generalizing state root term selected with
+  | zero =>
+    by_cases over : limit < state.steps + 1 <;>
+      simp [runCore,NativeCoreUnsignedCancellation.tick,over] at success
+  | succ depth ih =>
+    rcases ticked : NativeCoreUnsignedCancellation.tick state.arena limit (depth+1) state.steps root with ⟨answer,spent⟩
+    cases answer with
+    | error reason => simp [runCore,ticked] at success
+    | ok paid =>
+      cases paid
+      let entered := {state with steps := spent}
+      let visit := runCore extension early conditionals limit depth
+      cases source with
+      | var read =>
+        simp [runCore,ticked,read] at success
+        subst selected
+        simp only [runCore,ticked,read]
+        exact ⟨.refl _,id,_,.var read,by simp only [ResolvesGlobals,GlobalEnvironment.GlobalFree]⟩
+      | @node _ op refs terms read arity childrenRep =>
+        by_cases earlyEnabled : conditionals = true ∧ early.accepts op = true
+        · have route : runCore extension early conditionals limit (depth+1) state root =
+              early.finish visit limit depth root entered op refs := by
+            simp only [runCore,ticked,read,ite_eq_left earlyEnabled,entered,visit]
+          rw [route] at success ⊢
+          have result := earlyResolves (state := entered) earlyEnabled.2 onBase read childrenRep arity
+            (fun prior rep done => ih prior rep done) success
+          exact ⟨result.kept,result.backward,result.value⟩
+        · cases foundKind : conditionalKind conditionals op with
+          | some equal =>
+            obtain ⟨sameOp,_⟩ := conditionalKind_op foundKind
+            subst op
+            have count : refs.length = 4 := arity.trans (by cases equal <;> rfl)
+            obtain ⟨l,r,y,n,a,b,p,q,rfl,rfl,left,right,yes,no⟩ := child_quaternary childrenRep count
+            have route : runCore extension early conditionals limit (depth+1) state root =
+                conditional visit limit depth root entered equal l r y n := by
+              simp [runCore,ticked,read,ite_eq_right earlyEnabled,foundKind,entered,visit]
+            rw [route] at success ⊢
+            have result := conditional_resolves (state := entered) onBase read left right yes no
+              (fun prior child done => ih prior child done) success
+            exact ⟨result.kept,result.backward,result.value⟩
+          | none =>
+            let normalized := children visit entered refs
+            by_cases allowed : supported op = true
+            · have ordinary : GlobalEnvironment.ordinary op = true := by
+                cases op <;> first | rfl | contradiction
+              have route : runCore extension early conditionals limit (depth+1) state root = normalized.next
+                  (fun after output => post visit limit depth root after op refs output) := by
+                simp [runCore,ticked,read,ite_eq_right earlyEnabled,foundKind,allowed,normalized,entered,visit]
+              rw [route] at success ⊢
+              obtain ⟨selectedChildren,childSuccess,childNext⟩ := Outcome.next_success success
+              rw [childNext] at success ⊢
+              obtain ⟨kept,safe,width,outputTerms,held,free⟩ :=
+                visitOperands_relatesFrom (start := entered) (relation := ResolvesGlobals) onBase childrenRep
+                  (fun prior child done => by
+                    obtain ⟨kept,safe,output⟩ := ih prior child done
+                    exact ⟨kept,safe,output⟩) childSuccess
+              obtain ⟨suffix,later,output,represented,resolves⟩ := post_refines postRules (onBase.trans kept) (kept.lookup read)
+                held (width.trans arity)
+                (fun prior placed done => by
+                  obtain ⟨kept,safe,output,represented,free⟩ := ih prior placed done
+                  exact ⟨kept,safe,output,represented,fun _ => free⟩) success
+              have resolvedHead : GlobalEnvironment.GlobalFree (.node op outputTerms) := by
+                rw [GlobalEnvironment.GlobalFree]
+                exact ⟨ordinary,free_children free⟩
+              exact ⟨kept.trans suffix,later ∘ safe,output,represented,resolves resolvedHead⟩
+            · by_cases enabled : conditionals = true ∧ extension.accepts op = true
+              · have route : runCore extension early conditionals limit (depth+1) state root = normalized.next
+                    (fun after output => extension.finish visit limit depth root after op refs output) := by
+                  simp only [runCore,ticked,read,ite_eq_right earlyEnabled,foundKind,ite_eq_right allowed,ite_eq_left enabled,
+                    normalized,entered,visit]
+                rw [route] at success ⊢
+                obtain ⟨selectedChildren,childSuccess,childNext⟩ := Outcome.next_success success
+                rw [childNext] at success ⊢
+                obtain ⟨kept,safe,width,outputTerms,held,free⟩ :=
+                  visitOperands_relatesFrom (start := entered) (relation := ResolvesGlobals) onBase childrenRep
+                  (fun prior child done => by
+                    obtain ⟨kept,safe,output⟩ := ih prior child done
+                    exact ⟨kept,safe,output⟩) childSuccess
+                obtain ⟨suffix,later,output,represented,resolved⟩ :=
+                  canResolve.2 enabled.2 (onBase.trans kept) (kept.lookup read) held (width.trans arity)
+                    (fun prior input done => ih prior input done) success
+                exact ⟨kept.trans suffix,later ∘ safe,output,represented,resolved⟩
+              · simp [runCore,ticked,read,ite_eq_right earlyEnabled,foundKind,allowed,enabled] at success
+
+theorem runWithExtensions_resolves
+    (postRules : Rules (fun a b => GlobalEnvironment.GlobalFree a → GlobalEnvironment.GlobalFree b))
+    (postSound : extension.SoundFrom base ResolvesGlobals)
+    (earlySound : early.SoundFrom base ResolvesGlobals)
+    (onBase : Prefix base state.arena) (held : Represents state.arena root term)
+    (success : (runWithExtensions extension early limit depth state root).result = .ok selected) :
+    RefinesFor ResolvesGlobals state term (runWithExtensions extension early limit depth state root) selected :=
+  runCore_resolves postRules postSound earlySound onBase held success
+
 end Jihoo.NativeKernel.NativeCorePureComputationNormal

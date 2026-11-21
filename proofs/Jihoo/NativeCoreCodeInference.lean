@@ -78,7 +78,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
     (boxedMetadata : NativeCoreGhostReferenceTypes.BoxedFamilies env boxed)
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
-    (normalFree : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs normal)
+    (normalFree : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs base normal)
     (ghostProgress : ∀ depth bindings state root, state.steps ≤ limit → Progress limit state (ghost depth bindings state root))
     (ghostSound : ∀ {arena bindings ctx}, Prefix base arena → ContextRep env arena bindings ctx →
       ∀ depth, InferSound env arena ctx limit (ghost depth bindings))
@@ -96,6 +96,9 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
     have normalLocal (depth : Nat) : VisitsFrom start (ExpandedNormalization env) (normal depth) := by
       intro _ _ _ _ later represented succeeded
       exact normalSound depth (onStart.trans later) represented succeeded
+    have normalLocalFree : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs start normal := by
+      intro _ _ _ _ _ _ onBase input succeeded output
+      exact normalFree (onStart.trans onBase) input succeeded output
     have childSound : NativeCoreCodeHeadInference.Sound env start ctx limit recur := ih onStart context
     have childCost : ∀ state root, state.steps ≤ limit → Progress limit state (recur state root) :=
       fun _ _ inside => run_progress ghostProgress normalProgress inside
@@ -158,7 +161,7 @@ theorem run_sound (wf : UnifiedProgram.EnvWellFormed env)
                 · exact childCost
                 · exact ghostProgress depth bindings
               obtain ⟨kept,safe,type,represented,typed⟩ := NativeCoreCodeApplicationFinalization.run_refines
-                (state := {state with steps := state.steps+1}) wf normalFree normalLocal normalProgress
+                (state := {state with steps := state.steps+1}) wf normalLocalFree normalLocal normalProgress
                 calleeTyped operandTyped (fun _ _ inside => run_progress ghostProgress normalProgress inside)
                 operandProgress (ghostProgress depth bindings) ghostBackward normalBackward onBase inside
                 first second success ambient retained

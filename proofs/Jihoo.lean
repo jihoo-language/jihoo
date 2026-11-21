@@ -1382,3 +1382,4 @@ import Jihoo.NativeCoreFamilyHeadFormation
 import Jihoo.NativeCoreGhostFamilyElimination
 import Jihoo.NativeCoreProductSpine
 import Jihoo.NativeCoreDataRecursiveCaseLink
+import Jihoo.NativeCoreGlobalFreeComputation

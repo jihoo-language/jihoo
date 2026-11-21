@@ -113,7 +113,7 @@ theorem run_progress
 /-- The result still denotes the original substituted codomain.
 The application typing follows the same checked callee and argument. -/
 theorem run_refines (wf : UnifiedProgram.EnvWellFormed env)
-    (free : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs normal)
+    (free : NativeCoreCodeArgumentPolicy.GlobalFreeOutputs base normal)
     (normalSound : ∀ depth, VisitsFrom base (ExpandedNormalization env) (normal depth))
     (normalProgress : ∀ depth state root, Progress limit state (normal depth state root))
     (calleeSound : NativeCoreCodeApplication.Sound env loans base ctx limit false functionInfer)

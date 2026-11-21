@@ -1,3 +1,4 @@
+import Jihoo.NativeCoreGlobalFreeComputation
 import Jihoo.NativeCoreMeteredVisit
 import Jihoo.NativeCoreNestedAliases
 import Jihoo.NativeCoreUnsignedSum
@@ -317,5 +318,56 @@ theorem wide_literal_sum_uses_one_halved_leaf :
   cbv
 
 end Examples
+
+
+private theorem numeric_global_free (numeric : Represents term value) :
+    GlobalEnvironment.GlobalFree term := by
+  induction numeric with
+  | natural value => simp [Term.natural,GlobalEnvironment.GlobalFree,GlobalEnvironment.ordinary]
+  | add first second ihFirst ihSecond =>
+    simp [Term.uadd,GlobalEnvironment.GlobalFree,GlobalEnvironment.ordinary,ihFirst,ihSecond]
+
+theorem extension_resolves : extension.SoundFrom base NativeCorePureComputationNormal.ResolvesGlobals := by
+  constructor
+  · intro op accepted
+    have isAdd : op = .uadd := by simpa only [extension,beq_iff_eq] using accepted
+    subst op
+    refine ⟨?_,rfl⟩
+    intro impossible
+    cases impossible
+  intro visit limit depth root state op before after terms selected accepted onBase read children arity visitor success
+  change (finish limit depth root state after).result = .ok selected at success
+  change RefinesFor NativeCorePureComputationNormal.ResolvesGlobals state (.node op terms) (finish limit depth root state after) selected
+  unfold finish at success ⊢
+  split at success
+  · rename_i left right
+    split at success
+    · rename_i m n leftRead rightRead
+      split at success
+      · rename_i fits
+        simp only [ite_eq_left fits]
+        obtain ⟨kept,backward,represented⟩ := literalSum_refines success
+        have numeric := (NativeConstantAccumulator.naturalSum_correct (env := Environment.empty)
+          (loans := []) (ctx := []) (mode := true) (m+n)).1
+        exact ⟨kept,backward,_,represented,numeric_global_free numeric⟩
+      · cases success
+    · cases success
+  · cases success
+
+/-- A successful visit fully resolves transparent globals in the returned
+term, including visits that produced a beta argument or chose a branch. -/
+theorem run_resolves (history : LoanTyping.MixedProgram.History definitions declarations env)
+    (aligned : RepresentsDefinitions base roots definitions) (onBase : Prefix base state.arena)
+    (input : NativeArena.Represents state.arena root source)
+    (success : (run roots visible limit depth state root).result = .ok selected)
+    (output : NativeArena.Represents (run roots visible limit depth state root).state.arena selected residual) :
+    globalFree residual = true := by
+  obtain ⟨_,_,_,represented,free⟩ := NativeCorePureComputationNormal.runWithExtensions_resolves
+    NativeCoreGlobalFreeComputation.post_rules extension_resolves
+    (NativeCoreNestedAliases.extension_soundFor history aligned
+      (relation := NativeCorePureComputationNormal.ResolvesGlobals) (fun _ proof => proof))
+    onBase input success
+  rw [represented.unique output] at free
+  exact (globalFree_correct _).mpr free
 
 end Jihoo.NativeKernel.NativeCoreGhostLiteralAddition
